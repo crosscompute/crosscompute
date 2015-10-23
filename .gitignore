@@ -1,0 +1,20 @@
+# SQLite
+*.db
+*.db-journal
+# Python
+*.egg
+*.egg-info
+*.eggs
+*.py[co]
+.cache
+.coverage
+.ipynb_checkpoints
+build
+dist
+# Transient
+*.log
+*.tmp
+data_*
+# Vim
+*.sw[op]
+*~

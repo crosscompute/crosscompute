@@ -1,0 +1,13 @@
+{% extends 'invisibleroads_posts:templates/base.jinja2' %}
+
+{% block title %}
+{{ render_title(tool_name) }} &middot; {{ website_name }}
+{% endblock %}
+
+{% block head_style_inline %}
+#top-navbar {margin-bottom: 0}
+{% endblock %}
+
+{% block body_content %}
+<h1>{{ render_title(tool_name) }}</h1>
+{% endblock %}

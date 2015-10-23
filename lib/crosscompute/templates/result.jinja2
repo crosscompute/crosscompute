@@ -1,0 +1,28 @@
+{% extends base_template %}
+{% from 'type.jinja2' import render_values with context %}
+
+{% block title %}
+{{ result_id }} &middot; {{ render_title(tool_name) }} &middot; {{ website_name }}
+{% endblock %}
+
+{% block head_style_inline %}
+{{ super() }}
+.download {margin-top: 2em}
+{% endblock %}
+
+{% block body_content %}
+{{ super() }}
+<h2>Parameters</h2>
+<div id="result_arguments">
+{{ render_values(result_arguments) }}
+</div>
+
+{% if result_properties %}
+<h2>Properties</h2>
+<div id="result_properties">
+{{ render_values(result_properties.pop('standard_outputs', {})) }}
+{{ render_values(result_properties) }}
+</div>
+<a href="{{ request.route_path('result_name.zip', id=result_id, name='%s-%s' % (result_id, tool_name)) }}" class="btn btn-success download" role="button" download>Download</a>
+{% endif %}
+{% endblock %}

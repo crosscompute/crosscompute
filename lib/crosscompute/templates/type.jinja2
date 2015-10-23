@@ -1,0 +1,6 @@
+{% macro render_values(value_by_key) %}
+{% for key, value in value_by_key.iteritems() if not key.startswith('_') %}
+{% from get_data_type_for(key).template import render_value with context %}
+<div>{{ render_value(key, value) }}</div>
+{% endfor %}
+{% endmacro %}

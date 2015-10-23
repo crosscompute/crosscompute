@@ -1,0 +1,19 @@
+Check that it works on Windows
+Use real file objects for PIPE
+Parse standard_outputs as nested_dictionary from result_configuration
+Restore uploads
+    Compute hash on import
+Enhance crosscompute run
+    Let user define host and port in command-line
+    Add TAB completion for script arguments
+    Add option to list tool names
+    Get crosscompute_types from --types
+    Get crosscompute_types from --configuration_path
+    Consider parsing streaming output from Popen
+    Consider supporting tool_argument_names that are equivalent to types
+Enhance crosscompute serve
+    Do not change actual tool definition
+    Parse result_configuration file to get nested values
+    Accept markdown syntax for user interface template
+    Enable support for meinheld server
+    Enable support for chaussette server

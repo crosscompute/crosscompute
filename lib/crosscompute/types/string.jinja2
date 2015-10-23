@@ -1,0 +1,16 @@
+{% macro render_query(key) %}
+<label for="{{ key }}_" class="control-label">{{ key }}</label>
+<input type="text" name="{{ key }}" id="{{ key }}_" class="form-control" autocomplete="off" value="{{ format_value(key) }}">
+{% endmacro %}
+
+{% macro render_value(key, value) %}
+<h3>{{ key }}</h3>
+<div id="{{ key }}_">
+{% set lines = (value | string).strip().splitlines() %}
+{% if lines | length == 1 %}
+{{ value }}
+{% else %}
+{% for line in lines %}{{ line }}<br>{% endfor %}
+{% endif %}
+</div>
+{% endmacro %}
