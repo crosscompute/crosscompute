@@ -28,7 +28,6 @@ serve = crosscompute.scripts.serve:ServeScript
 """
 REQUIREMENTS = [
     'configparser',
-    'invisibleroads',
     'invisibleroads_macros',
     'invisibleroads_posts',
     'invisibleroads_repositories',
@@ -42,7 +41,7 @@ DESCRIPTION = '\n\n'.join(open(join(FOLDER, x)).read().strip() for x in [
     'README.rst', 'CHANGES.rst'])
 setup(
     name='crosscompute',
-    version='0.2',
+    version='0.2.1',
     description='Publish your computational model',
     long_description=DESCRIPTION,
     classifiers=[
