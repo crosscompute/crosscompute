@@ -4,6 +4,9 @@ import sys
 import time
 from collections import OrderedDict
 from os.path import dirname, join, relpath
+from invisibleroads.scripts import (
+    ReflectiveArgumentParser,
+    configure_subparsers, get_scripts_by_name, run_scripts)
 from invisibleroads_macros.disk import cd
 from invisibleroads_macros.exceptions import InvisibleRoadsError
 from invisibleroads_macros.log import (
@@ -74,6 +77,16 @@ class _ResultConfiguration(object):
             result_properties, suffix_format_packs, censored=False))
         self.target_file.write(template % format_nested_dictionary(
             result_properties, suffix_format_packs, censored=True) + '\n')
+
+
+def launch(argv=sys.argv):
+    argument_parser = ReflectiveArgumentParser(
+        'crosscompute', add_help=False)
+    argument_subparsers = argument_parser.add_subparsers(dest='command')
+    scripts_by_name = get_scripts_by_name('crosscompute')
+    configure_subparsers(argument_subparsers, scripts_by_name)
+    args = argument_parser.parse_known_args(argv[1:])[0]
+    run_scripts(scripts_by_name, args)
 
 
 def load_tool_definition(tool_name):

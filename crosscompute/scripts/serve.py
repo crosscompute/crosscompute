@@ -22,12 +22,7 @@ class ServeScript(Script):
 
     def run(self, args):
         tool_definition = load_tool_definition(args.tool_name)
-        tool_name = tool_definition['tool_name']
-        app = get_app(
-            tool_definition,
-            base_template='base.jinja2',
-            data_type_packs=get_data_type_packs(),
-            data_folder=join('/tmp', tool_name))
+        app = get_app(tool_definition, data_type_packs=get_data_type_packs())
         webbrowser.open_new_tab('http://127.0.0.1:4444/tools/0')
         server = make_server('127.0.0.1', 4444, app)
         try:
@@ -36,10 +31,13 @@ class ServeScript(Script):
             pass
 
 
-def get_app(tool_definition, base_template, data_type_packs, data_folder):
+def get_app(
+        tool_definition, base_template='crosscompute:templates/base.jinja2',
+        data_type_packs=None, data_folder=None):
+    tool_name = tool_definition['tool_name']
     config = Configurator(settings={
-        'data.folder': data_folder,
-        'data_type_packs': data_type_packs,
+        'data.folder': data_folder or join('/tmp', tool_name),
+        'data_type_packs': data_type_packs or [],
         'jinja2.directories': 'crosscompute:templates',
         'jinja2.lstrip_blocks': True,
         'jinja2.trim_blocks': True,
