@@ -1,4 +1,7 @@
-Check that it works on Windows
+Check that examples work on Windows
+Check that examples work on Mac OS
+Check that examples work with python 3
+
 Use real file objects for PIPE
 Parse standard_outputs as nested_dictionary from result_configuration
 Restore uploads
