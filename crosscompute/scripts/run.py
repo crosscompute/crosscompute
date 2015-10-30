@@ -18,6 +18,7 @@ class RunScript(Script):
         tool_definition = load_tool_definition(args.tool_name)
         tool_name = tool_definition['tool_name']
         data_type_packs = get_data_type_packs()
+        data_folder = join(sep + 'tmp', tool_name)
         argument_parser = ArgumentParser(tool_name)
         argument_parser.add_argument('tool_name', nargs='?', help=SUPPRESS)
         argument_parser = configure_argument_parser(
@@ -26,12 +27,12 @@ class RunScript(Script):
             result_arguments = prepare_result_arguments(
                 tool_definition['argument_names'],
                 argument_parser.parse_args(sys.argv[2:]).__dict__,
-                data_type_packs)
+                data_type_packs, data_folder)
         except TypeError as e:
             return {'errors': dict(e.args)}
         run_script(
             result_arguments.get('target_folder') or make_enumerated_folder(
-                join('/tmp', tool_name, 'results')),
+                join(data_folder, 'results')),
             tool_definition, result_arguments, data_type_packs, save_logs=True)
 
 

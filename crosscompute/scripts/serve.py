@@ -3,7 +3,7 @@ from collections import OrderedDict
 from configparser import RawConfigParser
 from invisibleroads.scripts import Script
 from invisibleroads_macros.disk import compress_zip, make_enumerated_folder
-from os.path import basename, dirname, isabs, join
+from os.path import basename, dirname, isabs, join, sep
 from pyramid.config import Configurator
 from pyramid.httpexceptions import HTTPBadRequest, HTTPSeeOther
 from pyramid.response import FileResponse
@@ -36,7 +36,7 @@ def get_app(
         data_type_packs=None, data_folder=None):
     tool_name = tool_definition['tool_name']
     config = Configurator(settings={
-        'data.folder': data_folder or join('/tmp', tool_name),
+        'data.folder': data_folder or join(sep + 'tmp', tool_name),
         'data_type_packs': data_type_packs or [],
         'jinja2.directories': 'crosscompute:templates',
         'jinja2.lstrip_blocks': True,

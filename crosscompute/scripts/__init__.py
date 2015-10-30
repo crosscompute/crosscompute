@@ -123,12 +123,15 @@ def run_script(
     result_configuration = _ResultConfiguration(target_folder)
     result_configuration.write_header(tool_definition, result_arguments)
     command = tool_definition['command_template'].format(**result_arguments)
-    with cd(dirname(tool_definition['configuration_path'])):
-        command_process = subprocess.Popen(
-            shlex.split(command),
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    standard_output, standard_error = [
-        x.rstrip() for x in command_process.communicate()]
+    try:
+        with cd(dirname(tool_definition['configuration_path'])):
+            command_process = subprocess.Popen(
+                shlex.split(command),
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        standard_output, standard_error = [
+            x.rstrip() for x in command_process.communicate()]
+    except OSError:
+        standard_output, standard_error = None, 'Command not found'
     result_properties = OrderedDict()
     if standard_output:
         key_prefix = '' if tool_definition.get('show_standard_output') else '_'
