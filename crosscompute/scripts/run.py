@@ -2,7 +2,7 @@ import sys
 from argparse import ArgumentParser, SUPPRESS
 from invisibleroads.scripts import Script
 from invisibleroads_macros.disk import make_enumerated_folder
-from os.path import join
+from os.path import join, sep
 
 from ..configurations import RESERVED_ARGUMENT_NAMES
 from ..types import get_data_type_packs, prepare_result_arguments
