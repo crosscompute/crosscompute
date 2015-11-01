@@ -4,7 +4,7 @@ from fnmatch import fnmatch
 from invisibleroads_macros.disk import are_same_path
 from os import getcwd, walk
 from os.path import abspath, basename, join
-from pyramid.settings import asbool
+from pyramid.settings import asbool, aslist
 
 from .exceptions import ConfigurationNotFound, ToolNotFound, ToolNotSpecified
 
@@ -73,6 +73,8 @@ def get_tool_definition_by_name_from_path(
         for key in tool_definition:
             if key.startswith('show_'):
                 tool_definition[key] = asbool(tool_definition[key])
+            elif key.endswith('.dependencies'):
+                tool_definition[key] = aslist(tool_definition[key])
         tool_definition[u'tool_name'] = tool_name
         tool_definition[u'argument_names'] = parse_tool_argument_names(
             tool_definition.get('command_template', ''))

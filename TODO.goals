@@ -1,7 +1,6 @@
-Check that examples work on Windows
-Check that examples work on Mac OS
 Check that examples work with Python 3
 
+Communicate when standard_error is not empty
 Use real file objects for PIPE
 Parse standard_outputs as nested_dictionary from result_configuration
 Restore uploads

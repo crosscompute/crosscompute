@@ -6,6 +6,10 @@ class ConfigurationNotFound(CrossComputeError):
     pass
 
 
+class DependencyError(CrossComputeError):
+    pass
+
+
 class ToolNotFound(CrossComputeError):
     pass
 

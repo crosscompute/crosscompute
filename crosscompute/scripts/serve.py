@@ -12,7 +12,7 @@ from wsgiref.simple_server import make_server
 from ..configurations import RESERVED_ARGUMENT_NAMES
 from ..types import (
     get_data_type, get_data_type_packs, prepare_result_arguments)
-from . import load_tool_definition, run_script
+from . import install_dependencies, load_tool_definition, run_script
 
 
 class ServeScript(Script):
@@ -22,6 +22,7 @@ class ServeScript(Script):
 
     def run(self, args):
         tool_definition = load_tool_definition(args.tool_name)
+        install_dependencies(tool_definition)
         app = get_app(tool_definition, data_type_packs=get_data_type_packs())
         webbrowser.open_new_tab('http://127.0.0.1:4444/tools/0')
         server = make_server('127.0.0.1', 4444, app)
