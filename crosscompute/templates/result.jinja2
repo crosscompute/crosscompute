@@ -26,3 +26,8 @@
 <a href="{{ request.route_path('result_name.zip', id=result_id, name='%s-%s' % (result_id, tool_name)) }}" class="btn btn-success download" role="button" download>Download</a>
 {% endif %}
 {% endblock %}
+
+{% block body_script_inline %}
+{{ super() }}
+$('[data-toggle="popover"]').popover({'trigger': 'click hover focus'});
+{% endblock %}

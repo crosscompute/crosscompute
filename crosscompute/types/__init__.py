@@ -2,7 +2,6 @@ from abc import ABCMeta
 from invisibleroads_macros.disk import make_enumerated_folder
 from invisibleroads_macros.log import (
     format_nested_dictionary, parse_nested_dictionary)
-from itertools import izip
 from os.path import join, sep
 from six import add_metaclass
 from stevedore.extension import ExtensionManager
@@ -46,10 +45,10 @@ def get_data_type(tool_argument_name, data_type_packs=None):
 def get_data_type_packs():
     extension_manager = ExtensionManager(
         'crosscompute.types', invoke_on_load=True)
-    return sorted(izip(
+    return sorted(zip(
         extension_manager.names(),
         (x.obj for x in extension_manager.extensions),
-    ), key=lambda (name, extension): (-len(name), name))
+    ), key=lambda pack: (-len(pack[0]), pack))
 
 
 def prepare_result_arguments(
@@ -102,6 +101,6 @@ def _save_upload(data_folder, file_name, file_content, user_id):
     upload_folder = make_enumerated_folder(join(
         data_folder, 'uploads'), first_index=1 if user_id else 0)
     target_path = join(upload_folder, file_name)
-    with open(target_path, 'wb') as target_file:
+    with open(target_path, 'w') as target_file:
         target_file.write(file_content)
     return target_path

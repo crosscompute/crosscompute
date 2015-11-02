@@ -7,12 +7,20 @@ from os.path import basename, dirname, isabs, join, sep
 from pyramid.config import Configurator
 from pyramid.httpexceptions import HTTPBadRequest, HTTPSeeOther
 from pyramid.response import FileResponse
+from six import string_types
 from wsgiref.simple_server import make_server
 
 from ..configurations import RESERVED_ARGUMENT_NAMES
 from ..types import (
     get_data_type, get_data_type_packs, prepare_result_arguments)
 from . import load_tool_definition, run_script
+
+
+HELP_BY_KEY = {
+    'return_code': 'There was an error while running the script.',
+    'standard_error': 'The script wrote data to the standard error stream.',
+    'standard_output': 'The script wrote data to the standard output stream.',
+}
 
 
 class ServeScript(Script):
@@ -63,9 +71,13 @@ def get_template_variables(settings, base_template, tool_definition=None):
             return ''
         value = tool_definition[value_key + '.value']
         data_type = get_data_type_for(value_key)
-        if isinstance(value, basestring):
+        if isinstance(value, string_types):
             value = data_type.parse(value)
         return data_type.format(value)
+
+    def get_help(help_key):
+        return tool_definition.get(
+            help_key + '.help', HELP_BY_KEY.get(help_key, ''))
 
     def load_value(value_key, path):
         if not isabs(path):
@@ -84,6 +96,7 @@ def get_template_variables(settings, base_template, tool_definition=None):
         base_template=base_template,
         format_value=format_value,
         get_data_type_for=get_data_type_for,
+        get_help=get_help,
         prepare_tool_argument_noun=prepare_tool_argument_noun,
         tool_argument_names=tool_definition['argument_names'],
         tool_name=tool_definition['tool_name'])
@@ -131,7 +144,7 @@ def run_tool(request):
     target_folder = make_enumerated_folder(join(data_folder, 'results'))
     run_script(
         target_folder, tool_definition, result_arguments, data_type_packs,
-        save_logs=True)
+        save_logs=True, debug=True)
     compress_zip(target_folder)
     result_id = basename(target_folder)
     return HTTPSeeOther(request.route_path('result', id=result_id))

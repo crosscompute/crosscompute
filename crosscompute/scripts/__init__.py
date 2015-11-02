@@ -1,3 +1,4 @@
+import codecs
 import shlex
 import subprocess
 import sys
@@ -117,8 +118,8 @@ def stylize_tool_definition(tool_definition, result_arguments):
 
 def run_script(
         target_folder, tool_definition, result_arguments, data_type_packs,
-        save_logs=False):
-    timestamp = time.time()
+        save_logs=False, debug=False):
+    result_properties, timestamp = OrderedDict(), time.time()
     result_arguments = dict(result_arguments, target_folder=target_folder)
     result_configuration = _ResultConfiguration(target_folder)
     result_configuration.write_header(tool_definition, result_arguments)
@@ -128,11 +129,12 @@ def run_script(
             command_process = subprocess.Popen(
                 shlex.split(command),
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        standard_output, standard_error = [
-            x.rstrip() for x in command_process.communicate()]
+        standard_output, standard_error = [codecs.getdecoder('unicode_escape')(
+            x.rstrip())[0] for x in command_process.communicate()]
+        if command_process.returncode:
+            result_properties['return_code'] = command_process.returncode
     except OSError:
         standard_output, standard_error = None, 'Command not found'
-    result_properties = OrderedDict()
     if standard_output:
         key_prefix = '' if tool_definition.get('show_standard_output') else '_'
         result_properties[key_prefix + 'standard_output'] = standard_output
@@ -151,6 +153,8 @@ def run_script(
         result_properties['standard_errors'] = standard_errors
     result_properties['execution_time_in_seconds'] = time.time() - timestamp
     result_configuration.write_footer(result_properties, data_type_packs)
+    if debug and standard_error:
+        print('\n' + standard_error)
     return result_properties
 
 

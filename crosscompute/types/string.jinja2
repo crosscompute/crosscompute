@@ -4,7 +4,8 @@
 {% endmacro %}
 
 {% macro render_value(key, value) %}
-<h3>{{ key }}</h3>
+{% set help = get_help(key) %}
+<h3>{{ key }} {% if help %}<span class="glyphicon glyphicon-question-sign" data-toggle="popover" data-content="{{ help }}"></span>{% endif %}</h3>
 <div id="{{ key }}_">
 {% set lines = (value | string).strip().splitlines() %}
 {% if lines | length == 1 %}
