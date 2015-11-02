@@ -6,7 +6,7 @@ from os.path import join, sep
 
 from ..configurations import RESERVED_ARGUMENT_NAMES
 from ..types import get_data_type_packs, prepare_result_arguments
-from . import install_dependencies, load_tool_definition, run_script
+from . import load_tool_definition, run_script
 
 
 class RunScript(Script):
@@ -17,9 +17,8 @@ class RunScript(Script):
     def run(self, args):
         tool_definition = load_tool_definition(args.tool_name)
         tool_name = tool_definition['tool_name']
-        install_dependencies(tool_definition)
         data_type_packs = get_data_type_packs()
-        data_folder = join(sep + 'tmp', tool_name)
+        data_folder = join(sep, 'tmp', tool_name)
         argument_parser = ArgumentParser(tool_name)
         argument_parser.add_argument('tool_name', nargs='?', help=SUPPRESS)
         argument_parser = configure_argument_parser(

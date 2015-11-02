@@ -1,7 +1,7 @@
 0.2
 ---
 - Support data type plugins
-- Use base template from invisibleroads_posts
+- Add setup
 
 0.1
 ---

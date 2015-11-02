@@ -54,7 +54,7 @@ def get_data_type_packs():
 
 def prepare_result_arguments(
         tool_argument_names, raw_arguments, data_type_packs,
-        data_folder=sep + 'tmp', user_id=0):
+        data_folder=join(sep, 'tmp'), user_id=0):
     d, error_packs = {'_upload_keys': []}, []
     for tool_argument_name in tool_argument_names:
         if tool_argument_name in raw_arguments:

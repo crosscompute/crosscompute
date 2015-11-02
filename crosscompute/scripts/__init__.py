@@ -16,7 +16,7 @@ from invisibleroads_repositories import (
     get_github_repository_commit_hash, get_github_repository_url)
 
 from ..configurations import get_tool_definition
-from ..exceptions import CrossComputeError, DependencyError
+from ..exceptions import CrossComputeError
 from ..types import parse_data_dictionary
 
 
@@ -152,20 +152,6 @@ def run_script(
     result_properties['execution_time_in_seconds'] = time.time() - timestamp
     result_configuration.write_footer(result_properties, data_type_packs)
     return result_properties
-
-
-def install_dependencies(tool_definition):
-    install_python_dependencies(tool_definition['python.dependencies'])
-
-
-def install_python_dependencies(python_dependencies):
-    if not python_dependencies:
-        return
-    try:
-        subprocess.check_call(['pip', 'install', '-U'] + python_dependencies)
-    except subprocess.CalledProcessError:
-        raise DependencyError('Dependencies not installed (%s).' % ', '.join(
-            python_dependencies))
 
 
 def _save_log(target_folder, target_nickname, text):
