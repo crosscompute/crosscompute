@@ -1,4 +1,5 @@
 import codecs
+import os
 import shlex
 import subprocess
 import sys
@@ -127,7 +128,7 @@ def run_script(
     try:
         with cd(dirname(tool_definition['configuration_path'])):
             command_process = subprocess.Popen(
-                shlex.split(command),
+                shlex.split(command, posix=os.name == 'posix'),
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         standard_output, standard_error = [codecs.getdecoder('unicode_escape')(
             x.rstrip())[0] for x in command_process.communicate()]
