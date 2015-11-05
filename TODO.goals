@@ -1,5 +1,6 @@
 Use real file objects for PIPE
 Parse standard_outputs as nested_dictionary from result_configuration
+Consider crosscompute debug script
 Restore uploads
     Compute hash on import
 Enhance crosscompute run

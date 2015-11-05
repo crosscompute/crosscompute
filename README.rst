@@ -10,8 +10,9 @@ Installation from PyPI
     pip install -U crosscompute-integer crosscompute-text crosscompute-table
 
     git clone https://github.com/invisibleroads/crosscompute-examples
-    crosscompute run find-prime-factors
-    crosscompute serve find-prime-factors
+    crosscompute setup convert-timestamps
+    crosscompute run convert-timestamps
+    crosscompute serve convert-timestamps
 
 Installation from GitHub
 ------------------------
@@ -26,5 +27,6 @@ Installation from GitHub
     cd crosscompute/opt/crosscompute/types/text; python setup.py develop
     cd crosscompute/opt/crosscompute/types/table; python setup.py develop
 
-    crosscompute run find-prime-factors
-    crosscompute serve find-prime-factors
+    crosscompute setup convert-timestamps
+    crosscompute run convert-timestamps
+    crosscompute serve convert-timestamps
