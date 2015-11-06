@@ -1,5 +1,6 @@
 import codecs
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -12,14 +13,14 @@ from invisibleroads.scripts import (
 from invisibleroads_macros.disk import cd
 from invisibleroads_macros.exceptions import InvisibleRoadsError
 from invisibleroads_macros.log import (
-    format_hanging_indent, format_nested_dictionary, format_path,
-    sort_dictionary, stylize_dictionary)
+    format_hanging_indent, format_path, format_summary, sort_dictionary,
+    stylize_dictionary)
 from invisibleroads_repositories import (
     get_github_repository_commit_hash, get_github_repository_url)
 
 from ..configurations import get_tool_definition
 from ..exceptions import CrossComputeError
-from ..types import parse_data_dictionary
+from ..types import format_data_dictionary, parse_data_dictionary
 
 
 class _ResultConfiguration(object):
@@ -38,16 +39,14 @@ class _ResultConfiguration(object):
         template = '[tool_definition]\n%s\n'
         tool_definition = stylize_tool_definition(
             tool_definition, result_arguments)
-        suffix_format_packs = [
-            ('command', format_hanging_indent),
-            ('_path', format_path),
-        ]
-        print(template % format_nested_dictionary(
+        print(template % format_summary(
             sort_dictionary(tool_definition, [
                 'repository_url', 'tool_name', 'commit_hash',
                 'configuration_path', 'command',
-            ]), suffix_format_packs))
-        self.target_file.write(template % format_nested_dictionary(
+            ]), [
+                ('command', format_hanging_indent),
+            ]))
+        self.target_file.write(template % format_summary(
             sort_dictionary(tool_definition, [
                 'repository_url', 'tool_name', 'commit_hash',
             ])) + '\n')
@@ -55,30 +54,19 @@ class _ResultConfiguration(object):
         template = '[result_arguments]\n%s\n'
         result_arguments = sort_dictionary(
             result_arguments, tool_argument_names)
-        suffix_format_packs = [
-            ('_folder', format_path),
-            ('_path', format_path),
-        ]
-        print(template % format_nested_dictionary(
-            OrderedDict(result_arguments, target_folder=target_folder),
-            suffix_format_packs))
-        self.target_file.write(template % format_nested_dictionary(
-            result_arguments, suffix_format_packs) + '\n')
+        print(template % format_summary(
+            OrderedDict(result_arguments, target_folder=target_folder)))
+        self.target_file.write(template % format_summary(
+            result_arguments) + '\n')
 
     def write_footer(self, result_properties, data_type_packs):
         template = '[result_properties]\n%s'
-        suffix_format_packs = [
-            (suffix, data_type.format) for suffix, data_type in data_type_packs
-        ] + [
-            ('_folder', format_path),
-            ('_path', format_path),
-        ]
         result_properties.pop('_standard_output', None)
         result_properties.pop('_standard_error', None)
-        print(template % format_nested_dictionary(
-            result_properties, suffix_format_packs, censored=False))
-        self.target_file.write(template % format_nested_dictionary(
-            result_properties, suffix_format_packs, censored=True) + '\n')
+        print(template % format_data_dictionary(
+            result_properties, data_type_packs, censored=False))
+        self.target_file.write(template % format_data_dictionary(
+            result_properties, data_type_packs, censored=True) + '\n')
 
 
 def launch(argv=sys.argv):
@@ -110,10 +98,12 @@ def stylize_tool_definition(tool_definition, result_arguments):
         d['commit_hash'] = get_github_repository_commit_hash(tool_folder)
     except InvisibleRoadsError:
         pass
-    d['command'] = tool_definition['command_template'].format(
+    d['command'] = render_command(
+        tool_definition['command_template'],
         **stylize_dictionary(result_arguments, [
             ('_folder', format_path),
-            ('_path', format_path)]))
+            ('_path', format_path),
+        ]))
     return d
 
 
@@ -124,7 +114,8 @@ def run_script(
     result_arguments = dict(result_arguments, target_folder=target_folder)
     result_configuration = _ResultConfiguration(target_folder)
     result_configuration.write_header(tool_definition, result_arguments)
-    command = tool_definition['command_template'].format(**result_arguments)
+    command = render_command(
+        tool_definition['command_template'], result_arguments)
     try:
         with cd(dirname(tool_definition['configuration_path'])):
             command_process = subprocess.Popen(
@@ -136,22 +127,13 @@ def run_script(
             result_properties['return_code'] = command_process.returncode
     except OSError:
         standard_output, standard_error = None, 'Command not found'
-    if standard_output:
-        key_prefix = '' if tool_definition.get('show_standard_output') else '_'
-        result_properties[key_prefix + 'standard_output'] = standard_output
-        if save_logs:
-            _save_log(target_folder, 'standard_output', standard_output)
-    if standard_error:
-        key_prefix = '' if tool_definition.get('show_standard_error') else '_'
-        result_properties[key_prefix + 'standard_error'] = standard_error
-        if save_logs:
-            _save_log(target_folder, 'standard_error', standard_error)
-    standard_outputs = parse_data_dictionary(standard_output, data_type_packs)
-    if standard_outputs:
-        result_properties['standard_outputs'] = standard_outputs
-    standard_errors = parse_data_dictionary(standard_error, data_type_packs)
-    if standard_errors:
-        result_properties['standard_errors'] = standard_errors
+    for stream_name, stream_content in [
+        ('standard_output', standard_output),
+        ('standard_error', standard_error),
+    ]:
+        _store_stream(
+            target_folder, stream_name, stream_content, tool_definition,
+            result_properties, data_type_packs, save_logs)
     result_properties['execution_time_in_seconds'] = time.time() - timestamp
     result_configuration.write_footer(result_properties, data_type_packs)
     if debug and standard_error:
@@ -159,7 +141,27 @@ def run_script(
     return result_properties
 
 
-def _save_log(target_folder, target_nickname, text):
-    target_path = join(target_folder, '%s.log' % target_nickname)
-    target_file = open(target_path, 'wt')
-    target_file.write(text + '\n')
+def render_command(command_template, result_arguments):
+    d = {}
+    quote_pattern = re.compile(r"""["'].*["']""")
+    for k, v in result_arguments.items():
+        v = v.strip()
+        if ' ' in v and not quote_pattern.match(v):
+            v = '"%s"' % v
+        d[k] = v
+    return command_template.format(**d)
+
+
+def _store_stream(
+        target_folder, target_nickname, stream_content, tool_definition,
+        result_properties, data_type_packs, write_to_disk):
+    if not stream_content:
+        return
+    key_prefix = '' if tool_definition.get('show_' + target_nickname) else '_'
+    result_properties[key_prefix + target_nickname] = stream_content
+    if write_to_disk:
+        target_path = join(target_folder, '%s.log' % target_nickname)
+        open(target_path, 'wt').write(stream_content + '\n')
+    value_by_key = parse_data_dictionary(stream_content, data_type_packs)
+    if value_by_key:
+        result_properties[target_nickname + 's'] = value_by_key

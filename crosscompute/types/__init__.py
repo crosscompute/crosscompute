@@ -1,7 +1,7 @@
 from abc import ABCMeta
 from invisibleroads_macros.disk import make_enumerated_folder
 from invisibleroads_macros.log import (
-    format_nested_dictionary, parse_nested_dictionary)
+    format_summary, parse_nested_dictionary)
 from os.path import join, sep
 from six import add_metaclass
 from stevedore.extension import ExtensionManager
@@ -85,10 +85,10 @@ def prepare_result_arguments(
     return d
 
 
-def format_data_dictionary(value_by_key, data_type_packs):
+def format_data_dictionary(value_by_key, data_type_packs, censored=False):
     suffix_format_packs = [
         (suffix, data_type.format) for suffix, data_type in data_type_packs]
-    return format_nested_dictionary(value_by_key, suffix_format_packs)
+    return format_summary(value_by_key, suffix_format_packs, censored=censored)
 
 
 def parse_data_dictionary(text, data_type_packs):
