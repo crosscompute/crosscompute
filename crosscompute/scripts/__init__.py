@@ -100,7 +100,7 @@ def stylize_tool_definition(tool_definition, result_arguments):
         pass
     d['command'] = render_command(
         tool_definition['command_template'],
-        **stylize_dictionary(result_arguments, [
+        stylize_dictionary(result_arguments, [
             ('_folder', format_path),
             ('_path', format_path),
         ]))

@@ -5,7 +5,7 @@ from invisibleroads_macros.disk import make_enumerated_folder
 from os.path import join, sep
 
 from ..configurations import RESERVED_ARGUMENT_NAMES
-from ..types import get_data_type_packs, prepare_result_arguments
+from ..types import get_data_type_packs, get_result_arguments
 from . import load_tool_definition, run_script
 
 
@@ -24,7 +24,7 @@ class RunScript(Script):
         argument_parser = configure_argument_parser(
             argument_parser, tool_definition, data_type_packs)
         try:
-            result_arguments = prepare_result_arguments(
+            result_arguments = get_result_arguments(
                 tool_definition['argument_names'],
                 argument_parser.parse_args(sys.argv[2:]).__dict__,
                 data_type_packs, data_folder)

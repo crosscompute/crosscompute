@@ -12,7 +12,7 @@ from wsgiref.simple_server import make_server
 
 from ..configurations import RESERVED_ARGUMENT_NAMES
 from ..types import (
-    get_data_type, get_data_type_packs, prepare_result_arguments)
+    get_data_type, get_data_type_packs, get_result_arguments)
 from . import load_tool_definition, run_script
 
 
@@ -136,7 +136,7 @@ def run_tool(request):
     data_type_packs = settings['data_type_packs']
     data_folder = settings['data.folder']
     try:
-        result_arguments = prepare_result_arguments(
+        result_arguments = get_result_arguments(
             tool_definition['argument_names'], request.params, data_type_packs,
             data_folder)
     except TypeError as e:

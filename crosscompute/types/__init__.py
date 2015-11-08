@@ -51,10 +51,10 @@ def get_data_type_packs():
     ), key=lambda pack: (-len(pack[0]), pack))
 
 
-def prepare_result_arguments(
+def get_result_arguments(
         tool_argument_names, raw_arguments, data_type_packs,
         data_folder=join(sep, 'tmp'), user_id=0):
-    d, error_packs = {'_upload_keys': []}, []
+    d, error_packs = {}, []
     for tool_argument_name in tool_argument_names:
         if tool_argument_name in raw_arguments:
             value = raw_arguments[tool_argument_name]
@@ -78,7 +78,6 @@ def prepare_result_arguments(
                 except TypeError as e:
                     error_packs.append((raw_argument_name, str(e)))
                 d[tool_argument_name] = target_path
-                d['_upload_keys'].append(tool_argument_name)
                 break
     if error_packs:
         raise TypeError(*error_packs)
