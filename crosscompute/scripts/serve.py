@@ -75,10 +75,6 @@ def get_template_variables(settings, base_template, tool_definition=None):
             value = data_type.parse(value)
         return data_type.format(value)
 
-    def get_help(help_key):
-        return tool_definition.get(
-            help_key + '.help', HELP_BY_KEY.get(help_key, ''))
-
     def load_value(value_key, path):
         if not isabs(path):
             path = join(dirname(tool_definition['configuration_path']), path)
@@ -96,7 +92,8 @@ def get_template_variables(settings, base_template, tool_definition=None):
         base_template=base_template,
         format_value=format_value,
         get_data_type_for=get_data_type_for,
-        get_help=get_help,
+        get_help=lambda x: tool_definition.get(
+            x + '.help', HELP_BY_KEY.get(x, '')),
         prepare_tool_argument_noun=prepare_tool_argument_noun,
         tool_argument_names=tool_definition['argument_names'],
         tool_name=tool_definition['tool_name'])
