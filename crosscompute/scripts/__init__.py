@@ -136,6 +136,8 @@ def run_script(
             result_properties, data_type_packs, save_logs)
     result_properties['execution_time_in_seconds'] = time.time() - timestamp
     result_configuration.write_footer(result_properties, data_type_packs)
+    if debug and standard_output:
+        print('\n' + standard_output)
     if debug and standard_error:
         print('\n' + standard_error)
     return result_properties

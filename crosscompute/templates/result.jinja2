@@ -8,6 +8,7 @@
 {% block head_style_inline %}
 {{ super() }}
 .download {margin-top: 2em}
+#standard-errors {background-color: yellow}
 {% endblock %}
 
 {% block body_content %}
@@ -19,27 +20,12 @@
 
 {% if result_properties %}
 {% set standard_errors = result_properties.pop('standard_errors', {}) %}
+{% if standard_errors %}<h2>Errors</h2><div id="standard-errors">{{ render_values(standard_errors) }}</div>{% endif %}
+
 {% set standard_outputs = result_properties.pop('standard_outputs', {}) %}
+{% if standard_outputs %}<h2>Outputs</h2><div id="standard-outputs">{{ render_values(standard_outputs) }}</div>{% endif %}
 
-{% if standard_errors %}
-<h2>Errors</h2>
-<div id="standard_errors">
-{{ render_values(standard_errors) }}
-</div>
-{% endif %}
-
-{% if standard_outputs %}
-<h2>Outputs</h2>
-<div id="standard_outputs">
-{{ render_values(standard_outputs) }}
-</div>
-{% endif %}
-
-<h2>Properties</h2>
-<div id="result_properties">
-{{ render_values(result_properties) }}
-</div>
-
+<h2>Properties</h2><div id="result_properties">{{ render_values(result_properties) }}</div>
 <a href="{{ request.route_path('result_name.zip', id=result_id, name='%s-%s' % (result_id, tool_name)) }}" class="btn btn-success download" role="button" download>Download</a>
 {% endif %}
 {% endblock %}

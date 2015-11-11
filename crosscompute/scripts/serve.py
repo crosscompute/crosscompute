@@ -156,7 +156,7 @@ def show_result(request):
     result_configuration.read(join(target_folder, 'result.cfg'))
     result_arguments = OrderedDict(result_configuration['result_arguments'])
     result_properties = parse_nested_dictionary_from(
-        result_configuration['result_properties'])
+        result_configuration['result_properties'], max_depth=1)
     return dict(
         result_id=result_id,
         result_arguments=result_arguments,
