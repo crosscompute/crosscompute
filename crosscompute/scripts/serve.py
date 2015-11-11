@@ -3,6 +3,7 @@ from collections import OrderedDict
 from configparser import RawConfigParser
 from invisibleroads.scripts import Script
 from invisibleroads_macros.disk import compress_zip, make_enumerated_folder
+from invisibleroads_macros.log import parse_nested_dictionary_from
 from os.path import basename, dirname, isabs, join, sep
 from pyramid.config import Configurator
 from pyramid.httpexceptions import HTTPBadRequest, HTTPSeeOther
@@ -154,7 +155,8 @@ def show_result(request):
     result_configuration = RawConfigParser()
     result_configuration.read(join(target_folder, 'result.cfg'))
     result_arguments = OrderedDict(result_configuration['result_arguments'])
-    result_properties = OrderedDict(result_configuration['result_properties'])
+    result_properties = parse_nested_dictionary_from(
+        result_configuration['result_properties'])
     return dict(
         result_id=result_id,
         result_arguments=result_arguments,

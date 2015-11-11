@@ -1,5 +1,4 @@
 Use real file objects for PIPE
-Parse standard_outputs as nested_dictionary from result_configuration
 Consider crosscompute debug script
 Consider prompting setup if we detect an import error
 Restore uploads
