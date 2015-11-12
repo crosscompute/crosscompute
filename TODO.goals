@@ -1,3 +1,20 @@
++ Remove _standard_output and _standard_error from result_properties
++ Move standard_output and standard_error debug display to middle
+
+Exclude _.msg, standard_output.log, standard_error.log from zip file
+Implement load_safely for each type
+Implement match for each type
+
+Load data types in output after running script to test values
+
+Write test that checks mismatching data type in input
+    Check that bad table_path is automatically handled
+Write test that checks mismatching data type in output
+
+Restore max_depth to show_result
+
+
+
 Use real file objects for PIPE
 Consider crosscompute debug script
 Consider prompting setup if we detect an import error

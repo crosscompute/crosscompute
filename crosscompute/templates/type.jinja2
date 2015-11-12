@@ -1,6 +1,15 @@
 {% macro render_values(value_by_key) %}
+{% set default_data_type = get_data_type_for('') %}
 {% for key, value in value_by_key.items() if not key.startswith('_') %}
-{% from get_data_type_for(key).template import render_value with context %}
+
+{% set data_type = get_data_type_for(key) %}
+{# 
+{% if not data_type.match(value) %}
+{% set data_type = default_data_type %}
+{% endif %}
+#}
+{% from data_type.template import render_value with context %}
+
 <div>{{ render_value(key, value) }}</div>
 {% endfor %}
 {% endmacro %}

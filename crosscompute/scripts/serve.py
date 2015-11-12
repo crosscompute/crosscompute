@@ -142,8 +142,9 @@ def run_tool(request):
     target_folder = make_enumerated_folder(join(data_folder, 'results'))
     run_script(
         target_folder, tool_definition, result_arguments, data_type_packs,
-        save_logs=True, debug=True)
-    compress_zip(target_folder)
+        debug=True)
+    compress_zip(target_folder, excludes=[
+        'standard_output.log', 'standard_error.log'])
     result_id = basename(target_folder)
     return HTTPSeeOther(request.route_path('result', id=result_id))
 

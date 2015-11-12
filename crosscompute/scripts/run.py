@@ -33,8 +33,7 @@ class RunScript(Script):
         run_script(
             result_arguments.get('target_folder') or make_enumerated_folder(
                 join(data_folder, 'results')),
-            tool_definition, result_arguments, data_type_packs,
-            save_logs=True, debug=True)
+            tool_definition, result_arguments, data_type_packs, debug=True)
 
 
 def configure_argument_parser(

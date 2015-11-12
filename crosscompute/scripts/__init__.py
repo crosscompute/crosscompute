@@ -59,10 +59,8 @@ class _ResultConfiguration(object):
         self.target_file.write(template % format_summary(
             result_arguments) + '\n')
 
-    def write_footer(self, result_properties, data_type_packs):
+    def write_footer(self, result_properties, data_type_packs, debug=False):
         template = '[result_properties]\n%s'
-        result_properties.pop('_standard_output', None)
-        result_properties.pop('_standard_error', None)
         print(template % format_data_dictionary(
             result_properties, data_type_packs, censored=False))
         self.target_file.write(template % format_data_dictionary(
@@ -109,7 +107,7 @@ def stylize_tool_definition(tool_definition, result_arguments):
 
 def run_script(
         target_folder, tool_definition, result_arguments, data_type_packs,
-        save_logs=False, debug=False):
+        debug=False):
     result_properties, timestamp = OrderedDict(), time.time()
     result_arguments = dict(result_arguments, target_folder=target_folder)
     result_configuration = _ResultConfiguration(target_folder)
@@ -127,19 +125,12 @@ def run_script(
             result_properties['return_code'] = command_process.returncode
     except OSError:
         standard_output, standard_error = None, 'Command not found'
-    for stream_name, stream_content in [
-        ('standard_output', standard_output),
-        ('standard_error', standard_error),
-    ]:
-        _store_stream(
-            target_folder, stream_name, stream_content, tool_definition,
-            result_properties, data_type_packs, save_logs)
+    result_properties.update(_process_streams(
+        standard_output, standard_error, target_folder, tool_definition,
+        data_type_packs, debug))
     result_properties['execution_time_in_seconds'] = time.time() - timestamp
-    result_configuration.write_footer(result_properties, data_type_packs)
-    if debug and standard_output:
-        print('\n' + standard_output)
-    if debug and standard_error:
-        print('\n' + standard_error)
+    result_configuration.write_footer(
+        result_properties, data_type_packs, debug)
     return result_properties
 
 
@@ -147,23 +138,41 @@ def render_command(command_template, result_arguments):
     d = {}
     quote_pattern = re.compile(r"""["'].*["']""")
     for k, v in result_arguments.items():
-        v = v.strip()
+        v = str(v).strip()
         if ' ' in v and not quote_pattern.match(v):
             v = '"%s"' % v
         d[k] = v
     return command_template.format(**d)
 
 
+def _process_streams(
+        standard_output, standard_error, target_folder, tool_definition,
+        data_type_packs, debug):
+    d = {}
+    for stream_name, stream_content in [
+        ('standard_output', standard_output),
+        ('standard_error', standard_error),
+    ]:
+        d.update(_store_stream(
+            target_folder, stream_name, stream_content, tool_definition,
+            data_type_packs, debug))
+        if debug and stream_content:
+            print('[%s]\n%s\n' % (stream_name, stream_content))
+    return d
+
+
 def _store_stream(
         target_folder, target_nickname, stream_content, tool_definition,
-        result_properties, data_type_packs, write_to_disk):
+        data_type_packs, debug):
+    d = {}
     if not stream_content:
-        return
-    key_prefix = '' if tool_definition.get('show_' + target_nickname) else '_'
-    result_properties[key_prefix + target_nickname] = stream_content
-    if write_to_disk:
+        return d
+    if debug:
         target_path = join(target_folder, '%s.log' % target_nickname)
         open(target_path, 'wt').write(stream_content + '\n')
+    if tool_definition.get('show_' + target_nickname):
+        d[target_nickname] = stream_content
     value_by_key = parse_data_dictionary(stream_content, data_type_packs)
     if value_by_key:
-        result_properties[target_nickname + 's'] = value_by_key
+        d[target_nickname + 's'] = value_by_key
+    return d
