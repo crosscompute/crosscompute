@@ -1,17 +1,17 @@
 + Remove _standard_output and _standard_error from result_properties
 + Move standard_output and standard_error debug display to middle
++ Exclude _.msg, standard_output.log, standard_error.log from zip file
++ Write test that checks mismatching data type in input
++ Write test that checks mismatching data type in output
 
-Exclude _.msg, standard_output.log, standard_error.log from zip file
-Implement load_safely for each type
-Implement match for each type
-
+Load data types in input before running script to test values
 Load data types in output after running script to test values
-
-Write test that checks mismatching data type in input
-    Check that bad table_path is automatically handled
-Write test that checks mismatching data type in output
+Implement match for each type
+Implement load_safely for each type
 
 Restore max_depth to show_result
+
+Check that resolve_result_argument_paths rejects ../.. paths
 
 
 
@@ -34,3 +34,4 @@ Enhance crosscompute serve
     Accept markdown syntax for user interface template
     Enable support for meinheld server
     Enable support for chaussette server
+Test for tables with good extensions but bad content
