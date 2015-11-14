@@ -1,17 +1,6 @@
-+ Remove _standard_output and _standard_error from result_properties
-+ Move standard_output and standard_error debug display to middle
-+ Exclude _.msg, standard_output.log, standard_error.log from zip file
-+ Write test that checks mismatching data type in input
-+ Write test that checks mismatching data type in output
-+ Load data types in input before running script to test values
-+ Load data types in output after running script to test values
-
 Implement load_safely
 Implement match for each type
-
 Restore max_depth to show_result
-
-Check that resolve_result_argument_paths rejects ../.. paths
 
 
 

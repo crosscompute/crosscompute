@@ -1,9 +1,11 @@
 from abc import ABCMeta
 from invisibleroads_macros.disk import make_enumerated_folder
-from invisibleroads_macros.log import format_summary, parse_nested_dictionary
+from invisibleroads_macros.log import parse_nested_dictionary
 from os.path import join, sep
 from six import add_metaclass
 from stevedore.extension import ExtensionManager
+
+from ..configurations import RESERVED_ARGUMENT_NAMES
 
 
 @add_metaclass(ABCMeta)
@@ -66,8 +68,11 @@ def get_result_arguments(
                     user_id)
             except KeyError:
                 errors.append((tool_argument_name, 'required'))
+                continue
         else:
-            errors.append((tool_argument_name, 'required'))
+            if tool_argument_name not in RESERVED_ARGUMENT_NAMES:
+                errors.append((tool_argument_name, 'required'))
+            continue
         d[tool_argument_name] = value
     d, more_errors = parse_data_dictionary_from(d, data_type_packs)
     errors.extend(more_errors)
