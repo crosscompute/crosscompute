@@ -40,8 +40,8 @@ def configure_argument_parser(
         argument_parser, tool_definition, data_type_packs):
     for x in tool_definition['argument_names']:
         d = {}
-        if x + '.value' in tool_definition:
-            d['default'] = tool_definition[x + '.value']
+        if x in tool_definition:
+            d['default'] = tool_definition[x]
         elif x not in RESERVED_ARGUMENT_NAMES:
             d['required'] = True
         for name, extension in data_type_packs:

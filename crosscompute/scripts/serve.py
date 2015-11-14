@@ -68,9 +68,9 @@ def get_template_variables(settings, base_template, tool_definition=None):
     get_data_type_for = lambda x: get_data_type(x, settings['data_type_packs'])
 
     def format_value(value_key):
-        if value_key + '.value' not in tool_definition:
+        if value_key not in tool_definition:
             return ''
-        value = tool_definition[value_key + '.value']
+        value = tool_definition[value_key]
         data_type = get_data_type_for(value_key)
         if isinstance(value, string_types):
             value = data_type.parse(value)
@@ -83,9 +83,9 @@ def get_template_variables(settings, base_template, tool_definition=None):
 
     def prepare_tool_argument_noun(path_key):
         tool_argument_noun = path_key[:-5]
-        if path_key + '.value' in tool_definition:
-            tool_definition[tool_argument_noun + '.value'] = load_value(
-                tool_argument_noun, tool_definition[path_key + '.value'])
+        if path_key in tool_definition:
+            tool_definition[tool_argument_noun] = load_value(
+                tool_argument_noun, tool_definition[path_key])
         return tool_argument_noun
 
     return dict(

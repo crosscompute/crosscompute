@@ -9,7 +9,6 @@ def run(tool_name, result_arguments=None):
     command_terms = ['crosscompute', 'run', tool_name]
     for k, v in (result_arguments or {}).items():
         command_terms.extend(['--%s' % k, str(v)])
-    print command_terms
     with cd(TESTS_FOLDER):
         process = subprocess.Popen(
             command_terms, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -36,15 +35,13 @@ def test_run_with_bad_integer_output():
 
 def test_run_with_good_table_input():
     standard_output = run('load-table', {
-        'a_table_path': join(TESTS_FOLDER, 'good.csv'),
-    })[0]
+        'a_table_path': join(TESTS_FOLDER, 'good.csv')})[0]
     assert 'row_count = 3' in standard_output
 
 
 def test_run_with_bad_table_input():
     standard_output = run('load-table', {
-        'a_table_path': join(TESTS_FOLDER, 'cc.ini'),
-    })[0]
+        'a_table_path': join(TESTS_FOLDER, 'cc.ini')})[0]
     assert 'a_table.error = unsupported_format' in standard_output
 
 

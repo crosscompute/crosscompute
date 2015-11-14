@@ -20,7 +20,7 @@ from invisibleroads_repositories import (
 
 from ..configurations import get_tool_definition
 from ..exceptions import CrossComputeError
-from ..types import format_data_dictionary, parse_data_dictionary
+from ..types import parse_data_dictionary
 
 
 class _ResultConfiguration(object):
@@ -61,10 +61,10 @@ class _ResultConfiguration(object):
 
     def write_footer(self, result_properties, data_type_packs, debug=False):
         template = '[result_properties]\n%s'
-        print(template % format_data_dictionary(
-            result_properties, data_type_packs, censored=False))
-        self.target_file.write(template % format_data_dictionary(
-            result_properties, data_type_packs, censored=True) + '\n')
+        print(template % format_summary(
+            result_properties, censored=False))
+        self.target_file.write(template % format_summary(
+            result_properties, censored=True) + '\n')
 
 
 def launch(argv=sys.argv):
@@ -148,31 +148,25 @@ def render_command(command_template, result_arguments):
 def _process_streams(
         standard_output, standard_error, target_folder, tool_definition,
         data_type_packs, debug):
-    d = {}
+    d, type_errors = OrderedDict(), OrderedDict()
     for stream_name, stream_content in [
         ('standard_output', standard_output),
         ('standard_error', standard_error),
     ]:
-        d.update(_store_stream(
-            target_folder, stream_name, stream_content, tool_definition,
-            data_type_packs, debug))
-        if debug and stream_content:
+        if not stream_content:
+            continue
+        if debug:
+            log_path = join(target_folder, '%s.log' % stream_name)
+            open(log_path, 'wt').write(stream_content + '\n')
             print('[%s]\n%s\n' % (stream_name, stream_content))
-    return d
-
-
-def _store_stream(
-        target_folder, target_nickname, stream_content, tool_definition,
-        data_type_packs, debug):
-    d = {}
-    if not stream_content:
-        return d
-    if debug:
-        target_path = join(target_folder, '%s.log' % target_nickname)
-        open(target_path, 'wt').write(stream_content + '\n')
-    if tool_definition.get('show_' + target_nickname):
-        d[target_nickname] = stream_content
-    value_by_key = parse_data_dictionary(stream_content, data_type_packs)
-    if value_by_key:
-        d[target_nickname + 's'] = value_by_key
+        value_by_key, errors = parse_data_dictionary(
+            stream_content, data_type_packs)
+        for k, v in errors:
+            type_errors['%s.error' % k] = v
+        if tool_definition.get('show_' + stream_name):
+            d[stream_name] = stream_content
+        if value_by_key:
+            d[stream_name + 's'] = value_by_key
+    if type_errors:
+        d['type_errors'] = type_errors
     return d
