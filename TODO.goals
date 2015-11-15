@@ -1,9 +1,3 @@
-+ Implement load_safely
-= Implement match for each type
-Restore max_depth to show_result
-
-
-
 Use real file objects for PIPE
 Consider crosscompute debug script
 Consider prompting setup if we detect an import error

@@ -1,5 +1,4 @@
 import webbrowser
-from collections import OrderedDict
 from configparser import RawConfigParser
 from invisibleroads.scripts import Script
 from invisibleroads_macros.disk import compress_zip, make_enumerated_folder
@@ -13,7 +12,8 @@ from wsgiref.simple_server import make_server
 
 from ..configurations import RESERVED_ARGUMENT_NAMES
 from ..types import (
-    get_data_type, get_data_type_packs, get_result_arguments)
+    get_data_type, get_data_type_packs, get_result_arguments,
+    parse_data_dictionary_from)
 from . import load_tool_definition, run_script
 
 
@@ -135,8 +135,7 @@ def run_tool(request):
     data_folder = settings['data.folder']
     try:
         result_arguments = get_result_arguments(
-            tool_definition['argument_names'], request.params, data_type_packs,
-            data_folder)
+            tool_definition, request.params, data_type_packs, data_folder)
     except TypeError as e:
         raise HTTPBadRequest(dict(e.args))
     target_folder = make_enumerated_folder(join(data_folder, 'results'))
@@ -151,15 +150,20 @@ def run_tool(request):
 
 def show_result(request):
     settings = request.registry.settings
+    configuration_folder = dirname(settings['tool_definition'][
+        'configuration_path'])
     result_id = request.matchdict['id']
     target_folder = join(settings['data.folder'], 'results', result_id)
     result_configuration = RawConfigParser()
     result_configuration.read(join(target_folder, 'result.cfg'))
-    result_arguments = OrderedDict(
+    data_type_packs = get_data_type_packs()
+    parse_value_by_key = lambda d: parse_data_dictionary_from(
+        d, data_type_packs, configuration_folder)[0]
+    result_arguments = parse_value_by_key(
         result_configuration['result_arguments'],
     ) if result_configuration.has_section('result_arguments') else {}
-    result_properties = parse_nested_dictionary_from(
-        result_configuration['result_properties'], max_depth=1)
+    result_properties = parse_value_by_key(parse_nested_dictionary_from(
+        result_configuration['result_properties'], max_depth=1))
     return dict(
         result_id=result_id,
         result_arguments=result_arguments,

@@ -25,7 +25,7 @@ class RunScript(Script):
             argument_parser, tool_definition, data_type_packs)
         try:
             result_arguments = get_result_arguments(
-                tool_definition['argument_names'],
+                tool_definition,
                 argument_parser.parse_args(sys.argv[2:]).__dict__,
                 data_type_packs, data_folder)
         except TypeError as e:

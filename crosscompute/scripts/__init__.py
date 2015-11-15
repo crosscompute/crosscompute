@@ -6,6 +6,7 @@ import subprocess
 import sys
 import time
 from collections import OrderedDict
+from os import sep
 from os.path import dirname, join, relpath
 from invisibleroads.scripts import (
     ReflectiveArgumentParser,
@@ -81,6 +82,7 @@ def launch(argv=sys.argv):
 
 
 def load_tool_definition(tool_name):
+    tool_name = tool_name.rstrip(sep)  # Remove folder autocompletion slash
     try:
         tool_definition = get_tool_definition(tool_name=tool_name)
     except CrossComputeError as e:
@@ -152,6 +154,7 @@ def _process_streams(
         standard_output, standard_error, target_folder, tool_definition,
         data_type_packs, debug):
     d, type_errors = OrderedDict(), OrderedDict()
+    configuration_folder = dirname(tool_definition['configuration_path'])
     for stream_name, stream_content in [
         ('standard_output', standard_output),
         ('standard_error', standard_error),
@@ -163,7 +166,7 @@ def _process_streams(
             open(log_path, 'wt').write(stream_content + '\n')
             print('[%s]\n%s\n' % (stream_name, stream_content))
         value_by_key, errors = parse_data_dictionary(
-            stream_content, data_type_packs)
+            stream_content, data_type_packs, configuration_folder)
         for k, v in errors:
             type_errors['%s.error' % k] = v
         if tool_definition.get('show_' + stream_name):

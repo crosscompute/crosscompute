@@ -10,7 +10,7 @@
 {% set data_type = get_data_type_for(tool_argument_noun) %}
 {% from data_type.template import render_value with context %}
 {% set value = data_type.load_safely(path) %}
-{% if value %}
+{% if value is not none %}
 {{ render_value(tool_argument_noun, value) }}
 {% else %}
 {% set data_type = get_data_type_for('') %}

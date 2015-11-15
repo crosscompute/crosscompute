@@ -1,7 +1,8 @@
 from abc import ABCMeta
+from collections import OrderedDict
 from invisibleroads_macros.disk import make_enumerated_folder
 from invisibleroads_macros.log import parse_nested_dictionary
-from os.path import join, sep
+from os.path import dirname, isabs, join, sep
 from six import add_metaclass
 from stevedore.extension import ExtensionManager
 
@@ -17,7 +18,7 @@ class DataType(object):
     def load_safely(self, path):
         try:
             value = self.load(path)
-        except TypeError:
+        except (IOError, TypeError):
             value = None
         return value
 
@@ -29,6 +30,9 @@ class DataType(object):
 
     def format(self, value):
         return value
+
+    def match(self, value):
+        return True
 
 
 class StringType(DataType):
@@ -60,10 +64,10 @@ def get_data_type_packs():
 
 
 def get_result_arguments(
-        tool_argument_names, raw_arguments, data_type_packs,
+        tool_definition, raw_arguments, data_type_packs,
         data_folder=join(sep, 'tmp'), user_id=0):
     d, errors = {}, []
-    for tool_argument_name in tool_argument_names:
+    for tool_argument_name in tool_definition['argument_names']:
         if tool_argument_name in raw_arguments:
             value = raw_arguments[tool_argument_name]
         elif tool_argument_name.endswith('_path'):
@@ -81,7 +85,8 @@ def get_result_arguments(
                 errors.append((tool_argument_name, 'required'))
             continue
         d[tool_argument_name] = value
-    d, more_errors = parse_data_dictionary_from(d, data_type_packs)
+    d, more_errors = parse_data_dictionary_from(
+        d, data_type_packs, dirname(tool_definition['configuration_path']))
     errors.extend(more_errors)
     if errors:
         raise TypeError(*errors)
@@ -106,9 +111,10 @@ def prepare_file_path(
     return file_path
 
 
-def parse_data_dictionary_from(raw_dictionary, data_type_packs):
-    d, errors = {}, []
-    for key, value in raw_dictionary.items():
+def parse_data_dictionary_from(
+        raw_dictionary, data_type_packs, configuration_folder):
+    d, errors = OrderedDict(), []
+    for key, value in OrderedDict(raw_dictionary).items():
         data_type = get_data_type(key, data_type_packs)
         try:
             value = data_type.parse(value)
@@ -119,13 +125,17 @@ def parse_data_dictionary_from(raw_dictionary, data_type_packs):
             continue
         noun = key[:-5]
         data_type = get_data_type(noun, data_type_packs)
+        if not isabs(value):
+            value = join(configuration_folder, value)
         try:
             data_type.load(value)
+        except IOError as e:
+            errors.append((noun, 'not_found'))
         except TypeError as e:
             errors.append((noun, str(e)))
     return d, errors
 
 
-def parse_data_dictionary(text, data_type_packs):
-    value_by_key = parse_nested_dictionary(text)
-    return parse_data_dictionary_from(value_by_key, data_type_packs)
+def parse_data_dictionary(text, data_type_packs, configuration_folder):
+    return parse_data_dictionary_from(parse_nested_dictionary(
+        text), data_type_packs, configuration_folder)
