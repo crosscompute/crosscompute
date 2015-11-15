@@ -1,11 +1,20 @@
 {% macro render_query(key) %}
 {% set tool_argument_noun = prepare_tool_argument_noun(key) %}
-{% from get_data_type_for(tool_argument_noun).template import render_query with context %}
+{% set data_type = get_data_type_for(tool_argument_noun) %}
+{% from data_type.template import render_query with context %}
 {{ render_query(tool_argument_noun) }}
 {% endmacro %}
 
 {% macro render_value(key, path) %}
 {% set tool_argument_noun = key[:-5] %}
-{% from get_data_type_for(tool_argument_noun).template import render_value with context %}
-{{ render_value(tool_argument_noun, get_data_type_for(tool_argument_noun).load(path)) }}
+{% set data_type = get_data_type_for(tool_argument_noun) %}
+{% from data_type.template import render_value with context %}
+{% set value = data_type.load_safely(path) %}
+{% if value %}
+{{ render_value(tool_argument_noun, value) }}
+{% else %}
+{% set data_type = get_data_type_for('') %}
+{% from data_type.template import render_value with context %}
+{{ render_value(key, path) }}
+{% endif %}
 {% endmacro %}

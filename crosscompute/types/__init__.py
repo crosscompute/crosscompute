@@ -14,6 +14,13 @@ class DataType(object):
     def save(self, path, value):
         open(path, 'wt').write(value)
 
+    def load_safely(self, path):
+        try:
+            value = self.load(path)
+        except TypeError:
+            value = None
+        return value
+
     def load(self, path):
         return open(path, 'rt').read()
 

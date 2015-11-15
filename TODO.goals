@@ -1,5 +1,5 @@
-Implement load_safely
-Implement match for each type
++ Implement load_safely
+= Implement match for each type
 Restore max_depth to show_result
 
 
