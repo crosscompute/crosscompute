@@ -54,8 +54,11 @@ class _ResultConfiguration(object):
         template = '[result_arguments]\n%s\n'
         result_arguments = sort_dictionary(
             result_arguments, tool_argument_names)
-        print(template % format_summary(
-            OrderedDict(result_arguments, target_folder=target_folder)))
+        print(template % format_summary(OrderedDict(
+            result_arguments, target_folder=target_folder)))
+        result_arguments.pop('target_folder', None)
+        if not result_arguments:
+            return
         self.target_file.write(template % format_summary(
             result_arguments) + '\n')
 

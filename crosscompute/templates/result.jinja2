@@ -13,11 +13,13 @@
 {% endblock %}
 
 {% block body_content %}
+{% if result_arguments %}
 {{ super() }}
-<h2>Parameters</h2>
+<h2>Arguments</h2>
 <div id="result_arguments">
 {{ render_values(result_arguments) }}
 </div>
+{% endif %}
 
 {% if result_properties %}
 {% set standard_errors = result_properties.pop('standard_errors', {}) %}

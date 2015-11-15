@@ -155,7 +155,9 @@ def show_result(request):
     target_folder = join(settings['data.folder'], 'results', result_id)
     result_configuration = RawConfigParser()
     result_configuration.read(join(target_folder, 'result.cfg'))
-    result_arguments = OrderedDict(result_configuration['result_arguments'])
+    result_arguments = OrderedDict(
+        result_configuration['result_arguments'],
+    ) if result_configuration.has_section('result_arguments') else {}
     result_properties = parse_nested_dictionary_from(
         result_configuration['result_properties'], max_depth=1)
     return dict(
