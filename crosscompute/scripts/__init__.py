@@ -63,7 +63,7 @@ class _ResultConfiguration(object):
         self.target_file.write(template % format_summary(
             result_arguments) + '\n')
 
-    def write_footer(self, result_properties, data_type_packs, debug=False):
+    def write_footer(self, result_properties, data_type_packs):
         template = '[result_properties]\n%s'
         print(template % format_summary(
             result_properties, censored=False))
@@ -82,7 +82,8 @@ def launch(argv=sys.argv):
 
 
 def load_tool_definition(tool_name):
-    tool_name = tool_name.rstrip(sep)  # Remove folder autocompletion slash
+    if tool_name:
+        tool_name = tool_name.rstrip(sep)  # Remove folder autocompletion slash
     try:
         tool_definition = get_tool_definition(tool_name=tool_name)
     except CrossComputeError as e:
@@ -111,8 +112,7 @@ def stylize_tool_definition(tool_definition, result_arguments):
 
 
 def run_script(
-        target_folder, tool_definition, result_arguments, data_type_packs,
-        debug=False):
+        target_folder, tool_definition, result_arguments, data_type_packs):
     result_properties, timestamp = OrderedDict(), time.time()
     result_arguments = dict(result_arguments, target_folder=target_folder)
     result_configuration = _ResultConfiguration(target_folder)
@@ -132,10 +132,9 @@ def run_script(
         standard_output, standard_error = None, 'Command not found'
     result_properties.update(_process_streams(
         standard_output, standard_error, target_folder, tool_definition,
-        data_type_packs, debug))
+        data_type_packs))
     result_properties['execution_time_in_seconds'] = time.time() - timestamp
-    result_configuration.write_footer(
-        result_properties, data_type_packs, debug)
+    result_configuration.write_footer(result_properties, data_type_packs)
     return result_properties
 
 
@@ -152,7 +151,7 @@ def render_command(command_template, result_arguments):
 
 def _process_streams(
         standard_output, standard_error, target_folder, tool_definition,
-        data_type_packs, debug):
+        data_type_packs):
     d, type_errors = OrderedDict(), OrderedDict()
     configuration_folder = dirname(tool_definition['configuration_path'])
     for stream_name, stream_content in [
@@ -161,10 +160,9 @@ def _process_streams(
     ]:
         if not stream_content:
             continue
-        if debug:
-            log_path = join(target_folder, '%s.log' % stream_name)
-            open(log_path, 'wt').write(stream_content + '\n')
-            print('[%s]\n%s\n' % (stream_name, stream_content))
+        log_path = join(target_folder, '%s.log' % stream_name)
+        open(log_path, 'wt').write(stream_content + '\n')
+        print('[%s]\n%s\n' % (stream_name, stream_content))
         value_by_key, errors = parse_data_dictionary(
             stream_content, data_type_packs, configuration_folder)
         for k, v in errors:

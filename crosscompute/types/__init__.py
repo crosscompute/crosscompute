@@ -2,7 +2,7 @@ from abc import ABCMeta
 from collections import OrderedDict
 from invisibleroads_macros.disk import make_enumerated_folder
 from invisibleroads_macros.log import parse_nested_dictionary
-from os.path import dirname, isabs, join, sep
+from os.path import dirname, expanduser, isabs, join, sep
 from six import add_metaclass
 from stevedore.extension import ExtensionManager
 
@@ -125,6 +125,7 @@ def parse_data_dictionary_from(
             continue
         noun = key[:-5]
         data_type = get_data_type(noun, data_type_packs)
+        value = expanduser(value)
         if not isabs(value):
             value = join(configuration_folder, value)
         try:
