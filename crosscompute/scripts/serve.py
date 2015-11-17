@@ -140,8 +140,7 @@ def run_tool(request):
         raise HTTPBadRequest(dict(e.args))
     target_folder = make_enumerated_folder(join(data_folder, 'results'))
     run_script(
-        target_folder, tool_definition, result_arguments, data_type_packs,
-        debug=True)
+        target_folder, tool_definition, result_arguments, data_type_packs)
     compress_zip(target_folder, excludes=[
         'standard_output.log', 'standard_error.log'])
     result_id = basename(target_folder)
