@@ -7,7 +7,7 @@ import sys
 import time
 from collections import OrderedDict
 from os import sep
-from os.path import dirname, join, relpath
+from os.path import abspath, dirname, isabs, join
 from invisibleroads.scripts import (
     ReflectiveArgumentParser,
     configure_subparsers, get_scripts_by_name, run_scripts)
@@ -30,38 +30,38 @@ class _ResultConfiguration(object):
         self.target_file = open(join(target_folder, 'result.cfg'), 'wt')
 
     def write_header(self, tool_definition, result_arguments):
-        target_folder = result_arguments['target_folder']
+        # Get tool_argument_names before they are removed from tool_definition
         tool_argument_names = list(tool_definition['argument_names'])
-        try:
-            tool_argument_names.remove('target_folder')
-        except ValueError:
-            pass
         # Write tool_definition
         template = '[tool_definition]\n%s\n'
         tool_definition = stylize_tool_definition(
             tool_definition, result_arguments)
-        print(template % format_summary(
+        section_content = template % format_summary(
             sort_dictionary(tool_definition, [
                 'repository_url', 'tool_name', 'commit_hash',
                 'configuration_path', 'command',
-            ]), [
-                ('command', format_hanging_indent),
-            ]))
-        self.target_file.write(template % format_summary(
-            sort_dictionary(tool_definition, [
-                'repository_url', 'tool_name', 'commit_hash',
-            ])) + '\n')
-        # Write result_arguments
-        template = '[result_arguments]\n%s\n'
+            ]), [('command', format_hanging_indent)])
+        print(section_content)
+        self.target_file.write(section_content + '\n')
+        # Put target_folder at end of result_arguments
+        target_folder = result_arguments['target_folder']
+        try:
+            tool_argument_names.remove('target_folder')
+        except ValueError:
+            pass
         result_arguments = sort_dictionary(
             result_arguments, tool_argument_names)
-        print(template % format_summary(OrderedDict(
-            result_arguments, target_folder=target_folder)))
-        result_arguments.pop('target_folder', None)
-        if not result_arguments:
-            return
-        self.target_file.write(template % format_summary(
-            result_arguments) + '\n')
+        # Write result_arguments
+        template = '[result_arguments]\n%s\n'
+        result_arguments['target_folder'] = target_folder
+        configuration_folder = dirname(tool_definition['configuration_path'])
+        for k, v in result_arguments.items():
+            if not k.endswith('_path') or isabs(v):
+                continue
+            result_arguments[k] = abspath(join(configuration_folder, v))
+        section_content = template % format_summary(result_arguments)
+        print(section_content)
+        self.target_file.write(section_content + '\n')
 
     def write_footer(self, result_properties, data_type_packs):
         template = '[result_properties]\n%s'
@@ -94,7 +94,7 @@ def load_tool_definition(tool_name):
 def stylize_tool_definition(tool_definition, result_arguments):
     d = {
         'tool_name': tool_definition['tool_name'],
-        'configuration_path': relpath(tool_definition['configuration_path']),
+        'configuration_path': tool_definition['configuration_path'],
     }
     tool_folder = dirname(tool_definition['configuration_path'])
     try:
