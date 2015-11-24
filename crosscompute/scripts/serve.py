@@ -140,8 +140,7 @@ def run_tool(request):
         raise HTTPBadRequest(dict(e.args))
     target_folder = make_enumerated_folder(join(data_folder, 'results'))
     run_script(
-        target_folder, tool_definition, result_arguments, data_type_packs,
-        debug=True)
+        target_folder, tool_definition, result_arguments, data_type_packs)
     compress_zip(target_folder, excludes=[
         'standard_output.log', 'standard_error.log'])
     result_id = basename(target_folder)
@@ -160,8 +159,8 @@ def show_result(request):
     parse_value_by_key = lambda d: parse_data_dictionary_from(
         d, data_type_packs, configuration_folder)[0]
     result_arguments = parse_value_by_key(
-        result_configuration['result_arguments'],
-    ) if result_configuration.has_section('result_arguments') else {}
+        result_configuration['result_arguments'])
+    result_arguments.pop('target_folder')
     result_properties = parse_value_by_key(parse_nested_dictionary_from(
         result_configuration['result_properties'], max_depth=1))
     return dict(

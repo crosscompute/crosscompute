@@ -9,7 +9,7 @@ Installation from PyPI
     pip install -U crosscompute
     pip install -U crosscompute-integer crosscompute-text crosscompute-table
 
-    git clone https://github.com/invisibleroads/crosscompute-examples
+    git clone https://github.com/crosscompute/crosscompute-examples
     crosscompute setup convert-timestamps
     crosscompute run convert-timestamps
     crosscompute serve convert-timestamps
@@ -18,7 +18,7 @@ Installation from GitHub
 ------------------------
 ::
 
-    git clone https://github.com/invisibleroads/crosscompute
+    git clone https://github.com/crosscompute/crosscompute
     git submodule init
     git submodule update
 
