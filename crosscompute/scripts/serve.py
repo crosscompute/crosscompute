@@ -91,6 +91,7 @@ def get_template_variables(settings, base_template, tool_definition=None):
     return dict(
         RESERVED_ARGUMENT_NAMES=RESERVED_ARGUMENT_NAMES,
         base_template=base_template,
+        data_folder=settings['data.folder'],
         format_value=format_value,
         get_data_type_for=get_data_type_for,
         get_help=lambda x: tool_definition.get(
@@ -105,6 +106,7 @@ def add_routes(config):
     config.add_route('result.json', 'results/{id}.json')
     config.add_route('result', 'results/{id}')
     config.add_route('result_name.zip', 'results/{id}/{name}.zip')
+    config.add_route('result_file', 'results/{id}/{name}')
 
     config.add_view(
         show_tool, renderer='tool.jinja2', request_method='GET',
@@ -121,6 +123,9 @@ def add_routes(config):
     config.add_view(
         show_result_zip, request_method='GET',
         route_name='result_name.zip')
+    config.add_view(
+        show_result_file, request_method='GET',
+        route_name='result_file')
 
 
 def show_tool(request):
@@ -179,3 +184,12 @@ def show_result_zip(request):
     target_folder = join(settings['data.folder'], 'results', result_id)
     result_archive_path = target_folder + '.zip'
     return FileResponse(result_archive_path, request=request)
+
+
+def show_result_file(request):
+    settings = request.registry.settings
+    result_id = request.matchdict['id']
+    target_folder = join(settings['data.folder'], 'results', result_id)
+    result_file_name = basename(request.matchdict['name'])
+    result_file_path = join(target_folder, result_file_name)
+    return FileResponse(result_file_path, request=request)
