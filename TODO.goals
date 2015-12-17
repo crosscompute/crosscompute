@@ -1,5 +1,6 @@
 Check that examples work in Python3
 Add help support for more data types
+Consider making target_folder enumeration start at 1 by default
 
 Use real file objects for PIPE
 Consider crosscompute debug script
