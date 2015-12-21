@@ -1,3 +1,26 @@
+Rearrange url structure
+Support relative paths in show_result_file
+
+Consider whether a tool can have assets
+Consider whether a data type can have assets
+    Load stylesheets, scripts, styles for data types if present in tool
+
+Consider whether to restore tool_name and result_name in url
+    _ results/3/image.png
+    results/3?file=image.png
+    results/3/nyc-traffic-forecast/image.png
+    results/3/nyc-traffic-forecast?file=image.png
+    results/3-nyc-traffic-forecast
+    tools/3/place-hotspots
+    tools/3/place-hotspots?file=image.png
+    tools/3/place-hotspots/image.png
+    tools/3-place-hotspots/image.png
+
+Evaluate whether we should use data_folder
+    Consider whether to use get_url_from_path(image_path) instead
+    Consider whether to use get_url_from(image_path) instead
+    Consider whether to use get_url(image_path) instead
+
 Check that examples work in Python3
 Add help support for more data types
 Consider making target_folder enumeration start at 1 by default
