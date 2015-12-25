@@ -65,7 +65,7 @@ def get_data_type_packs():
 
 def get_result_arguments(
         tool_definition, raw_arguments, data_type_packs,
-        data_folder=join(sep, 'tmp'), user_id=0):
+        data_folder=join(sep, 'tmp')):
     d, errors = {}, []
     for tool_argument_name in tool_definition['argument_names']:
         if tool_argument_name in raw_arguments:
@@ -75,8 +75,7 @@ def get_result_arguments(
             data_type = get_data_type(tool_argument_noun, data_type_packs)
             try:
                 value = prepare_file_path(
-                    data_folder, data_type, raw_arguments, tool_argument_noun,
-                    user_id)
+                    data_folder, data_type, raw_arguments, tool_argument_noun)
             except KeyError:
                 errors.append((tool_argument_name, 'required'))
                 continue
@@ -94,7 +93,7 @@ def get_result_arguments(
 
 
 def prepare_file_path(
-        data_folder, data_type, raw_arguments, tool_argument_noun, user_id):
+        data_folder, data_type, raw_arguments, tool_argument_noun):
     for file_format in data_type.file_formats:
         raw_argument_name = '%s_%s' % (tool_argument_noun, file_format)
         if raw_argument_name in raw_arguments:
@@ -103,8 +102,7 @@ def prepare_file_path(
         raise KeyError
     file_content = raw_arguments[raw_argument_name]
     file_name = '%s.%s' % (tool_argument_noun, file_format)
-    upload_folder = make_enumerated_folder(join(
-        data_folder, 'uploads'), first_index=1 if user_id else 0)
+    upload_folder = make_enumerated_folder(join(data_folder, 'uploads'))
     file_path = join(upload_folder, file_name)
     with open(file_path, 'w') as f:
         f.write(file_content)

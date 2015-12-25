@@ -1,20 +1,16 @@
++ Consider making target_folder enumeration start at 1 by default
+
 Rearrange url structure
-Support relative paths in show_result_file
+    Restore tool_name and result_name in url
+        results/5/ethiopia-2020/grid-geotable.csv
+        r/5/ethiopia-2020.zip
+    Test whether we can omit tool_name and result_name
+        r/5//grid-geotable.csv
+    Support relative paths in show_result_file
 
-Consider whether a tool can have assets
-Consider whether a data type can have assets
+Consider how a tool can have assets
+Consider how a data type can have assets
     Load stylesheets, scripts, styles for data types if present in tool
-
-Consider whether to restore tool_name and result_name in url
-    _ results/3/image.png
-    results/3?file=image.png
-    results/3/nyc-traffic-forecast/image.png
-    results/3/nyc-traffic-forecast?file=image.png
-    results/3-nyc-traffic-forecast
-    tools/3/place-hotspots
-    tools/3/place-hotspots?file=image.png
-    tools/3/place-hotspots/image.png
-    tools/3-place-hotspots/image.png
 
 Evaluate whether we should use data_folder
     Consider whether to use get_url_from_path(image_path) instead
@@ -23,7 +19,6 @@ Evaluate whether we should use data_folder
 
 Check that examples work in Python3
 Add help support for more data types
-Consider making target_folder enumeration start at 1 by default
 
 Use real file objects for PIPE
 Consider crosscompute debug script
