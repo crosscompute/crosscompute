@@ -1,7 +1,24 @@
 {% extends base_template %}
 
-{% block body_content %}
+{% block page_title %}
+{{ render_title(tool_name) }}
+&middot;
+Tools
+&middot;
+{{ website_name }}
+{% endblock %}
+
+{% block head_style_inline %}
 {{ super() }}
+#top-navbar {margin-bottom: 0}
+{% endblock %}
+
+{% block body_content %}
+<h1><div class="row">
+<div class="col-xs-9">{{ render_title(tool_name) }}</div>
+<div class="col-xs-3 text-right">{% block tool_toolbar %}{% endblock %}</div>
+</div></h1>
+
 <form id="tool-form" method="post">
 {% for tool_argument_name in tool_argument_names if tool_argument_name not in RESERVED_ARGUMENT_NAMES %}
 {% from get_data_type_for(tool_argument_name).template import render_query with context %}

@@ -1,4 +1,15 @@
-+ Consider making target_folder enumeration start at 1 by default
+Handle case when result_id does not exist
+Handle case when tool_id does not exist
+Rename results
+
+Consider how a data type can have assets
+    Load stylesheets, scripts, styles for data types if present in tool or result
+        option 2: load only those that are on the page (this)
+            option 1: check and load at beginning
+            option 2: load on demand
+
+Consider how a tool can have assets (maybe if they are explicitly defined in cc.ini)
+    tools/14/transform-coordinates/xyz.csv
 
 Rearrange url structure
     Restore tool_name and result_name in url
@@ -8,25 +19,24 @@ Rearrange url structure
         r/5//grid-geotable.csv
     Support relative paths in show_result_file
 
-Consider how a tool can have assets
-Consider how a data type can have assets
-    Load stylesheets, scripts, styles for data types if present in tool
-
 Evaluate whether we should use data_folder
     Consider whether to use get_url_from_path(image_path) instead
-    Consider whether to use get_url_from(image_path) instead
     Consider whether to use get_url(image_path) instead
+
+Use real file objects for PIPE
+Let user define host and port in command-line for crosscompute run
+
++ Consider making target_folder enumeration start at 1 by default
 
 Check that examples work in Python3
 Add help support for more data types
+Accept markdown syntax for user interface template
 
-Use real file objects for PIPE
 Consider crosscompute debug script
 Consider prompting setup if we detect an import error
 Restore uploads
     Compute hash on import
 Enhance crosscompute run
-    Let user define host and port in command-line
     Add TAB completion for script arguments
     Add option to list tool names
     Get crosscompute_types from --types
@@ -36,7 +46,6 @@ Enhance crosscompute run
 Enhance crosscompute serve
     Do not change actual tool definition
     Parse result_configuration file to get nested values
-    Accept markdown syntax for user interface template
     Enable support for meinheld server
     Enable support for chaussette server
 Test for tables with good extensions but bad content

@@ -1,24 +1,19 @@
 {% extends "invisibleroads_posts:templates/base.jinja2" %}
 
 {% block page_title %}
-{{ render_title(tool_name) }} &middot; {{ website_name }}
+{{ website_name }}
 {% endblock %}
 
 {% block head_style_loaded %}
 {{ super() }}
-<link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.css">
+<link rel="stylesheet" href="//cdn.leafletjs.com/leaflet/v0.7.7/leaflet.css">
 {% endblock %}
 
 {% block head_style_inline %}
 .map {height: 300px}
-#top-navbar {margin-bottom: 0}
-{% endblock %}
-
-{% block body_content %}
-<h1>{{ render_title(tool_name) }}</h1>
 {% endblock %}
 
 {% block body_script_loaded %}
 {{ super() }}
-<script src="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.js"></script>
+<script src="//cdn.leafletjs.com/leaflet/v0.7.7/leaflet.js"></script>
 {% endblock %}

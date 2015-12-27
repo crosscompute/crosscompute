@@ -1,20 +1,29 @@
 {% extends base_template %}
 {% from 'type.jinja2' import render_values with context %}
+{% set result_name = result_name or result_id %}
 
-{% block title %}
-{{ result_id }} &middot; {{ render_title(tool_name) }} &middot; {{ website_name }}
+{% block page_title %}
+{{ result_name }} ({{ render_title(tool_name) }})
+&middot;
+Results
+&middot;
+{{ website_name }}
 {% endblock %}
 
 {% block head_style_inline %}
 {{ super() }}
 .download {margin-top: 2em}
-#standard-errors {background-color: yellow}
-#type-errors {background-color: orange}
+.errors {background-color: yellow}
+#top-navbar {margin-bottom: 0}
 {% endblock %}
 
 {% block body_content %}
+<h1><div class="row">
+<div class="col-xs-9">{{ result_name }}</div>
+<div class="col-xs-3 text-right">{% block result_toolbar %}{% endblock %}</div>
+</div></h1>
+
 {% if result_arguments %}
-{{ super() }}
 <h2>Arguments</h2>
 <div id="result_arguments">
 {{ render_values(result_arguments) }}
@@ -22,22 +31,32 @@
 {% endif %}
 
 {% if result_properties %}
+
 {% set standard_errors = result_properties.pop('standard_errors', {}) %}
 {% set type_errors = result_properties.pop('type_errors', {}) %}
 {% if standard_errors or type_errors %}
 <h2>Errors</h2>
-<div id="standard-errors">{{ render_values(standard_errors) }}</div>
-<div id="type-errors">{{ render_values(type_errors) }}</div>
+<div class="errors">
+{{ render_values(standard_errors) }}
+{{ render_values(type_errors) }}
+</div>
 {% endif %}
 
 {% set standard_outputs = result_properties.pop('standard_outputs', {}) %}
 {% if standard_outputs %}
 <h2>Outputs</h2>
-<div id="standard-outputs">{{ render_values(standard_outputs) }}</div>
+<div id="standard-outputs">
+{{ render_values(standard_outputs) }}
+</div>
 {% endif %}
 
-<h2>Properties</h2><div id="result_properties">{{ render_values(result_properties) }}</div>
-<a href="{{ request.route_path('result_name.zip', id=result_id, name='%s-%s' % (result_id, tool_name)) }}" class="btn btn-success download" role="button" download>Download</a>
+<h2>Properties</h2>
+<div id="result_properties">
+{{ render_values(result_properties) }}
+</div>
+
+<a href="{{ request.route_path('result_name.zip', id=result_id, name=result_name) }}" class="btn btn-success download" role="button" download>Download</a>
+
 {% endif %}
 {% endblock %}
 
