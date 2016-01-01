@@ -32,7 +32,7 @@ class ServeScript(Script):
     def run(self, args):
         tool_definition = load_tool_definition(args.tool_name)
         app = get_app(tool_definition, data_type_packs=get_data_type_packs())
-        webbrowser.open_new_tab('http://127.0.0.1:4444/tools/0')
+        webbrowser.open_new_tab('http://127.0.0.1:4444/tools/1')
         server = make_server('127.0.0.1', 4444, app)
         try:
             server.serve_forever()
@@ -41,7 +41,8 @@ class ServeScript(Script):
 
 
 def get_app(
-        tool_definition, base_template='crosscompute:templates/base.jinja2',
+        tool_definition,
+        base_template='invisibleroads_posts:templates/base.jinja2',
         data_type_packs=None, data_folder=None):
     tool_name = tool_definition['tool_name']
     config = Configurator(settings={
@@ -130,7 +131,15 @@ def add_routes(config):
 
 def show_tool(request):
     # !! Render markdown
-    return {}
+    settings = request.registry.settings
+    data_type_packs = settings['data_type_packs']
+    return dict(
+        data_types=zip(*data_type_packs)[1])
+
+    [y() for y in set(x.__class__ for x in xs)]
+
+
+get_unique_data_types
 
 
 def run_tool(request):
@@ -169,6 +178,7 @@ def show_result(request):
     result_properties = parse_value_by_key(parse_nested_dictionary_from(
         result_configuration['result_properties'], max_depth=1))
     return dict(
+        data_types=zip(*data_type_packs)[1],
         result_id=result_id,
         result_arguments=result_arguments,
         result_properties=result_properties)

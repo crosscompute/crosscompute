@@ -1,6 +1,7 @@
-Load stylesheets, scripts, styles for data types if present in tool or result
-    Option 2: load only those that are on the page (this)
-        Option 1: check and load at beginning
+= Load stylesheets, scripts, styles for data types if present in tool or result
+    = Load all data types at first
+        = Write get_relevant_data_types
+    Load only those that are on the page
 
 Rearrange url structure
     Restore tool_name and result_name in url
@@ -13,11 +14,15 @@ Rearrange url structure
 Evaluate whether we should use data_folder
     Consider whether to use get_url_from_path(image_path) instead
 
++ Use classmethod for data type functions
++ Change data type function usage in examples to use classmethod
++ Fix stevedore to invoke_on_load=False
++ Rename file_formats to formats
 + Consider making target_folder enumeration start at 1 by default
 
+Use real file objects for PIPE
 Handle case when result_id does not exist
 Handle case when tool_id does not exist
-Use real file objects for PIPE
 Let user rename results
 Let user define host and port in command-line for crosscompute run
 Consider how a tool can have assets (maybe if they are explicitly defined in cc.ini)

@@ -1,0 +1,30 @@
+{% extends base_template %}
+
+{% block head_style_loaded %}
+{{ super() }}
+{% for data_type in data_types %}
+{% from data_type.template import head_style_loaded %}
+{{ head_style_loaded() }}
+{% endfor %}
+{% endblock %}
+
+{% block head_style_inline %}
+{{ super() }}
+.error {background-color: yellow}
+#top-navbar {margin-bottom: 0}
+{% endblock %}
+
+{% block body_content %}
+<h1><div class="row">
+<div class="col-xs-9">{% block body_title %}{% endblock %}</div>
+<div class="col-xs-3 text-right">{% block body_toolbar %}{% endblock %}</div>
+</div></h1>
+{% endblock %}
+
+{% block body_script_loaded %}
+{% endblock %}
+
+{% block body_script_inline %}
+{{ super() }}
+$('[data-toggle="popover"]').popover({'trigger': 'click hover focus'});
+{% endblock %}

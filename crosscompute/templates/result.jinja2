@@ -1,27 +1,18 @@
-{% extends base_template %}
+{% extends 'page.jinja2' %}
 {% from 'type.jinja2' import render_values with context %}
-{% set result_name = result_name or result_id %}
+{% set result_name = result_name or '%s (%s)' % (result_id, render_title(tool_name)) %}
 
 {% block page_title %}
-{{ result_name }} ({{ render_title(tool_name) }})
-&middot;
-Results
-&middot;
-{{ website_name }}
+{% block body_title %}{{ result_name }}{% endblock %} &middot; Results &middot; {{ super() }}
 {% endblock %}
 
 {% block head_style_inline %}
-{{ super() }}
 .download {margin-top: 2em}
-.errors {background-color: yellow}
-#top-navbar {margin-bottom: 0}
+{{ super() }}
 {% endblock %}
 
 {% block body_content %}
-<h1><div class="row">
-<div class="col-xs-9">{{ result_name }}</div>
-<div class="col-xs-3 text-right">{% block result_toolbar %}{% endblock %}</div>
-</div></h1>
+{{ super() }}
 
 {% if result_arguments %}
 <h2>Arguments</h2>
@@ -36,7 +27,7 @@ Results
 {% set type_errors = result_properties.pop('type_errors', {}) %}
 {% if standard_errors or type_errors %}
 <h2>Errors</h2>
-<div class="errors">
+<div class="error">
 {{ render_values(standard_errors) }}
 {{ render_values(type_errors) }}
 </div>
@@ -58,9 +49,4 @@ Results
 <a href="{{ request.route_path('result_name.zip', id=result_id, name=result_name) }}" class="btn btn-success download" role="button" download>Download</a>
 
 {% endif %}
-{% endblock %}
-
-{% block body_script_inline %}
-{{ super() }}
-$('[data-toggle="popover"]').popover({'trigger': 'click hover focus'});
 {% endblock %}

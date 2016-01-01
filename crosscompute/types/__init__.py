@@ -12,37 +12,43 @@ from ..configurations import RESERVED_ARGUMENT_NAMES
 @add_metaclass(ABCMeta)
 class DataType(object):
 
-    def save(self, path, value):
+    @classmethod
+    def save(Class, path, value):
         open(path, 'wt').write(value)
 
-    def load_safely(self, path):
+    @classmethod
+    def load_safely(Class, path):
         try:
-            value = self.load(path)
+            value = Class.load(path)
         except (IOError, TypeError):
             value = None
         return value
 
-    def load(self, path):
+    @classmethod
+    def load(Class, path):
         return open(path, 'rt').read()
 
-    def parse(self, text):
+    @classmethod
+    def parse(Class, text):
         return text
 
-    def format(self, value):
+    @classmethod
+    def format(Class, value):
         return value
 
-    def match(self, value):
+    @classmethod
+    def match(Class, value):
         return True
 
 
 class StringType(DataType):
     template = 'crosscompute:types/string.jinja2'
-    file_formats = ['txt']
+    formats = 'txt',
 
 
 class PathType(DataType):
     template = 'crosscompute:types/path.jinja2'
-    file_formats = ['txt']
+    formats = 'txt',
 
 
 def get_data_type(tool_argument_name, data_type_packs=None):
@@ -50,16 +56,15 @@ def get_data_type(tool_argument_name, data_type_packs=None):
         if tool_argument_name.endswith('_' + data_type_name):
             return data_type
     if tool_argument_name.endswith('_path'):
-        return PathType()
-    return StringType()
+        return PathType
+    return StringType
 
 
 def get_data_type_packs():
-    extension_manager = ExtensionManager(
-        'crosscompute.types', invoke_on_load=True)
+    extension_manager = ExtensionManager('crosscompute.types')
     return sorted(zip(
         extension_manager.names(),
-        (x.obj for x in extension_manager.extensions),
+        (x.plugin for x in extension_manager.extensions),
     ), key=lambda pack: (-len(pack[0]), pack))
 
 
@@ -94,7 +99,7 @@ def get_result_arguments(
 
 def prepare_file_path(
         data_folder, data_type, raw_arguments, tool_argument_noun):
-    for file_format in data_type.file_formats:
+    for file_format in data_type.formats:
         raw_argument_name = '%s_%s' % (tool_argument_noun, file_format)
         if raw_argument_name in raw_arguments:
             break
