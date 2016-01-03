@@ -1,14 +1,9 @@
-Rearrange url structure
-    Restore tool_name and result_name in url
-        results/5/ethiopia-2020/grid-geotable.csv
-        r/5/ethiopia-2020.zip
-    Test whether we can omit tool_name and result_name
-        r/5//grid-geotable.csv
-    Support relative paths in show_result_file
+Redirect tool to tool_name
+Redirect result to result_name
+Support relative paths in show_result_file
 
-Evaluate whether we should use data_folder
-    Consider whether to use get_url_from_path(image_path) instead
-
++ Use get_url_from_path(image_path)
++ Restore tool_name and result_name in url
 + Load stylesheets, scripts, styles for data types only if they are present in tool or result
 + Use classmethod for data type functions
 + Change data type function usage in examples to use classmethod
