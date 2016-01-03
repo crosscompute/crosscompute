@@ -68,8 +68,17 @@ def get_data_type_packs():
     ), key=lambda pack: (-len(pack[0]), pack))
 
 
-def get_relevant_data_types(data_type_packs, data_type_keys=None):
-    return set(zip(*data_type_packs)[1])
+def get_relevant_data_types(data_type_packs, data_type_keys):
+    data_types = []
+    for data_type_key in data_type_keys:
+        if data_type_key.endswith('_path'):
+            data_type_key = data_type_key[:-5]
+        data_types.append(get_data_type(data_type_key, data_type_packs))
+    if hasattr(data_type_keys, 'values'):
+        for x in data_type_keys.values():
+            if hasattr(x, 'keys'):
+                data_types.extend(get_relevant_data_types(data_type_packs, x))
+    return list(set(data_types).difference([StringType]))
 
 
 def get_result_arguments(

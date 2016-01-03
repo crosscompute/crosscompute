@@ -177,7 +177,8 @@ def show_result(request):
         result_configuration['result_properties'], max_depth=1))
     return dict(
         data_types=get_relevant_data_types(
-            data_type_packs, result_configuration),
+            data_type_packs, result_arguments) + get_relevant_data_types(
+            data_type_packs, result_properties),
         result_id=result_id,
         result_arguments=result_arguments,
         result_properties=result_properties)
