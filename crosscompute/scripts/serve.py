@@ -12,15 +12,15 @@ from wsgiref.simple_server import make_server
 
 from ..configurations import RESERVED_ARGUMENT_NAMES
 from ..types import (
-    get_data_type, get_data_type_packs, get_result_arguments,
-    parse_data_dictionary_from)
+    get_data_type, get_data_type_packs, get_relevant_data_types,
+    get_result_arguments, parse_data_dictionary_from)
 from . import load_tool_definition, run_script
 
 
 HELP_BY_KEY = {
     'return_code': 'There was an error while running the script.',
-    'standard_error': 'The script wrote data to the standard error stream.',
-    'standard_output': 'The script wrote data to the standard output stream.',
+    'standard_error': 'The script wrote to the standard error stream.',
+    'standard_output': 'The script wrote to the standard output stream.',
 }
 
 
@@ -133,13 +133,11 @@ def show_tool(request):
     # !! Render markdown
     settings = request.registry.settings
     data_type_packs = settings['data_type_packs']
+    tool_definition = settings['tool_definition']
+    tool_argument_names = tool_definition['argument_names']
+    data_types = get_relevant_data_types(data_type_packs, tool_argument_names)
     return dict(
-        data_types=zip(*data_type_packs)[1])
-
-    [y() for y in set(x.__class__ for x in xs)]
-
-
-get_unique_data_types
+        data_types=data_types)
 
 
 def run_tool(request):
@@ -178,7 +176,8 @@ def show_result(request):
     result_properties = parse_value_by_key(parse_nested_dictionary_from(
         result_configuration['result_properties'], max_depth=1))
     return dict(
-        data_types=zip(*data_type_packs)[1],
+        data_types=get_relevant_data_types(
+            data_type_packs, result_configuration),
         result_id=result_id,
         result_arguments=result_arguments,
         result_properties=result_properties)

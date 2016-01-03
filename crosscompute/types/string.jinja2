@@ -7,11 +7,10 @@
 {% set help = get_help(key) %}
 <h3>{{ key }} {% if help %}<span class="glyphicon glyphicon-question-sign" data-toggle="popover" data-content="{{ help }}"></span>{% endif %}</h3>
 <div id="{{ key }}_">
-{% set lines = (value | string).strip().splitlines() %}
+{%- set lines = (value | string).strip().splitlines() %}
 {% if lines | length == 1 %}
-{{ value }}
+{{ value -}}
 {% else %}
-{% for line in lines %}{{ line }}<br>{% endfor %}
-{% endif %}
-</div>
+{% for line in lines %}{{ line }}<br>{% endfor -%}
+{% endif %}</div>
 {% endmacro %}

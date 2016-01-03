@@ -68,6 +68,10 @@ def get_data_type_packs():
     ), key=lambda pack: (-len(pack[0]), pack))
 
 
+def get_relevant_data_types(data_type_packs, data_type_keys=None):
+    return set(zip(*data_type_packs)[1])
+
+
 def get_result_arguments(
         tool_definition, raw_arguments, data_type_packs,
         data_folder=join(sep, 'tmp')):

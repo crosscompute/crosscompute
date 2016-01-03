@@ -1,7 +1,5 @@
-= Load stylesheets, scripts, styles for data types if present in tool or result
-    = Load all data types at first
-        = Write get_relevant_data_types
-    Load only those that are on the page
+= Load stylesheets, scripts, styles for data types only if they are present in tool or result
+    = Write get_relevant_data_types
 
 Rearrange url structure
     Restore tool_name and result_name in url
@@ -14,6 +12,7 @@ Rearrange url structure
 Evaluate whether we should use data_folder
     Consider whether to use get_url_from_path(image_path) instead
 
++ Load stylesheets, scripts, styles for data types
 + Use classmethod for data type functions
 + Change data type function usage in examples to use classmethod
 + Fix stevedore to invoke_on_load=False

@@ -1,11 +1,11 @@
 {% extends 'page.jinja2' %}
 
 {% block page_title %}
-{% block body_title %}{{ render_title(tool_name) }}{% endblock %} &middot; Tools &middot; {{ super() }}
+{% block body_title %}{{ render_title(tool_name) }}{% endblock %} &middot; Tools &middot; {{ website_name -}}
 {% endblock %}
 
 {% block body_content %}
-{{ super() }}
+{{ super() -}}
 
 <form id="tool-form" method="post">
 {% for tool_argument_name in tool_argument_names if tool_argument_name not in RESERVED_ARGUMENT_NAMES %}
@@ -17,10 +17,8 @@
 {% endblock %}
 
 {% block body_script_inline %}
-{{ super() }}
+{{ super() -}}
 {% if tool_argument_names %}
-setTimeout(function() {
-  $('#tool-form').find('[name]').first().focus();
-}, 100);
+$('#tool-form').find('[name]').first().focus();
 {% endif %}
 {% endblock %}
