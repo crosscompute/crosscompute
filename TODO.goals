@@ -1,16 +1,19 @@
-Redirect tool to tool_name
-Redirect result to result_name
+Use Content Disposition to specify file_name for download instead
 Support relative paths in show_result_file
 
++ Check how URLs with spaces are rendered
 + Use get_url_from_path(image_path)
-+ Restore tool_name and result_name in url
 + Load stylesheets, scripts, styles for data types only if they are present in tool or result
 + Use classmethod for data type functions
 + Change data type function usage in examples to use classmethod
 + Fix stevedore to invoke_on_load=False
 + Rename file_formats to formats
 + Consider making target_folder enumeration start at 1 by default
+_ Restore tool_name and result_name in url
+_ Use result_name instead of x
 
+Redirect tool to tool_name
+Redirect result to result_name
 Use real file objects for PIPE
 Handle case when result_id does not exist
 Handle case when tool_id does not exist

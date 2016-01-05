@@ -68,7 +68,7 @@ def get_app(
 def get_template_variables(settings, base_template, tool_definition=None):
     tool_definition = tool_definition or settings['tool_definition']
     get_data_type_for = lambda x: get_data_type(x, settings['data_type_packs'])
-    path_pattern = re.compile(r'(results|uploads)/(\d+)/(.*)')
+    path_pattern = re.compile(r'results/(\d+)/(.*)')
 
     def format_value(value_key):
         if value_key not in tool_definition:
@@ -81,11 +81,10 @@ def get_template_variables(settings, base_template, tool_definition=None):
 
     def get_url_from_path(path):
         try:
-            folder, object_id, file_path = path_pattern.search(path).groups()
+            result_id, file_path = path_pattern.search(path).groups()
         except AttributeError:
-            raise AttributeError(
-                'Expected results/11/abc.def or uploads/22/uvw.xyz')
-        return '/%s/%s/x/%s' % (folder, object_id, file_path)
+            raise AttributeError('Expected results/11/abc.def')
+        return '/results/%s/x/%s' % (result_id, file_path)
 
     def load_value(value_key, path):
         if not isabs(path):
@@ -113,13 +112,14 @@ def get_template_variables(settings, base_template, tool_definition=None):
 
 
 def add_routes(config):
+    """
+
+    """
     config.add_route('tool', 'tools/{id}')
-    config.add_route('tool_name', 'tools/{id}/{name}')
-    config.add_route('result.json', 'results/{id}.json')
     config.add_route('result', 'results/{id}')
-    config.add_route('result_name', 'results/{id}/{name}')
-    config.add_route('result_name.zip', 'results/{id}/{name}.zip')
-    config.add_route('result_name_path', 'results/{id}/{name}/{path}')
+    config.add_route('result.json', 'results/{id}.json')
+    config.add_route('result.zip', 'results/{id}.zip')
+    config.add_route('result_file', 'results/{id}/{path}')
 
     config.add_view(
         show_tool, renderer='tool.jinja2', request_method='GET',
@@ -135,10 +135,10 @@ def add_routes(config):
         route_name='result.json')
     config.add_view(
         show_result_zip, request_method='GET',
-        route_name='result_name.zip')
+        route_name='result.zip')
     config.add_view(
         show_result_file, request_method='GET',
-        route_name='result_name_path')
+        route_name='result_file')
 
 
 def show_tool(request):
