@@ -1,35 +1,19 @@
-+ Test tools
-+ Check how URLs with spaces are rendered
-+ Use get_url_from_path(image_path)
-+ Load stylesheets, scripts, styles for data types only if they are present in tool or result
-+ Use classmethod for data type functions
-+ Change data type function usage in examples to use classmethod
-+ Fix stevedore to invoke_on_load=False
-+ Rename file_formats to formats
-+ Consider making target_folder enumeration start at 1 by default
-+ Support relative paths in show_result_file
-_ Restore tool_name and result_name in url
-_ Use result_name instead of x
-_ Use Content Disposition to specify file_name for download instead
+Merge crosscompute setup into crosscompute run
+    Prompt to install dependencies on ImportError
+    Consider -y option to install without prompting
+Check that examples work in Python3
+Accept markdown syntax for user interface template
 
-Add tests for show_result_file
-
-Redirect tool to tool_name
-Redirect result to result_name
+Add help support for more data types
 Use real file objects for PIPE
 Handle case when result_id does not exist
 Handle case when tool_id does not exist
+Add tests for show_result_file
+
 Let user rename results
 Let user define host and port in command-line for crosscompute run
 Consider how a tool can have assets (maybe if they are explicitly defined in cc.ini)
     tools/14/transform-coordinates/xyz.csv
-
-Check that examples work in Python3
-Add help support for more data types
-Accept markdown syntax for user interface template
-
-Consider crosscompute debug script
-Consider prompting setup if we detect an import error
 Restore uploads
     Compute hash on import
 Enhance crosscompute run
