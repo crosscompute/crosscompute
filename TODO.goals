@@ -1,6 +1,4 @@
-Use Content Disposition to specify file_name for download instead
-Support relative paths in show_result_file
-
++ Test tools
 + Check how URLs with spaces are rendered
 + Use get_url_from_path(image_path)
 + Load stylesheets, scripts, styles for data types only if they are present in tool or result
@@ -9,8 +7,12 @@ Support relative paths in show_result_file
 + Fix stevedore to invoke_on_load=False
 + Rename file_formats to formats
 + Consider making target_folder enumeration start at 1 by default
++ Support relative paths in show_result_file
 _ Restore tool_name and result_name in url
 _ Use result_name instead of x
+_ Use Content Disposition to specify file_name for download instead
+
+Add tests for show_result_file
 
 Redirect tool to tool_name
 Redirect result to result_name

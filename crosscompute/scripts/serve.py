@@ -2,11 +2,13 @@ import re
 import webbrowser
 from configparser import RawConfigParser
 from invisibleroads.scripts import Script
-from invisibleroads_macros.disk import compress_zip, make_enumerated_folder
+from invisibleroads_macros.disk import (
+    compress_zip, make_enumerated_folder, resolve_relative_path)
 from invisibleroads_macros.log import parse_nested_dictionary_from
-from os.path import basename, dirname, isabs, join, sep
+from os.path import basename, dirname, exists, isabs, join, sep
 from pyramid.config import Configurator
-from pyramid.httpexceptions import HTTPBadRequest, HTTPSeeOther
+from pyramid.httpexceptions import (
+    HTTPBadRequest, HTTPForbidden, HTTPNotFound, HTTPSeeOther)
 from pyramid.response import FileResponse
 from six import string_types
 from wsgiref.simple_server import make_server
@@ -83,8 +85,8 @@ def get_template_variables(settings, base_template, tool_definition=None):
         try:
             result_id, file_path = path_pattern.search(path).groups()
         except AttributeError:
-            raise AttributeError('Expected results/11/abc.def')
-        return '/results/%s/x/%s' % (result_id, file_path)
+            return ''
+        return '/results/%s/_/%s' % (result_id, file_path)
 
     def load_value(value_key, path):
         if not isabs(path):
@@ -112,14 +114,11 @@ def get_template_variables(settings, base_template, tool_definition=None):
 
 
 def add_routes(config):
-    """
-
-    """
     config.add_route('tool', 'tools/{id}')
-    config.add_route('result', 'results/{id}')
     config.add_route('result.json', 'results/{id}.json')
-    config.add_route('result.zip', 'results/{id}.zip')
-    config.add_route('result_file', 'results/{id}/{path}')
+    config.add_route('result.zip', 'results/{id}/{name}.zip')
+    config.add_route('result_file', 'results/{id}/_/{path:.+}')
+    config.add_route('result', 'results/{id}')
 
     config.add_view(
         show_tool, renderer='tool.jinja2', request_method='GET',
@@ -212,6 +211,11 @@ def show_result_file(request):
     settings = request.registry.settings
     result_id = request.matchdict['id']
     target_folder = join(settings['data.folder'], 'results', result_id)
-    result_file_name = basename(request.matchdict['path'])
-    result_file_path = join(target_folder, result_file_name)
+    try:
+        result_file_path = resolve_relative_path(
+            request.matchdict['path'], target_folder)
+    except IOError:
+        raise HTTPForbidden
+    if not exists(result_file_path):
+        raise HTTPNotFound
     return FileResponse(result_file_path, request=request)

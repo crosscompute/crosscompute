@@ -45,6 +45,6 @@
 <div id="result_properties">
 {{ render_values(result_properties) -}}
 </div>
-<a href="{{ request.route_path('result_name.zip', id=result_id, name=result_name) }}" class="btn btn-success download" role="button" download>Download</a>
+<a href="{{ request.route_path('result.zip', id=result_id, name=result_name) }}" class="btn btn-success download" role="button" download>Download</a>
 {% endif %}
 {% endblock %}
