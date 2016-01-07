@@ -70,7 +70,7 @@ def get_app(
 def get_template_variables(settings, base_template, tool_definition=None):
     tool_definition = tool_definition or settings['tool_definition']
     get_data_type_for = lambda x: get_data_type(x, settings['data_type_packs'])
-    path_pattern = re.compile(r'results/(\d+)/(.*)')
+    path_pattern = re.compile(r'results/(\d+)/(.+)')
 
     def format_value(value_key):
         if value_key not in tool_definition:
