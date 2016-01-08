@@ -12,6 +12,11 @@
 #top-navbar {margin-bottom: 0}
 {% endblock %}
 
+{% block head_script_inline %}
+{{ super() -}}
+{% for data_type in data_types %}{% from data_type.template import head_script_inline %}{{ head_script_inline() }}{% endfor %}
+{% endblock %}
+
 {% block body_content %}
 <h1><div class="row">
 <div class="col-xs-9">{% block body_title %}{% endblock %}</div>

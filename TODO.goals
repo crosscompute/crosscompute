@@ -1,8 +1,10 @@
+Add head_script_inline to all types
+
 Merge crosscompute setup into crosscompute run
     Prompt to install dependencies on ImportError
     Consider -y option to install without prompting
-Check that examples work in Python3
 Accept markdown syntax for user interface template
+Check that examples work in Python3
 
 Add help support for more data types
 Use real file objects for PIPE
