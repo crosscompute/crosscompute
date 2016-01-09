@@ -42,13 +42,12 @@ class DataType(object):
 
 
 class StringType(DataType):
+    formats = 'txt',
     template = 'crosscompute:types/string.jinja2'
-    formats = 'txt',
 
 
-class PathType(DataType):
+class PathType(StringType):
     template = 'crosscompute:types/path.jinja2'
-    formats = 'txt',
 
 
 def get_data_type(tool_argument_name, data_type_packs=None):
