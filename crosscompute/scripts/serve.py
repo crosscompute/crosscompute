@@ -5,6 +5,7 @@ from invisibleroads.scripts import Script
 from invisibleroads_macros.disk import (
     compress_zip, make_enumerated_folder, resolve_relative_path)
 from invisibleroads_macros.log import parse_nested_dictionary_from
+from os import environ
 from os.path import basename, dirname, exists, isabs, join, sep
 from pyramid.config import Configurator
 from pyramid.httpexceptions import (
@@ -25,6 +26,7 @@ HELP_BY_KEY = {
     'standard_error': 'The script wrote to the standard error stream.',
     'standard_output': 'The script wrote to the standard output stream.',
 }
+RESULT_PATH_PATTERN = re.compile(r'results/(\d+)/(.+)')
 
 
 class ServeScript(Script):
@@ -70,7 +72,6 @@ def get_app(
 def get_template_variables(settings, base_template, tool_definition=None):
     tool_definition = tool_definition or settings['tool_definition']
     get_data_type_for = lambda x: get_data_type(x, settings['data_type_packs'])
-    path_pattern = re.compile(r'results/(\d+)/(.+)')
 
     def format_value(value_key):
         if value_key not in tool_definition:
@@ -83,7 +84,7 @@ def get_template_variables(settings, base_template, tool_definition=None):
 
     def get_url_from_path(path):
         try:
-            result_id, file_path = path_pattern.search(path).groups()
+            result_id, file_path = RESULT_PATH_PATTERN.search(path).groups()
         except AttributeError:
             return ''
         return '/results/%s/_/%s' % (result_id, file_path)
@@ -105,6 +106,7 @@ def get_template_variables(settings, base_template, tool_definition=None):
         base_template=base_template,
         format_value=format_value,
         get_data_type_for=get_data_type_for,
+        get_os_environment_variable=environ.get,
         get_help=lambda x: tool_definition.get(
             x + '.help', HELP_BY_KEY.get(x, '')),
         get_url_from_path=get_url_from_path,
@@ -188,8 +190,7 @@ def show_result(request):
         result_configuration['result_properties'], max_depth=1))
     return dict(
         data_types=get_relevant_data_types(
-            data_type_packs, result_arguments) + get_relevant_data_types(
-            data_type_packs, result_properties),
+            data_type_packs, result_configuration),
         result_id=result_id,
         result_arguments=result_arguments,
         result_properties=result_properties)

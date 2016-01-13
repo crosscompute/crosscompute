@@ -1,6 +1,5 @@
-Consider calling get_template_variables for each relevant data_type
+= Accept markdown syntax for user interface template
 
-Accept markdown syntax for user interface template
 Merge crosscompute setup into crosscompute run
     Prompt to install dependencies on ImportError
     Consider -y option to install without prompting
@@ -8,12 +7,12 @@ Check that examples work in Python3
 
 + Add head_script_inline to all types
 
-Add help support for more data types
 Use real file objects for PIPE
 Handle case when result_id does not exist
 Handle case when tool_id does not exist
 Add tests for show_result_file
 
+Add help support for more data types
 Let user rename results
 Let user define host and port in command-line for crosscompute run
 Consider how a tool can have assets (maybe if they are explicitly defined in cc.ini)
