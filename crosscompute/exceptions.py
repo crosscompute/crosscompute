@@ -2,6 +2,10 @@ class CrossComputeError(Exception):
     pass
 
 
+class DataTypeError(CrossComputeError):
+    pass
+
+
 class ConfigurationNotFound(CrossComputeError):
     pass
 

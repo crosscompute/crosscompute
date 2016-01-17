@@ -7,6 +7,7 @@ from six import add_metaclass
 from stevedore.extension import ExtensionManager
 
 from ..configurations import RESERVED_ARGUMENT_NAMES
+from ..exceptions import DataTypeError
 
 
 @add_metaclass(ABCMeta)
@@ -20,7 +21,7 @@ class DataType(object):
     def load_safely(Class, path):
         try:
             value = Class.load(path)
-        except (IOError, TypeError):
+        except (IOError, DataTypeError):
             value = None
         return value
 
@@ -105,7 +106,7 @@ def get_result_arguments(
         d, data_type_packs, dirname(tool_definition['configuration_path']))
     errors.extend(more_errors)
     if errors:
-        raise TypeError(*errors)
+        raise DataTypeError(*errors)
     return d
 
 
@@ -133,7 +134,7 @@ def parse_data_dictionary_from(
         data_type = get_data_type(key, data_type_packs)
         try:
             value = data_type.parse(value)
-        except TypeError as e:
+        except DataTypeError as e:
             errors.append((key, str(e)))
         d[key] = value
         if not key.endswith('_path'):
@@ -147,7 +148,7 @@ def parse_data_dictionary_from(
             data_type.load(value)
         except IOError as e:
             errors.append((noun, 'not_found'))
-        except TypeError as e:
+        except DataTypeError as e:
             errors.append((noun, str(e)))
     return d, errors
 

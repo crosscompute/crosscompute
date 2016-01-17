@@ -5,6 +5,7 @@ from invisibleroads_macros.disk import make_enumerated_folder
 from os.path import join, sep
 
 from ..configurations import RESERVED_ARGUMENT_NAMES
+from ..exceptions import DataTypeError
 from ..types import get_data_type_packs, get_result_arguments
 from . import load_tool_definition, run_script
 
@@ -28,7 +29,7 @@ class RunScript(Script):
                 tool_definition,
                 argument_parser.parse_args(sys.argv[2:]).__dict__,
                 data_type_packs, data_folder)
-        except TypeError as e:
+        except DataTypeError as e:
             return [(k + '.error', v) for k, v in e.args]
         run_script(
             result_arguments.get('target_folder') or make_enumerated_folder(

@@ -15,6 +15,7 @@ from six import string_types
 from wsgiref.simple_server import make_server
 
 from ..configurations import RESERVED_ARGUMENT_NAMES
+from ..exceptions import DataTypeError
 from ..types import (
     get_data_type, get_data_type_packs, get_relevant_data_types,
     get_result_arguments, parse_data_dictionary_from)
@@ -161,7 +162,7 @@ def run_tool(request):
     try:
         result_arguments = get_result_arguments(
             tool_definition, request.params, data_type_packs, data_folder)
-    except TypeError as e:
+    except DataTypeError as e:
         raise HTTPBadRequest(dict(e.args))
     target_folder = make_enumerated_folder(join(data_folder, 'results'))
     run_script(
