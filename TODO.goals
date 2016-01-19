@@ -1,11 +1,12 @@
-= Accept markdown syntax for user interface template
+Check that examples work in Python3
+Check that examples work in Mac OS X
+
++ Add head_script_inline to all types
 
 Merge crosscompute setup into crosscompute run
     Prompt to install dependencies on ImportError
     Consider -y option to install without prompting
-Check that examples work in Python3
-
-+ Add head_script_inline to all types
+Accept markdown syntax for user interface template
 
 Use real file objects for PIPE
 Handle case when result_id does not exist
