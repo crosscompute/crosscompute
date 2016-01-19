@@ -1,3 +1,10 @@
+0.4
+---
+- Support data_types that require extra stylesheets, scripts, api_keys
+- Make files inside result available from server
+- Use DataTypeError to detect data_type errors
+- Use DataType classmethods without instantiation
+
 0.3
 ---
 - Validate standard_outputs and standard_errors against data_types

@@ -25,12 +25,12 @@ def test_run_with_good_integer_input():
 
 def test_run_with_bad_integer_input():
     standard_output = run('load-integer', {'x_integer': 'abc'})[0]
-    assert 'x_integer.error = expected_integer' in standard_output
+    assert 'x_integer.error' in standard_output
 
 
 def test_run_with_bad_integer_output():
     standard_output = run('save-bad-integer')[0]
-    assert 'z_integer.error = expected_integer' in standard_output
+    assert 'z_integer.error' in standard_output
 
 
 def test_run_with_good_table_input():
@@ -42,12 +42,12 @@ def test_run_with_good_table_input():
 def test_run_with_bad_table_input():
     standard_output = run('load-table', {
         'a_table_path': join(TESTS_FOLDER, 'cc.ini')})[0]
-    assert 'a_table.error = unsupported_format' in standard_output
+    assert 'a_table.error' in standard_output
 
 
 def test_run_with_bad_table_output():
     standard_output = run('save-bad-table')[0]
-    assert 'b_table.error = unsupported_format' in standard_output
+    assert 'b_table.error' in standard_output
 
 
 if __name__ == '__main__':

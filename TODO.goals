@@ -1,4 +1,4 @@
-Check that examples work in Python3
+= Check that examples work in Python3
 Check that examples work in Mac OS X
 
 + Add head_script_inline to all types
@@ -33,3 +33,4 @@ Enhance crosscompute serve
     Enable support for meinheld server
     Enable support for chaussette server
 Test for tables with good extensions but bad content
+Consider TravisCI and AppVeyor 
