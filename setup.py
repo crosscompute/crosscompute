@@ -25,11 +25,12 @@ setup(
     include_package_data=True,
     zip_safe=False,
     setup_requires=[
+        'invisibleroads>=0.1.4',
         'pytest-runner',
     ],
     install_requires=[
         'configparser',
-        'invisibleroads_macros',
+        'invisibleroads_macros>=0.6.4',
         'invisibleroads_posts',
         'invisibleroads_repositories',
         'pyramid',
