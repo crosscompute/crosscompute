@@ -1,5 +1,5 @@
 import re
-from configparser import RawConfigParser
+from ConfigParser import RawConfigParser
 from fnmatch import fnmatch
 from invisibleroads_macros.disk import are_same_path
 from os import getcwd, walk
@@ -62,14 +62,14 @@ def get_tool_definition_by_name_from_path(
     configuration = RawConfigParser()
     configuration.read(configuration_path)
     d = {u'configuration_path': configuration_path}
-    for section_name in configuration:
+    for section_name in configuration.sections():
         try:
             tool_name = TOOL_NAME_PATTERN.match(section_name).group(1).strip()
         except AttributeError:
             continue
         if not tool_name:
             tool_name = default_tool_name
-        tool_definition = dict(configuration[section_name])
+        tool_definition = dict(configuration.items(section_name))
         for key in tool_definition:
             if key.startswith('show_'):
                 tool_definition[key] = asbool(tool_definition[key])

@@ -1,6 +1,6 @@
 import re
 import webbrowser
-from configparser import RawConfigParser
+from ConfigParser import RawConfigParser
 from invisibleroads.scripts import Script
 from invisibleroads_macros.disk import (
     compress_zip, make_enumerated_folder, resolve_relative_path)
@@ -181,17 +181,19 @@ def show_result(request):
     target_folder = join(settings['data.folder'], 'results', result_id)
     result_configuration = RawConfigParser()
     result_configuration.read(join(target_folder, 'result.cfg'))
+    result_arguments = dict(result_configuration.items('result_arguments'))
+    result_properties = dict(result_configuration.items('result_properties'))
     data_type_packs = get_data_type_packs()
     parse_value_by_key = lambda d: parse_data_dictionary_from(
         d, data_type_packs, configuration_folder)[0]
-    result_arguments = parse_value_by_key(
-        result_configuration['result_arguments'])
+    result_arguments = parse_value_by_key(result_arguments)
     result_arguments.pop('target_folder')
     result_properties = parse_value_by_key(parse_nested_dictionary_from(
-        result_configuration['result_properties'], max_depth=1))
+        result_properties, max_depth=1))
     return dict(
-        data_types=get_relevant_data_types(
-            data_type_packs, result_configuration),
+        data_types=get_relevant_data_types(data_type_packs, {
+            'result_arguments': result_arguments,
+            'result_properties': result_properties}),
         result_id=result_id,
         result_arguments=result_arguments,
         result_properties=result_properties)
