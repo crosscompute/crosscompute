@@ -1,5 +1,4 @@
-from os.path import abspath, dirname, join
+from os.path import abspath, dirname
 
 
-TESTS_FOLDER = dirname(abspath(__file__))
-EXAMPLES_FOLDER = join(TESTS_FOLDER, '..', 'examples')
+TOOL_FOLDER = dirname(abspath(__file__))

@@ -2,31 +2,23 @@ CrossCompute
 ============
 Publish your computational model.
 
-Installation from PyPI
-----------------------
+
+Installation
+------------
 ::
 
     pip install -U crosscompute
-    pip install -U crosscompute-integer crosscompute-text crosscompute-table
+    pip install -U crosscompute-integer
+    pip install -U crosscompute-text
+    pip install -U crosscompute-table
+    pip install -U crosscompute-image
+    pip install -U crosscompute-geotable
 
-    git clone https://github.com/crosscompute/crosscompute-examples
-    crosscompute setup convert-timestamps
-    crosscompute run convert-timestamps
-    crosscompute serve convert-timestamps
 
-Installation from GitHub
-------------------------
+Usage
+-----
 ::
 
-    git clone https://github.com/crosscompute/crosscompute
-    git submodule init
-    git submodule update
-
-    cd crosscompute; python setup.py develop
-    cd crosscompute/opt/crosscompute/types/integer; python setup.py develop
-    cd crosscompute/opt/crosscompute/types/text; python setup.py develop
-    cd crosscompute/opt/crosscompute/types/table; python setup.py develop
-
-    crosscompute setup convert-timestamps
-    crosscompute run convert-timestamps
-    crosscompute serve convert-timestamps
+    git clone https://github.com/crosscompute/crosscompute-examples
+    crosscompute run find-prime-factors
+    crosscompute serve find-prime-factors

@@ -29,10 +29,9 @@ setup(
         'pytest-runner',
     ],
     install_requires=[
-        'configparser',
         'invisibleroads_macros>=0.6.4',
-        'invisibleroads_posts',
-        'invisibleroads_repositories',
+        'invisibleroads_posts>=0.4.5',
+        'invisibleroads_repositories>=0.1.2',
         'pyramid',
         'pyramid_jinja2',
         'six',
