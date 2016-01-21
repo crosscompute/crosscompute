@@ -1,6 +1,5 @@
 import re
 import webbrowser
-from ConfigParser import RawConfigParser
 from invisibleroads.scripts import Script
 from invisibleroads_macros.disk import (
     compress_zip, make_enumerated_folder, resolve_relative_path)
@@ -12,6 +11,7 @@ from pyramid.httpexceptions import (
     HTTPBadRequest, HTTPForbidden, HTTPNotFound, HTTPSeeOther)
 from pyramid.response import FileResponse
 from six import string_types
+from six.moves.configparser import RawConfigParser
 from wsgiref.simple_server import make_server
 
 from ..configurations import RESERVED_ARGUMENT_NAMES

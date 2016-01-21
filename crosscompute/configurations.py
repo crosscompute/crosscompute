@@ -1,10 +1,10 @@
 import re
-from ConfigParser import RawConfigParser
 from fnmatch import fnmatch
 from invisibleroads_macros.disk import are_same_path
 from os import getcwd, walk
 from os.path import abspath, basename, join
 from pyramid.settings import asbool, aslist
+from six.moves.configparser import RawConfigParser
 
 from .exceptions import ConfigurationNotFound, ToolNotFound, ToolNotSpecified
 
@@ -24,7 +24,7 @@ def get_tool_definition(tool_folder=None, tool_name='', default_tool_name=''):
             'Configuration not found. Run this command in a folder '
             'with a configuration file or in a parent folder.')
     if len(tool_definition_by_name) == 1:
-        return tool_definition_by_name.values()[0]
+        return list(tool_definition_by_name.values())[0]
     if not tool_name:
         raise ToolNotSpecified('Tool not specified. %s' % (
             format_available_tools(tool_definition_by_name)))
