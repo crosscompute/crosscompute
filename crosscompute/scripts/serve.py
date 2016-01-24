@@ -130,9 +130,6 @@ def add_routes(config):
         run_tool, request_method='POST',
         route_name='tool')
     config.add_view(
-        show_result, renderer='result.jinja2', request_method='GET',
-        route_name='result')
-    config.add_view(
         show_result_json, renderer='json', request_method='GET',
         route_name='result.json')
     config.add_view(
@@ -141,6 +138,9 @@ def add_routes(config):
     config.add_view(
         show_result_file, request_method='GET',
         route_name='result_file')
+    config.add_view(
+        show_result, renderer='result.jinja2', request_method='GET',
+        route_name='result')
 
 
 def show_tool(request):
@@ -148,10 +148,9 @@ def show_tool(request):
     settings = request.registry.settings
     data_type_packs = settings['data_type_packs']
     tool_definition = settings['tool_definition']
-    tool_argument_names = tool_definition['argument_names']
     return dict(
         data_types=get_relevant_data_types(
-            data_type_packs, tool_argument_names))
+            data_type_packs, tool_definition['argument_names']))
 
 
 def run_tool(request):
