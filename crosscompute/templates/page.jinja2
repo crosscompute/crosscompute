@@ -9,7 +9,6 @@
 {{ super() -}}
 {% for data_type in data_types %}{% from data_type.template import head_style_inline %}{{ head_style_inline() }}{% endfor %}
 .error {background-color: yellow}
-#top-navbar {margin-bottom: 0}
 {% endblock %}
 
 {% block head_script_inline %}
