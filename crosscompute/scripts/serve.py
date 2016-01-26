@@ -64,13 +64,23 @@ def get_app(
         ],
     })
     config.include('invisibleroads_posts')
-    config.get_jinja2_environment().globals.update(get_template_variables(
-        config.registry.settings, base_template))
+    config.get_jinja2_environment().globals.update(
+        get_global_template_variables(base_template))
+    config.get_jinja2_environment().globals.update(
+        get_local_template_variables(config.registry.settings))
     add_routes(config)
     return config.make_wsgi_app()
 
 
-def get_template_variables(settings, base_template, tool_definition=None):
+def get_global_template_variables(base_template):
+    return dict(
+        RESERVED_ARGUMENT_NAMES=RESERVED_ARGUMENT_NAMES,
+        base_template=base_template,
+        get_os_environment_variable=environ.get,
+        get_url_from_path=_get_url_from_path)
+
+
+def get_local_template_variables(settings, tool_definition=None):
     tool_definition = tool_definition or settings['tool_definition']
     get_data_type_for = lambda x: get_data_type(x, settings['data_type_packs'])
 
@@ -82,13 +92,6 @@ def get_template_variables(settings, base_template, tool_definition=None):
         if isinstance(value, string_types):
             value = data_type.parse(value)
         return data_type.format(value)
-
-    def get_url_from_path(path):
-        try:
-            result_id, file_path = RESULT_PATH_PATTERN.search(path).groups()
-        except AttributeError:
-            return ''
-        return '/results/%s/_/%s' % (result_id, file_path)
 
     def load_value(value_key, path):
         if not isabs(path):
@@ -103,14 +106,10 @@ def get_template_variables(settings, base_template, tool_definition=None):
         return tool_argument_noun
 
     return dict(
-        RESERVED_ARGUMENT_NAMES=RESERVED_ARGUMENT_NAMES,
-        base_template=base_template,
         format_value=format_value,
         get_data_type_for=get_data_type_for,
-        get_os_environment_variable=environ.get,
         get_help=lambda x: tool_definition.get(
             x + '.help', HELP_BY_KEY.get(x, '')),
-        get_url_from_path=get_url_from_path,
         prepare_tool_argument_noun=prepare_tool_argument_noun,
         tool_argument_names=tool_definition['argument_names'],
         tool_name=tool_definition['tool_name'])
@@ -222,3 +221,11 @@ def show_result_file(request):
     if not exists(result_file_path):
         raise HTTPNotFound
     return FileResponse(result_file_path, request=request)
+
+
+def _get_url_from_path(path):
+    try:
+        result_id, file_path = RESULT_PATH_PATTERN.search(path).groups()
+    except AttributeError:
+        return ''
+    return '/results/%s/_/%s' % (result_id, file_path)

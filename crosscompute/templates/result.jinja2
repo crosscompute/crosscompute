@@ -1,9 +1,9 @@
 {% extends 'page.jinja2' %}
 {% from 'type.jinja2' import render_values with context %}
-{% set result_name = result_name or '%s (%s)' % (result_id, render_title(tool_name)) %}
+{% set result_name = result_name or result_id %}
 
 {% block page_title %}
-{% block body_title %}{{ result_name }}{% endblock %} &middot; Results &middot; {{ website_name -}}
+{% block body_subtitle %}{{ result_name }}{% endblock %} &middot; Results &middot; {{ website_name -}}
 {% endblock %}
 
 {% block head_style_inline %}
@@ -13,7 +13,6 @@
 
 {% block body_content %}
 {{ super() -}}
-
 {% if result_arguments %}
 <h2>Arguments</h2>
 <div id="result_arguments">

@@ -17,10 +17,13 @@
 {% endblock %}
 
 {% block body_content %}
-<h1><div class="row">
-<div class="col-xs-9">{% block body_title %}{% endblock %}</div>
-<div class="col-xs-3 text-right">{% block body_toolbar %}{% endblock %}</div>
-</div></h1>
+<h1>{% block body_title %}{% endblock %}</h1>
+<h1>
+<div class="row">
+<div class="col-xs-9">{% block body_subtitle %}{% endblock %}</div>
+<div class="col-xs-3 text-right">{% block body_subtitle_toolbar %}{% endblock %}</div>
+</div>
+</h1>
 {% endblock %}
 
 {% block body_script_loaded %}
