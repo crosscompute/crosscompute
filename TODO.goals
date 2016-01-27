@@ -1,3 +1,5 @@
+Consider whether get_local_template_variables should accept case when tool_definition is really blank
+
 Let author specify tool nickname
 Show tool link at top of result
 

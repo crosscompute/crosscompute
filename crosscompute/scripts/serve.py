@@ -65,7 +65,9 @@ def get_app(
     })
     config.include('invisibleroads_posts')
     config.get_jinja2_environment().globals.update(
-        get_global_template_variables(base_template))
+        get_global_template_variables(base_template), **{
+            'get_url_from_path': _get_url_from_path,
+        })
     config.get_jinja2_environment().globals.update(
         get_local_template_variables(config.registry.settings))
     add_routes(config)
@@ -76,12 +78,11 @@ def get_global_template_variables(base_template):
     return dict(
         RESERVED_ARGUMENT_NAMES=RESERVED_ARGUMENT_NAMES,
         base_template=base_template,
-        get_os_environment_variable=environ.get,
-        get_url_from_path=_get_url_from_path)
+        get_os_environment_variable=environ.get)
 
 
 def get_local_template_variables(settings, tool_definition=None):
-    tool_definition = tool_definition or settings['tool_definition']
+    tool_definition = tool_definition or settings.get('tool_definition', {})
     get_data_type_for = lambda x: get_data_type(x, settings['data_type_packs'])
 
     def format_value(value_key):
@@ -111,8 +112,8 @@ def get_local_template_variables(settings, tool_definition=None):
         get_help=lambda x: tool_definition.get(
             x + '.help', HELP_BY_KEY.get(x, '')),
         prepare_tool_argument_noun=prepare_tool_argument_noun,
-        tool_argument_names=tool_definition['argument_names'],
-        tool_name=tool_definition['tool_name'])
+        tool_argument_names=tool_definition.get('argument_names', []),
+        tool_name=tool_definition.get('tool_name', ''))
 
 
 def add_routes(config):
