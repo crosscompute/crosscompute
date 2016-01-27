@@ -154,5 +154,5 @@ def parse_data_dictionary_from(
 
 
 def parse_data_dictionary(text, data_type_packs, configuration_folder):
-    return parse_data_dictionary_from(parse_nested_dictionary(
-        text), data_type_packs, configuration_folder)
+    d = parse_nested_dictionary(text, is_key=lambda x: ':' not in x)
+    return parse_data_dictionary_from(d, data_type_packs, configuration_folder)
