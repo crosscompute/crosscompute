@@ -3,8 +3,8 @@ CrossCompute
 Publish your computational model.
 
 
-Installation
-------------
+Install
+-------
 ::
 
     pip install -U crosscompute
@@ -15,8 +15,8 @@ Installation
     pip install -U crosscompute-geotable
 
 
-Usage
------
+Use
+---
 ::
 
     git clone https://github.com/crosscompute/crosscompute-examples
