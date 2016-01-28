@@ -7,7 +7,7 @@ DESCRIPTION = '\n\n'.join(open(join(FOLDER, x)).read().strip() for x in [
     'README.rst', 'CHANGES.rst'])
 setup(
     name='crosscompute',
-    version='0.4.1',
+    version='0.4.2',
     description='Publish your computational model',
     long_description=DESCRIPTION,
     classifiers=[
@@ -29,7 +29,7 @@ setup(
         'pytest-runner',
     ],
     install_requires=[
-        'invisibleroads_macros>=0.6.4',
+        'invisibleroads_macros>=0.6.5',
         'invisibleroads_posts>=0.4.5',
         'invisibleroads_repositories>=0.1.2',
         'pyramid',
