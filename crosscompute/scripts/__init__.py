@@ -1,4 +1,3 @@
-import codecs
 import os
 import re
 import shlex
@@ -29,6 +28,9 @@ class _ResultConfiguration(object):
     def __init__(self, target_folder):
         self.target_file = open(join(target_folder, 'result.cfg'), 'wt')
 
+    def write(self, screen_text, file_text=None):
+        _write(self.target_file, screen_text, file_text)
+
     def write_header(self, tool_definition, result_arguments):
         # Get tool_argument_names before they are removed from tool_definition
         tool_argument_names = list(tool_definition['argument_names'])
@@ -36,13 +38,11 @@ class _ResultConfiguration(object):
         template = '[tool_definition]\n%s\n'
         tool_definition = stylize_tool_definition(
             tool_definition, result_arguments)
-        section_content = template % format_summary(
+        self.write(template % format_summary(
             sort_dictionary(tool_definition, [
                 'repository_url', 'tool_name', 'commit_hash',
                 'configuration_path', 'command',
-            ]), [('command', format_hanging_indent)])
-        print(section_content)
-        self.target_file.write(section_content + '\n')
+            ]), [('command', format_hanging_indent)]))
         # Put target_folder at end of result_arguments
         target_folder = result_arguments['target_folder']
         try:
@@ -59,16 +59,15 @@ class _ResultConfiguration(object):
             if not k.endswith('_path') or isabs(v):
                 continue
             result_arguments[k] = abspath(join(configuration_folder, v))
-        section_content = template % format_summary(result_arguments)
-        print(section_content)
-        self.target_file.write(section_content + '\n')
+        self.write(template % format_summary(result_arguments))
 
     def write_footer(self, result_properties, data_type_packs):
         template = '[result_properties]\n%s'
-        print(template % format_summary(
-            result_properties, censored=False))
-        self.target_file.write(template % format_summary(
-            result_properties, censored=True) + '\n')
+        self.write(
+            screen_text=template % format_summary(
+                result_properties, censored=False),
+            file_text=template % format_summary(
+                result_properties, censored=True))
 
 
 def launch(argv=sys.argv):
@@ -124,8 +123,8 @@ def run_script(
             command_process = subprocess.Popen(
                 shlex.split(command, posix=os.name == 'posix'),
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        standard_output, standard_error = [codecs.getdecoder('unicode_escape')(
-            x.rstrip())[0] for x in command_process.communicate()]
+        standard_output, standard_error = [
+            x.rstrip().decode('utf-8') for x in command_process.communicate()]
         if command_process.returncode:
             result_properties['return_code'] = command_process.returncode
     except OSError:
@@ -160,9 +159,10 @@ def _process_streams(
     ]:
         if not stream_content:
             continue
-        log_path = join(target_folder, '%s.log' % stream_name)
-        open(log_path, 'wt').write(stream_content + '\n')
-        print('[%s]\n%s\n' % (stream_name, stream_content))
+        _write(
+            open(join(target_folder, '%s.log' % stream_name), 'wt'),
+            screen_text='[%s]\n%s\n' % (stream_name, stream_content),
+            file_text=stream_content)
         value_by_key, errors = parse_data_dictionary(
             stream_content, data_type_packs, configuration_folder)
         for k, v in errors:
@@ -174,3 +174,10 @@ def _process_streams(
     if type_errors:
         d['type_errors'] = type_errors
     return d
+
+
+def _write(target_file, screen_text, file_text=None):
+    if not file_text:
+        file_text = screen_text
+    print(screen_text.encode('utf-8'))
+    target_file.write(file_text.encode('utf-8') + '\n')

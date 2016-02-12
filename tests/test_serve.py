@@ -1,5 +1,4 @@
-from lxml.html import fromstring
-from lxml.cssselect import CSSSelector
+from bs4 import BeautifulSoup
 from urlparse import urlparse as parse_url
 from werkzeug.test import Client
 from werkzeug.wrappers import BaseResponse
@@ -16,5 +15,5 @@ def test_serve():
     assert 303 == response.status_code
     result_url = parse_url(dict(response.headers)['Location']).path
     response = client.get(result_url)
-    element = fromstring(response.data)
-    assert '7' == CSSSelector('#standard_output_')(element)[0].text.strip()
+    soup = BeautifulSoup(response.data)
+    assert '7' in soup.find('div', id='standard_output_').text.strip()

@@ -38,7 +38,7 @@ setup(
         'stevedore',
     ],
     tests_require=[
-        'lxml',
+        'beautifulsoup4',
         'pytest',
         'werkzeug',
     ],
