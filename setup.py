@@ -7,7 +7,7 @@ DESCRIPTION = '\n\n'.join(open(join(FOLDER, x)).read().strip() for x in [
     'README.rst', 'CHANGES.rst'])
 setup(
     name='crosscompute',
-    version='0.4.2',
+    version='0.4.3',
     description='Publish your computational model',
     long_description=DESCRIPTION,
     classifiers=[
@@ -50,5 +50,8 @@ setup(
             'setup = crosscompute.scripts.setup:SetupScript',
             'run = crosscompute.scripts.run:RunScript',
             'serve = crosscompute.scripts.serve:ServeScript',
+        ],
+        'pyramid.scaffold': [
+            'tool = crosscompute.scaffolds:ToolTemplate',
         ],
     })

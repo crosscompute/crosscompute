@@ -145,7 +145,7 @@ def render_command(command_template, result_arguments):
         if ' ' in v and not quote_pattern.match(v):
             v = '"%s"' % v
         d[k] = v
-    return command_template.format(**d)
+    return command_template.replace('\n', ' ').format(**d)
 
 
 def _process_streams(

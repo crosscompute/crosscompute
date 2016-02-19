@@ -1,3 +1,5 @@
+Write test to ensure that serve shows result_properties in same order as returned by script
+
 + Add head_script_inline to all types
 + Remove dependency on lxml
 

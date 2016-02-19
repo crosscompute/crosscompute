@@ -1,5 +1,6 @@
 import re
 import webbrowser
+from collections import OrderedDict
 from invisibleroads.scripts import Script
 from invisibleroads_macros.disk import (
     compress_zip, make_enumerated_folder, resolve_relative_path)
@@ -83,7 +84,9 @@ def get_global_template_variables(base_template):
 
 def get_local_template_variables(settings, tool_definition=None):
     tool_definition = tool_definition or settings.get('tool_definition', {})
-    get_data_type_for = lambda x: get_data_type(x, settings['data_type_packs'])
+
+    def get_data_type_for(x):
+        return get_data_type(x, settings['data_type_packs'])
 
     def format_value(value_key):
         if value_key not in tool_definition:
@@ -180,11 +183,16 @@ def show_result(request):
     target_folder = join(settings['data.folder'], 'results', result_id)
     result_configuration = RawConfigParser()
     result_configuration.read(join(target_folder, 'result.cfg'))
-    result_arguments = dict(result_configuration.items('result_arguments'))
-    result_properties = dict(result_configuration.items('result_properties'))
+    result_arguments = OrderedDict(
+        result_configuration.items('result_arguments'))
+    result_properties = OrderedDict(
+        result_configuration.items('result_properties'))
     data_type_packs = get_data_type_packs()
-    parse_value_by_key = lambda d: parse_data_dictionary_from(
-        d, data_type_packs, configuration_folder)[0]
+
+    def parse_value_by_key(d):
+        return parse_data_dictionary_from(
+            d, data_type_packs, configuration_folder)[0]
+
     result_arguments = parse_value_by_key(result_arguments)
     result_arguments.pop('target_folder')
     result_properties = parse_value_by_key(parse_nested_dictionary_from(

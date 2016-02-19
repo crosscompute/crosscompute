@@ -1,5 +1,6 @@
 0.4
 ---
+- Add tool scaffold
 - Support data_types that require extra stylesheets, scripts, api_keys
 - Make files inside result available from server
 - Use DataTypeError to detect data_type errors
