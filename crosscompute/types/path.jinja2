@@ -1,3 +1,9 @@
+{% macro head_style_loaded() %}{% endmacro %}
+{% macro head_style_inline() %}{% endmacro %}
+{% macro head_script_inline() %}{% endmacro %}
+{% macro body_script_loaded() %}{% endmacro %}
+{% macro body_script_inline() %}{% endmacro %}
+
 {% macro render_query(key) %}
 {% set tool_argument_noun = prepare_tool_argument_noun(key) %}
 {% set data_type = get_data_type_for(tool_argument_noun) %}
