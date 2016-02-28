@@ -30,8 +30,8 @@ setup(
     ],
     install_requires=[
         'invisibleroads_macros>=0.6.6',
-        'invisibleroads_posts>=0.4.5',
-        'invisibleroads_repositories>=0.1.2',
+        'invisibleroads_posts>=0.4.6',
+        'invisibleroads_repositories>=0.1.3',
         'pyramid',
         'pyramid_jinja2',
         'six',
