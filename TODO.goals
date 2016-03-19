@@ -1,15 +1,17 @@
-Write test to ensure that serve shows result_properties in same order as returned by script
 
-+ Add head_script_inline to all types
-+ Remove dependency on lxml
+
++ Have `crosscompute run` list each tool on a separate line
+
+Write test to ensure that serve shows result_properties in same order as returned by script
 
 Consider whether get_local_template_variables should accept case when tool_definition is really blank
 
 Let author specify tool nickname
 Show tool link at top of result
 
-Check that examples work in Python3
-Check that examples work in Mac OS X
+Check that all examples in documentation work
+    Check that examples work in Python3
+    Check that examples work in Mac OS X
 
 Merge crosscompute setup into crosscompute run
     Prompt to install dependencies on ImportError

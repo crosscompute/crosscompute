@@ -86,8 +86,8 @@ def format_available_tools(tool_definition_by_name):
     tool_count = len(tool_definition_by_name)
     if tool_count == 1:
         return '1 tool available.'
-    return '%s tools available (%s).' % (
-        tool_count, ', '.join(tool_definition_by_name))
+    return '%s tools available:\n\n%s' % (
+        tool_count, '\n'.join(tool_definition_by_name))
 
 
 def parse_tool_argument_names(command_template):
