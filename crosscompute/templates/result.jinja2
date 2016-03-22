@@ -1,6 +1,6 @@
 {% extends 'page.jinja2' %}
 {% from 'type.jinja2' import render_values with context %}
-{% set result_name = result_name or result_id %}
+{% set result_name = result_name or '%s %s' % (result_id, result_title) %}
 
 {% block page_title %}
 {% block body_subtitle %}{{ result_name }}{% endblock %} &middot; Results &middot; {{ website_name -}}

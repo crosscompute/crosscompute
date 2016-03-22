@@ -1,7 +1,3 @@
-
-
-+ Have `crosscompute run` list each tool on a separate line
-
 Write test to ensure that serve shows result_properties in same order as returned by script
 
 Consider whether get_local_template_variables should accept case when tool_definition is really blank
@@ -28,6 +24,7 @@ Let user rename results
 Let user define host and port in command-line for crosscompute run
 Consider how a tool can have assets (maybe if they are explicitly defined in cc.ini)
     tools/14/transform-coordinates/xyz.csv
+Consider how a data type can have custom views
 Restore uploads
     Compute hash on import
 Enhance crosscompute run

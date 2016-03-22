@@ -4,7 +4,10 @@ from collections import OrderedDict
 from invisibleroads.scripts import Script
 from invisibleroads_macros.disk import (
     compress_zip, make_enumerated_folder, resolve_relative_path)
+from invisibleroads_macros.iterable import merge_dictionaries
 from invisibleroads_macros.log import parse_nested_dictionary_from
+from markupsafe import Markup
+from mistune import Markdown
 from os import environ
 from os.path import basename, dirname, exists, isabs, join, sep
 from pyramid.config import Configurator
@@ -15,7 +18,7 @@ from six import string_types
 from six.moves.configparser import RawConfigParser
 from wsgiref.simple_server import make_server
 
-from ..configurations import RESERVED_ARGUMENT_NAMES
+from ..configurations import ARGUMENT_NAME_PATTERN, RESERVED_ARGUMENT_NAMES
 from ..exceptions import DataTypeError
 from ..types import (
     get_data_type, get_data_type_packs, get_relevant_data_types,
@@ -23,12 +26,12 @@ from ..types import (
 from . import load_tool_definition, run_script
 
 
-HELP_BY_KEY = {
+HELP = {
     'return_code': 'There was an error while running the script.',
     'standard_error': 'The script wrote to the standard error stream.',
     'standard_output': 'The script wrote to the standard output stream.',
 }
-RESULT_PATH_PATTERN = re.compile(r'results/(\d+)/(.+)')
+MARKDOWN_TITLE_PATTERN = re.compile(r'^#[^#]\s*(.+)')
 
 
 class ServeScript(Script):
@@ -65,24 +68,74 @@ def get_app(
         ],
     })
     config.include('invisibleroads_posts')
-    config.get_jinja2_environment().globals.update(
-        get_global_template_variables(base_template), **{
-            'get_url_from_path': _get_url_from_path,
-        })
-    config.get_jinja2_environment().globals.update(
-        get_local_template_variables(config.registry.settings))
+    configure_jinja2_environment(
+        config, base_template, r'results/(\d+)/(.+)',
+        **get_template_variables(config.registry.settings))
     add_routes(config)
     return config.make_wsgi_app()
 
 
-def get_global_template_variables(base_template):
-    return dict(
-        RESERVED_ARGUMENT_NAMES=RESERVED_ARGUMENT_NAMES,
-        base_template=base_template,
-        get_os_environment_variable=environ.get)
+def configure_jinja2_environment(
+        config, base_template, result_path_expression, **kw):
+    result_path_pattern = re.compile(result_path_expression)
+    markdown = Markdown(escape=True, hard_wrap=True)
+
+    def get_url_from_path(path):
+        try:
+            result_id, file_path = result_path_pattern.search(path).groups()
+        except AttributeError:
+            return ''
+        return '/results/%s/_/%s' % (result_id, file_path)
+
+    jinja2_environment = config.get_jinja2_environment()
+    jinja2_environment.filters.update({
+        'markdown': lambda x: Markup(markdown(x)),
+    })
+    jinja2_environment.globals.update({
+        'RESERVED_ARGUMENT_NAMES': RESERVED_ARGUMENT_NAMES,
+        'base_template': base_template,
+        'get_os_environment_variable': environ.get,
+        'get_url_from_path': get_url_from_path,
+    }, **kw)
 
 
-def get_local_template_variables(settings, tool_definition=None):
+def get_template_variables(settings, tool_definition=None):
+    'Template variables that can change from tool to tool'
+    tool_definition = tool_definition or settings.get('tool_definition', {})
+    tool_argument_names = tool_definition['argument_names']
+    return merge_dictionaries(
+        parse_template_from(tool_definition, 'tool', tool_argument_names),
+        parse_template_from(tool_definition, 'result'),
+        make_template_functions(settings, tool_definition))
+
+
+def parse_template_from(tool_definition, template_type, default_fields=None):
+    template_path = tool_definition.get(template_type + '_template_path')
+    default_title = tool_definition['tool_name']
+    return parse_template(
+        template_path, template_type, default_title, default_fields)
+
+
+def parse_template(
+        template_path, template_type, default_title, default_fields=None):
+    if not template_path or not exists(template_path):
+        template_title = default_title
+        template_packs = [(0, x) for x in default_fields or []]
+    else:
+        template_text = open(template_path, 'rt').read()
+        template_title = MARKDOWN_TITLE_PATTERN.search(template_text).group(1)
+        # Remove title
+        template_content = MARKDOWN_TITLE_PATTERN.sub('', template_text)
+        # Split
+        template_packs = [(index % 2 == 0, x) for index, x in enumerate(
+            ARGUMENT_NAME_PATTERN.split(template_content)) if x.strip()]
+    return {
+        template_type + '_title': template_title,
+        template_type + '_template_packs': template_packs,
+    }
+
+
+def make_template_functions(settings, tool_definition=None):
     tool_definition = tool_definition or settings.get('tool_definition', {})
 
     def get_data_type_for(x):
@@ -97,11 +150,6 @@ def get_local_template_variables(settings, tool_definition=None):
             value = data_type.parse(value)
         return data_type.format(value)
 
-    def load_value(value_key, path):
-        if not isabs(path):
-            path = join(dirname(tool_definition['configuration_path']), path)
-        return get_data_type_for(value_key).load(path)
-
     def prepare_tool_argument_noun(path_key):
         tool_argument_noun = path_key[:-5]
         if path_key in tool_definition:
@@ -109,14 +157,16 @@ def get_local_template_variables(settings, tool_definition=None):
                 tool_argument_noun, tool_definition[path_key])
         return tool_argument_noun
 
+    def load_value(value_key, path):
+        if not isabs(path):
+            path = join(dirname(tool_definition['configuration_path']), path)
+        return get_data_type_for(value_key).load(path)
+
     return dict(
         format_value=format_value,
         get_data_type_for=get_data_type_for,
-        get_help=lambda x: tool_definition.get(
-            x + '.help', HELP_BY_KEY.get(x, '')),
-        prepare_tool_argument_noun=prepare_tool_argument_noun,
-        tool_argument_names=tool_definition.get('argument_names', []),
-        tool_name=tool_definition.get('tool_name', ''))
+        get_help=lambda x: tool_definition.get(x + '.help', HELP.get(x, '')),
+        prepare_tool_argument_noun=prepare_tool_argument_noun)
 
 
 def add_routes(config):
@@ -147,7 +197,6 @@ def add_routes(config):
 
 
 def show_tool(request):
-    # !! Render markdown
     settings = request.registry.settings
     data_type_packs = settings['data_type_packs']
     tool_definition = settings['tool_definition']
@@ -230,11 +279,3 @@ def show_result_file(request):
     if not exists(result_file_path):
         raise HTTPNotFound
     return FileResponse(result_file_path, request=request)
-
-
-def _get_url_from_path(path):
-    try:
-        result_id, file_path = RESULT_PATH_PATTERN.search(path).groups()
-    except AttributeError:
-        return ''
-    return '/results/%s/_/%s' % (result_id, file_path)
