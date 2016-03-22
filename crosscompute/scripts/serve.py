@@ -1,3 +1,4 @@
+import inspect
 import re
 import webbrowser
 from collections import OrderedDict
@@ -72,6 +73,7 @@ def get_app(
         config, base_template, r'results/(\d+)/(.+)',
         **get_template_variables(config.registry.settings))
     add_routes(config)
+    add_routes_for_data_types(config, data_type_packs)
     return config.make_wsgi_app()
 
 
@@ -141,14 +143,19 @@ def make_template_functions(settings, tool_definition=None):
     def get_data_type_for(x):
         return get_data_type(x, settings['data_type_packs'])
 
-    def format_value(value_key):
+    def format_value(value_key, *args, **kw):
+        value = get_value(value_key)
+        data_type = get_data_type_for(value_key)
+        return data_type.format(value, *args, **kw)
+
+    def get_value(value_key):
         if value_key not in tool_definition:
             return ''
         value = tool_definition[value_key]
         data_type = get_data_type_for(value_key)
         if isinstance(value, string_types):
             value = data_type.parse(value)
-        return data_type.format(value)
+        return value
 
     def prepare_tool_argument_noun(path_key):
         tool_argument_noun = path_key[:-5]
@@ -166,6 +173,7 @@ def make_template_functions(settings, tool_definition=None):
         format_value=format_value,
         get_data_type_for=get_data_type_for,
         get_help=lambda x: tool_definition.get(x + '.help', HELP.get(x, '')),
+        get_value=get_value,
         prepare_tool_argument_noun=prepare_tool_argument_noun)
 
 
@@ -194,6 +202,20 @@ def add_routes(config):
     config.add_view(
         show_result, renderer='result.jinja2', request_method='GET',
         route_name='result')
+
+
+def add_routes_for_data_types(config, data_type_packs):
+    for data_type_name, data_type in data_type_packs or []:
+        for asset_path in data_type.asset_paths:
+            asset_path = join(dirname(inspect.getfile(data_type)), asset_path)
+            asset_name = basename(asset_path)
+            route_name = '___/crosscompute/%s/%s' % (
+                data_type_name, asset_name)
+            config.add_route(route_name, '/_/crosscompute/%s/%s' % (
+                data_type_name, asset_name))
+            config.add_view(
+                lambda request: FileResponse(asset_path, request),
+                route_name=route_name, http_cache=3600)
 
 
 def show_tool(request):

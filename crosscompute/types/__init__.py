@@ -12,6 +12,7 @@ from ..exceptions import DataTypeError
 
 @add_metaclass(ABCMeta)
 class DataType(object):
+    asset_paths = []
 
     @classmethod
     def save(Class, path, value):
