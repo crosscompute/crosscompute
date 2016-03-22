@@ -36,7 +36,28 @@
 {% if standard_outputs %}
 <h2>Outputs</h2>
 <div id="standard-outputs">
+{% for content_type, content in result_template_packs %}
+
+{%- if content_type == 0 -%}
+{% set result_property_name = content %}
+{% set result_property_value = standard_outputs.get(result_property_name) %}
+
+{% if result_property_value is not none %}
+{% set data_type = get_data_type_for(result_property_name) %}
+{% if not data_type.match(result_property_value) %}
+{% set data_type = default_data_type %}
+{% endif -%}
+{% from data_type.template import render_value with context %}
+{{- render_value(result_property_name, result_property_value) -}}
+{% endif %}
+
+{%- elif content_type == 1 -%}
+{{ content | markdown }}
+
+{%- endif -%}
+{% else %}
 {{ render_values(standard_outputs) -}}
+{% endfor %}
 </div>
 {% endif -%}
 
