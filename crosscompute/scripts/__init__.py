@@ -8,8 +8,8 @@ from collections import OrderedDict
 from os import sep
 from os.path import abspath, dirname, isabs, join
 from invisibleroads.scripts import (
-    ReflectiveArgumentParser,
-    configure_subparsers, get_scripts_by_name, run_scripts)
+    StoicArgumentParser, configure_subparsers, get_scripts_by_name,
+    run_scripts)
 from invisibleroads_macros.disk import cd
 from invisibleroads_macros.exceptions import InvisibleRoadsError
 from invisibleroads_macros.log import (
@@ -71,8 +71,7 @@ class _ResultConfiguration(object):
 
 
 def launch(argv=sys.argv):
-    argument_parser = ReflectiveArgumentParser(
-        'crosscompute', add_help=False)
+    argument_parser = StoicArgumentParser('crosscompute', add_help=False)
     argument_subparsers = argument_parser.add_subparsers(dest='command')
     scripts_by_name = get_scripts_by_name('crosscompute')
     configure_subparsers(argument_subparsers, scripts_by_name)

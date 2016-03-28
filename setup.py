@@ -2,6 +2,16 @@ from os.path import abspath, dirname, join
 from setuptools import setup, find_packages
 
 
+ENTRY_POINTS = """
+[console_scripts]
+crosscompute = crosscompute.scripts:launch
+[crosscompute]
+setup = crosscompute.scripts.setup:SetupScript
+run = crosscompute.scripts.run:RunScript
+serve = crosscompute.scripts.serve:ServeScript
+[pyramid.scaffold]
+tool = crosscompute.scaffolds:ToolTemplate
+"""
 FOLDER = dirname(abspath(__file__))
 DESCRIPTION = '\n\n'.join(open(join(FOLDER, x)).read().strip() for x in [
     'README.rst', 'CHANGES.rst'])
@@ -25,7 +35,6 @@ setup(
     include_package_data=True,
     zip_safe=False,
     setup_requires=[
-        'invisibleroads>=0.1.4',
         'pytest-runner',
     ],
     install_requires=[
@@ -42,16 +51,4 @@ setup(
         'pytest',
         'werkzeug',
     ],
-    entry_points={
-        'console_scripts': [
-            'crosscompute = crosscompute.scripts:launch',
-        ],
-        'crosscompute': [
-            'setup = crosscompute.scripts.setup:SetupScript',
-            'run = crosscompute.scripts.run:RunScript',
-            'serve = crosscompute.scripts.serve:ServeScript',
-        ],
-        'pyramid.scaffold': [
-            'tool = crosscompute.scaffolds:ToolTemplate',
-        ],
-    })
+    entry_points=ENTRY_POINTS)
