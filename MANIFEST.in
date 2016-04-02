@@ -1,2 +1,2 @@
 include *.rst
-recursive-include crosscompute *.ini *.jinja2 *.md
+recursive-include crosscompute *.ini *.jinja2 *.md *.py
