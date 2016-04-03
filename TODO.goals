@@ -12,7 +12,6 @@ Check that all examples in documentation work
 Merge crosscompute setup into crosscompute run
     Prompt to install dependencies on ImportError
     Consider -y option to install without prompting
-Accept markdown syntax for user interface template
 
 Use real file objects for PIPE
 Handle case when result_id does not exist
@@ -29,7 +28,6 @@ Restore uploads
     Compute hash on import
 Enhance crosscompute run
     Add TAB completion for script arguments
-    Add option to list tool names
     Get crosscompute_types from --types
     Get crosscompute_types from --configuration_path
     Consider parsing streaming output from Popen
