@@ -120,7 +120,7 @@ def run_script(
     try:
         with cd(dirname(tool_definition['configuration_path'])):
             command_process = subprocess.Popen(
-                shlex.split(command, posix=os.name == 'posix'),
+                shlex.split(command),
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         standard_output, standard_error = [
             x.rstrip().decode('utf-8') for x in command_process.communicate()]
