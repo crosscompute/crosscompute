@@ -10,7 +10,7 @@ setup = crosscompute.scripts.setup:SetupScript
 run = crosscompute.scripts.run:RunScript
 serve = crosscompute.scripts.serve:ServeScript
 [pyramid.scaffold]
-python-tool = crosscompute.scaffolds:PythonToolTemplate
+cc-python = crosscompute.scaffolds:PythonToolTemplate
 """
 FOLDER = dirname(abspath(__file__))
 DESCRIPTION = '\n\n'.join(open(join(FOLDER, x)).read().strip() for x in [
