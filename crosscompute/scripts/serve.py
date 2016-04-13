@@ -1,3 +1,4 @@
+import codecs
 import inspect
 import re
 import webbrowser
@@ -112,7 +113,9 @@ def get_template_variables(settings, tool_definition=None):
 
 
 def parse_template_from(tool_definition, template_type, default_fields=None):
-    template_path = tool_definition.get(template_type + '_template_path')
+    template_path = join(
+        tool_definition['configuration_folder'],
+        tool_definition.get(template_type + '_template_path'))
     default_title = tool_definition['tool_name']
     return parse_template(
         template_path, template_type, default_title, default_fields)
@@ -124,7 +127,7 @@ def parse_template(
         template_title = default_title
         template_packs = [(0, x) for x in default_fields or []]
     else:
-        template_text = open(template_path, 'rt').read()
+        template_text = codecs.open(template_path, 'r', 'utf-8').read()
         template_title = MARKDOWN_TITLE_PATTERN.search(template_text).group(1)
         # Remove title
         template_content = MARKDOWN_TITLE_PATTERN.sub('', template_text)
@@ -166,7 +169,7 @@ def make_template_functions(settings, tool_definition=None):
 
     def load_value(value_key, path):
         if not isabs(path):
-            path = join(dirname(tool_definition['configuration_path']), path)
+            path = join(tool_definition['configuration_folder'], path)
         return get_data_type_for(value_key).load(path)
 
     return dict(
@@ -248,8 +251,7 @@ def run_tool(request):
 
 def show_result(request):
     settings = request.registry.settings
-    configuration_folder = dirname(settings['tool_definition'][
-        'configuration_path'])
+    configuration_folder = settings['tool_definition']['configuration_folder']
     result_id = request.matchdict['id']
     target_folder = join(settings['data.folder'], 'results', result_id)
     result_configuration = RawConfigParser()

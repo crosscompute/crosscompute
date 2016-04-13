@@ -2,7 +2,7 @@ from abc import ABCMeta
 from collections import OrderedDict
 from invisibleroads_macros.disk import make_enumerated_folder
 from invisibleroads_macros.log import parse_nested_dictionary
-from os.path import dirname, expanduser, isabs, join, sep
+from os.path import expanduser, isabs, join, sep
 from six import add_metaclass
 from stevedore.extension import ExtensionManager
 
@@ -104,7 +104,7 @@ def get_result_arguments(
             continue
         d[tool_argument_name] = value
     d, more_errors = parse_data_dictionary_from(
-        d, data_type_packs, dirname(tool_definition['configuration_path']))
+        d, data_type_packs, tool_definition['configuration_folder'])
     errors.extend(more_errors)
     if errors:
         raise DataTypeError(*errors)

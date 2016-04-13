@@ -1,5 +1,5 @@
 from os.path import abspath, dirname, join
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 
 ENTRY_POINTS = """

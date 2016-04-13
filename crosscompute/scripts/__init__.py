@@ -6,7 +6,7 @@ import sys
 import time
 from collections import OrderedDict
 from os import sep
-from os.path import abspath, dirname, isabs, join
+from os.path import abspath, isabs, join
 from invisibleroads.scripts import (
     StoicArgumentParser, configure_subparsers, get_scripts_by_name,
     run_scripts)
@@ -32,7 +32,8 @@ class _ResultConfiguration(object):
         _write(self.target_file, screen_text, file_text)
 
     def write_header(self, tool_definition, result_arguments):
-        # Get tool_argument_names before they are removed from tool_definition
+        # Get values before they are removed from tool_definition
+        configuration_folder = tool_definition['configuration_folder']
         tool_argument_names = list(tool_definition['argument_names'])
         # Write tool_definition
         template = '[tool_definition]\n%s\n'
@@ -54,7 +55,6 @@ class _ResultConfiguration(object):
         # Write result_arguments
         template = '[result_arguments]\n%s\n'
         result_arguments['target_folder'] = target_folder
-        configuration_folder = dirname(tool_definition['configuration_path'])
         for k, v in result_arguments.items():
             if not k.endswith('_path') or isabs(v):
                 continue
@@ -94,10 +94,12 @@ def stylize_tool_definition(tool_definition, result_arguments):
         'tool_name': tool_definition['tool_name'],
         'configuration_path': tool_definition['configuration_path'],
     }
-    tool_folder = dirname(tool_definition['configuration_path'])
+    configuration_folder = tool_definition['configuration_folder']
     try:
-        d['repository_url'] = get_github_repository_url(tool_folder)
-        d['commit_hash'] = get_github_repository_commit_hash(tool_folder)
+        d['repository_url'] = get_github_repository_url(
+            configuration_folder)
+        d['commit_hash'] = get_github_repository_commit_hash(
+            configuration_folder)
     except InvisibleRoadsError:
         pass
     d['command'] = render_command(
@@ -118,7 +120,7 @@ def run_script(
     command = render_command(
         tool_definition['command_template'], result_arguments)
     try:
-        with cd(dirname(tool_definition['configuration_path'])):
+        with cd(tool_definition['configuration_folder']):
             command_process = subprocess.Popen(
                 shlex.split(command, posix=os.name == 'posix'),
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -151,7 +153,7 @@ def _process_streams(
         standard_output, standard_error, target_folder, tool_definition,
         data_type_packs):
     d, type_errors = OrderedDict(), OrderedDict()
-    configuration_folder = dirname(tool_definition['configuration_path'])
+    configuration_folder = tool_definition['configuration_folder']
     for stream_name, stream_content in [
         ('standard_output', standard_output),
         ('standard_error', standard_error),
