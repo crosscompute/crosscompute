@@ -28,13 +28,5 @@ def test_correct_target_folder_path():
     standard_output = run(
         TOOL_FOLDER, 'show-correct-target_folder')[0]
     target_folder = re.search(r'\ntarget_folder\s=\s(.+?)\r',standard_output).group(1)
-    """
-    # how it is now, the test will pass
-    check = 'standard_outputs.target folder = ' + 'tmpshow-correct-target_folderresults'
-    """
-    # should either this
-    check = 'standard_outputs.target folder = ' + target_folder
-    # or this
-    check = 'standard_outputs.target folder = ' + target_folder + '/tmpshow-correct-target_folderresults'
-    #assert re.match(r'target folder = tmpshow-correct-target_folderresults',standard_output) is not None  
+    check = 'standard_outputs.target folder = ' + target_folder + '/tmpshow-correct-target_folderresults'  
     assert check in standard_output
