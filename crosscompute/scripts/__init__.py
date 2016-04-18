@@ -61,7 +61,7 @@ class _ResultConfiguration(object):
             result_arguments[k] = abspath(join(configuration_folder, v))
         self.write(template % format_summary(result_arguments))
 
-    def write_footer(self, result_properties, data_type_packs):
+    def write_footer(self, result_properties):
         template = '[result_properties]\n%s'
         self.write(
             screen_text=template % format_summary(
@@ -112,7 +112,7 @@ def stylize_tool_definition(tool_definition, result_arguments):
 
 
 def run_script(
-        target_folder, tool_definition, result_arguments, data_type_packs):
+        target_folder, tool_definition, result_arguments, data_type_by_suffix):
     result_properties, timestamp = OrderedDict(), time.time()
     result_arguments = dict(result_arguments, target_folder=target_folder)
     result_configuration = _ResultConfiguration(target_folder)
@@ -132,9 +132,9 @@ def run_script(
         standard_output, standard_error = None, 'Command not found'
     result_properties.update(_process_streams(
         standard_output, standard_error, target_folder, tool_definition,
-        data_type_packs))
+        data_type_by_suffix))
     result_properties['execution_time_in_seconds'] = time.time() - timestamp
-    result_configuration.write_footer(result_properties, data_type_packs)
+    result_configuration.write_footer(result_properties)
     return result_properties
 
 
@@ -151,7 +151,7 @@ def render_command(command_template, result_arguments):
 
 def _process_streams(
         standard_output, standard_error, target_folder, tool_definition,
-        data_type_packs):
+        data_type_by_suffix):
     d, type_errors = OrderedDict(), OrderedDict()
     configuration_folder = tool_definition['configuration_folder']
     for stream_name, stream_content in [
@@ -165,7 +165,7 @@ def _process_streams(
             screen_text='[%s]\n%s\n' % (stream_name, stream_content),
             file_text=stream_content)
         value_by_key, errors = parse_data_dictionary(
-            stream_content, data_type_packs, configuration_folder)
+            stream_content, data_type_by_suffix, configuration_folder)
         for k, v in errors:
             type_errors['%s.error' % k] = v
         if tool_definition.get('show_' + stream_name):

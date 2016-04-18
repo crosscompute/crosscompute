@@ -1,13 +1,16 @@
-{% macro render_values(value_by_key) %}
-{% set default_data_type = get_data_type_for('') %}
-{% for key, value in value_by_key.items() if not key.startswith('_') -%}
+{% macro render_properties(data_items) %}
+{%- for x in data_items %}
+{% from x.data_type.template import render_property %}
+{{- render_key(x) }}
+{{- render_property(x) }}
+{%- endfor %}
+{% endmacro %}
 
-{% set data_type = get_data_type_for(key) %}
-{% if not data_type.match(value) %}
-{% set data_type = default_data_type %}
-{% endif -%}
-
-{% from data_type.template import render_value with context %}
-{{- render_value(key, value) -}}
-{% endfor %}
+{% macro render_key(data_item) %}
+{% set key = data_item.key %}
+{% set help_text = data_item.help_text %}
+<label for="{{ key }}_" class="control-label h3">{{ key }}</label>
+{% if help_text %}
+<span class="glyphicon glyphicon-question-sign btn-lg" data-toggle="popover" data-content="{{ help_text }}"></span>
+{% endif %}
 {% endmacro %}

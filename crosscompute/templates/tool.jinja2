@@ -4,25 +4,6 @@
 {% block body_subtitle %}{{ tool_title }}{% endblock %} &middot; Tools &middot; {{ website_name -}}
 {% endblock %}
 
-{% block body_content %}
-{{ super() -}}
-<form id="tool-form" method="post">
-{% for content_type, content in tool_template_packs %}
-
-{%- if content_type == 0 and content not in RESERVED_ARGUMENT_NAMES -%}
-{% set tool_argument_name = content %}
-{% from get_data_type_for(tool_argument_name).template import render_query with context %}
-<div class="form-group">{{ render_query(tool_argument_name) }}</div>
-
-{%- elif content_type == 1 -%}
-{{ content | markdown }}
-
-{%- endif -%}
-{% endfor %}
-<button type="submit" class="btn btn-primary btn-lg">Run</button>
-</form>
-{% endblock %}
-
 {% block body_script_inline %}
 {{ super() -}}
 $('#tool-form').find('[name]').first().focus();

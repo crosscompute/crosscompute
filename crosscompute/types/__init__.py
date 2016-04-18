@@ -1,6 +1,7 @@
 from abc import ABCMeta
 from collections import OrderedDict
 from invisibleroads_macros.disk import make_enumerated_folder
+from invisibleroads_macros.iterable import merge_dictionaries
 from invisibleroads_macros.log import parse_nested_dictionary
 from os.path import expanduser, isabs, join, sep
 from six import add_metaclass
@@ -10,8 +11,23 @@ from ..configurations import RESERVED_ARGUMENT_NAMES
 from ..exceptions import DataTypeError
 
 
+class DataItem(object):
+
+    def __init__(self, key, value, data_type, help_text=''):
+        self.key = key
+        self.value = value
+        self.data_type = data_type
+        self.help_text = help_text
+
+    def format_value(self, *args, **kw):
+        return self.data_type.format(self.value, *args, **kw)
+
+
 @add_metaclass(ABCMeta)
 class DataType(object):
+    suffixes = ()
+    formats = ()
+    template = None
     asset_paths = []
 
     @classmethod
@@ -48,42 +64,47 @@ class StringType(DataType):
     template = 'crosscompute:types/string.jinja2'
 
 
-class PathType(StringType):
-    template = 'crosscompute:types/path.jinja2'
-
-
-def get_data_type(tool_argument_name, data_type_packs=None):
-    for data_type_name, data_type in data_type_packs or []:
-        if tool_argument_name.endswith('_' + data_type_name):
-            return data_type
-    if tool_argument_name.endswith('_path'):
-        return PathType
+def get_data_type(key, data_type_by_suffix):
+    for suffix in data_type_by_suffix:
+        if key.endswith('_' + suffix):
+            return data_type_by_suffix[suffix]
     return StringType
 
 
-def get_data_type_packs():
-    extension_manager = ExtensionManager('crosscompute.types')
-    return sorted(zip(
-        extension_manager.names(),
-        (x.plugin for x in extension_manager.extensions),
-    ), key=lambda pack: (-len(pack[0]), pack))
+def get_data_type_by_name():
+    data_type_by_name = {}
+    x_manager = ExtensionManager('crosscompute.types')
+    for data_type_name, x in zip(x_manager.names(), x_manager.extensions):
+        data_type_by_name[data_type_name] = x.plugin
+    return data_type_by_name
 
 
-def get_relevant_data_types(data_type_packs, data_type_keys):
+def get_data_type_by_suffix(data_type_by_suffix=None):
+    d = {}
+    x_manager = ExtensionManager('crosscompute.types')
+    for x in x_manager.extensions:
+        data_type = x.plugin
+        for suffix in data_type.suffixes:
+            d[suffix] = data_type
+    return merge_dictionaries(d, data_type_by_suffix or {})
+
+
+def get_relevant_data_types(keys, data_type_by_suffix):
     data_types = []
-    for data_type_key in data_type_keys:
-        if data_type_key.endswith('_path'):
-            data_type_key = data_type_key[:-5]
-        data_types.append(get_data_type(data_type_key, data_type_packs))
-    if hasattr(data_type_keys, 'values'):
-        for x in data_type_keys.values():
-            if hasattr(x, 'keys'):
-                data_types.extend(get_relevant_data_types(data_type_packs, x))
+    for key in keys:
+        if key.endswith('_path'):
+            key = key[:-5]
+        data_types.append(get_data_type(key, data_type_by_suffix))
+    if hasattr(keys, 'values'):
+        for x in keys.values():
+            if not hasattr(x, 'keys'):
+                continue
+            data_types.extend(get_relevant_data_types(x, data_type_by_suffix))
     return list(set(data_types).difference([StringType]))
 
 
 def get_result_arguments(
-        tool_definition, raw_arguments, data_type_packs,
+        tool_definition, raw_arguments, data_type_by_suffix,
         data_folder=join(sep, 'tmp')):
     d, errors = {}, []
     for tool_argument_name in tool_definition['argument_names']:
@@ -91,7 +112,7 @@ def get_result_arguments(
             value = raw_arguments[tool_argument_name]
         elif tool_argument_name.endswith('_path'):
             tool_argument_noun = tool_argument_name[:-5]
-            data_type = get_data_type(tool_argument_noun, data_type_packs)
+            data_type = get_data_type(tool_argument_noun, data_type_by_suffix)
             try:
                 value = prepare_file_path(
                     data_folder, data_type, raw_arguments, tool_argument_noun)
@@ -104,7 +125,7 @@ def get_result_arguments(
             continue
         d[tool_argument_name] = value
     d, more_errors = parse_data_dictionary_from(
-        d, data_type_packs, tool_definition['configuration_folder'])
+        d, data_type_by_suffix, tool_definition['configuration_folder'])
     errors.extend(more_errors)
     if errors:
         raise DataTypeError(*errors)
@@ -129,10 +150,10 @@ def prepare_file_path(
 
 
 def parse_data_dictionary_from(
-        raw_dictionary, data_type_packs, configuration_folder):
+        raw_dictionary, data_type_by_suffix, configuration_folder):
     d, errors = OrderedDict(), []
     for key, value in OrderedDict(raw_dictionary).items():
-        data_type = get_data_type(key, data_type_packs)
+        data_type = get_data_type(key, data_type_by_suffix)
         try:
             value = data_type.parse(value)
         except DataTypeError as e:
@@ -141,7 +162,7 @@ def parse_data_dictionary_from(
         if not key.endswith('_path'):
             continue
         noun = key[:-5]
-        data_type = get_data_type(noun, data_type_packs)
+        data_type = get_data_type(noun, data_type_by_suffix)
         value = expanduser(value)
         if not isabs(value):
             value = join(configuration_folder, value)
@@ -154,6 +175,7 @@ def parse_data_dictionary_from(
     return d, errors
 
 
-def parse_data_dictionary(text, data_type_packs, configuration_folder):
+def parse_data_dictionary(text, data_type_by_suffix, configuration_folder):
     d = parse_nested_dictionary(text, is_key=lambda x: ':' not in x)
-    return parse_data_dictionary_from(d, data_type_packs, configuration_folder)
+    return parse_data_dictionary_from(
+        d, data_type_by_suffix, configuration_folder)

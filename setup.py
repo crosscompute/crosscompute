@@ -6,7 +6,7 @@ ENTRY_POINTS = """
 [console_scripts]
 crosscompute = crosscompute.scripts:launch
 [crosscompute]
-setup = crosscompute.scripts.setup:SetupScript
+help = crosscompute.scripts.help:HelpScript
 run = crosscompute.scripts.run:RunScript
 serve = crosscompute.scripts.serve:ServeScript
 [pyramid.scaffold]

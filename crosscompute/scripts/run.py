@@ -6,7 +6,7 @@ from os.path import join, sep
 
 from ..configurations import RESERVED_ARGUMENT_NAMES
 from ..exceptions import DataTypeError
-from ..types import get_data_type_packs, get_result_arguments
+from ..types import get_data_type_by_suffix, get_result_arguments
 from . import load_tool_definition, run_script
 
 
@@ -18,36 +18,36 @@ class RunScript(Script):
     def run(self, args):
         tool_definition = load_tool_definition(args.tool_name)
         tool_name = tool_definition['tool_name']
-        data_type_packs = get_data_type_packs()
+        data_type_by_suffix = get_data_type_by_suffix()
         data_folder = join(sep, 'tmp', tool_name)
         argument_parser = ArgumentParser(tool_name)
         argument_parser.add_argument('tool_name', nargs='?', help=SUPPRESS)
         argument_parser = configure_argument_parser(
-            argument_parser, tool_definition, data_type_packs)
+            argument_parser, tool_definition, data_type_by_suffix)
         try:
             result_arguments = get_result_arguments(
                 tool_definition,
                 argument_parser.parse_args(sys.argv[2:]).__dict__,
-                data_type_packs, data_folder)
+                data_type_by_suffix, data_folder)
         except DataTypeError as e:
             return [(k + '.error', v) for k, v in e.args]
         run_script(
             result_arguments.get('target_folder') or make_enumerated_folder(
                 join(data_folder, 'results')),
-            tool_definition, result_arguments, data_type_packs)
+            tool_definition, result_arguments, data_type_by_suffix)
 
 
 def configure_argument_parser(
-        argument_parser, tool_definition, data_type_packs):
+        argument_parser, tool_definition, data_type_by_suffix):
     for x in tool_definition['argument_names']:
         d = {}
         if x in tool_definition:
             d['default'] = tool_definition[x]
         elif x not in RESERVED_ARGUMENT_NAMES:
             d['required'] = True
-        for name, extension in data_type_packs:
-            if x.endswith('_' + name):
-                d['metavar'] = name.upper()
+        for suffix in data_type_by_suffix:
+            if x.endswith('_' + suffix):
+                d['metavar'] = suffix.upper()
                 break
         else:
             if x.endswith('_folder'):
