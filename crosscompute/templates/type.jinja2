@@ -6,10 +6,10 @@
 {%- endfor %}
 {% endmacro %}
 
-{% macro render_key(data_item) %}
+{% macro render_key(data_item, suffix='') %}
 {% set key = data_item.key %}
 {% set help_text = data_item.help_text %}
-<label for="{{ key }}_" class="control-label h3">{{ key }}</label>
+<label for="{{ key }}_{{ suffix }}" class="control-label h3">{{ key }}</label>
 {% if help_text %}
 <span class="glyphicon glyphicon-question-sign btn-lg" data-toggle="popover" data-content="{{ help_text }}"></span>
 {% endif %}

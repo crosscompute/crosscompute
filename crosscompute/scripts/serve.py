@@ -7,26 +7,24 @@ from invisibleroads.scripts import Script
 from invisibleroads_macros.disk import (
     compress_zip, make_enumerated_folder, resolve_relative_path)
 from invisibleroads_macros.iterable import merge_dictionaries
-from invisibleroads_macros.log import parse_nested_dictionary_from
 from invisibleroads_posts import get_http_expiration_time
 from markupsafe import Markup
 from mistune import Markdown
 from os import environ
-from os.path import basename, dirname, exists, join, sep
+from os.path import basename, dirname, exists, isabs, join, sep
 from pyramid.config import Configurator
 from pyramid.httpexceptions import (
     HTTPBadRequest, HTTPForbidden, HTTPNotFound, HTTPSeeOther)
 from pyramid.response import FileResponse
 from six import string_types
-from six.moves.configparser import RawConfigParser
 from wsgiref.simple_server import make_server
 
 from ..configurations import ARGUMENT_NAME_PATTERN, RESERVED_ARGUMENT_NAMES
 from ..exceptions import DataTypeError
 from ..types import (
     DataItem, get_data_type, get_data_type_by_name, get_data_type_by_suffix,
-    get_result_arguments, parse_data_dictionary_from)
-from . import load_tool_definition, run_script
+    get_result_arguments)
+from . import load_result_configuration, load_tool_definition, run_script
 
 
 HELP = {
@@ -101,7 +99,6 @@ def configure_jinja2_environment(
         'markdown': lambda x: Markup(markdown(x)),
     })
     jinja2_environment.globals.update({
-        'RESERVED_ARGUMENT_NAMES': RESERVED_ARGUMENT_NAMES,
         'base_template': base_template,
         'get_os_environment_variable': environ.get,
         'get_url_from_path': get_url_from_path,
@@ -110,7 +107,7 @@ def configure_jinja2_environment(
 
 def get_template_variables(tool_definition, template_type, data_items):
     template_path = get_template_path(tool_definition, template_type)
-    if not template_path or not exists(template_path):
+    if not template_path or not exists(template_path) or not data_items:
         title, parts = tool_definition['tool_name'], data_items
     else:
         template_text = codecs.open(template_path, 'r', 'utf-8').read()
@@ -146,30 +143,6 @@ def parse_template(template_text, data_items):
     return title, parts
 
 
-"""
-from os.path import isabs
-
-
-def make_template_functions(tool_definition, data_type_by_suffix):
-
-    def prepare_tool_argument_noun(path_key):
-        tool_argument_noun = path_key[:-5]
-        if path_key in tool_definition:
-            tool_definition[tool_argument_noun] = load_value(
-                tool_argument_noun, tool_definition[path_key])
-        return tool_argument_noun
-
-    def load_value(value_key, path):
-        if not isabs(path):
-            path = join(tool_definition['configuration_folder'], path)
-        return get_data_type_for(value_key).load(path)
-
-    return dict(
-        get_value=get_value,
-        prepare_tool_argument_noun=prepare_tool_argument_noun)
-"""
-
-
 def add_routes(config):
     config.add_route('tool', 'tools/{id}')
     config.add_route('result.json', 'results/{id}.json')
@@ -177,6 +150,9 @@ def add_routes(config):
     config.add_route('result_file', 'results/{id}/_/{path:.+}')
     config.add_route('result', 'results/{id}')
 
+    config.add_view(
+        index,
+        route_name='index')
     config.add_view(
         show_tool, renderer='tool.jinja2', request_method='GET',
         route_name='tool')
@@ -213,12 +189,17 @@ def add_routes_for_data_types(config):
                 route_name=route_name, http_cache=http_expiration_time)
 
 
+def index(request):
+    return HTTPSeeOther(request.route_path('tool', id=1))
+
+
 def show_tool(request):
     settings = request.registry.settings
+    data_type_by_suffix = settings['data_type_by_suffix']
     tool_definition = settings['tool_definition']
     tool_arguments = get_tool_arguments(tool_definition)
     tool_items = get_data_items(
-        tool_arguments, tool_definition, settings['data_type_by_suffix'])
+        tool_arguments, tool_definition, data_type_by_suffix)
     return merge_dictionaries(
         get_template_variables(tool_definition, 'tool', tool_items), {
             'data_types': set(x.data_type for x in tool_items),
@@ -248,30 +229,13 @@ def run_tool(request):
 def show_result(request):
     settings = request.registry.settings
     tool_definition = settings['tool_definition']
-
-    configuration_folder = tool_definition['configuration_folder']
     result_id = request.matchdict['id']
-    target_folder = join(settings['data.folder'], 'results', result_id)
-    result_configuration = RawConfigParser()
-    result_configuration.read(join(target_folder, 'result.cfg'))
-    result_arguments = OrderedDict(
-        result_configuration.items('result_arguments'))
-    result_properties = OrderedDict(
-        result_configuration.items('result_properties'))
+    result_arguments, result_properties = load_result_configuration(join(
+        settings['data.folder'], 'results', result_id))
     data_type_by_suffix = get_data_type_by_suffix()
-
-    def parse_value_by_key(d):
-        return parse_data_dictionary_from(
-            d, data_type_by_suffix, configuration_folder)[0]
-
-    result_arguments = parse_value_by_key(result_arguments)
-    result_properties = parse_value_by_key(parse_nested_dictionary_from(
-        result_properties, max_depth=1))
-
     tool_items = get_data_items(
         result_arguments, tool_definition, data_type_by_suffix)
-    result_errors = get_data_items(
-        merge_dictionaries(
+    result_errors = get_data_items(merge_dictionaries(
             result_properties.pop('standard_errors', {}),
             result_properties.pop('type_errors', {})),
         tool_definition, data_type_by_suffix)
@@ -280,7 +244,6 @@ def show_result(request):
         data_type_by_suffix)
     result_properties = get_data_items(
         result_properties, tool_definition, data_type_by_suffix)
-
     return merge_dictionaries(
         get_template_variables(tool_definition, 'tool', tool_items),
         get_template_variables(tool_definition, 'result', result_items), {
@@ -320,19 +283,28 @@ def show_result_file(request):
 
 def get_tool_arguments(tool_definition):
     value_by_key = OrderedDict()
+    configuration_folder = tool_definition['configuration_folder']
     for key in tool_definition['argument_names']:
-        value_by_key[key] = tool_definition.get(key, '')
+        value = tool_definition.get(key, '')
+        if key.endswith('_path') and not isabs(value):
+            value = join(configuration_folder, value)
+        value_by_key[key] = value
     return value_by_key
 
 
 def get_data_items(value_by_key, tool_definition, data_type_by_suffix):
     data_items = []
     for key, value in value_by_key.items():
-        if key.startswith('_'):
+        if key.startswith('_') or key in RESERVED_ARGUMENT_NAMES:
             continue
-        data_type = get_data_type(key, data_type_by_suffix)
-        if isinstance(value, string_types):
-            value = data_type.parse(value)
+        if key.endswith('_path'):
+            key = key[:-5]
+            data_type = get_data_type(key, data_type_by_suffix)
+            value = data_type.load_safely(value)
+        else:
+            data_type = get_data_type(key, data_type_by_suffix)
+            if isinstance(value, string_types):
+                value = data_type.parse(value)
         help_text = tool_definition.get(key + '.help', HELP.get(key, ''))
         data_items.append(DataItem(key, value, data_type, help_text))
     return data_items

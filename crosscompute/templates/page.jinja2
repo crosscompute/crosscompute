@@ -8,6 +8,7 @@
 
 {% block head_style_inline %}
 {{ super() -}}
+#tool-form {margin-bottom: 1em}
 {% for data_type in data_types %}{% from data_type.template import head_style_inline %}{{ head_style_inline() }}{% endfor %}
 .error {background-color: yellow}
 {% endblock %}
@@ -27,12 +28,12 @@ d.crosscompute = {};
 <form id="tool-form" action="{{ request.route_path('tool', id=tool_id) }}" method="post">
 {% for x in tool_template_parts %}
 {%- if x is string -%}
-{{ content | markdown }}
+{{ x | markdown }}
 
-{%- elif x.key not in RESERVED_ARGUMENT_NAMES -%}
+{%- else -%}
 {% from x.data_type.template import render_argument %}
 <div class="form-group">
-{{- render_key(x) -}}
+{{- render_key(x, 'a') -}}
 {{- render_argument(x) -}}
 </div>
 

@@ -13,10 +13,11 @@ from invisibleroads.scripts import (
 from invisibleroads_macros.disk import cd
 from invisibleroads_macros.exceptions import InvisibleRoadsError
 from invisibleroads_macros.log import (
-    format_hanging_indent, format_path, format_summary, sort_dictionary,
-    stylize_dictionary)
+    format_hanging_indent, format_path, format_summary,
+    parse_nested_dictionary_from, sort_dictionary, stylize_dictionary)
 from invisibleroads_repositories import (
     get_github_repository_commit_hash, get_github_repository_url)
+from six.moves.configparser import RawConfigParser
 
 from ..configurations import get_tool_definition
 from ..exceptions import CrossComputeError
@@ -89,6 +90,16 @@ def load_tool_definition(tool_name):
     return tool_definition
 
 
+def load_result_configuration(result_folder):
+    result_configuration = RawConfigParser()
+    result_configuration.read(join(result_folder, 'result.cfg'))
+    result_arguments = OrderedDict(
+        result_configuration.items('result_arguments'))
+    result_properties = parse_nested_dictionary_from(OrderedDict(
+        result_configuration.items('result_properties')), max_depth=1)
+    return result_arguments, result_properties
+
+
 def stylize_tool_definition(tool_definition, result_arguments):
     d = {
         'tool_name': tool_definition['tool_name'],
@@ -153,7 +164,6 @@ def _process_streams(
         standard_output, standard_error, target_folder, tool_definition,
         data_type_by_suffix):
     d, type_errors = OrderedDict(), OrderedDict()
-    configuration_folder = tool_definition['configuration_folder']
     for stream_name, stream_content in [
         ('standard_output', standard_output),
         ('standard_error', standard_error),
@@ -165,7 +175,7 @@ def _process_streams(
             screen_text='[%s]\n%s\n' % (stream_name, stream_content),
             file_text=stream_content)
         value_by_key, errors = parse_data_dictionary(
-            stream_content, data_type_by_suffix, configuration_folder)
+            stream_content, data_type_by_suffix, target_folder)
         for k, v in errors:
             type_errors['%s.error' % k] = v
         if tool_definition.get('show_' + stream_name):

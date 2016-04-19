@@ -39,7 +39,7 @@ class DataType(object):
         try:
             value = Class.load(path)
         except (IOError, DataTypeError):
-            value = None
+            value = ''
         return value
 
     @classmethod
@@ -149,10 +149,16 @@ def prepare_file_path(
     return file_path
 
 
+def parse_data_dictionary(text, data_type_by_suffix, root_folder):
+    d = parse_nested_dictionary(text, is_key=lambda x: ':' not in x)
+    return parse_data_dictionary_from(d, data_type_by_suffix, root_folder)
+
+
 def parse_data_dictionary_from(
-        raw_dictionary, data_type_by_suffix, configuration_folder):
-    d, errors = OrderedDict(), []
-    for key, value in OrderedDict(raw_dictionary).items():
+        raw_dictionary, data_type_by_suffix, root_folder):
+    d = make_absolute_paths(raw_dictionary, root_folder)
+    errors = []
+    for key, value in d.items():
         data_type = get_data_type(key, data_type_by_suffix)
         try:
             value = data_type.parse(value)
@@ -163,9 +169,6 @@ def parse_data_dictionary_from(
             continue
         noun = key[:-5]
         data_type = get_data_type(noun, data_type_by_suffix)
-        value = expanduser(value)
-        if not isabs(value):
-            value = join(configuration_folder, value)
         try:
             data_type.load(value)
         except IOError as e:
@@ -175,7 +178,12 @@ def parse_data_dictionary_from(
     return d, errors
 
 
-def parse_data_dictionary(text, data_type_by_suffix, configuration_folder):
-    d = parse_nested_dictionary(text, is_key=lambda x: ':' not in x)
-    return parse_data_dictionary_from(
-        d, data_type_by_suffix, configuration_folder)
+def make_absolute_paths(value_by_key, root_folder):
+    d = OrderedDict()
+    for key, value in OrderedDict(value_by_key).items():
+        if key.endswith('_path'):
+            value = expanduser(value)
+            if not isabs(value):
+                value = join(root_folder, value)
+        d[key] = value
+    return d

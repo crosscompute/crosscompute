@@ -1,5 +1,5 @@
 {% extends 'page.jinja2' %}
-{% from 'type.jinja2' import render_properties %}
+{% from 'type.jinja2' import render_key, render_properties %}
 {% set result_name = result_name or '%s (%s)' % (result_id, result_title) %}
 
 {% block page_title %}
@@ -17,19 +17,24 @@
 {% if result_properties -%}
 
 {% if result_errors -%}
+<div class=error>
 {{ render_properties(result_errors) -}}
-{% endif -%}
+</div>
+{% else -%}
 
 {% for x in result_template_parts %}
 {%- if x is string -%}
-{{ content | markdown }}
+{{ x | markdown }}
 
 {%- else -%}
 {% from x.data_type.template import render_property %}
+{{- render_key(x) }}
 {{- render_property(x) -}}
 
 {%- endif -%}
-{% endfor %}
+{% endfor -%}
+
+{% endif -%}
 
 {{- render_properties(result_properties) -}}
 
