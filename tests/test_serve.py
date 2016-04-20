@@ -17,15 +17,3 @@ def test_serve():
 	response = client.get(result_url)
 	soup = BeautifulSoup(response.data)
 	assert '7' in soup.find('div', id='standard_output_').text.strip()
-
-def test_show_plot_serve():
-	tool_definition = get_tool_definition(TOOL_FOLDER, 'show-plot')
-	client = Client(get_app(tool_definition), BaseResponse)
-	response = client.post('/tools/1', data=dict(phrase='welcome'))
-	# showed 303 which means See Other (does it mean haven't foudn a page?)
-	assert 303 == response.status_code
-	# do not understand that
-	result_url = parse_url(dict(response.headers)['Location']).path
-	response = client.get(result_url)
-	soup = BeautifulSoup(response.data)
-	assert '7' in soup.find('div', id='standard_output_').text.strip()
