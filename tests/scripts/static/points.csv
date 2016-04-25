@@ -1,0 +1,65 @@
+description,latitude,longitude,FillColor,radius_in_pixels
+Queried Building,40.705735,-73.814284,red,20
+Nearby grocery_or_supermarket,40.70603799999999,-73.80738199999999,green,10
+Nearby grocery_or_supermarket,40.7080856,-73.8174264,green,10
+Nearby grocery_or_supermarket,40.7052046,-73.8124198,green,10
+Nearby grocery_or_supermarket,40.7030834,-73.8086811,green,10
+Nearby grocery_or_supermarket,40.7080404,-73.8175662,green,10
+Nearby grocery_or_supermarket,40.7011208,-73.8075702,green,10
+Nearby grocery_or_supermarket,40.70239060000001,-73.8130949,green,10
+Nearby grocery_or_supermarket,40.70504830000001,-73.8096688,green,10
+Nearby grocery_or_supermarket,40.7053473,-73.80965789999999,green,10
+Nearby grocery_or_supermarket,40.706098,-73.809456,green,10
+Nearby grocery_or_supermarket,40.709184,-73.8185669,green,10
+Nearby grocery_or_supermarket,40.7016531,-73.80826429999999,green,10
+Nearby grocery_or_supermarket,40.706133,-73.809322,green,10
+Nearby grocery_or_supermarket,40.7076997,-73.81732319999999,green,10
+Nearby grocery_or_supermarket,40.7007974,-73.8079731,green,10
+Nearby grocery_or_supermarket,40.70887359999999,-73.81828329999999,green,10
+Nearby grocery_or_supermarket,40.7027897,-73.8131868,green,10
+Nearby grocery_or_supermarket,40.70776409999999,-73.8170596,green,10
+Nearby grocery_or_supermarket,40.706425,-73.80827699999999,green,10
+Nearby grocery_or_supermarket,40.70516799999999,-73.812685,green,10
+Nearby bus or subway,40.701828,-73.808846,blue,10
+Nearby bus or subway,40.701424,-73.80803,blue,10
+Nearby bus or subway,40.702312,-73.811432,blue,10
+Nearby bus or subway,40.705379,-73.809608,blue,10
+Nearby bus or subway,40.702831,-73.818161,blue,10
+Nearby bus or subway,40.70599,-73.81670400000002,blue,10
+Nearby bus or subway,40.703091,-73.80856299999999,blue,10
+Nearby bus or subway,40.708065,-73.817635,blue,10
+Nearby bus or subway,40.70211799999999,-73.816772,blue,10
+Nearby bus or subway,40.702587,-73.814247,blue,10
+Nearby bus or subway,40.702545,-73.815773,blue,10
+Nearby bus or subway,40.70677599999999,-73.81675,blue,10
+Nearby bus or subway,40.700626,-73.807228,blue,10
+Nearby bus or subway,40.70318599999999,-73.820641,blue,10
+Nearby bus or subway,40.70977099999999,-73.819786,blue,10
+Nearby bus or subway,40.704525,-73.81438399999999,blue,10
+Nearby bus or subway,40.70233200000001,-73.818275,blue,10
+Nearby bus or subway,40.703606,-73.808796,blue,10
+Nearby bus or subway,40.70216,-73.807976,blue,10
+Nearby bus or subway,40.70492100000001,-73.809404,blue,10
+Nearby bus or subway,40.70545999999999,-73.81070799999999,blue,10
+Nearby bus or subway,40.702566,-73.816859,blue,10
+Nearby bus or subway,40.7089111,-73.8201498,blue,10
+Nearby School,40.7011647,-73.81503579999999,yellow,10
+Nearby School,40.71048469999999,-73.8118561,yellow,10
+Nearby School,40.71044809999999,-73.8118626,yellow,10
+Nearby School,40.71034480000001,-73.8131914,yellow,10
+Nearby School,40.7037543,-73.81208269999999,yellow,10
+Nearby School,40.70933730000001,-73.8113163,yellow,10
+Nearby School,40.7040679,-73.81989999999999,yellow,10
+Nearby School,40.7006769,-73.8090248,yellow,10
+Nearby School,40.71028080000001,-73.81311819999999,yellow,10
+Nearby School,40.7025407,-73.8083654,yellow,10
+Nearby School,40.7051022,-73.8182691,yellow,10
+Nearby School,40.7055941,-73.8207326,yellow,10
+Nearby School,40.7006913,-73.8091007,yellow,10
+Nearby School,40.7006913,-73.8091007,yellow,10
+Nearby School,40.7108485,-73.8157545,yellow,10
+Nearby School,40.71050940000001,-73.8118746,yellow,10
+Nearby School,40.71052,-73.8118815,yellow,10
+Nearby School,40.7107526,-73.81587689999999,yellow,10
+Nearby School,40.7049713,-73.81902509999999,yellow,10
+Nearby School,40.7104481,-73.8118625,yellow,10
