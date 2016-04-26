@@ -1,6 +1,6 @@
 Write test to ensure that serve shows result_properties in same order as returned by script
 
-Consider whether get_local_template_variables should accept case when tool_definition is really blank
+Consider whether get_template_variables should accept case when tool_definition is really blank
 
 Let author specify tool nickname
 Show tool link at top of result

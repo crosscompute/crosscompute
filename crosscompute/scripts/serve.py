@@ -230,6 +230,7 @@ def show_result(request):
     settings = request.registry.settings
     tool_definition = settings['tool_definition']
     result_id = request.matchdict['id']
+
     result_arguments, result_properties = load_result_configuration(join(
         settings['data.folder'], 'results', result_id))
     data_type_by_suffix = get_data_type_by_suffix()

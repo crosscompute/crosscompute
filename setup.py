@@ -18,7 +18,7 @@ DESCRIPTION = '\n\n'.join(open(join(FOLDER, x)).read().strip() for x in [
 setup(
     name='crosscompute',
     version='0.4.5',
-    description='Publish your computational model',
+    description='Publish your own tools by writing a configuration file',
     long_description=DESCRIPTION,
     classifiers=[
         'Programming Language :: Python',
@@ -29,7 +29,7 @@ setup(
     ],
     author='Roy Hyunjin Han',
     author_email='rhh@crosscompute.com',
-    url='https://crosscompute.com',
+    url='https://crosscompute.com/docs',
     keywords='web pyramid pylons crosscompute',
     packages=find_packages(),
     include_package_data=True,

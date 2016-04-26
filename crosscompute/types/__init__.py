@@ -89,20 +89,6 @@ def get_data_type_by_suffix(data_type_by_suffix=None):
     return merge_dictionaries(d, data_type_by_suffix or {})
 
 
-def get_relevant_data_types(keys, data_type_by_suffix):
-    data_types = []
-    for key in keys:
-        if key.endswith('_path'):
-            key = key[:-5]
-        data_types.append(get_data_type(key, data_type_by_suffix))
-    if hasattr(keys, 'values'):
-        for x in keys.values():
-            if not hasattr(x, 'keys'):
-                continue
-            data_types.extend(get_relevant_data_types(x, data_type_by_suffix))
-    return list(set(data_types).difference([StringType]))
-
-
 def get_result_arguments(
         tool_definition, raw_arguments, data_type_by_suffix,
         data_folder=join(sep, 'tmp')):
