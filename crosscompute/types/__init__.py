@@ -27,8 +27,9 @@ class DataItem(object):
 class DataType(object):
     suffixes = ()
     formats = ()
+    style = None
+    script = None
     template = None
-    asset_paths = []
 
     @classmethod
     def save(Class, path, value):

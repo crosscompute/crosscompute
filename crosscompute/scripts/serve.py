@@ -7,7 +7,7 @@ from invisibleroads.scripts import Script
 from invisibleroads_macros.disk import (
     compress_zip, make_enumerated_folder, resolve_relative_path)
 from invisibleroads_macros.iterable import merge_dictionaries
-from invisibleroads_posts import get_http_expiration_time
+# from invisibleroads_posts import get_http_expiration_time
 from markupsafe import Markup
 from mistune import Markdown
 from os import environ
@@ -45,8 +45,7 @@ class ServeScript(Script):
     def run(self, args):
         tool_definition = load_tool_definition(args.tool_name)
         app = get_app(
-            tool_definition,
-            data_type_by_suffix=get_data_type_by_suffix())
+            tool_definition, data_type_by_suffix=get_data_type_by_suffix())
         app_url = 'http://%s:%s/tools/1' % (args.host, args.port)
         webbrowser.open_new_tab(app_url)
         server = make_server(args.host, args.port, app)
@@ -62,6 +61,7 @@ def get_app(
         data_type_by_suffix=None,
         data_folder=None):
     tool_name = tool_definition['tool_name']
+    data_types = set(data_type_by_suffix.values())
     config = Configurator(settings={
         'data.folder': data_folder or join(sep, 'tmp', tool_name),
         'data_type_by_suffix': data_type_by_suffix or {},
@@ -74,11 +74,27 @@ def get_app(
         'website.root_assets': [
             'invisibleroads_posts:assets/favicon.ico',
         ],
+        'website.style_assets': [
+            'invisibleroads_posts:assets/part.min.css',
+            'invisibleroads_uploads:assets/part.min.css',
+        ] + [x.style for x in data_types if x.style],
+        'website.script_assets': [
+            'invisibleroads_posts:assets/part.min.js',
+            'invisibleroads_uploads:assets/part.min.js',
+        ] + [x.script for x in data_types if x.script],
     })
     config.include('invisibleroads_posts')
+    config.include('invisibleroads_uploads')
     configure_jinja2_environment(config, base_template, r'results/(\d+)/(.+)')
     add_routes(config)
-    add_routes_for_data_types(config)
+
+    from crosscompute_table.views import import_table
+    route_name = 'table/import_table'
+    route_url = '/c/table/import_table'
+    # route_permission = ''
+    config.add_route(route_name, route_url)
+    config.add_view(import_table, route_name=route_name)
+
     return config.make_wsgi_app()
 
 
@@ -144,11 +160,11 @@ def parse_template(template_text, data_items):
 
 
 def add_routes(config):
-    config.add_route('tool', 'tools/{id}')
-    config.add_route('result.json', 'results/{id}.json')
-    config.add_route('result.zip', 'results/{id}/{name}.zip')
-    config.add_route('result_file', 'results/{id}/_/{path:.+}')
-    config.add_route('result', 'results/{id}')
+    config.add_route('tool', '/tools/{id}')
+    config.add_route('result.json', '/results/{id}.json')
+    config.add_route('result.zip', '/results/{id}/{name}.zip')
+    config.add_route('result_file', '/results/{id}/_/{path:.+}')
+    config.add_route('result', '/results/{id}')
 
     config.add_view(
         index,
@@ -174,10 +190,13 @@ def add_routes(config):
 
 
 def add_routes_for_data_types(config):
-    settings = config.registry.settings
-    http_expiration_time = get_http_expiration_time(settings)
     data_type_by_name = get_data_type_by_name()
     for data_type_name, data_type in data_type_by_name.items():
+        # for view in data_type.views:
+            # route_name = 
+            # route_url =
+
+
         for asset_path in data_type.asset_paths:
             asset_path = join(dirname(inspect.getfile(data_type)), asset_path)
             asset_name = basename(asset_path)
@@ -185,7 +204,7 @@ def add_routes_for_data_types(config):
             route_name = '___/' + route_subpath
             config.add_route(route_name, '/_/' + route_subpath)
             config.add_view(
-                lambda request: FileResponse(asset_path, request),
+                lambda request, x=asset_path: FileResponse(x, request),
                 route_name=route_name, http_cache=http_expiration_time)
 
 
