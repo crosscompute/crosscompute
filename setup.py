@@ -41,6 +41,7 @@ setup(
         'invisibleroads_macros>=0.6.7',
         'invisibleroads_posts>=0.4.6',
         'invisibleroads_repositories>=0.1.3',
+        'invisibleroads_uploads>=0.0.1',
         'pyramid',
         'pyramid_jinja2',
         'six',

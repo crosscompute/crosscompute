@@ -1,8 +1,8 @@
 from abc import ABCMeta
 from collections import OrderedDict
-from invisibleroads_macros.disk import make_enumerated_folder
 from invisibleroads_macros.iterable import merge_dictionaries
 from invisibleroads_macros.log import parse_nested_dictionary
+from invisibleroads_uploads.views import get_upload, make_upload_folder
 from os.path import expanduser, isabs, join, sep
 from six import add_metaclass
 from stevedore.extension import ExtensionManager
@@ -92,7 +92,7 @@ def get_data_type_by_suffix(data_type_by_suffix=None):
 
 def get_result_arguments(
         tool_definition, raw_arguments, data_type_by_suffix,
-        data_folder=join(sep, 'tmp')):
+        data_folder=join(sep, 'tmp'), user_id=0):
     d, errors = {}, []
     for tool_argument_name in tool_definition['argument_names']:
         if tool_argument_name in raw_arguments:
@@ -102,7 +102,11 @@ def get_result_arguments(
             data_type = get_data_type(tool_argument_noun, data_type_by_suffix)
             try:
                 value = prepare_file_path(
-                    data_folder, data_type, raw_arguments, tool_argument_noun)
+                    data_folder, data_type, raw_arguments, tool_argument_noun,
+                    user_id)
+            except IOError:
+                errors.append((tool_argument_name, 'invalid'))
+                continue
             except KeyError:
                 errors.append((tool_argument_name, 'required'))
                 continue
@@ -120,20 +124,26 @@ def get_result_arguments(
 
 
 def prepare_file_path(
-        data_folder, data_type, raw_arguments, tool_argument_noun):
+        data_folder, data_type, raw_arguments, tool_argument_noun, user_id):
     for file_format in data_type.formats:
-        raw_argument_name = '%s_%s' % (tool_argument_noun, file_format)
+        raw_argument_name = '%s-%s' % (tool_argument_noun, file_format)
         if raw_argument_name in raw_arguments:
-            break
-    else:
-        raise KeyError
-    file_content = raw_arguments[raw_argument_name]
-    file_name = '%s.%s' % (tool_argument_noun, file_format)
-    upload_folder = make_enumerated_folder(join(data_folder, 'uploads'))
-    file_path = join(upload_folder, file_name)
-    with open(file_path, 'w') as f:
-        f.write(file_content)
-    return file_path
+            source_folder = make_upload_folder(data_folder, user_id)
+            file_content = raw_arguments[raw_argument_name]
+            file_name = 'raw.%s' % file_format
+            file_path = join(source_folder, file_name)
+            with open(file_path, 'w') as f:
+                f.write(file_content)
+            return file_path
+    raw_argument_name = '%s-upload' % tool_argument_noun
+    if raw_argument_name in raw_arguments:
+        upload_id = raw_arguments[raw_argument_name]
+        try:
+            upload = get_upload(data_folder, user_id, upload_id)
+        except IOError:
+            raise ValueError
+        return upload.path
+    raise KeyError
 
 
 def parse_data_dictionary(text, data_type_by_suffix, root_folder):

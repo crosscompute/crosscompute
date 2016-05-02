@@ -33,7 +33,7 @@ d.crosscompute = {};
 {%- else -%}
 {% from x.data_type.template import render_argument %}
 <div class="form-group">
-{{- render_key(x, 'a') -}}
+{{- render_key(x) -}}
 {{- render_argument(x) -}}
 </div>
 

@@ -10,6 +10,7 @@ from os.path import abspath, isabs, join
 from invisibleroads.scripts import (
     StoicArgumentParser, configure_subparsers, get_scripts_by_name,
     run_scripts)
+from invisibleroads_macros.configuration import RawCaseSensitiveConfigParser
 from invisibleroads_macros.disk import cd
 from invisibleroads_macros.exceptions import InvisibleRoadsError
 from invisibleroads_macros.log import (
@@ -17,7 +18,6 @@ from invisibleroads_macros.log import (
     parse_nested_dictionary_from, sort_dictionary, stylize_dictionary)
 from invisibleroads_repositories import (
     get_github_repository_commit_hash, get_github_repository_url)
-from six.moves.configparser import RawConfigParser
 
 from ..configurations import get_tool_definition
 from ..exceptions import CrossComputeError
@@ -91,7 +91,7 @@ def load_tool_definition(tool_name):
 
 
 def load_result_configuration(result_folder):
-    result_configuration = RawConfigParser()
+    result_configuration = RawCaseSensitiveConfigParser()
     result_configuration.read(join(result_folder, 'result.cfg'))
     result_arguments = OrderedDict(
         result_configuration.items('result_arguments'))

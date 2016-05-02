@@ -7,7 +7,9 @@ from invisibleroads.scripts import Script
 from invisibleroads_macros.disk import (
     compress_zip, make_enumerated_folder, resolve_relative_path)
 from invisibleroads_macros.iterable import merge_dictionaries
-# from invisibleroads_posts import get_http_expiration_time
+from invisibleroads_posts.exceptions import HTTPBadRequestJSON
+from invisibleroads_posts.views import expect_param
+from invisibleroads_uploads.views import get_upload_from
 from markupsafe import Markup
 from mistune import Markdown
 from os import environ
@@ -15,8 +17,10 @@ from os.path import basename, dirname, exists, isabs, join, sep
 from pyramid.config import Configurator
 from pyramid.httpexceptions import (
     HTTPBadRequest, HTTPForbidden, HTTPNotFound, HTTPSeeOther)
-from pyramid.response import FileResponse
+from pyramid.renderers import get_renderer
+from pyramid.response import FileResponse, Response
 from six import string_types
+from traceback import format_exc
 from wsgiref.simple_server import make_server
 
 from ..configurations import ARGUMENT_NAME_PATTERN, RESERVED_ARGUMENT_NAMES
@@ -88,12 +92,13 @@ def get_app(
     configure_jinja2_environment(config, base_template, r'results/(\d+)/(.+)')
     add_routes(config)
 
-    from crosscompute_table.views import import_table
+    from crosscompute_table import import_table
     route_name = 'table/import_table'
     route_url = '/c/table/import_table'
-    # route_permission = ''
     config.add_route(route_name, route_url)
-    config.add_view(import_table, route_name=route_name)
+    config.add_view(
+        import_table, permission='run_tool', request_method='POST',
+        route_name=route_name)
 
     return config.make_wsgi_app()
 
@@ -192,11 +197,6 @@ def add_routes(config):
 def add_routes_for_data_types(config):
     data_type_by_name = get_data_type_by_name()
     for data_type_name, data_type in data_type_by_name.items():
-        # for view in data_type.views:
-            # route_name = 
-            # route_url =
-
-
         for asset_path in data_type.asset_paths:
             asset_path = join(dirname(inspect.getfile(data_type)), asset_path)
             asset_name = basename(asset_path)
@@ -205,7 +205,7 @@ def add_routes_for_data_types(config):
             config.add_route(route_name, '/_/' + route_subpath)
             config.add_view(
                 lambda request, x=asset_path: FileResponse(x, request),
-                route_name=route_name, http_cache=http_expiration_time)
+                route_name=route_name)
 
 
 def index(request):
@@ -233,7 +233,8 @@ def run_tool(request):
     data_folder = settings['data.folder']
     try:
         result_arguments = get_result_arguments(
-            tool_definition, request.params, data_type_by_suffix, data_folder)
+            tool_definition, request.params, data_type_by_suffix, data_folder,
+            request.authenticated_userid)
     except DataTypeError as e:
         raise HTTPBadRequest(dict(e.args))
     target_folder = make_enumerated_folder(join(data_folder, 'results'))
@@ -299,6 +300,28 @@ def show_result_file(request):
     if not exists(result_file_path):
         raise HTTPNotFound
     return FileResponse(result_file_path, request=request)
+
+
+def import_upload(request, DataType):
+    params = request.params
+    upload = get_upload_from(request)
+    name = expect_param('name', params)
+    help_text = params.get('help', '')
+    try:
+        value = DataType.load(upload.path)
+    except Exception as e:
+        open(join(upload.folder, 'error.log'), 'wt').write(format_exc())
+        if isinstance(e, DataTypeError):
+            message = str(e)
+        else:
+            message = 'Import failed'
+        raise HTTPBadRequestJSON({name: message})
+    DataType.save(join(upload.folder, '%s.%s' % (
+        DataType.suffixes[0], DataType.formats[0])), value)
+    template = get_renderer(DataType.template).template_loader()
+    data_item = DataItem(name, value, DataType, help_text)
+    html = template.make_module().render_property(data_item, stamp='-upload')
+    return Response(html)
 
 
 def get_tool_arguments(tool_definition):

@@ -1,15 +1,15 @@
-{% macro render_properties(data_items) %}
+{% macro render_properties(data_items, stamp='') %}
 {%- for x in data_items %}
 {% from x.data_type.template import render_property %}
-{{- render_key(x) }}
-{{- render_property(x) }}
+{{- render_key(x, stamp=stamp) }}
+{{- render_property(x, stamp=stamp) }}
 {%- endfor %}
 {% endmacro %}
 
-{% macro render_key(data_item, suffix='') %}
+{% macro render_key(data_item, stamp='') %}
 {% set key = data_item.key %}
 {% set help_text = data_item.help_text %}
-<label for="{{ key }}_{{ suffix }}" class="control-label h3">{{ key }}</label>
+<label for="{{ key }}{{ stamp }}" class="control-label h3">{{ key }}</label>
 {% if help_text %}
 <span class="glyphicon glyphicon-question-sign btn-lg" data-toggle="popover" data-content="{{ help_text }}"></span>
 {% endif %}

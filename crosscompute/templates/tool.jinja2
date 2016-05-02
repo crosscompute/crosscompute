@@ -3,8 +3,3 @@
 {% block page_title %}
 {% block body_subtitle %}{{ tool_title }}{% endblock %} &middot; Tools &middot; {{ website_name -}}
 {% endblock %}
-
-{% block body_script_inline %}
-{{ super() -}}
-$('#tool-form').find('[name]').first().focus();
-{% endblock %}

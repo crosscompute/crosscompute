@@ -1,10 +1,10 @@
 import re
 from fnmatch import fnmatch
+from invisibleroads_macros.configuration import RawCaseSensitiveConfigParser
 from invisibleroads_macros.disk import are_same_path
 from os import getcwd, walk
 from os.path import abspath, basename, dirname, join
 from pyramid.settings import asbool, aslist
-from six.moves.configparser import RawConfigParser
 
 from .exceptions import ConfigurationNotFound, ToolNotFound, ToolNotSpecified
 
@@ -59,7 +59,7 @@ def get_tool_definition_by_name_from_path(
         configuration_path, default_tool_name=None):
     tool_definition_by_name = {}
     configuration_path = abspath(configuration_path)
-    configuration = RawConfigParser()
+    configuration = RawCaseSensitiveConfigParser()
     configuration.read(configuration_path)
     d = {
         u'configuration_path': configuration_path,
