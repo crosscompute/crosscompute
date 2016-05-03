@@ -1,8 +1,8 @@
 import codecs
-import inspect
 import re
 import webbrowser
 from collections import OrderedDict
+from importlib import import_module
 from invisibleroads.scripts import Script
 from invisibleroads_macros.disk import (
     compress_zip, make_enumerated_folder, resolve_relative_path)
@@ -13,7 +13,7 @@ from invisibleroads_uploads.views import get_upload_from
 from markupsafe import Markup
 from mistune import Markdown
 from os import environ
-from os.path import basename, dirname, exists, isabs, join, sep
+from os.path import basename, exists, isabs, join, sep
 from pyramid.config import Configurator
 from pyramid.httpexceptions import (
     HTTPBadRequest, HTTPForbidden, HTTPNotFound, HTTPSeeOther)
@@ -91,15 +91,7 @@ def get_app(
     config.include('invisibleroads_uploads')
     configure_jinja2_environment(config, base_template, r'results/(\d+)/(.+)')
     add_routes(config)
-
-    from crosscompute_table import import_table
-    route_name = 'table/import_table'
-    route_url = '/c/table/import_table'
-    config.add_route(route_name, route_url)
-    config.add_view(
-        import_table, permission='run_tool', request_method='POST',
-        route_name=route_name)
-
+    add_routes_for_data_types(config)
     return config.make_wsgi_app()
 
 
@@ -197,15 +189,19 @@ def add_routes(config):
 def add_routes_for_data_types(config):
     data_type_by_name = get_data_type_by_name()
     for data_type_name, data_type in data_type_by_name.items():
-        for asset_path in data_type.asset_paths:
-            asset_path = join(dirname(inspect.getfile(data_type)), asset_path)
-            asset_name = basename(asset_path)
-            route_subpath = 'crosscompute/%s/%s' % (data_type_name, asset_name)
-            route_name = '___/' + route_subpath
-            config.add_route(route_name, '/_/' + route_subpath)
-            config.add_view(
-                lambda request, x=asset_path: FileResponse(x, request),
-                route_name=route_name)
+        root_module_name = data_type.__module__
+        for relative_view_url in data_type.views:
+            # Get route_url
+            route_name = '%s/%s' % (data_type_name, relative_view_url)
+            route_url = '/c/' + route_name
+            # Get view
+            view_url = root_module_name + '.' + relative_view_url
+            module_url, view_name = view_url.rsplit('.', 1)
+            module = import_module(module_url)
+            view = getattr(module, view_name)
+            # Add view
+            config.add_route(route_name, route_url)
+            config.add_view(view, permission='run_tool', route_name=route_name)
 
 
 def index(request):
@@ -302,7 +298,7 @@ def show_result_file(request):
     return FileResponse(result_file_path, request=request)
 
 
-def import_upload(request, DataType):
+def import_upload(request, DataType, render_property_kw):
     params = request.params
     upload = get_upload_from(request)
     name = expect_param('name', params)
@@ -320,7 +316,8 @@ def import_upload(request, DataType):
         DataType.suffixes[0], DataType.formats[0])), value)
     template = get_renderer(DataType.template).template_loader()
     data_item = DataItem(name, value, DataType, help_text)
-    html = template.make_module().render_property(data_item, stamp='-upload')
+    html = template.make_module().render_property(
+        data_item, **render_property_kw)
     return Response(html)
 
 

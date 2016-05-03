@@ -30,6 +30,7 @@ class DataType(object):
     style = None
     script = None
     template = None
+    views = ()
 
     @classmethod
     def save(Class, path, value):
@@ -40,7 +41,7 @@ class DataType(object):
         try:
             value = Class.load(path)
         except (IOError, DataTypeError):
-            value = ''
+            value = None
         return value
 
     @classmethod
@@ -142,7 +143,8 @@ def prepare_file_path(
             upload = get_upload(data_folder, user_id, upload_id)
         except IOError:
             raise ValueError
-        return upload.path
+        return join(upload.folder, '%s.%s' % (
+            data_type.suffixes[0], data_type.formats[0]))
     raise KeyError
 
 
@@ -161,6 +163,8 @@ def parse_data_dictionary_from(
             value = data_type.parse(value)
         except DataTypeError as e:
             errors.append((key, str(e)))
+        except Exception:
+            errors.append((key, 'could_not_parse'))
         d[key] = value
         if not key.endswith('_path'):
             continue
@@ -168,10 +172,12 @@ def parse_data_dictionary_from(
         data_type = get_data_type(noun, data_type_by_suffix)
         try:
             data_type.load(value)
-        except IOError as e:
-            errors.append((noun, 'not_found'))
         except DataTypeError as e:
             errors.append((noun, str(e)))
+        except IOError:
+            errors.append((noun, 'not_found'))
+        except Exception:
+            errors.append((noun, 'could_not_load'))
     return d, errors
 
 
