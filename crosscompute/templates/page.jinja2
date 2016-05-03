@@ -33,7 +33,9 @@ d.crosscompute = {};
 {%- else -%}
 {% from x.data_type.template import render_argument %}
 <div class="form-group">
+{% if not request.registry.settings['tool_definition'].get('tool_template_path') %}
 {{- render_key(x) -}}
+{% endif %}
 {{- render_argument(x) -}}
 </div>
 

@@ -17,7 +17,7 @@
 {% if result_properties -%}
 
 {% if result_errors -%}
-<div class=error>
+<div class="error">
 {{ render_properties(result_errors, stamp='-error') -}}
 </div>
 {% else -%}
@@ -28,7 +28,9 @@
 
 {%- else -%}
 {% from x.data_type.template import render_property %}
+{% if not request.registry.settings['tool_definition'].get('result_template_path') %}
 {{- render_key(x, stamp='-result') }}
+{% endif %}
 {{- render_property(x, stamp='-result') -}}
 
 {%- endif -%}
@@ -36,8 +38,10 @@
 
 {% endif -%}
 
-{{- render_properties(result_properties, stamp='-meta') -}}
+<div>
+<a href="{{ request.route_path('result.zip', id=result_id, name=result_name) }}" class="btn btn-success btn-lg download" role="button" download>Download</a>
+</div>
 
-<a href="{{ request.route_path('result.zip', id=result_id, name=result_name) }}" class="btn btn-success download" role="button" download>Download</a>
+{{- render_properties(result_properties, stamp='-meta') -}}
 {% endif %}
 {% endblock %}
