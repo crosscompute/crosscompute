@@ -27,6 +27,7 @@ from ..types import parse_data_dictionary
 class _ResultConfiguration(object):
 
     def __init__(self, target_folder):
+        self.target_folder = target_folder
         self.target_file = open(join(target_folder, 'result.cfg'), 'wt')
 
     def write(self, screen_text, file_text=None):
@@ -37,14 +38,13 @@ class _ResultConfiguration(object):
         configuration_folder = tool_definition['configuration_folder']
         tool_argument_names = list(tool_definition['argument_names'])
         # Write tool_definition
-        template = '[tool_definition]\n%s\n'
-        tool_definition = stylize_tool_definition(
-            tool_definition, result_arguments)
-        self.write(template % format_summary(
-            sort_dictionary(tool_definition, [
-                'repository_url', 'tool_name', 'commit_hash',
-                'configuration_path', 'command',
-            ]), [('command', format_hanging_indent)]))
+        template = '[tool_definition]\n%s'
+        command_path = self.write_script(tool_definition, result_arguments)
+        tool_definition = stylize_tool_definition(tool_definition)
+        self.write(template % format_summary(sort_dictionary(tool_definition, [
+            'repository_url', 'tool_name', 'commit_hash', 'configuration_path',
+        ])))
+        print(format_summary({'command_path': command_path}) + '\n')
         # Put target_folder at end of result_arguments
         target_folder = result_arguments['target_folder']
         try:
@@ -61,6 +61,35 @@ class _ResultConfiguration(object):
                 continue
             result_arguments[k] = abspath(join(configuration_folder, v))
         self.write(template % format_summary(result_arguments))
+
+    def write_script(self, tool_definition, result_arguments):
+        configuration_folder = tool_definition['configuration_folder']
+        if os.name == 'posix':
+            line_join = '\\'
+            script_name = 'run.sh'
+            script_header = '\n'.join([
+                'CONFIGURATION_FOLDER=' + format_path(configuration_folder),
+                'cd ${CONFIGURATION_FOLDER}'
+            ])
+        else:
+            line_join = '^'
+            script_name = 'run.bat'
+            script_header = '\n'.join([
+                'SET CONFIGURATION_FOLDER=' + format_path(configuration_folder),
+                'cd %CONFIGURATION_FOLDER%'
+            ])
+        script_path = join(self.target_folder, script_name)
+        command = render_command(
+            tool_definition['command_template'],
+            stylize_dictionary(result_arguments, [
+                ('_folder', format_path),
+                ('_path', format_path),
+            ]))
+        with open(script_path, 'wt') as script_file:
+            script_file.write(script_header + '\n')
+            script_file.write(format_hanging_indent(
+                command.replace('\n', ' %s\n' % line_join)) + '\n')
+        return script_path
 
     def write_footer(self, result_properties):
         template = '[result_properties]\n%s'
@@ -100,7 +129,7 @@ def load_result_configuration(result_folder):
     return result_arguments, result_properties
 
 
-def stylize_tool_definition(tool_definition, result_arguments):
+def stylize_tool_definition(tool_definition):
     d = {
         'tool_name': tool_definition['tool_name'],
         'configuration_path': tool_definition['configuration_path'],
@@ -113,12 +142,6 @@ def stylize_tool_definition(tool_definition, result_arguments):
             configuration_folder)
     except InvisibleRoadsError:
         pass
-    d['command'] = render_command(
-        tool_definition['command_template'],
-        stylize_dictionary(result_arguments, [
-            ('_folder', format_path),
-            ('_path', format_path),
-        ]))
     return d
 
 
@@ -128,8 +151,8 @@ def run_script(
     result_arguments = dict(result_arguments, target_folder=target_folder)
     result_configuration = _ResultConfiguration(target_folder)
     result_configuration.write_header(tool_definition, result_arguments)
-    command = render_command(
-        tool_definition['command_template'], result_arguments)
+    command = render_command(tool_definition[
+        'command_template'], result_arguments).replace('\n', ' ')
     try:
         with cd(tool_definition['configuration_folder']):
             command_process = subprocess.Popen(
@@ -157,7 +180,7 @@ def render_command(command_template, result_arguments):
         if ' ' in v and not quote_pattern.match(v):
             v = '"%s"' % v
         d[k] = v
-    return command_template.replace('\n', ' ').format(**d)
+    return command_template.format(**d)
 
 
 def _process_streams(

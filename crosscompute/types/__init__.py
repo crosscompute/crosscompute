@@ -104,7 +104,7 @@ def get_result_arguments(
             try:
                 value = prepare_file_path(
                     data_folder, data_type, raw_arguments, tool_argument_noun,
-                    user_id)
+                    user_id, tool_definition.get(tool_argument_name))
             except IOError:
                 errors.append((tool_argument_name, 'invalid'))
                 continue
@@ -125,7 +125,8 @@ def get_result_arguments(
 
 
 def prepare_file_path(
-        data_folder, data_type, raw_arguments, tool_argument_noun, user_id):
+        data_folder, data_type, raw_arguments, tool_argument_noun, user_id,
+        default_path):
     for file_format in data_type.formats:
         raw_argument_name = '%s-%s' % (tool_argument_noun, file_format)
         if raw_argument_name in raw_arguments:
@@ -139,12 +140,16 @@ def prepare_file_path(
     raw_argument_name = '%s-upload' % tool_argument_noun
     if raw_argument_name in raw_arguments:
         upload_id = raw_arguments[raw_argument_name]
-        try:
-            upload = get_upload(data_folder, user_id, upload_id)
-        except IOError:
-            raise ValueError
-        return join(upload.folder, '%s.%s' % (
-            data_type.suffixes[0], data_type.formats[0]))
+        if upload_id:
+            try:
+                upload = get_upload(data_folder, user_id, upload_id)
+            except IOError:
+                raise
+            else:
+                return join(upload.folder, '%s.%s' % (
+                    data_type.suffixes[0], data_type.formats[0]))
+        if default_path:
+            return default_path
     raise KeyError
 
 
