@@ -53,6 +53,7 @@ class ServeScript(Script):
         app_url = 'http://%s:%s/tools/1' % (args.host, args.port)
         webbrowser.open_new_tab(app_url)
         server = make_server(args.host, args.port, app)
+        print('Serving %s:%s' % (args.host, args.port))
         try:
             server.serve_forever()
         except KeyboardInterrupt:
