@@ -83,6 +83,7 @@ def get_app(tool_definition):
     settings['tool_definition'] = tool_definition
     config = Configurator(settings=settings)
     includeme(config)
+    add_routes(config)
     return config.make_wsgi_app()
 
 
@@ -102,7 +103,6 @@ def includeme(config):
     config.include('invisibleroads_posts')
     config.include('invisibleroads_uploads')
     configure_jinja2_environment(config)
-    add_routes(config)
     add_routes_for_data_types(config)
 
 

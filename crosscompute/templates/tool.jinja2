@@ -6,5 +6,5 @@
 
 {% block body_script_inline %}
 {{ super() -}}
-$('.form-group input').first().focus();
+$('.form-group').first().find('input').focus();
 {% endblock %}
