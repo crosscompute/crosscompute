@@ -1,13 +1,12 @@
 import sys
 from argparse import ArgumentParser, SUPPRESS
 from invisibleroads.scripts import Script
-from invisibleroads_macros.disk import make_enumerated_folder
 from os.path import join, sep
 
 from ..configurations import RESERVED_ARGUMENT_NAMES
 from ..exceptions import DataTypeError
 from ..types import get_data_type_by_suffix, get_result_arguments
-from . import load_tool_definition, run_script
+from . import load_tool_definition, prepare_result_response_folder, run_script
 
 
 class RunScript(Script):
@@ -31,10 +30,11 @@ class RunScript(Script):
                 data_type_by_suffix, data_folder)
         except DataTypeError as e:
             return [(k + '.error', v) for k, v in e.args]
+        target_folder = result_arguments.get(
+            'target_folder') or prepare_result_response_folder(data_folder)[1]
         run_script(
-            result_arguments.get('target_folder') or make_enumerated_folder(
-                join(data_folder, 'results')),
-            tool_definition, result_arguments, data_type_by_suffix)
+            target_folder, tool_definition, result_arguments,
+            data_type_by_suffix)
 
 
 def configure_argument_parser(

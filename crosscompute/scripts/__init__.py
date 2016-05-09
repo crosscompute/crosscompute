@@ -6,22 +6,30 @@ import sys
 import time
 from collections import OrderedDict
 from os import sep
-from os.path import abspath, isabs, join
+from os.path import abspath, basename, isabs, join
 from invisibleroads.scripts import (
     StoicArgumentParser, configure_subparsers, get_scripts_by_name,
     run_scripts)
 from invisibleroads_macros.configuration import RawCaseSensitiveConfigParser
-from invisibleroads_macros.disk import cd
+from invisibleroads_macros.disk import cd, make_enumerated_folder, make_folder
 from invisibleroads_macros.exceptions import InvisibleRoadsError
 from invisibleroads_macros.log import (
-    format_hanging_indent, format_path, format_summary,
-    parse_nested_dictionary_from, sort_dictionary, stylize_dictionary)
+    format_hanging_indent, format_summary,
+    parse_nested_dictionary_from, sort_dictionary)
 from invisibleroads_repositories import (
     get_github_repository_commit_hash, get_github_repository_url)
 
 from ..configurations import get_tool_definition
 from ..exceptions import CrossComputeError
 from ..types import parse_data_dictionary
+
+
+EXCLUDED_FILE_NAMES = [
+    'run.bat',
+    'run.sh',
+    'standard_output.log',
+    'standard_error.log',
+]
 
 
 class _ResultConfiguration(object):
@@ -44,7 +52,7 @@ class _ResultConfiguration(object):
         self.write(template % format_summary(sort_dictionary(tool_definition, [
             'repository_url', 'tool_name', 'commit_hash', 'configuration_path',
         ])))
-        print(format_summary({'command_path': command_path}) + '\n')
+        print(format_summary({'command_path': command_path}))
         # Put target_folder at end of result_arguments
         target_folder = result_arguments['target_folder']
         try:
@@ -54,7 +62,7 @@ class _ResultConfiguration(object):
         result_arguments = sort_dictionary(
             result_arguments, tool_argument_names)
         # Write result_arguments
-        template = '[result_arguments]\n%s\n'
+        template = '\n[result_arguments]\n%s\n'
         result_arguments['target_folder'] = target_folder
         for k, v in result_arguments.items():
             if not k.endswith('_path') or isabs(v):
@@ -65,28 +73,14 @@ class _ResultConfiguration(object):
     def write_script(self, tool_definition, result_arguments):
         configuration_folder = tool_definition['configuration_folder']
         if os.name == 'posix':
-            line_join = '\\'
-            script_name = 'run.sh'
-            script_header = '\n'.join([
-                'CONFIGURATION_FOLDER=' + format_path(configuration_folder),
-                'cd ${CONFIGURATION_FOLDER}'
-            ])
+            line_join, script_name = '\\', 'run.sh'
         else:
-            line_join = '^'
-            script_name = 'run.bat'
-            script_header = '\n'.join([
-                'SET CONFIGURATION_FOLDER=' + format_path(configuration_folder),
-                'cd %CONFIGURATION_FOLDER%'
-            ])
+            line_join, script_name = '^', 'run.bat'
         script_path = join(self.target_folder, script_name)
         command = render_command(
-            tool_definition['command_template'],
-            stylize_dictionary(result_arguments, [
-                ('_folder', format_path),
-                ('_path', format_path),
-            ]))
+            tool_definition['command_template'], result_arguments)
         with open(script_path, 'wt') as script_file:
-            script_file.write(script_header + '\n')
+            script_file.write('cd "%s"\n' % configuration_folder)
             script_file.write(format_hanging_indent(
                 command.replace('\n', ' %s\n' % line_join)) + '\n')
         return script_path
@@ -143,6 +137,13 @@ def stylize_tool_definition(tool_definition):
     except InvisibleRoadsError:
         pass
     return d
+
+
+def prepare_result_response_folder(data_folder):
+    results_folder = join(data_folder, 'results')
+    result_folder = make_enumerated_folder(results_folder)
+    result_id = basename(result_folder)
+    return result_id, make_folder(join(result_folder, 'response'))
 
 
 def run_script(

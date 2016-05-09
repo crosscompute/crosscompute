@@ -1,5 +1,10 @@
-{% extends 'page.jinja2' %}
+{% extends page_template %}
 
 {% block page_title %}
 {% block body_subtitle %}{{ tool_title }}{% endblock %} &middot; Tools &middot; {{ website_name -}}
+{% endblock %}
+
+{% block body_script_inline %}
+{{ super() -}}
+$('.form-group input').first().focus();
 {% endblock %}

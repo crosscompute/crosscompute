@@ -1,13 +1,13 @@
 import codecs
+import logging
 import re
 import webbrowser
 from collections import OrderedDict
 from importlib import import_module
 from invisibleroads.scripts import Script
 from invisibleroads_macros.disk import (
-    compress_zip, make_enumerated_folder, resolve_relative_path)
+    compress_zip, resolve_relative_path)
 from invisibleroads_macros.iterable import merge_dictionaries
-from invisibleroads_posts.exceptions import HTTPBadRequestJSON
 from invisibleroads_posts.views import expect_param
 from invisibleroads_uploads.views import get_upload_from
 from markupsafe import Markup
@@ -19,6 +19,7 @@ from pyramid.httpexceptions import (
     HTTPBadRequest, HTTPForbidden, HTTPNotFound, HTTPSeeOther)
 from pyramid.renderers import get_renderer
 from pyramid.response import FileResponse, Response
+from pyramid.settings import aslist
 from six import string_types
 from traceback import format_exc
 from wsgiref.simple_server import make_server
@@ -28,7 +29,9 @@ from ..exceptions import DataTypeError
 from ..types import (
     DataItem, get_data_type, get_data_type_by_name, get_data_type_by_suffix,
     get_result_arguments)
-from . import load_result_configuration, load_tool_definition, run_script
+from . import (
+    load_result_configuration, load_tool_definition,
+    prepare_result_response_folder, run_script, EXCLUDED_FILE_NAMES)
 
 
 HELP = {
@@ -45,78 +48,76 @@ class ServeScript(Script):
         argument_subparser.add_argument('tool_name', nargs='?')
         argument_subparser.add_argument('--host', default='127.0.0.1')
         argument_subparser.add_argument('--port', default=4444, type=int)
+        argument_subparser.add_argument('--verbose', action='store_true')
 
     def run(self, args):
+        if args.verbose:
+            logging.basicConfig(level=logging.DEBUG)
         tool_definition = load_tool_definition(args.tool_name)
-        app = get_app(
-            tool_definition, data_type_by_suffix=get_data_type_by_suffix())
+        app = get_app(tool_definition)
         app_url = 'http://%s:%s/tools/1' % (args.host, args.port)
         webbrowser.open_new_tab(app_url)
         server = make_server(args.host, args.port, app)
-        print('Serving %s:%s' % (args.host, args.port))
+        print('Running on http://%s:%s' % (args.host, args.port))
         try:
             server.serve_forever()
         except KeyboardInterrupt:
             pass
 
 
-def get_app(
-        tool_definition,
-        base_template='invisibleroads_posts:templates/base.jinja2',
-        data_type_by_suffix=None,
-        data_folder=None):
-    tool_name = tool_definition['tool_name']
-    data_types = set(data_type_by_suffix.values())
-    config = Configurator(settings={
-        'data.folder': data_folder or join(sep, 'tmp', tool_name),
-        'data_type_by_suffix': data_type_by_suffix or {},
-        'jinja2.directories': 'crosscompute:templates',
-        'jinja2.lstrip_blocks': True,
-        'jinja2.trim_blocks': True,
-        'tool_definition': tool_definition,
+def get_app(tool_definition):
+    settings = {
+        'data.folder': join(sep, 'tmp', tool_definition['tool_name']),
         'website.name': 'CrossCompute',
         'website.author': 'CrossCompute Inc',
         'website.root_assets': [
             'invisibleroads_posts:assets/favicon.ico',
+            'invisibleroads_posts:assets/robots.txt',
         ],
-        'website.style_assets': [
-            'invisibleroads_posts:assets/part.min.css',
-            'invisibleroads_uploads:assets/part.min.css',
-        ] + [x.style for x in data_types if x.style],
-        'website.script_assets': [
-            'invisibleroads_posts:assets/part.min.js',
-            'invisibleroads_uploads:assets/part.min.js',
-        ] + [x.script for x in data_types if x.script],
-    })
-    config.include('invisibleroads_posts')
-    config.include('invisibleroads_uploads')
-    configure_jinja2_environment(config, base_template, r'results/(\d+)/(.+)')
-    add_routes(config)
-    add_routes_for_data_types(config)
+        'jinja2.directories': 'crosscompute:templates',
+        'jinja2.lstrip_blocks': True,
+        'jinja2.trim_blocks': True,
+        'crosscompute.base': 'invisibleroads_posts:templates/base.jinja2',
+        'crosscompute.page': 'crosscompute:templates/page.jinja2',
+    }
+    settings['tool_definition'] = tool_definition
+    config = Configurator(settings=settings)
+    includeme(config)
     return config.make_wsgi_app()
 
 
-def configure_jinja2_environment(
-        config, base_template, result_path_expression, **kw):
-    result_path_pattern = re.compile(result_path_expression)
+def includeme(config):
+    data_type_by_suffix = get_data_type_by_suffix()
+    data_types = set(data_type_by_suffix.values())
+    website_dependencies = [
+        'invisibleroads_posts',
+        'invisibleroads_uploads',
+    ] + [x.__module__ for x in data_types]
+
+    settings = config.registry.settings
+    settings['website.dependencies'] = website_dependencies + aslist(
+        settings.get('website.dependencies', []))
+    settings['data_type_by_suffix'] = data_type_by_suffix
+
+    config.include('invisibleroads_posts')
+    config.include('invisibleroads_uploads')
+    configure_jinja2_environment(config)
+    add_routes(config)
+    add_routes_for_data_types(config)
+
+
+def configure_jinja2_environment(config):
+    settings = config.registry.settings
     markdown = Markdown(escape=True, hard_wrap=True)
-
-    def get_url_from_path(path):
-        try:
-            result_id, file_path = result_path_pattern.search(path).groups()
-        except AttributeError:
-            return ''
-        return '/results/%s/_/%s' % (result_id, file_path)
-
     jinja2_environment = config.get_jinja2_environment()
     jinja2_environment.filters.update({
         'markdown': lambda x: Markup(markdown(x)),
     })
     jinja2_environment.globals.update({
-        'base_template': base_template,
+        'base_template': settings['crosscompute.base'],
+        'page_template': settings['crosscompute.page'],
         'get_os_environment_variable': environ.get,
-        'get_url_from_path': get_url_from_path,
-    }, **kw)
+    })
 
 
 def get_template_variables(tool_definition, template_type, data_items):
@@ -234,22 +235,25 @@ def run_tool(request):
             request.authenticated_userid)
     except DataTypeError as e:
         raise HTTPBadRequest(dict(e.args))
-    target_folder = make_enumerated_folder(join(data_folder, 'results'))
+    result_id, target_folder = prepare_result_response_folder(data_folder)
     run_script(
         target_folder, tool_definition, result_arguments, data_type_by_suffix)
-    compress_zip(target_folder, excludes=[
-        'standard_output.log', 'standard_error.log'])
+    compress_zip(target_folder, excludes=EXCLUDED_FILE_NAMES)
     return HTTPSeeOther(request.route_path(
-        'result', id=basename(target_folder), _anchor='properties'))
+        'result', id=result_id, _anchor='properties'))
 
 
 def show_result(request):
     settings = request.registry.settings
+    data_folder = settings['data.folder']
     tool_definition = settings['tool_definition']
-    result_id = request.matchdict['id']
-
-    result_arguments, result_properties = load_result_configuration(join(
-        settings['data.folder'], 'results', result_id))
+    result_id = basename(request.matchdict['id'])
+    result_response_folder = join(
+        data_folder, 'results', result_id, 'response')
+    if not exists(result_response_folder):
+        raise HTTPNotFound
+    result_arguments, result_properties = load_result_configuration(
+        result_response_folder)
     data_type_by_suffix = get_data_type_by_suffix()
     tool_items = get_data_items(
         result_arguments, tool_definition, data_type_by_suffix)
@@ -279,16 +283,18 @@ def show_result_json(request):
 
 def show_result_zip(request):
     settings = request.registry.settings
+    data_folder = settings['data.folder']
     result_id = request.matchdict['id']
-    target_folder = join(settings['data.folder'], 'results', result_id)
+    target_folder = join(data_folder, 'results', result_id, 'response')
     result_archive_path = target_folder + '.zip'
     return FileResponse(result_archive_path, request=request)
 
 
 def show_result_file(request):
     settings = request.registry.settings
+    data_folder = settings['data.folder']
     result_id = request.matchdict['id']
-    target_folder = join(settings['data.folder'], 'results', result_id)
+    target_folder = join(data_folder, 'results', result_id, 'response')
     try:
         result_file_path = resolve_relative_path(
             request.matchdict['path'], target_folder)
@@ -312,7 +318,7 @@ def import_upload(request, DataType, render_property_kw):
             message = str(e)
         else:
             message = 'Import failed'
-        raise HTTPBadRequestJSON({name: message})
+        raise HTTPBadRequest({name: message})
     DataType.save(join(upload.folder, '%s.%s' % (
         DataType.suffixes[0], DataType.formats[0])), value)
     template = get_renderer(DataType.template).template_loader()
@@ -349,3 +355,13 @@ def get_data_items(value_by_key, tool_definition, data_type_by_suffix):
         help_text = tool_definition.get(key + '.help', HELP.get(key, ''))
         data_items.append(DataItem(key, value, data_type, help_text))
     return data_items
+
+
+def get_file_url(result_path):
+    result_path_expression = r'results/(\d+)/response/(.+)'
+    try:
+        result_id, file_path = re.search(
+            result_path_expression, result_path).groups()
+    except AttributeError:
+        return ''
+    return '/results/%s/_/%s' % (result_id, file_path)
