@@ -77,8 +77,10 @@ def get_app(tool_definition):
         'jinja2.directories': 'crosscompute:templates',
         'jinja2.lstrip_blocks': True,
         'jinja2.trim_blocks': True,
-        'crosscompute.base': 'invisibleroads_posts:templates/base.jinja2',
-        'crosscompute.page': 'crosscompute:templates/page.jinja2',
+        'crosscompute.base_template':
+            'invisibleroads_posts:templates/base.jinja2',
+        'crosscompute.page_template':
+            'crosscompute:templates/page.jinja2',
     }
     settings['tool_definition'] = tool_definition
     config = Configurator(settings=settings)
