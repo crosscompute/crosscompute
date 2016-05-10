@@ -116,8 +116,8 @@ def configure_jinja2_environment(config):
         'markdown': lambda x: Markup(markdown(x)),
     })
     jinja2_environment.globals.update({
-        'base_template': settings['crosscompute.base'],
-        'page_template': settings['crosscompute.page'],
+        'base_template': settings['crosscompute.base_template'],
+        'page_template': settings['crosscompute.page_template'],
         'get_os_environment_variable': environ.get,
     })
 
@@ -260,9 +260,9 @@ def show_result(request):
     tool_items = get_data_items(
         result_arguments, tool_definition, data_type_by_suffix)
     result_errors = get_data_items(merge_dictionaries(
-            result_properties.pop('standard_errors', {}),
-            result_properties.pop('type_errors', {})),
-        tool_definition, data_type_by_suffix)
+        result_properties.pop('standard_errors', {}),
+        result_properties.pop('type_errors', {}),
+    ), tool_definition, data_type_by_suffix)
     result_items = get_data_items(
         result_properties.pop('standard_outputs', {}), tool_definition,
         data_type_by_suffix)
