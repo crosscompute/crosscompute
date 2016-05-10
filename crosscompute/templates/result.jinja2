@@ -20,7 +20,7 @@
 <div class="error">
 {{ render_properties(result_errors, stamp='-error') -}}
 </div>
-{% else -%}
+{% endif -%}
 
 {% for x in result_template_parts %}
 {%- if x is string -%}
@@ -36,8 +36,6 @@
 
 {%- endif -%}
 {% endfor -%}
-
-{% endif -%}
 
 <div>
 <a href="{{ request.route_path('result.zip', id=result_id, name=result_name) }}" class="btn btn-success btn-lg download" role="button" download>Download</a>

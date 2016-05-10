@@ -205,7 +205,8 @@ def _process_streams(
         if tool_definition.get('show_' + stream_name):
             d[stream_name] = stream_content
         if value_by_key:
-            d[stream_name + 's'] = value_by_key
+            d[stream_name + 's'] = {
+                k: v for k, v in value_by_key.items() if ' ' not in k}
     if type_errors:
         d['type_errors'] = type_errors
     return d

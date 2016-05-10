@@ -55,7 +55,7 @@ class ServeScript(Script):
             logging.basicConfig(level=logging.DEBUG)
         tool_definition = load_tool_definition(args.tool_name)
         app = get_app(tool_definition)
-        app_url = 'http://%s:%s/tools/1' % (args.host, args.port)
+        app_url = 'http://%s:%s/t/1' % (args.host, args.port)
         webbrowser.open_new_tab(app_url)
         server = make_server(args.host, args.port, app)
         print('Running on http://%s:%s' % (args.host, args.port))
@@ -159,11 +159,11 @@ def parse_template(template_text, data_items):
 
 
 def add_routes(config):
-    config.add_route('tool', '/tools/{id}')
-    config.add_route('result.json', '/results/{id}.json')
-    config.add_route('result.zip', '/results/{id}/{name}.zip')
-    config.add_route('result_file', '/results/{id}/_/{path:.+}')
-    config.add_route('result', '/results/{id}')
+    config.add_route('tool', '/t/{id}')
+    config.add_route('result.json', '/r/{id}.json')
+    config.add_route('result.zip', '/r/{id}/{name}.zip')
+    config.add_route('result_file', '/r/{id}/_/{path:.+}')
+    config.add_route('result', '/r/{id}')
 
     config.add_view(
         index,
@@ -300,6 +300,8 @@ def show_result_file(request):
             request.matchdict['path'], target_folder)
     except IOError:
         raise HTTPForbidden
+    if basename(result_file_path) in EXCLUDED_FILE_NAMES:
+        raise HTTPForbidden
     if not exists(result_file_path):
         raise HTTPNotFound
     return FileResponse(result_file_path, request=request)
@@ -364,4 +366,4 @@ def get_file_url(result_path):
             result_path_expression, result_path).groups()
     except AttributeError:
         return ''
-    return '/results/%s/_/%s' % (result_id, file_path)
+    return '/r/%s/_/%s' % (result_id, file_path)

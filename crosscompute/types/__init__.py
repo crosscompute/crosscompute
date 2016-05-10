@@ -1,9 +1,11 @@
+import shutil
+import tempfile
 from abc import ABCMeta
 from collections import OrderedDict
 from invisibleroads_macros.iterable import merge_dictionaries
 from invisibleroads_macros.log import parse_nested_dictionary
 from invisibleroads_uploads.views import get_upload, make_upload_folder
-from os.path import expanduser, isabs, join, sep
+from os.path import basename, expanduser, isabs, join, sep
 from six import add_metaclass
 from stevedore.extension import ExtensionManager
 
@@ -95,6 +97,7 @@ def get_result_arguments(
         tool_definition, raw_arguments, data_type_by_suffix,
         data_folder=join(sep, 'tmp'), user_id=0):
     d, errors = {}, []
+    configuration_folder = tool_definition['configuration_folder']
     for tool_argument_name in tool_definition['argument_names']:
         if tool_argument_name in raw_arguments:
             value = raw_arguments[tool_argument_name]
@@ -104,7 +107,8 @@ def get_result_arguments(
             try:
                 value = prepare_file_path(
                     data_folder, data_type, raw_arguments, tool_argument_noun,
-                    user_id, tool_definition.get(tool_argument_name))
+                    user_id, join(configuration_folder, tool_definition.get(
+                        tool_argument_name)))
             except IOError:
                 errors.append((tool_argument_name, 'invalid'))
                 continue
@@ -117,7 +121,7 @@ def get_result_arguments(
             continue
         d[tool_argument_name] = value
     d, more_errors = parse_data_dictionary_from(
-        d, data_type_by_suffix, tool_definition['configuration_folder'])
+        d, data_type_by_suffix, configuration_folder)
     errors.extend(more_errors)
     if errors:
         raise DataTypeError(*errors)
@@ -149,7 +153,12 @@ def prepare_file_path(
                 return join(upload.folder, '%s.%s' % (
                     data_type.suffixes[0], data_type.formats[0]))
         if default_path:
-            return default_path
+            # TODO: Think of a better way to do this
+            folder = tempfile.mkdtemp(
+                prefix='', dir=join(data_folder, 'uploads', str(user_id or 0)))
+            path = join(folder, basename(default_path))
+            shutil.copy(default_path, path)
+            return path
     raise KeyError
 
 
