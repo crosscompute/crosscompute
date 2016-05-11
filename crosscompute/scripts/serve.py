@@ -11,7 +11,7 @@ from invisibleroads_macros.iterable import merge_dictionaries
 from invisibleroads_posts.views import expect_param
 from invisibleroads_uploads.views import get_upload_from
 from markupsafe import Markup
-from mistune import Markdown
+from mistune import markdown
 from os import environ
 from os.path import basename, exists, isabs, join, sep
 from pyramid.config import Configurator
@@ -110,10 +110,9 @@ def includeme(config):
 
 def configure_jinja2_environment(config):
     settings = config.registry.settings
-    markdown = Markdown(escape=True, hard_wrap=True)
     jinja2_environment = config.get_jinja2_environment()
     jinja2_environment.filters.update({
-        'markdown': lambda x: Markup(markdown(x)),
+        'markdown': lambda x: Markup(markdown(x, escape=True, hard_wrap=True)),
     })
     jinja2_environment.globals.update({
         'base_template': settings['crosscompute.base_template'],
