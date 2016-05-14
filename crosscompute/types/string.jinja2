@@ -1,16 +1,23 @@
-{% macro render_query(key) %}
-<label for="{{ key }}_" class="control-label">{{ key }}</label>
-<input type="text" name="{{ key }}" id="{{ key }}_" class="form-control" autocomplete="off" value="{{ format_value(key) }}">
+{% macro head_style_loaded() %}{% endmacro %}
+{% macro head_style_inline() %}{% endmacro %}
+{% macro head_script_inline() %}{% endmacro %}
+{% macro body_script_loaded() %}{% endmacro %}
+{% macro body_script_inline() %}{% endmacro %}
+
+{% macro render_argument(data_item) %}
+{% set key = data_item.key %}
+<input id="{{ key }}" name="{{ key }}" class="form-control" autocomplete="off" value="{{ data_item.format_value() }}" type="text">
 {% endmacro %}
 
-{% macro render_value(key, value) %}
-{% set help = get_help(key) %}
-<h3>{{ key }} {% if help %}<span class="glyphicon glyphicon-question-sign" data-toggle="popover" data-content="{{ help }}"></span>{% endif %}</h3>
-<div id="{{ key }}_">
-{%- set lines = (value | string).strip().splitlines() %}
+{% macro render_property(data_item, stamp='') %}
+{% set key = data_item.key + stamp %}
+{% set value = data_item.value %}
+<div id="{{ key }}">
+{% set lines = (value | string).strip().splitlines() %}
 {% if lines | length == 1 %}
 {{ value -}}
 {% else %}
 {% for line in lines %}{{ line }}<br>{% endfor -%}
-{% endif %}</div>
+{% endif %}
+</div>
 {% endmacro %}

@@ -1,24 +1,24 @@
 from os.path import abspath, dirname, join
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 
 ENTRY_POINTS = """
 [console_scripts]
 crosscompute = crosscompute.scripts:launch
 [crosscompute]
-setup = crosscompute.scripts.setup:SetupScript
+help = crosscompute.scripts.help:HelpScript
 run = crosscompute.scripts.run:RunScript
 serve = crosscompute.scripts.serve:ServeScript
 [pyramid.scaffold]
-tool = crosscompute.scaffolds:ToolTemplate
+cc-python = crosscompute.scaffolds:PythonToolTemplate
 """
 FOLDER = dirname(abspath(__file__))
 DESCRIPTION = '\n\n'.join(open(join(FOLDER, x)).read().strip() for x in [
     'README.rst', 'CHANGES.rst'])
 setup(
     name='crosscompute',
-    version='0.4.4',
-    description='Publish your computational model',
+    version='0.4.5',
+    description='Publish your own tools by writing a configuration file',
     long_description=DESCRIPTION,
     classifiers=[
         'Programming Language :: Python',
@@ -29,7 +29,7 @@ setup(
     ],
     author='Roy Hyunjin Han',
     author_email='rhh@crosscompute.com',
-    url='https://crosscompute.com',
+    url='https://crosscompute.com/docs',
     keywords='web pyramid pylons crosscompute',
     packages=find_packages(),
     include_package_data=True,
@@ -41,6 +41,7 @@ setup(
         'invisibleroads_macros>=0.6.7',
         'invisibleroads_posts>=0.4.6',
         'invisibleroads_repositories>=0.1.3',
+        'invisibleroads_uploads>=0.0.1',
         'pyramid',
         'pyramid_jinja2',
         'six',

@@ -1,4 +1,5 @@
 {% extends base_template %}
+{% from 'type.jinja2' import render_key %}
 
 {% block head_style_loaded %}
 {{ super() -}}
@@ -7,6 +8,7 @@
 
 {% block head_style_inline %}
 {{ super() -}}
+#tool-form {margin-bottom: 1em}
 {% for data_type in data_types %}{% from data_type.template import head_style_inline %}{{ head_style_inline() }}{% endfor %}
 .error {background-color: yellow}
 {% endblock %}
@@ -18,13 +20,30 @@ d.crosscompute = {};
 {% endblock %}
 
 {% block body_content %}
-<h1>{% block body_title %}{% endblock %}</h1>
-<h1>
+{% block body_title %}{% endblock %}
 <div class="row">
-<div class="col-xs-9">{% block body_subtitle %}{% endblock %}</div>
-<div class="col-xs-3 text-right">{% block body_subtitle_toolbar %}{% endblock %}</div>
+<div class="col-xs-9"><h1>{% block body_subtitle %}{% endblock %}</h1></div>
+<div class="col-xs-3 text-right h1">{% block body_subtitle_toolbar %}{% endblock %}</div>
 </div>
-</h1>
+<form id="tool-form" action="{{ request.route_path('tool', id=tool_id) }}" method="post">
+{% for x in tool_template_parts %}
+{%- if x is string -%}
+{{ x | markdown }}
+{% set has_tool_template = True %}
+
+{%- else -%}
+{% from x.data_type.template import render_argument %}
+<div class="form-group">
+{% if not has_tool_template %}
+{{- render_key(x) -}}
+{% endif %}
+{{- render_argument(x) -}}
+</div>
+
+{%- endif -%}
+{% endfor %}
+<button type="submit" class="btn btn-primary btn-lg">Run</button>
+</form>
 {% endblock %}
 
 {% block body_script_loaded %}

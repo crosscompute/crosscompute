@@ -6,15 +6,16 @@ import sys
 import time
 from collections import OrderedDict
 from os import sep
-from os.path import abspath, dirname, isabs, join
+from os.path import abspath, basename, isabs, join
 from invisibleroads.scripts import (
     StoicArgumentParser, configure_subparsers, get_scripts_by_name,
     run_scripts)
-from invisibleroads_macros.disk import cd
+from invisibleroads_macros.configuration import RawCaseSensitiveConfigParser
+from invisibleroads_macros.disk import cd, make_enumerated_folder, make_folder
 from invisibleroads_macros.exceptions import InvisibleRoadsError
 from invisibleroads_macros.log import (
-    format_hanging_indent, format_path, format_summary, sort_dictionary,
-    stylize_dictionary)
+    format_hanging_indent, format_summary,
+    parse_nested_dictionary_from, sort_dictionary)
 from invisibleroads_repositories import (
     get_github_repository_commit_hash, get_github_repository_url)
 
@@ -23,26 +24,35 @@ from ..exceptions import CrossComputeError
 from ..types import parse_data_dictionary
 
 
+EXCLUDED_FILE_NAMES = [
+    'run.bat',
+    'run.sh',
+    'standard_output.log',
+    'standard_error.log',
+]
+
+
 class _ResultConfiguration(object):
 
     def __init__(self, target_folder):
+        self.target_folder = target_folder
         self.target_file = open(join(target_folder, 'result.cfg'), 'wt')
 
     def write(self, screen_text, file_text=None):
         _write(self.target_file, screen_text, file_text)
 
     def write_header(self, tool_definition, result_arguments):
-        # Get tool_argument_names before they are removed from tool_definition
+        # Get values before they are removed from tool_definition
+        configuration_folder = tool_definition['configuration_folder']
         tool_argument_names = list(tool_definition['argument_names'])
         # Write tool_definition
-        template = '[tool_definition]\n%s\n'
-        tool_definition = stylize_tool_definition(
-            tool_definition, result_arguments)
-        self.write(template % format_summary(
-            sort_dictionary(tool_definition, [
-                'repository_url', 'tool_name', 'commit_hash',
-                'configuration_path', 'command',
-            ]), [('command', format_hanging_indent)]))
+        template = '[tool_definition]\n%s'
+        command_path = self.write_script(tool_definition, result_arguments)
+        tool_definition = stylize_tool_definition(tool_definition)
+        self.write(template % format_summary(sort_dictionary(tool_definition, [
+            'repository_url', 'tool_name', 'commit_hash', 'configuration_path',
+        ])))
+        print(format_summary({'command_path': command_path}))
         # Put target_folder at end of result_arguments
         target_folder = result_arguments['target_folder']
         try:
@@ -52,16 +62,30 @@ class _ResultConfiguration(object):
         result_arguments = sort_dictionary(
             result_arguments, tool_argument_names)
         # Write result_arguments
-        template = '[result_arguments]\n%s\n'
+        template = '\n[result_arguments]\n%s\n'
         result_arguments['target_folder'] = target_folder
-        configuration_folder = dirname(tool_definition['configuration_path'])
         for k, v in result_arguments.items():
             if not k.endswith('_path') or isabs(v):
                 continue
             result_arguments[k] = abspath(join(configuration_folder, v))
         self.write(template % format_summary(result_arguments))
 
-    def write_footer(self, result_properties, data_type_packs):
+    def write_script(self, tool_definition, result_arguments):
+        configuration_folder = tool_definition['configuration_folder']
+        if os.name == 'posix':
+            line_join, script_name = '\\', 'run.sh'
+        else:
+            line_join, script_name = '^', 'run.bat'
+        script_path = join(self.target_folder, script_name)
+        command = render_command(
+            tool_definition['command_template'], result_arguments)
+        with open(script_path, 'wt') as script_file:
+            script_file.write('cd "%s"\n' % configuration_folder)
+            script_file.write(format_hanging_indent(
+                command.replace('\n', ' %s\n' % line_join)) + '\n')
+        return script_path
+
+    def write_footer(self, result_properties):
         template = '[result_properties]\n%s'
         self.write(
             screen_text=template % format_summary(
@@ -89,36 +113,49 @@ def load_tool_definition(tool_name):
     return tool_definition
 
 
-def stylize_tool_definition(tool_definition, result_arguments):
+def load_result_configuration(result_folder):
+    result_configuration = RawCaseSensitiveConfigParser()
+    result_configuration.read(join(result_folder, 'result.cfg'))
+    result_arguments = OrderedDict(
+        result_configuration.items('result_arguments'))
+    result_properties = parse_nested_dictionary_from(OrderedDict(
+        result_configuration.items('result_properties')), max_depth=1)
+    return result_arguments, result_properties
+
+
+def stylize_tool_definition(tool_definition):
     d = {
         'tool_name': tool_definition['tool_name'],
         'configuration_path': tool_definition['configuration_path'],
     }
-    tool_folder = dirname(tool_definition['configuration_path'])
+    configuration_folder = tool_definition['configuration_folder']
     try:
-        d['repository_url'] = get_github_repository_url(tool_folder)
-        d['commit_hash'] = get_github_repository_commit_hash(tool_folder)
+        d['repository_url'] = get_github_repository_url(
+            configuration_folder)
+        d['commit_hash'] = get_github_repository_commit_hash(
+            configuration_folder)
     except InvisibleRoadsError:
         pass
-    d['command'] = render_command(
-        tool_definition['command_template'],
-        stylize_dictionary(result_arguments, [
-            ('_folder', format_path),
-            ('_path', format_path),
-        ]))
     return d
 
 
+def prepare_result_response_folder(data_folder):
+    results_folder = join(data_folder, 'results')
+    result_folder = make_enumerated_folder(results_folder)
+    result_id = basename(result_folder)
+    return result_id, make_folder(join(result_folder, 'response'))
+
+
 def run_script(
-        target_folder, tool_definition, result_arguments, data_type_packs):
+        target_folder, tool_definition, result_arguments, data_type_by_suffix):
     result_properties, timestamp = OrderedDict(), time.time()
     result_arguments = dict(result_arguments, target_folder=target_folder)
     result_configuration = _ResultConfiguration(target_folder)
     result_configuration.write_header(tool_definition, result_arguments)
-    command = render_command(
-        tool_definition['command_template'], result_arguments)
+    command = render_command(tool_definition[
+        'command_template'], result_arguments).replace('\n', ' ')
     try:
-        with cd(dirname(tool_definition['configuration_path'])):
+        with cd(tool_definition['configuration_folder']):
             command_process = subprocess.Popen(
                 shlex.split(command),
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -130,9 +167,9 @@ def run_script(
         standard_output, standard_error = None, 'Command not found'
     result_properties.update(_process_streams(
         standard_output, standard_error, target_folder, tool_definition,
-        data_type_packs))
+        data_type_by_suffix))
     result_properties['execution_time_in_seconds'] = time.time() - timestamp
-    result_configuration.write_footer(result_properties, data_type_packs)
+    result_configuration.write_footer(result_properties)
     return result_properties
 
 
@@ -144,14 +181,13 @@ def render_command(command_template, result_arguments):
         if ' ' in v and not quote_pattern.match(v):
             v = '"%s"' % v
         d[k] = v
-    return command_template.replace('\n', ' ').format(**d)
+    return command_template.format(**d)
 
 
 def _process_streams(
         standard_output, standard_error, target_folder, tool_definition,
-        data_type_packs):
+        data_type_by_suffix):
     d, type_errors = OrderedDict(), OrderedDict()
-    configuration_folder = dirname(tool_definition['configuration_path'])
     for stream_name, stream_content in [
         ('standard_output', standard_output),
         ('standard_error', standard_error),
@@ -163,7 +199,7 @@ def _process_streams(
             screen_text='[%s]\n%s\n' % (stream_name, stream_content),
             file_text=stream_content)
         value_by_key, errors = parse_data_dictionary(
-            stream_content, data_type_packs, configuration_folder)
+            stream_content, data_type_by_suffix, target_folder)
         for k, v in errors:
             type_errors['%s.error' % k] = v
         if tool_definition.get('show_' + stream_name):

@@ -1,10 +1,10 @@
 import re
 from fnmatch import fnmatch
+from invisibleroads_macros.configuration import RawCaseSensitiveConfigParser
 from invisibleroads_macros.disk import are_same_path
 from os import getcwd, walk
-from os.path import abspath, basename, join
+from os.path import abspath, basename, dirname, join
 from pyramid.settings import asbool, aslist
-from six.moves.configparser import RawConfigParser
 
 from .exceptions import ConfigurationNotFound, ToolNotFound, ToolNotSpecified
 
@@ -38,11 +38,11 @@ def get_tool_definition(tool_folder=None, tool_name='', default_tool_name=''):
 
 
 def get_tool_definition_by_name_from_folder(
-        configuration_folder, default_tool_name=None):
+        tool_folder, default_tool_name=None):
     tool_definition_by_name = {}
-    for root_folder, folder_names, file_names in walk(configuration_folder):
-        if are_same_path(root_folder, configuration_folder):
-            tool_name = default_tool_name or basename(configuration_folder)
+    for root_folder, folder_names, file_names in walk(tool_folder):
+        if are_same_path(root_folder, tool_folder):
+            tool_name = default_tool_name or basename(tool_folder)
         else:
             tool_name = basename(root_folder)
         for file_name in file_names:
@@ -59,9 +59,12 @@ def get_tool_definition_by_name_from_path(
         configuration_path, default_tool_name=None):
     tool_definition_by_name = {}
     configuration_path = abspath(configuration_path)
-    configuration = RawConfigParser()
+    configuration = RawCaseSensitiveConfigParser()
     configuration.read(configuration_path)
-    d = {u'configuration_path': configuration_path}
+    d = {
+        u'configuration_path': configuration_path,
+        u'configuration_folder': dirname(configuration_path),
+    }
     for section_name in configuration.sections():
         try:
             tool_name = TOOL_NAME_PATTERN.match(section_name).group(1).strip()
@@ -84,9 +87,7 @@ def get_tool_definition_by_name_from_path(
 
 def format_available_tools(tool_definition_by_name):
     tool_count = len(tool_definition_by_name)
-    if tool_count == 1:
-        return '1 tool available.'
-    return '%s tools available:\n%s' % (
+    return '%s available:\n%s' % (
         tool_count, '\n'.join(tool_definition_by_name))
 
 

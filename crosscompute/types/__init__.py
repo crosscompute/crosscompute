@@ -1,8 +1,11 @@
+import shutil
+import tempfile
 from abc import ABCMeta
 from collections import OrderedDict
-from invisibleroads_macros.disk import make_enumerated_folder
+from invisibleroads_macros.iterable import merge_dictionaries
 from invisibleroads_macros.log import parse_nested_dictionary
-from os.path import dirname, expanduser, isabs, join, sep
+from invisibleroads_uploads.views import get_upload, make_upload_folder
+from os.path import basename, expanduser, isabs, join, sep
 from six import add_metaclass
 from stevedore.extension import ExtensionManager
 
@@ -10,9 +13,26 @@ from ..configurations import RESERVED_ARGUMENT_NAMES
 from ..exceptions import DataTypeError
 
 
+class DataItem(object):
+
+    def __init__(self, key, value, data_type, help_text=''):
+        self.key = key
+        self.value = value
+        self.data_type = data_type
+        self.help_text = help_text
+
+    def format_value(self, *args, **kw):
+        return self.data_type.format(self.value, *args, **kw)
+
+
 @add_metaclass(ABCMeta)
 class DataType(object):
-    asset_paths = []
+    suffixes = ()
+    formats = ()
+    style = None
+    script = None
+    template = None
+    views = ()
 
     @classmethod
     def save(Class, path, value):
@@ -48,53 +68,50 @@ class StringType(DataType):
     template = 'crosscompute:types/string.jinja2'
 
 
-class PathType(StringType):
-    template = 'crosscompute:types/path.jinja2'
-
-
-def get_data_type(tool_argument_name, data_type_packs=None):
-    for data_type_name, data_type in data_type_packs or []:
-        if tool_argument_name.endswith('_' + data_type_name):
-            return data_type
-    if tool_argument_name.endswith('_path'):
-        return PathType
+def get_data_type(key, data_type_by_suffix):
+    for suffix in data_type_by_suffix:
+        if key.endswith('_' + suffix):
+            return data_type_by_suffix[suffix]
     return StringType
 
 
-def get_data_type_packs():
-    extension_manager = ExtensionManager('crosscompute.types')
-    return sorted(zip(
-        extension_manager.names(),
-        (x.plugin for x in extension_manager.extensions),
-    ), key=lambda pack: (-len(pack[0]), pack))
+def get_data_type_by_name():
+    data_type_by_name = {}
+    x_manager = ExtensionManager('crosscompute.types')
+    for data_type_name, x in zip(x_manager.names(), x_manager.extensions):
+        data_type_by_name[data_type_name] = x.plugin
+    return data_type_by_name
 
 
-def get_relevant_data_types(data_type_packs, data_type_keys):
-    data_types = []
-    for data_type_key in data_type_keys:
-        if data_type_key.endswith('_path'):
-            data_type_key = data_type_key[:-5]
-        data_types.append(get_data_type(data_type_key, data_type_packs))
-    if hasattr(data_type_keys, 'values'):
-        for x in data_type_keys.values():
-            if hasattr(x, 'keys'):
-                data_types.extend(get_relevant_data_types(data_type_packs, x))
-    return list(set(data_types).difference([StringType]))
+def get_data_type_by_suffix(data_type_by_suffix=None):
+    d = {}
+    x_manager = ExtensionManager('crosscompute.types')
+    for x in x_manager.extensions:
+        data_type = x.plugin
+        for suffix in data_type.suffixes:
+            d[suffix] = data_type
+    return merge_dictionaries(d, data_type_by_suffix or {})
 
 
 def get_result_arguments(
-        tool_definition, raw_arguments, data_type_packs,
-        data_folder=join(sep, 'tmp')):
+        tool_definition, raw_arguments, data_type_by_suffix,
+        data_folder=join(sep, 'tmp'), user_id=0):
     d, errors = {}, []
+    configuration_folder = tool_definition['configuration_folder']
     for tool_argument_name in tool_definition['argument_names']:
         if tool_argument_name in raw_arguments:
             value = raw_arguments[tool_argument_name]
         elif tool_argument_name.endswith('_path'):
             tool_argument_noun = tool_argument_name[:-5]
-            data_type = get_data_type(tool_argument_noun, data_type_packs)
+            data_type = get_data_type(tool_argument_noun, data_type_by_suffix)
             try:
                 value = prepare_file_path(
-                    data_folder, data_type, raw_arguments, tool_argument_noun)
+                    data_folder, data_type, raw_arguments, tool_argument_noun,
+                    user_id, join(configuration_folder, tool_definition.get(
+                        tool_argument_name)))
+            except IOError:
+                errors.append((tool_argument_name, 'invalid'))
+                continue
             except KeyError:
                 errors.append((tool_argument_name, 'required'))
                 continue
@@ -104,7 +121,7 @@ def get_result_arguments(
             continue
         d[tool_argument_name] = value
     d, more_errors = parse_data_dictionary_from(
-        d, data_type_packs, dirname(tool_definition['configuration_path']))
+        d, data_type_by_suffix, configuration_folder)
     errors.extend(more_errors)
     if errors:
         raise DataTypeError(*errors)
@@ -112,48 +129,78 @@ def get_result_arguments(
 
 
 def prepare_file_path(
-        data_folder, data_type, raw_arguments, tool_argument_noun):
+        data_folder, data_type, raw_arguments, tool_argument_noun, user_id,
+        default_path):
     for file_format in data_type.formats:
-        raw_argument_name = '%s_%s' % (tool_argument_noun, file_format)
+        raw_argument_name = '%s-%s' % (tool_argument_noun, file_format)
         if raw_argument_name in raw_arguments:
-            break
-    else:
-        raise KeyError
-    file_content = raw_arguments[raw_argument_name]
-    file_name = '%s.%s' % (tool_argument_noun, file_format)
-    upload_folder = make_enumerated_folder(join(data_folder, 'uploads'))
-    file_path = join(upload_folder, file_name)
-    with open(file_path, 'w') as f:
-        f.write(file_content)
-    return file_path
+            source_folder = make_upload_folder(data_folder, user_id)
+            file_content = raw_arguments[raw_argument_name]
+            file_name = 'raw.%s' % file_format
+            file_path = join(source_folder, file_name)
+            with open(file_path, 'w') as f:
+                f.write(file_content)
+            return file_path
+    raw_argument_name = '%s-upload' % tool_argument_noun
+    if raw_argument_name in raw_arguments:
+        upload_id = raw_arguments[raw_argument_name]
+        if upload_id:
+            try:
+                upload = get_upload(data_folder, user_id, upload_id)
+            except IOError:
+                raise
+            else:
+                return join(upload.folder, '%s.%s' % (
+                    data_type.suffixes[0], data_type.formats[0]))
+        if default_path:
+            # TODO: Think of a better way to do this
+            folder = tempfile.mkdtemp(
+                prefix='', dir=join(data_folder, 'uploads', str(user_id or 0)))
+            path = join(folder, basename(default_path))
+            shutil.copy(default_path, path)
+            return path
+    raise KeyError
+
+
+def parse_data_dictionary(text, data_type_by_suffix, root_folder):
+    d = parse_nested_dictionary(text, is_key=lambda x: ':' not in x and ' ' not in x)
+    return parse_data_dictionary_from(d, data_type_by_suffix, root_folder)
 
 
 def parse_data_dictionary_from(
-        raw_dictionary, data_type_packs, configuration_folder):
-    d, errors = OrderedDict(), []
-    for key, value in OrderedDict(raw_dictionary).items():
-        data_type = get_data_type(key, data_type_packs)
+        raw_dictionary, data_type_by_suffix, root_folder):
+    d = make_absolute_paths(raw_dictionary, root_folder)
+    errors = []
+    for key, value in d.items():
+        data_type = get_data_type(key, data_type_by_suffix)
         try:
             value = data_type.parse(value)
         except DataTypeError as e:
             errors.append((key, str(e)))
+        except Exception:
+            errors.append((key, 'could_not_parse'))
         d[key] = value
         if not key.endswith('_path'):
             continue
         noun = key[:-5]
-        data_type = get_data_type(noun, data_type_packs)
-        value = expanduser(value)
-        if not isabs(value):
-            value = join(configuration_folder, value)
+        data_type = get_data_type(noun, data_type_by_suffix)
         try:
             data_type.load(value)
-        except IOError as e:
-            errors.append((noun, 'not_found'))
         except DataTypeError as e:
             errors.append((noun, str(e)))
+        except IOError:
+            errors.append((noun, 'not_found'))
+        except Exception:
+            errors.append((noun, 'could_not_load'))
     return d, errors
 
 
-def parse_data_dictionary(text, data_type_packs, configuration_folder):
-    d = parse_nested_dictionary(text, is_key=lambda x: ':' not in x)
-    return parse_data_dictionary_from(d, data_type_packs, configuration_folder)
+def make_absolute_paths(value_by_key, root_folder):
+    d = OrderedDict()
+    for key, value in OrderedDict(value_by_key).items():
+        if key.endswith('_path'):
+            value = expanduser(value)
+            if not isabs(value):
+                value = join(root_folder, value)
+        d[key] = value
+    return d
