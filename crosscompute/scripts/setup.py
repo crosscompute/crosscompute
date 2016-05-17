@@ -19,7 +19,7 @@ class SetupScript(Script):
         try:
             install_dependencies(tool_definition, args.upgrade)
         except DependencyError as e:
-            sys.exit(str(e))
+            sys.exit(e)
 
 
 def install_dependencies(tool_definition, upgrade=False):

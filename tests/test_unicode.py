@@ -1,36 +1,35 @@
 # coding: utf-8
-from conftest import TOOL_FOLDER
 from crosscompute.tests import run
-from test_serve import serve
+
+import test_string
+from conftest import TOOL_FOLDER
 
 
-def test_print_unicode():
-    standard_output = run(TOOL_FOLDER, 'print-unicode')[0]
-    assert 'standard_outputs.a = клубника' in standard_output
-    assert 'standard_errors.b = малина' in standard_output
+def test_standard_output():
+    x = '야채'.decode('utf-8')
+    test_string.test_standard_output(x)
 
 
-def test_unicode_content_run():
-    standard_output = run(TOOL_FOLDER, 'arabic_content', dict(
-                             arabic_text_path='static/arabic_content.txt'))[0]
-    assert 'للل' in standard_output
+def test_standard_error():
+    x = '고기'.decode('utf-8')
+    test_string.test_standard_error(x)
 
 
-def test_unicode_content_serve():
-    soup = serve('arabic_content', dict(
-                 arabic_text_path='static/arabic_content.txt'))
-    assert 'للل' in soup.find(id='standard_output_').text.strip()
+def test_standard_outputs():
+    x = 'клубника'.decode('utf-8')
+    test_string.test_standard_outputs(x)
 
 
-def test_unicode_name_run():
-    # this passes for some reason 'arabic-name'
-    stdout = run(TOOL_FOLDER, 'arabic_name',
-                 dict(arabic_text_path='static/ل.txt'))
-    print(stdout)
-    assert 'number of words: 2' in stdout[0]
+def test_standard_errors():
+    x = 'малина'.decode('utf-8')
+    test_string.test_standard_errors(x)
 
 
-def test_unicode_name_serve():
-    soup = serve('arabic_name', dict(arabic_text_path='static/ل.txt'))
-    assert ('number of words: 2' in soup.find(id='standard_output_')
-                                        .text.strip())
+def test_file_name_with_unicode():
+    args = TOOL_FOLDER, 'file-name-with-unicode'
+    r = run(*args)
+    assert r['standard_output'] == 'abc'
+
+
+def test_file_content(tmpdir):
+    test_string.test_file_content(tmpdir, 'assets/unicode.txt')

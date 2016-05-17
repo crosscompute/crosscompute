@@ -20,7 +20,7 @@ from pyramid.httpexceptions import (
 from pyramid.renderers import get_renderer
 from pyramid.response import FileResponse, Response
 from pyramid.settings import aslist
-from six import string_types
+from six import string_types, text_type
 from traceback import format_exc
 from wsgiref.simple_server import make_server
 
@@ -65,9 +65,10 @@ class ServeScript(Script):
             pass
 
 
-def get_app(tool_definition):
+def get_app(tool_definition, data_folder=None):
     settings = {
-        'data.folder': join(sep, 'tmp', tool_definition['tool_name']),
+        'data.folder': data_folder or join(
+            sep, 'tmp', tool_definition['tool_name']),
         'website.name': 'CrossCompute',
         'website.author': 'CrossCompute Inc',
         'website.root_assets': [
@@ -318,7 +319,7 @@ def import_upload(request, DataType, render_property_kw):
     except Exception as e:
         open(join(upload.folder, 'error.log'), 'wt').write(format_exc())
         if isinstance(e, DataTypeError):
-            message = str(e)
+            message = text_type(e)
         else:
             message = 'Import failed'
         raise HTTPBadRequest({name: message})
