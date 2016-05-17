@@ -1,6 +1,0 @@
-[submodule "types"]
-	path = types
-	url = git@github.com:crosscompute/crosscompute-types
-[submodule "examples"]
-	path = examples
-	url = git@github.com:crosscompute/crosscompute-examples

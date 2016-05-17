@@ -5,19 +5,17 @@ import subprocess
 import sys
 import time
 from collections import OrderedDict
-from os import sep
-from os.path import abspath, basename, isabs, join
 from invisibleroads.scripts import (
     StoicArgumentParser, configure_subparsers, get_scripts_by_name,
     run_scripts)
 from invisibleroads_macros.configuration import RawCaseSensitiveConfigParser
 from invisibleroads_macros.disk import cd, make_enumerated_folder, make_folder
-from invisibleroads_macros.exceptions import InvisibleRoadsError
 from invisibleroads_macros.log import (
-    format_hanging_indent, format_summary,
-    parse_nested_dictionary_from, sort_dictionary)
-from invisibleroads_repositories import (
-    get_github_repository_commit_hash, get_github_repository_url)
+    format_hanging_indent, format_summary, parse_nested_dictionary_from,
+    sort_dictionary)
+from os import sep
+from os.path import abspath, basename, isabs, join
+from six import text_type
 
 from ..configurations import get_tool_definition
 from ..exceptions import CrossComputeError
@@ -42,15 +40,14 @@ class _ResultConfiguration(object):
         _write(self.target_file, screen_text, file_text)
 
     def write_header(self, tool_definition, result_arguments):
-        # Get values before they are removed from tool_definition
         configuration_folder = tool_definition['configuration_folder']
         tool_argument_names = list(tool_definition['argument_names'])
         # Write tool_definition
         template = '[tool_definition]\n%s'
         command_path = self.write_script(tool_definition, result_arguments)
-        tool_definition = stylize_tool_definition(tool_definition)
-        self.write(template % format_summary(sort_dictionary(tool_definition, [
-            'repository_url', 'tool_name', 'commit_hash', 'configuration_path',
+        self.write(template % format_summary(OrderedDict([
+            ('tool_name', tool_definition['tool_name']),
+            ('configuration_path', tool_definition['configuration_path']),
         ])))
         print(format_summary({'command_path': command_path}))
         # Put target_folder at end of result_arguments
@@ -123,22 +120,6 @@ def load_result_configuration(result_folder):
     return result_arguments, result_properties
 
 
-def stylize_tool_definition(tool_definition):
-    d = {
-        'tool_name': tool_definition['tool_name'],
-        'configuration_path': tool_definition['configuration_path'],
-    }
-    configuration_folder = tool_definition['configuration_folder']
-    try:
-        d['repository_url'] = get_github_repository_url(
-            configuration_folder)
-        d['commit_hash'] = get_github_repository_commit_hash(
-            configuration_folder)
-    except InvisibleRoadsError:
-        pass
-    return d
-
-
 def prepare_result_response_folder(data_folder):
     results_folder = join(data_folder, 'results')
     result_folder = make_enumerated_folder(results_folder)
@@ -177,7 +158,7 @@ def render_command(command_template, result_arguments):
     d = {}
     quote_pattern = re.compile(r"""["'].*["']""")
     for k, v in result_arguments.items():
-        v = str(v).strip()
+        v = text_type(v).encode('utf-8').strip()
         if ' ' in v and not quote_pattern.match(v):
             v = '"%s"' % v
         d[k] = v

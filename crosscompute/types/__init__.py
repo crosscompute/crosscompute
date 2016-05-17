@@ -1,12 +1,11 @@
-import shutil
-import tempfile
+import codecs
 from abc import ABCMeta
 from collections import OrderedDict
 from invisibleroads_macros.iterable import merge_dictionaries
 from invisibleroads_macros.log import parse_nested_dictionary
 from invisibleroads_uploads.views import get_upload, make_upload_folder
-from os.path import basename, expanduser, isabs, join, sep
-from six import add_metaclass
+from os.path import expanduser, isabs, join, sep
+from six import add_metaclass, text_type
 from stevedore.extension import ExtensionManager
 
 from ..configurations import RESERVED_ARGUMENT_NAMES
@@ -43,12 +42,12 @@ class DataType(object):
         try:
             value = Class.load(path)
         except (IOError, DataTypeError):
-            value = None
+            value = ''
         return value
 
     @classmethod
     def load(Class, path):
-        return open(path, 'rt').read()
+        return open(path, 'rb').read()
 
     @classmethod
     def parse(Class, text):
@@ -66,6 +65,16 @@ class DataType(object):
 class StringType(DataType):
     formats = 'txt',
     template = 'crosscompute:types/string.jinja2'
+
+    @classmethod
+    def load(Class, path):
+        return codecs.open(path, 'rt', encoding='utf-8').read()
+
+    @classmethod
+    def parse(Class, text):
+        if isinstance(text, text_type):
+            return text
+        return text.decode('utf-8')
 
 
 def get_data_type(key, data_type_by_suffix):
@@ -104,11 +113,13 @@ def get_result_arguments(
         elif tool_argument_name.endswith('_path'):
             tool_argument_noun = tool_argument_name[:-5]
             data_type = get_data_type(tool_argument_noun, data_type_by_suffix)
+            default_path = join(
+                configuration_folder, tool_definition[tool_argument_name],
+            ) if tool_argument_name in tool_definition else None
             try:
                 value = prepare_file_path(
                     data_folder, data_type, raw_arguments, tool_argument_noun,
-                    user_id, join(configuration_folder, tool_definition.get(
-                        tool_argument_name)))
+                    user_id, default_path)
             except IOError:
                 errors.append((tool_argument_name, 'invalid'))
                 continue
@@ -134,13 +145,9 @@ def prepare_file_path(
     for file_format in data_type.formats:
         raw_argument_name = '%s-%s' % (tool_argument_noun, file_format)
         if raw_argument_name in raw_arguments:
-            source_folder = make_upload_folder(data_folder, user_id)
+            file_name = '%s.%s' % (tool_argument_noun, file_format)
             file_content = raw_arguments[raw_argument_name]
-            file_name = 'raw.%s' % file_format
-            file_path = join(source_folder, file_name)
-            with open(file_path, 'w') as f:
-                f.write(file_content)
-            return file_path
+            return save_upload(data_folder, user_id, file_name, file_content)
     raw_argument_name = '%s-upload' % tool_argument_noun
     if raw_argument_name in raw_arguments:
         upload_id = raw_arguments[raw_argument_name]
@@ -154,16 +161,27 @@ def prepare_file_path(
                     data_type.suffixes[0], data_type.formats[0]))
         if default_path:
             # TODO: Think of a better way to do this
-            folder = tempfile.mkdtemp(
-                prefix='', dir=join(data_folder, 'uploads', str(user_id or 0)))
-            path = join(folder, basename(default_path))
-            shutil.copy(default_path, path)
-            return path
+            file_name = tool_argument_noun
+            file_content = open(default_path, 'rb').read()
+            return save_upload(data_folder, user_id, file_name, file_content)
+    if tool_argument_noun in raw_arguments:
+        file_name = tool_argument_noun
+        file_content = raw_arguments[tool_argument_noun]
+        return save_upload(data_folder, user_id, file_name, file_content)
     raise KeyError
 
 
+def save_upload(data_folder, user_id, file_name, file_content):
+    source_folder = make_upload_folder(data_folder, user_id)
+    file_path = join(source_folder, file_name)
+    with codecs.open(file_path, 'wb', encoding='utf-8') as f:
+        f.write(file_content)
+    return file_path
+
+
 def parse_data_dictionary(text, data_type_by_suffix, root_folder):
-    d = parse_nested_dictionary(text, is_key=lambda x: ':' not in x and ' ' not in x)
+    d = parse_nested_dictionary(
+        text, is_key=lambda x: ':' not in x and ' ' not in x)
     return parse_data_dictionary_from(d, data_type_by_suffix, root_folder)
 
 
@@ -176,8 +194,8 @@ def parse_data_dictionary_from(
         try:
             value = data_type.parse(value)
         except DataTypeError as e:
-            errors.append((key, str(e)))
-        except Exception:
+            errors.append((key, text_type(e)))
+        except Exception as e:
             errors.append((key, 'could_not_parse'))
         d[key] = value
         if not key.endswith('_path'):
@@ -187,7 +205,7 @@ def parse_data_dictionary_from(
         try:
             data_type.load(value)
         except DataTypeError as e:
-            errors.append((noun, str(e)))
+            errors.append((noun, text_type(e)))
         except IOError:
             errors.append((noun, 'not_found'))
         except Exception:
