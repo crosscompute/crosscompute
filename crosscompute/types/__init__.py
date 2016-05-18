@@ -4,7 +4,7 @@ from collections import OrderedDict
 from invisibleroads_macros.iterable import merge_dictionaries
 from invisibleroads_macros.log import parse_nested_dictionary
 from invisibleroads_uploads.views import get_upload, make_upload_folder
-from os.path import expanduser, isabs, join, sep
+from os.path import expanduser, isabs, join, sep, splitext
 from six import add_metaclass, text_type
 from stevedore.extension import ExtensionManager
 
@@ -74,7 +74,7 @@ class StringType(DataType):
     def parse(Class, text):
         if isinstance(text, text_type):
             return text
-        return text.decode('utf-8')
+        return (text or '').decode('utf-8')
 
 
 def get_data_type(key, data_type_by_suffix):
@@ -161,7 +161,7 @@ def prepare_file_path(
                     data_type.suffixes[0], data_type.formats[0]))
         if default_path:
             # TODO: Think of a better way to do this
-            file_name = tool_argument_noun
+            file_name = tool_argument_noun + splitext(default_path)[1]
             file_content = open(default_path, 'rb').read()
             return save_upload(data_folder, user_id, file_name, file_content)
     if tool_argument_noun in raw_arguments:
