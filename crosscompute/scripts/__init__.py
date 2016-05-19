@@ -158,7 +158,7 @@ def render_command(command_template, result_arguments):
     d = {}
     quote_pattern = re.compile(r"""["'].*["']""")
     for k, v in result_arguments.items():
-        v = text_type(v).encode('utf-8').strip()
+        v = text_type(v).encode(sys.getfilesystemencoding()).strip()
         if os.name != 'posix' and k.endswith('_path') or k.endswith('_folder'):
             v = v.replace('\\', '\\\\')
         if ' ' in v and not quote_pattern.match(v):
