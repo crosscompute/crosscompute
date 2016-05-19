@@ -1,4 +1,7 @@
-import subprocess32 as subprocess
+try:
+    import subprocess32 as subprocess
+except ImportError:
+    import subprocess
 import sys
 from invisibleroads.scripts import Script
 

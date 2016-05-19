@@ -1,3 +1,4 @@
+import sys
 from os.path import abspath, dirname, join
 from setuptools import find_packages, setup
 
@@ -12,6 +13,18 @@ serve = crosscompute.scripts.serve:ServeScript
 [pyramid.scaffold]
 cc-python = crosscompute.scaffolds:PythonToolTemplate
 """
+REQUIREMENTS = [
+    'invisibleroads_macros>=0.6.8',
+    'invisibleroads_posts>=0.4.8',
+    'invisibleroads_uploads>=0.0.2',
+    'mistune',
+    'pyramid',
+    'pyramid_jinja2',
+    'six',
+    'stevedore',
+]
+if sys.version_info[0] < 3:
+    REQUIREMENTS.append('subprocess32')
 FOLDER = dirname(abspath(__file__))
 DESCRIPTION = '\n\n'.join(open(join(FOLDER, x)).read().strip() for x in [
     'README.rst', 'CHANGES.rst'])
@@ -37,17 +50,7 @@ setup(
     setup_requires=[
         'pytest-runner',
     ],
-    install_requires=[
-        'invisibleroads_macros>=0.6.8',
-        'invisibleroads_posts>=0.4.8',
-        'invisibleroads_uploads>=0.0.2',
-        'mistune',
-        'pyramid',
-        'pyramid_jinja2',
-        'six',
-        'stevedore',
-        'subprocess32',
-    ],
+    install_requires=REQUIREMENTS,
     tests_require=[
         'beautifulsoup4',
         'lxml',
