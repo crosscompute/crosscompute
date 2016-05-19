@@ -1,8 +1,8 @@
 import codecs
 import tempfile
-from cStringIO import StringIO
 from crosscompute.tests import run, serve
 from os.path import join
+from six import StringIO
 from zipfile import ZipFile
 
 from conftest import TOOL_FOLDER

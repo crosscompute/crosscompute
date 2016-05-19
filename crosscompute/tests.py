@@ -4,7 +4,7 @@ from crosscompute.types import get_data_type_by_suffix
 from crosscompute.scripts import (
     load_tool_definition, prepare_result_response_folder, run_script)
 from crosscompute.scripts.serve import get_app
-from urlparse import urlparse as parse_url
+from six.moves.urllib.parse import urlparse as parse_url
 from werkzeug.test import Client
 from werkzeug.wrappers import BaseResponse
 

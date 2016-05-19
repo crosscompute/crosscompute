@@ -37,7 +37,7 @@ class _ResultConfiguration(object):
 
     def __init__(self, target_folder):
         self.target_folder = target_folder
-        self.target_file = open(join(target_folder, 'result.cfg'), 'wt')
+        self.target_file = open(join(target_folder, 'result.cfg'), 'w')
 
     def write(self, screen_text, file_text=None):
         _write(self.target_file, screen_text, file_text)
@@ -79,7 +79,7 @@ class _ResultConfiguration(object):
         script_path = join(self.target_folder, script_name)
         command = render_command(
             tool_definition['command_template'], result_arguments)
-        with open(script_path, 'wt') as script_file:
+        with open(script_path, 'w') as script_file:
             script_file.write('cd "%s"\n' % configuration_folder)
             script_file.write(format_hanging_indent(
                 command.replace('\n', ' %s\n' % line_join)) + '\n')
@@ -163,8 +163,8 @@ def render_command(command_template, result_arguments):
     for k, v in result_arguments.items():
         v = text_type(v).encode('utf-8').strip()
         if os.name != 'posix' and k.endswith('_path') or k.endswith('_folder'):
-            v = v.replace('\\', '\\\\')
-        if ' ' in v and not quote_pattern.match(v):
+            v = v.replace(b'\\', b'\\\\')
+        if b' ' in v and not quote_pattern.match(v.decode('utf-8')):
             v = '"%s"' % v
         d[k] = v
     return command_template.format(**d)
@@ -181,7 +181,7 @@ def _process_streams(
         if not stream_content:
             continue
         _write(
-            open(join(target_folder, '%s.log' % stream_name), 'wt'),
+            open(join(target_folder, '%s.log' % stream_name), 'w'),
             screen_text='[%s]\n%s\n' % (stream_name, stream_content),
             file_text=stream_content)
         value_by_key, errors = parse_data_dictionary(
@@ -201,4 +201,7 @@ def _write(target_file, screen_text, file_text=None):
     if not file_text:
         file_text = screen_text
     print(screen_text.encode('utf-8'))
-    target_file.write(file_text.encode('utf-8') + '\n')
+    try:
+        target_file.write((file_text + '\n').encode('utf-8'))
+    except TypeError:
+        target_file.write(file_text + '\n')  # Python 3 workaround

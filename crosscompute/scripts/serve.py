@@ -321,7 +321,9 @@ def import_upload(request, DataType, render_property_kw):
     try:
         value = DataType.load(upload.path)
     except Exception as e:
-        open(join(upload.folder, 'error.log'), 'wt').write(format_exc())
+        codecs.open(join(
+            upload.folder, 'error.log'), 'w', encoding='utf-8',
+        ).write(format_exc())
         if isinstance(e, DataTypeError):
             message = text_type(e)
         else:
