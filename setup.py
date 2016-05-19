@@ -38,10 +38,10 @@ setup(
         'pytest-runner',
     ],
     install_requires=[
-        'invisibleroads_macros>=0.6.7',
-        'invisibleroads_posts>=0.4.6',
+        'invisibleroads_macros>=0.6.8',
+        'invisibleroads_posts>=0.4.8',
         'invisibleroads_repositories>=0.1.3',
-        'invisibleroads_uploads>=0.0.1',
+        'invisibleroads_uploads>=0.0.2',
         'pyramid',
         'pyramid_jinja2',
         'six',
