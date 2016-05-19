@@ -1,7 +1,7 @@
 import os
 import re
 import shlex
-import subprocess
+import subprocess32 as subprocess
 import sys
 import time
 from collections import OrderedDict

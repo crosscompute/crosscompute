@@ -46,6 +46,7 @@ setup(
         'pyramid_jinja2',
         'six',
         'stevedore',
+        'subprocess32',
     ],
     tests_require=[
         'beautifulsoup4',
