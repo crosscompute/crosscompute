@@ -35,7 +35,7 @@ class DataType(object):
 
     @classmethod
     def save(Class, path, value):
-        open(path, 'wt').write(value)
+        codecs.open(path, 'w', encoding='utf-8').write(value)
 
     @classmethod
     def load_safely(Class, path):
@@ -47,7 +47,7 @@ class DataType(object):
 
     @classmethod
     def load(Class, path):
-        return open(path, 'rb').read()
+        return codecs.open(path, encoding='utf-8').read()
 
     @classmethod
     def parse(Class, text):
@@ -68,7 +68,7 @@ class StringType(DataType):
 
     @classmethod
     def load(Class, path):
-        return codecs.open(path, 'rt', encoding='utf-8').read()
+        return codecs.open(path, encoding='utf-8').read()
 
     @classmethod
     def parse(Class, text):
@@ -162,7 +162,7 @@ def prepare_file_path(
         if default_path:
             # TODO: Think of a better way to do this
             file_name = tool_argument_noun + splitext(default_path)[1]
-            file_content = open(default_path, 'rb').read()
+            file_content = codecs.open(default_path, encoding='utf-8').read()
             return save_upload(data_folder, user_id, file_name, file_content)
     if tool_argument_noun in raw_arguments:
         file_name = tool_argument_noun
@@ -174,7 +174,7 @@ def prepare_file_path(
 def save_upload(data_folder, user_id, file_name, file_content):
     source_folder = make_upload_folder(data_folder, user_id)
     file_path = join(source_folder, file_name)
-    with codecs.open(file_path, 'wb', encoding='utf-8') as f:
+    with codecs.open(file_path, 'w', encoding='utf-8') as f:
         f.write(file_content)
     return file_path
 
