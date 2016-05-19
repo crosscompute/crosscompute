@@ -49,6 +49,7 @@ setup(
     ],
     tests_require=[
         'beautifulsoup4',
+        'lxml',
         'pytest',
         'werkzeug',
     ],
