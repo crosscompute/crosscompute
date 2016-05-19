@@ -2,33 +2,22 @@
 from crosscompute.tests import run
 
 import test_string
-from conftest import TOOL_FOLDER
 
 
-def test_standard_output():
-    x = '야채'.decode('utf-8')
-    test_string.test_standard_output(x)
-
-
-def test_standard_error():
+def test_stream_logging():
     x = '고기'.decode('utf-8')
-    test_string.test_standard_error(x)
+    test_string.test_stream_logging(x)
 
 
-def test_standard_outputs():
+def test_stream_parsing():
     x = 'клубника'.decode('utf-8')
-    test_string.test_standard_outputs(x)
+    test_string.test_stream_parsing(x)
 
 
-def test_standard_errors():
-    x = 'малина'.decode('utf-8')
-    test_string.test_standard_errors(x)
-
-
-def test_file_name_with_unicode():
-    args = TOOL_FOLDER, 'file-name-with-unicode'
+def test_file_name():
+    args = 'file-name',
     r = run(*args)
-    assert r['standard_output'] == 'abc'
+    assert r['standard_output'] == 'acta non verba'
 
 
 def test_file_content(tmpdir):
