@@ -33,6 +33,12 @@ def test_stream_parsing(tmpdir, text=TEXT):
     assert s.find(id='a-error').text.strip() == text
 
 
+def test_file_name_with_spaces(tmpdir):
+    args = str(tmpdir), 'file-name-with-spaces',
+    r = run(*args)
+    assert r['standard_output'] == 'actions not words'
+
+
 def test_file_content(tmpdir, file_path='assets/string.txt'):
     file_content = codecs.open(join(
         TOOL_FOLDER, file_path), encoding='utf-8').read()

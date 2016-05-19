@@ -14,8 +14,8 @@ def test_stream_parsing(tmpdir):
     test_string.test_stream_parsing(tmpdir, x)
 
 
-def test_file_name(tmpdir):
-    args = str(tmpdir), 'file-name',
+def test_file_name_with_unicode(tmpdir):
+    args = str(tmpdir), 'file-name-with-unicode',
     r = run(*args)
     assert r['standard_output'] == 'acta non verba'
 
