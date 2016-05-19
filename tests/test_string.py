@@ -1,4 +1,5 @@
 import codecs
+import tempfile
 from cStringIO import StringIO
 from crosscompute.tests import run, serve
 from os.path import join
@@ -12,8 +13,8 @@ TEXT = (
     'in a way that other people can use.')
 
 
-def test_stream_logging(text=TEXT):
-    args = 'echo', {'x': text}
+def test_stream_logging(tmpdir, text=TEXT):
+    args = str(tmpdir), 'echo', {'x': text}
     r = run(*args)
     assert r['standard_output'] == text
     assert r['standard_error'] == text
@@ -22,8 +23,8 @@ def test_stream_logging(text=TEXT):
     assert s.find(id='standard_error-meta').text.strip() == text
 
 
-def test_stream_parsing(text=TEXT):
-    args = 'assign', {'x': text}
+def test_stream_parsing(tmpdir, text=TEXT):
+    args = str(tmpdir), 'assign', {'x': text}
     r = run(*args)
     assert r['standard_outputs']['a'] == text
     assert r['standard_errors']['a'] == text
@@ -35,7 +36,7 @@ def test_stream_parsing(text=TEXT):
 def test_file_content(tmpdir, file_path='assets/string.txt'):
     file_content = codecs.open(join(
         TOOL_FOLDER, file_path), encoding='utf-8').read()
-    args = 'file-content', {'x_path': file_path}
+    args = str(tmpdir), 'file-content', {'x_path': file_path}
     s, c = serve(*args)
     assert s.find(id='a-result').text.strip() == file_content.strip()
     response = c.get(s.find('a', {'class': 'download'})['href'])
@@ -43,7 +44,7 @@ def test_file_content(tmpdir, file_path='assets/string.txt'):
     assert zip_file.read('a').decode('utf-8') == file_content
 
 
-def test_target_folder():
-    args = 'target-folder',
+def test_target_folder(tmpdir):
+    args = str(tmpdir), 'target-folder'
     r = run(*args)
-    assert r['standard_output'].startswith('/tmp')
+    assert r['standard_output'].startswith(tempfile.gettempdir())

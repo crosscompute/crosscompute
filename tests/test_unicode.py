@@ -4,18 +4,18 @@ from crosscompute.tests import run
 import test_string
 
 
-def test_stream_logging():
+def test_stream_logging(tmpdir):
     x = '고기'.decode('utf-8')
-    test_string.test_stream_logging(x)
+    test_string.test_stream_logging(tmpdir, x)
 
 
-def test_stream_parsing():
+def test_stream_parsing(tmpdir):
     x = 'клубника'.decode('utf-8')
-    test_string.test_stream_parsing(x)
+    test_string.test_stream_parsing(tmpdir, x)
 
 
-def test_file_name():
-    args = 'file-name',
+def test_file_name(tmpdir):
+    args = str(tmpdir), 'file-name',
     r = run(*args)
     assert r['standard_output'] == 'acta non verba'
 

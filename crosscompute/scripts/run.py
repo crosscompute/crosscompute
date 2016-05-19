@@ -1,6 +1,7 @@
+import tempfile
 from argparse import ArgumentParser, SUPPRESS
 from invisibleroads.scripts import Script
-from os.path import join, sep
+from os.path import join
 from sys import argv
 
 from ..configurations import RESERVED_ARGUMENT_NAMES
@@ -19,7 +20,7 @@ class RunScript(Script):
         tool_definition = load_tool_definition(args.tool_name)
         tool_name = tool_definition['tool_name']
         data_folder = args.data_folder or join(
-            sep, 'tmp', 'crosscompute', tool_name)
+            tempfile.gettempdir(), 'crosscompute', tool_name)
         data_type_by_suffix = get_data_type_by_suffix()
         argument_parser = ArgumentParser(tool_name)
         argument_parser.add_argument('tool_name', nargs='?', help=SUPPRESS)

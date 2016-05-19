@@ -1,6 +1,7 @@
 import codecs
 import logging
 import re
+import tempfile
 import webbrowser
 from collections import OrderedDict
 from importlib import import_module
@@ -13,7 +14,7 @@ from invisibleroads_uploads.views import get_upload_from
 from markupsafe import Markup
 from mistune import markdown
 from os import environ
-from os.path import basename, exists, isabs, join, sep
+from os.path import basename, exists, isabs, join
 from pyramid.config import Configurator
 from pyramid.httpexceptions import (
     HTTPBadRequest, HTTPForbidden, HTTPNotFound, HTTPSeeOther)
@@ -57,7 +58,7 @@ class ServeScript(Script):
         tool_definition = load_tool_definition(args.tool_name)
         tool_name = tool_definition['tool_name']
         data_folder = args.data_folder or join(
-            sep, 'tmp', 'crosscompute', tool_name)
+            tempfile.gettempdir(), 'crosscompute', tool_name)
         app = get_app(tool_definition, data_folder)
         app_url = 'http://%s:%s/t/1' % (args.host, args.port)
         webbrowser.open_new_tab(app_url)
