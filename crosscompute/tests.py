@@ -20,7 +20,7 @@ def run(data_folder, tool_name, result_arguments=None):
 def serve(data_folder, tool_name, result_arguments=None):
     response, client = _prepare_response(
         data_folder, tool_name, result_arguments)
-    assert response.status_code == 303
+    assert response.status_code == 303, response.data
     result_url = parse_url(dict(response.headers)['Location']).path
     with client.get(result_url) as response:
         soup = BeautifulSoup(response.data, 'lxml')
@@ -30,7 +30,7 @@ def serve(data_folder, tool_name, result_arguments=None):
 def serve_bad_request(data_folder, tool_name, result_arguments=None):
     response, client = _prepare_response(
         data_folder, tool_name, result_arguments)
-    assert response.status_code == 400
+    assert response.status_code == 400, response.data
     return json.loads(response.data)
 
 
