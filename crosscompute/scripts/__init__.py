@@ -160,7 +160,7 @@ def render_command(command_template, result_arguments):
     for k, v in result_arguments.items():
         v = text_type(v).encode('utf-8').strip()
         if os.name != 'posix' and k.endswith('_path') or k.endswith('_folder'):
-            v = v.replace('\\', '/')
+            v = v.replace('\\', '\\\\')
         if ' ' in v and not quote_pattern.match(v):
             v = '"%s"' % v
         d[k] = v
