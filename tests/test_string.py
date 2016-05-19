@@ -12,50 +12,38 @@ TEXT = (
     'in a way that other people can use.')
 
 
-def test_standard_output(text=TEXT):
-    args = TOOL_FOLDER, 'standard-output', {'x': text}
+def test_stream_logging(text=TEXT):
+    args = 'echo', {'x': text}
     r = run(*args)
     assert r['standard_output'] == text
-    s = serve(*args)[0]
-    assert s.find(id='standard_output-meta').text.strip() == text
-
-
-def test_standard_error(text=TEXT):
-    args = TOOL_FOLDER, 'standard-error', {'x': text}
-    r = run(*args)
     assert r['standard_error'] == text
     s = serve(*args)[0]
+    assert s.find(id='standard_output-meta').text.strip() == text
     assert s.find(id='standard_error-meta').text.strip() == text
 
 
-def test_standard_outputs(text=TEXT):
-    args = TOOL_FOLDER, 'standard-outputs', {'x': text}
+def test_stream_parsing(text=TEXT):
+    args = 'assign', {'x': text}
     r = run(*args)
     assert r['standard_outputs']['a'] == text
-    s = serve(*args)[0]
-    assert s.find(id='a-result').text.strip() == text
-
-
-def test_standard_errors(text=TEXT):
-    args = TOOL_FOLDER, 'standard-errors', {'x': text}
-    r = run(*args)
     assert r['standard_errors']['a'] == text
     s = serve(*args)[0]
+    assert s.find(id='a-result').text.strip() == text
     assert s.find(id='a-error').text.strip() == text
-
-
-def test_file_name_with_spaces():
-    args = TOOL_FOLDER, 'file-name-with-spaces'
-    r = run(*args)
-    assert r['standard_output'] == 'abc'
 
 
 def test_file_content(tmpdir, file_path='assets/string.txt'):
     file_content = codecs.open(join(
         TOOL_FOLDER, file_path), encoding='utf-8').read()
-    args = TOOL_FOLDER, 'file-content', {'x_path': file_path}
+    args = 'file-content', {'x_path': file_path}
     s, c = serve(*args)
     assert s.find(id='a-result').text.strip() == file_content.strip()
     response = c.get(s.find('a', {'class': 'download'})['href'])
     zip_file = ZipFile(StringIO(response.data))
     assert zip_file.read('a').decode('utf-8') == file_content
+
+
+def test_target_folder():
+    args = 'target-folder',
+    r = run(*args)
+    assert r['standard_output'].startswith('/tmp')

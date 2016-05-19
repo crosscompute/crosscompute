@@ -1,7 +1,7 @@
-import sys
 from argparse import ArgumentParser, SUPPRESS
 from invisibleroads.scripts import Script
 from os.path import join, sep
+from sys import argv
 
 from ..configurations import RESERVED_ARGUMENT_NAMES
 from ..exceptions import DataTypeError
@@ -13,21 +13,23 @@ class RunScript(Script):
 
     def configure(self, argument_subparser):
         argument_subparser.add_argument('tool_name', nargs='?')
+        argument_subparser.add_argument('--data_folder', metavar='FOLDER')
 
     def run(self, args):
         tool_definition = load_tool_definition(args.tool_name)
         tool_name = tool_definition['tool_name']
+        data_folder = args.data_folder or join(
+            sep, 'tmp', 'crosscompute', tool_name)
         data_type_by_suffix = get_data_type_by_suffix()
-        data_folder = join(sep, 'tmp', tool_name)
         argument_parser = ArgumentParser(tool_name)
         argument_parser.add_argument('tool_name', nargs='?', help=SUPPRESS)
         argument_parser = configure_argument_parser(
             argument_parser, tool_definition, data_type_by_suffix)
+        raw_arguments = argument_parser.parse_args(argv[2:]).__dict__
         try:
             result_arguments = get_result_arguments(
-                tool_definition,
-                argument_parser.parse_args(sys.argv[2:]).__dict__,
-                data_type_by_suffix, data_folder)
+                tool_definition, raw_arguments, data_type_by_suffix,
+                data_folder)
         except DataTypeError as e:
             return [(k + '.error', v) for k, v in e.args]
         target_folder = result_arguments.get(

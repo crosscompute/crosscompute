@@ -4,7 +4,7 @@ from collections import OrderedDict
 from invisibleroads_macros.iterable import merge_dictionaries
 from invisibleroads_macros.log import parse_nested_dictionary
 from invisibleroads_uploads.views import get_upload, make_upload_folder
-from os.path import expanduser, isabs, join, sep, splitext
+from os.path import expanduser, isabs, join, splitext
 from six import add_metaclass, text_type
 from stevedore.extension import ExtensionManager
 
@@ -42,7 +42,7 @@ class DataType(object):
         try:
             value = Class.load(path)
         except (IOError, DataTypeError):
-            value = ''
+            value = None
         return value
 
     @classmethod
@@ -72,9 +72,9 @@ class StringType(DataType):
 
     @classmethod
     def parse(Class, text):
-        if isinstance(text, text_type):
+        if not isinstance(text, basestring) or isinstance(text, text_type):
             return text
-        return (text or '').decode('utf-8')
+        return text.decode('utf-8')
 
 
 def get_data_type(key, data_type_by_suffix):
@@ -103,8 +103,8 @@ def get_data_type_by_suffix(data_type_by_suffix=None):
 
 
 def get_result_arguments(
-        tool_definition, raw_arguments, data_type_by_suffix,
-        data_folder=join(sep, 'tmp'), user_id=0):
+        tool_definition, raw_arguments, data_type_by_suffix, data_folder,
+        user_id=0):
     d, errors = {}, []
     configuration_folder = tool_definition['configuration_folder']
     for tool_argument_name in tool_definition['argument_names']:

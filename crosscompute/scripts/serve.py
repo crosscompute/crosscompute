@@ -46,6 +46,7 @@ class ServeScript(Script):
 
     def configure(self, argument_subparser):
         argument_subparser.add_argument('tool_name', nargs='?')
+        argument_subparser.add_argument('--data_folder', metavar='FOLDER')
         argument_subparser.add_argument('--host', default='127.0.0.1')
         argument_subparser.add_argument('--port', default=4444, type=int)
         argument_subparser.add_argument('--verbose', action='store_true')
@@ -54,7 +55,10 @@ class ServeScript(Script):
         if args.verbose:
             logging.basicConfig(level=logging.DEBUG)
         tool_definition = load_tool_definition(args.tool_name)
-        app = get_app(tool_definition)
+        tool_name = tool_definition['tool_name']
+        data_folder = args.data_folder or join(
+            sep, 'tmp', 'crosscompute', tool_name)
+        app = get_app(tool_definition, data_folder)
         app_url = 'http://%s:%s/t/1' % (args.host, args.port)
         webbrowser.open_new_tab(app_url)
         server = make_server(args.host, args.port, app)
@@ -65,10 +69,9 @@ class ServeScript(Script):
             pass
 
 
-def get_app(tool_definition, data_folder=None):
+def get_app(tool_definition, data_folder):
     settings = {
-        'data.folder': data_folder or join(
-            sep, 'tmp', tool_definition['tool_name']),
+        'data.folder': data_folder,
         'website.name': 'CrossCompute',
         'website.author': 'CrossCompute Inc',
         'website.root_assets': [
