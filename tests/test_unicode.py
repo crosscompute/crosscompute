@@ -5,12 +5,12 @@ import test_string
 
 
 def test_stream_logging(tmpdir):
-    x = '고기'.decode('utf-8')
+    x = u'고기'
     test_string.test_stream_logging(tmpdir, x)
 
 
 def test_stream_parsing(tmpdir):
-    x = 'клубника'.decode('utf-8')
+    x = u'клубника'
     test_string.test_stream_parsing(tmpdir, x)
 
 

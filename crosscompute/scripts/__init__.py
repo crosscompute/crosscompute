@@ -1,3 +1,4 @@
+import codecs
 import os
 import re
 import shlex
@@ -37,7 +38,8 @@ class _ResultConfiguration(object):
 
     def __init__(self, target_folder):
         self.target_folder = target_folder
-        self.target_file = open(join(target_folder, 'result.cfg'), 'w')
+        self.target_file = codecs.open(
+            join(target_folder, 'result.cfg'), 'w', encoding='utf-8')
 
     def write(self, screen_text, file_text=None):
         _write(self.target_file, screen_text, file_text)
@@ -79,7 +81,7 @@ class _ResultConfiguration(object):
         script_path = join(self.target_folder, script_name)
         command = render_command(
             tool_definition['command_template'], result_arguments)
-        with open(script_path, 'w') as script_file:
+        with codecs.open(script_path, 'w', encoding='utf-8') as script_file:
             script_file.write('cd "%s"\n' % configuration_folder)
             script_file.write(format_hanging_indent(
                 command.replace('\n', ' %s\n' % line_join)) + '\n')
@@ -106,6 +108,8 @@ def launch(argv=sys.argv):
 def load_tool_definition(tool_name):
     if tool_name:
         tool_name = tool_name.rstrip(sep)  # Remove folder autocompletion slash
+        tool_name = tool_name.replace('_', '-')
+        tool_name = tool_name.replace('.py', '')
     try:
         tool_definition = get_tool_definition(tool_name=tool_name)
     except CrossComputeError as e:
@@ -141,7 +145,7 @@ def run_script(
     try:
         with cd(tool_definition['configuration_folder']):
             command_process = subprocess.Popen(
-                shlex.split(command),
+                shlex.split(command.encode('utf-8')),
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         standard_output, standard_error = [
             x.rstrip().decode('utf-8') for x in command_process.communicate()]
@@ -161,10 +165,10 @@ def render_command(command_template, result_arguments):
     d = {}
     quote_pattern = re.compile(r"""["'].*["']""")
     for k, v in result_arguments.items():
-        v = text_type(v).encode('utf-8').strip()
+        v = text_type(v).strip()
         if os.name != 'posix' and k.endswith('_path') or k.endswith('_folder'):
-            v = v.replace(b'\\', b'\\\\')
-        if b' ' in v and not quote_pattern.match(v.decode('utf-8')):
+            v = v.replace('\\', '\\\\')
+        if ' ' in v and not quote_pattern.match(v):
             v = '"%s"' % v
         d[k] = v
     return command_template.format(**d)
@@ -181,7 +185,8 @@ def _process_streams(
         if not stream_content:
             continue
         _write(
-            open(join(target_folder, '%s.log' % stream_name), 'w'),
+            codecs.open(join(
+                target_folder, '%s.log' % stream_name), 'w', encoding='utf-8'),
             screen_text='[%s]\n%s\n' % (stream_name, stream_content),
             file_text=stream_content)
         value_by_key, errors = parse_data_dictionary(
@@ -201,7 +206,4 @@ def _write(target_file, screen_text, file_text=None):
     if not file_text:
         file_text = screen_text
     print(screen_text.encode('utf-8'))
-    try:
-        target_file.write((file_text + '\n').encode('utf-8'))
-    except TypeError:
-        target_file.write(file_text + '\n')  # Python 3 workaround
+    target_file.write(file_text + '\n')

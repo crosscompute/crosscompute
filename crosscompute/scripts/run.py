@@ -1,6 +1,7 @@
 import tempfile
 from argparse import ArgumentParser, SUPPRESS
 from invisibleroads.scripts import Script
+from invisibleroads_macros.configuration import unicode_
 from os.path import join
 from sys import argv
 
@@ -13,8 +14,10 @@ from . import load_tool_definition, prepare_result_response_folder, run_script
 class RunScript(Script):
 
     def configure(self, argument_subparser):
-        argument_subparser.add_argument('tool_name', nargs='?')
-        argument_subparser.add_argument('--data_folder', metavar='FOLDER')
+        argument_subparser.add_argument(
+            'tool_name', nargs='?', type=unicode_)
+        argument_subparser.add_argument(
+            '--data_folder', metavar='FOLDER', type=unicode_)
 
     def run(self, args):
         tool_definition = load_tool_definition(args.tool_name)
@@ -23,7 +26,8 @@ class RunScript(Script):
             tempfile.gettempdir(), 'crosscompute', tool_name)
         data_type_by_suffix = get_data_type_by_suffix()
         argument_parser = ArgumentParser(tool_name)
-        argument_parser.add_argument('tool_name', nargs='?', help=SUPPRESS)
+        argument_parser.add_argument(
+            'tool_name', nargs='?', help=SUPPRESS, type=unicode_)
         argument_parser = configure_argument_parser(
             argument_parser, tool_definition, data_type_by_suffix)
         raw_arguments = argument_parser.parse_args(argv[2:]).__dict__
@@ -57,5 +61,5 @@ def configure_argument_parser(
                 d['metavar'] = 'FOLDER'
             elif x.endswith('_path'):
                 d['metavar'] = 'PATH'
-        argument_parser.add_argument('--' + x, **d)
+        argument_parser.add_argument('--' + x, type=unicode_, **d)
     return argument_parser
