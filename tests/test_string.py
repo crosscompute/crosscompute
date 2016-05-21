@@ -2,7 +2,7 @@ import codecs
 import tempfile
 from crosscompute.tests import run, serve
 from os.path import join
-from six import StringIO
+from six import BytesIO
 from zipfile import ZipFile
 
 from conftest import TOOL_FOLDER
@@ -46,7 +46,7 @@ def test_file_content(tmpdir, file_path='assets/string.txt'):
     s, c = serve(*args)
     assert s.find(id='a-result').text.strip() == file_content.strip()
     response = c.get(s.find('a', {'class': 'download'})['href'])
-    zip_file = ZipFile(StringIO(response.data))
+    zip_file = ZipFile(BytesIO(response.data))
     assert zip_file.read('a').decode('utf-8') == file_content
 
 

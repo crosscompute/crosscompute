@@ -1,7 +1,7 @@
 import codecs
+import logging
 import os
 import re
-import shlex
 try:
     import subprocess32 as subprocess
 except ImportError:
@@ -10,9 +10,10 @@ import sys
 import time
 from collections import OrderedDict
 from invisibleroads.scripts import (
-    StoicArgumentParser, configure_subparsers, get_scripts_by_name,
+    Script, StoicArgumentParser, configure_subparsers, get_scripts_by_name,
     run_scripts)
-from invisibleroads_macros.configuration import RawCaseSensitiveConfigParser
+from invisibleroads_macros.configuration import (
+    RawCaseSensitiveConfigParser, split_, unicode_)
 from invisibleroads_macros.disk import cd, make_enumerated_folder, make_folder
 from invisibleroads_macros.log import (
     format_hanging_indent, format_summary, parse_nested_dictionary_from,
@@ -20,6 +21,7 @@ from invisibleroads_macros.log import (
 from os import sep
 from os.path import abspath, basename, isabs, join
 from six import text_type
+from tempfile import gettempdir
 
 from ..configurations import get_tool_definition
 from ..exceptions import CrossComputeError
@@ -32,6 +34,26 @@ EXCLUDED_FILE_NAMES = [
     'standard_output.log',
     'standard_error.log',
 ]
+
+
+class ToolScript(Script):
+
+    def configure(self, argument_subparser):
+        argument_subparser.add_argument(
+            'tool_name', nargs='?', type=unicode_)
+        argument_subparser.add_argument(
+            '--data_folder', metavar='FOLDER', type=unicode_)
+        argument_subparser.add_argument(
+            '--verbose', action='store_true')
+
+    def run(self, args):
+        tool_definition = load_tool_definition(args.tool_name)
+        tool_name = tool_definition['tool_name']
+        data_folder = args.data_folder or join(
+            gettempdir(), 'crosscompute', tool_name)
+        if args.verbose:
+            logging.basicConfig(level=logging.DEBUG)
+        return tool_definition, data_folder
 
 
 class _ResultConfiguration(object):
@@ -142,11 +164,11 @@ def run_script(
     result_configuration.write_header(tool_definition, result_arguments)
     command = render_command(tool_definition[
         'command_template'], result_arguments).replace('\n', ' ')
+    command_terms = split_(command)
     try:
         with cd(tool_definition['configuration_folder']):
             command_process = subprocess.Popen(
-                shlex.split(command.encode('utf-8')),
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                command_terms, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         standard_output, standard_error = [
             x.rstrip().decode('utf-8') for x in command_process.communicate()]
         if command_process.returncode:
@@ -205,5 +227,5 @@ def _process_streams(
 def _write(target_file, screen_text, file_text=None):
     if not file_text:
         file_text = screen_text
-    print(screen_text.encode('utf-8'))
+    print(screen_text)
     target_file.write(file_text + '\n')

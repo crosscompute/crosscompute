@@ -1,36 +1,28 @@
-import tempfile
 from argparse import ArgumentParser, SUPPRESS
-from invisibleroads.scripts import Script
 from invisibleroads_macros.configuration import unicode_
-from os.path import join
 from sys import argv
 
 from ..configurations import RESERVED_ARGUMENT_NAMES
 from ..exceptions import DataTypeError
 from ..types import get_data_type_by_suffix, get_result_arguments
-from . import load_tool_definition, prepare_result_response_folder, run_script
+from . import ToolScript, prepare_result_response_folder, run_script
 
 
-class RunScript(Script):
+class RunScript(ToolScript):
 
     def configure(self, argument_subparser):
-        argument_subparser.add_argument(
-            'tool_name', nargs='?', type=unicode_)
-        argument_subparser.add_argument(
-            '--data_folder', metavar='FOLDER', type=unicode_)
+        super(RunScript, self).configure(argument_subparser)
 
     def run(self, args):
-        tool_definition = load_tool_definition(args.tool_name)
+        tool_definition, data_folder = super(RunScript, self).run(args)
         tool_name = tool_definition['tool_name']
-        data_folder = args.data_folder or join(
-            tempfile.gettempdir(), 'crosscompute', tool_name)
         data_type_by_suffix = get_data_type_by_suffix()
         argument_parser = ArgumentParser(tool_name)
         argument_parser.add_argument(
             'tool_name', nargs='?', help=SUPPRESS, type=unicode_)
         argument_parser = configure_argument_parser(
             argument_parser, tool_definition, data_type_by_suffix)
-        raw_arguments = argument_parser.parse_args(argv[2:]).__dict__
+        raw_arguments = argument_parser.parse_known_args(argv[2:])[0].__dict__
         try:
             result_arguments = get_result_arguments(
                 tool_definition, raw_arguments, data_type_by_suffix,

@@ -1,13 +1,9 @@
 import codecs
-import logging
 import re
-import tempfile
 import webbrowser
 from collections import OrderedDict
 from importlib import import_module
-from invisibleroads.scripts import Script
-from invisibleroads_macros.disk import (
-    compress_zip, resolve_relative_path)
+from invisibleroads_macros.disk import compress_zip, resolve_relative_path
 from invisibleroads_macros.iterable import merge_dictionaries
 from invisibleroads_posts.views import expect_param
 from invisibleroads_uploads.views import get_upload_from
@@ -31,8 +27,8 @@ from ..types import (
     DataItem, get_data_type, get_data_type_by_name, get_data_type_by_suffix,
     get_result_arguments)
 from . import (
-    load_result_configuration, load_tool_definition,
-    prepare_result_response_folder, run_script, EXCLUDED_FILE_NAMES)
+    ToolScript, load_result_configuration, prepare_result_response_folder,
+    run_script, EXCLUDED_FILE_NAMES)
 
 
 HELP = {
@@ -43,23 +39,24 @@ HELP = {
 MARKDOWN_TITLE_PATTERN = re.compile(r'^#[^#]\s*(.+)')
 
 
-class ServeScript(Script):
+class ServeScript(ToolScript):
 
     def configure(self, argument_subparser):
-        argument_subparser.add_argument('tool_name', nargs='?')
-        argument_subparser.add_argument('--data_folder', metavar='FOLDER')
-        argument_subparser.add_argument('--host', default='127.0.0.1')
-        argument_subparser.add_argument('--port', default=4444, type=int)
-        argument_subparser.add_argument('--verbose', action='store_true')
+        super(ServeScript, self).configure(argument_subparser)
+        argument_subparser.add_argument(
+            '--host', default='127.0.0.1')
+        argument_subparser.add_argument(
+            '--port', default=4444, type=int)
+        argument_subparser.add_argument(
+            '--website_name', default='CrossCompute')
+        argument_subparser.add_argument(
+            '--website_author', default='CrossCompute Inc')
 
     def run(self, args):
-        if args.verbose:
-            logging.basicConfig(level=logging.DEBUG)
-        tool_definition = load_tool_definition(args.tool_name)
-        tool_name = tool_definition['tool_name']
-        data_folder = args.data_folder or join(
-            tempfile.gettempdir(), 'crosscompute', tool_name)
-        app = get_app(tool_definition, data_folder)
+        tool_definition, data_folder = super(ServeScript, self).run(args)
+        app = get_app(
+            tool_definition, data_folder, args.website_name,
+            args.website_author)
         app_url = 'http://%s:%s/t/1' % (args.host, args.port)
         webbrowser.open_new_tab(app_url)
         server = make_server(args.host, args.port, app)
@@ -70,11 +67,11 @@ class ServeScript(Script):
             pass
 
 
-def get_app(tool_definition, data_folder):
+def get_app(tool_definition, data_folder, website_name, website_author):
     settings = {
         'data.folder': data_folder,
-        'website.name': 'CrossCompute',
-        'website.author': 'CrossCompute Inc',
+        'website.name': website_name,
+        'website.author': website_author,
         'website.root_assets': [
             'invisibleroads_posts:assets/favicon.ico',
             'invisibleroads_posts:assets/robots.txt',

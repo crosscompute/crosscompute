@@ -1,4 +1,5 @@
 import codecs
+import logging
 from abc import ABCMeta
 from collections import OrderedDict
 from invisibleroads_macros.iterable import merge_dictionaries
@@ -10,6 +11,9 @@ from stevedore.extension import ExtensionManager
 
 from ..configurations import RESERVED_ARGUMENT_NAMES
 from ..exceptions import DataTypeError
+
+
+LOG = logging.getLogger(__name__)
 
 
 class DataItem(object):
@@ -72,7 +76,7 @@ class StringType(DataType):
 
     @classmethod
     def parse(Class, text):
-        if not isinstance(text, basestring) or isinstance(text, text_type):
+        if not isinstance(text, str) or isinstance(text, text_type):
             return text
         return text.decode('utf-8')
 
@@ -196,6 +200,7 @@ def parse_data_dictionary_from(
         except DataTypeError as e:
             errors.append((key, text_type(e)))
         except Exception as e:
+            LOG.debug(e)
             errors.append((key, 'could_not_parse'))
         d[key] = value
         if not key.endswith('_path'):
@@ -206,9 +211,11 @@ def parse_data_dictionary_from(
             data_type.load(value)
         except DataTypeError as e:
             errors.append((noun, text_type(e)))
-        except IOError:
+        except IOError as e:
+            LOG.debug(e)
             errors.append((noun, 'not_found'))
-        except Exception:
+        except Exception as e:
+            LOG.debug(e)
             errors.append((noun, 'could_not_load'))
     return d, errors
 
