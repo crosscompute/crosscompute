@@ -13,7 +13,7 @@ from invisibleroads.scripts import (
     Script, StoicArgumentParser, configure_subparsers, get_scripts_by_name,
     run_scripts)
 from invisibleroads_macros.configuration import (
-    RawCaseSensitiveConfigParser, split_, unicode_)
+    RawCaseSensitiveConfigParser, split_arguments, unicode_safely)
 from invisibleroads_macros.disk import cd, make_enumerated_folder, make_folder
 from invisibleroads_macros.log import (
     format_hanging_indent, format_summary, parse_nested_dictionary_from,
@@ -40,9 +40,9 @@ class ToolScript(Script):
 
     def configure(self, argument_subparser):
         argument_subparser.add_argument(
-            'tool_name', nargs='?', type=unicode_)
+            'tool_name', nargs='?', type=unicode_safely)
         argument_subparser.add_argument(
-            '--data_folder', metavar='FOLDER', type=unicode_)
+            '--data_folder', metavar='FOLDER', type=unicode_safely)
         argument_subparser.add_argument(
             '--verbose', action='store_true')
 
@@ -164,7 +164,7 @@ def run_script(
     result_configuration.write_header(tool_definition, result_arguments)
     command = render_command(tool_definition[
         'command_template'], result_arguments).replace('\n', ' ')
-    command_terms = split_(command)
+    command_terms = split_arguments(command)
     try:
         with cd(tool_definition['configuration_folder']):
             command_process = subprocess.Popen(

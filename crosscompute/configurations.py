@@ -1,7 +1,7 @@
 import re
 from fnmatch import fnmatch
 from invisibleroads_macros.configuration import (
-    RawCaseSensitiveConfigParser, unicode_)
+    RawCaseSensitiveConfigParser, unicode_safely)
 from invisibleroads_macros.disk import are_same_path
 from os import getcwd, walk
 from os.path import abspath, basename, dirname, join
@@ -49,11 +49,11 @@ def get_tool_definition_by_name_from_folder(
         for file_name in file_names:
             if not fnmatch(file_name, '*.ini'):
                 continue
-            configuration_path = unicode_(join(root_folder, file_name))
+            configuration_path = unicode_safely(join(root_folder, file_name))
             tool_definition_by_name.update(
                 get_tool_definition_by_name_from_path(
                     configuration_path,
-                    default_tool_name=unicode_(tool_name)))
+                    default_tool_name=unicode_safely(tool_name)))
     return tool_definition_by_name
 
 
@@ -75,7 +75,7 @@ def get_tool_definition_by_name_from_path(
         if not tool_name:
             tool_name = default_tool_name
         tool_definition = {
-            unicode_(k): unicode_(v)
+            unicode_safely(k): unicode_safely(v)
             for k, v in configuration.items(section_name)}
         for key in tool_definition:
             if key.startswith('show_'):

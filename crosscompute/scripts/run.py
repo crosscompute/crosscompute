@@ -1,5 +1,5 @@
 from argparse import ArgumentParser, SUPPRESS
-from invisibleroads_macros.configuration import unicode_
+from invisibleroads_macros.configuration import unicode_safely
 from sys import argv
 
 from ..configurations import RESERVED_ARGUMENT_NAMES
@@ -19,7 +19,7 @@ class RunScript(ToolScript):
         data_type_by_suffix = get_data_type_by_suffix()
         argument_parser = ArgumentParser(tool_name)
         argument_parser.add_argument(
-            'tool_name', nargs='?', help=SUPPRESS, type=unicode_)
+            'tool_name', nargs='?', help=SUPPRESS, type=unicode_safely)
         argument_parser = configure_argument_parser(
             argument_parser, tool_definition, data_type_by_suffix)
         raw_arguments = argument_parser.parse_known_args(argv[2:])[0].__dict__
@@ -53,5 +53,5 @@ def configure_argument_parser(
                 d['metavar'] = 'FOLDER'
             elif x.endswith('_path'):
                 d['metavar'] = 'PATH'
-        argument_parser.add_argument('--' + x, type=unicode_, **d)
+        argument_parser.add_argument('--' + x, type=unicode_safely, **d)
     return argument_parser
