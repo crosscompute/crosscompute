@@ -24,7 +24,7 @@ from tempfile import gettempdir
 
 from ..configurations import get_tool_definition
 from ..exceptions import CrossComputeError
-from ..platforms import (
+from ..fallbacks import (
     COMMAND_LINE_JOIN, SCRIPT_EXTENSION, SCRIPT_ENVIRONMENT,
     prepare_path_argument)
 from ..types import parse_data_dictionary
