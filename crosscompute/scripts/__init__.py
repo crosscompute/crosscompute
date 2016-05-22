@@ -170,7 +170,7 @@ def run_script(
             command_process = subprocess.Popen(
                 command_terms, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         standard_output, standard_error = [
-            x.rstrip().decode('utf-8') for x in command_process.communicate()]
+            unicode_safely(x).rstrip() for x in command_process.communicate()]
         if command_process.returncode:
             result_properties['return_code'] = command_process.returncode
     except OSError:
