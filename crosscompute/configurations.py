@@ -41,6 +41,8 @@ def get_tool_definition(tool_folder=None, tool_name='', default_tool_name=''):
 def get_tool_definition_by_name_from_folder(
         tool_folder, default_tool_name=None):
     tool_definition_by_name = {}
+    tool_folder = unicode_safely(tool_folder)
+    default_tool_name = unicode_safely(default_tool_name)
     for root_folder, folder_names, file_names in walk(tool_folder):
         if are_same_path(root_folder, tool_folder):
             tool_name = default_tool_name or basename(tool_folder)
@@ -49,11 +51,11 @@ def get_tool_definition_by_name_from_folder(
         for file_name in file_names:
             if not fnmatch(file_name, '*.ini'):
                 continue
-            configuration_path = unicode_safely(join(root_folder, file_name))
+            configuration_path = join(root_folder, file_name)
             tool_definition_by_name.update(
                 get_tool_definition_by_name_from_path(
                     configuration_path,
-                    default_tool_name=unicode_safely(tool_name)))
+                    default_tool_name=tool_name))
     return tool_definition_by_name
 
 

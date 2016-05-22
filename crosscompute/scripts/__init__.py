@@ -18,13 +18,15 @@ from invisibleroads_macros.disk import cd, make_enumerated_folder, make_folder
 from invisibleroads_macros.log import (
     format_hanging_indent, format_summary, parse_nested_dictionary_from,
     sort_dictionary)
-from os import sep
 from os.path import abspath, basename, isabs, join
 from six import text_type
 from tempfile import gettempdir
 
 from ..configurations import get_tool_definition
 from ..exceptions import CrossComputeError
+from ..platforms import (
+    COMMAND_LINE_JOIN, SCRIPT_EXTENSION, SCRIPT_ENVIRONMENT,
+    prepare_path_argument)
 from ..types import parse_data_dictionary
 
 
@@ -96,17 +98,13 @@ class _ResultConfiguration(object):
 
     def write_script(self, tool_definition, result_arguments):
         configuration_folder = tool_definition['configuration_folder']
-        if os.name == 'posix':
-            line_join, script_name = '\\', 'run.sh'
-        else:
-            line_join, script_name = '^', 'run.bat'
-        script_path = join(self.target_folder, script_name)
+        script_path = join(self.target_folder, 'run' + SCRIPT_EXTENSION)
         command = render_command(
             tool_definition['command_template'], result_arguments)
         with codecs.open(script_path, 'w', encoding='utf-8') as script_file:
             script_file.write('cd "%s"\n' % configuration_folder)
             script_file.write(format_hanging_indent(
-                command.replace('\n', ' %s\n' % line_join)) + '\n')
+                command.replace('\n', ' %s\n' % COMMAND_LINE_JOIN)) + '\n')
         return script_path
 
     def write_footer(self, result_properties):
@@ -129,7 +127,7 @@ def launch(argv=sys.argv):
 
 def load_tool_definition(tool_name):
     if tool_name:
-        tool_name = tool_name.rstrip(sep)  # Remove folder autocompletion slash
+        tool_name = tool_name.rstrip(os.sep)  # Remove folder slash
         tool_name = tool_name.replace('_', '-')
         tool_name = tool_name.replace('.py', '')
     try:
@@ -157,24 +155,26 @@ def prepare_result_response_folder(data_folder):
 
 
 def run_script(
-        target_folder, tool_definition, result_arguments, data_type_by_suffix):
+        target_folder, tool_definition, result_arguments, data_type_by_suffix,
+        environment=None):
     result_properties, timestamp = OrderedDict(), time.time()
     result_arguments = dict(result_arguments, target_folder=target_folder)
     result_configuration = _ResultConfiguration(target_folder)
     result_configuration.write_header(tool_definition, result_arguments)
-    command = render_command(tool_definition[
-        'command_template'], result_arguments).replace('\n', ' ')
-    command_terms = split_arguments(command)
+    command_terms = split_arguments(render_command(tool_definition[
+        'command_template'], result_arguments).replace('\n', ' '))
     try:
         with cd(tool_definition['configuration_folder']):
             command_process = subprocess.Popen(
-                command_terms, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        standard_output, standard_error = [
-            unicode_safely(x).rstrip() for x in command_process.communicate()]
-        if command_process.returncode:
-            result_properties['return_code'] = command_process.returncode
+                command_terms, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                env=environment or SCRIPT_ENVIRONMENT)
     except OSError:
         standard_output, standard_error = None, 'Command not found'
+    else:
+        standard_output, standard_error = [
+            x.rstrip().decode('utf-8') for x in command_process.communicate()]
+        if command_process.returncode:
+            result_properties['return_code'] = command_process.returncode
     result_properties.update(_process_streams(
         standard_output, standard_error, target_folder, tool_definition,
         data_type_by_suffix))
@@ -188,8 +188,8 @@ def render_command(command_template, result_arguments):
     quote_pattern = re.compile(r"""["'].*["']""")
     for k, v in result_arguments.items():
         v = text_type(v).strip()
-        if os.name != 'posix' and k.endswith('_path') or k.endswith('_folder'):
-            v = v.replace('\\', '\\\\')
+        if k.endswith('_path') or k.endswith('_folder'):
+            v = prepare_path_argument(v)
         if ' ' in v and not quote_pattern.match(v):
             v = '"%s"' % v
         d[k] = v

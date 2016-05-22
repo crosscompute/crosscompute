@@ -5,7 +5,7 @@ from os.path import join
 from six import BytesIO
 from zipfile import ZipFile
 
-from conftest import TOOL_FOLDER
+from conftest import TOOL_FOLDER, extract_text
 
 
 TEXT = (
@@ -19,8 +19,8 @@ def test_stream_logging(tmpdir, text=TEXT):
     assert r['standard_output'] == text
     assert r['standard_error'] == text
     s = serve(*args)[0]
-    assert s.find(id='standard_output-meta').text.strip() == text
-    assert s.find(id='standard_error-meta').text.strip() == text
+    assert extract_text(s, 'standard_output-meta') == text
+    assert extract_text(s, 'standard_error-meta') == text
 
 
 def test_stream_parsing(tmpdir, text=TEXT):
@@ -29,8 +29,8 @@ def test_stream_parsing(tmpdir, text=TEXT):
     assert r['standard_outputs']['a'] == text
     assert r['standard_errors']['a'] == text
     s = serve(*args)[0]
-    assert s.find(id='a-result').text.strip() == text
-    assert s.find(id='a-error').text.strip() == text
+    assert extract_text(s, 'a-result') == text
+    assert extract_text(s, 'a-error') == text
 
 
 def test_file_name_with_spaces(tmpdir):
@@ -44,7 +44,7 @@ def test_file_content(tmpdir, file_path='assets/string.txt'):
         TOOL_FOLDER, file_path), encoding='utf-8').read()
     args = str(tmpdir), 'file-content', {'x_path': file_path}
     s, c = serve(*args)
-    assert s.find(id='a-result').text.strip() == file_content.strip()
+    assert extract_text(s, 'a-result') == file_content.strip()
     response = c.get(s.find('a', {'class': 'download'})['href'])
     zip_file = ZipFile(BytesIO(response.data))
     assert zip_file.read('a').decode('utf-8') == file_content
