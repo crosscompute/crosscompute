@@ -7,7 +7,7 @@ ENTRY_POINTS = """
 [console_scripts]
 crosscompute = crosscompute.scripts:launch
 [crosscompute]
-help = crosscompute.scripts.help:HelpScript
+setup = crosscompute.scripts.setup:SetupScript
 run = crosscompute.scripts.run:RunScript
 serve = crosscompute.scripts.serve:ServeScript
 [pyramid.scaffold]
@@ -18,7 +18,7 @@ cc-python = crosscompute.scaffolds:PythonToolTemplate
 REQUIREMENTS = [
     'invisibleroads_macros>=0.6.9',
     'invisibleroads_posts>=0.4.9',
-    'invisibleroads_uploads>=0.0.2',
+    'invisibleroads_uploads>=0.0.3',
     'mistune',
     'pyramid',
     'pyramid_jinja2',
@@ -34,7 +34,7 @@ DESCRIPTION = '\n\n'.join(open(join(FOLDER, x)).read().strip() for x in [
     'README.rst', 'CHANGES.rst'])
 setup(
     name='crosscompute',
-    version='0.5.1',
+    version='0.5.3',
     description='Publish your own tools by writing a configuration file',
     long_description=DESCRIPTION,
     classifiers=[

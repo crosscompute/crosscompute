@@ -2,7 +2,6 @@ try:
     import subprocess32 as subprocess
 except ImportError:
     import subprocess
-import sys
 from invisibleroads.scripts import Script
 
 from . import load_tool_definition
@@ -22,7 +21,7 @@ class SetupScript(Script):
         try:
             install_dependencies(tool_definition, args.upgrade)
         except DependencyError as e:
-            sys.exit(e)
+            exit(e)
 
 
 def install_dependencies(tool_definition, upgrade=False):

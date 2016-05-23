@@ -12,6 +12,8 @@ class RunScript(ToolScript):
 
     def configure(self, argument_subparser):
         super(RunScript, self).configure(argument_subparser)
+        argument_subparser.add_argument(
+            '--upgrade', action='store_true', help='upgrade dependencies')
 
     def run(self, args):
         tool_definition, data_folder = super(RunScript, self).run(args)
