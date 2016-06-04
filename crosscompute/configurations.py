@@ -63,13 +63,15 @@ def get_tool_definition_by_name_from_path(
         configuration_path, default_tool_name=None):
     tool_definition_by_name = {}
     configuration_path = abspath(configuration_path)
+    # TODO: add doc string for this function
     configuration = RawCaseSensitiveConfigParser()
     configuration.read(configuration_path)
     d = {
         u'configuration_path': configuration_path,
         u'configuration_folder': dirname(configuration_path),
     }
-    for section_name in configuration.sections():
+    tools = configuration.sections()
+    for section_name in tools:
         try:
             tool_name = TOOL_NAME_PATTERN.match(section_name).group(1).strip()
         except AttributeError:
@@ -93,7 +95,7 @@ def get_tool_definition_by_name_from_path(
 
 def format_available_tools(tool_definition_by_name):
     tool_count = len(tool_definition_by_name)
-    return '%s available:\n%s' % (
+    return '{0} available:\n{1}'.format(
         tool_count, '\n'.join(tool_definition_by_name))
 
 
