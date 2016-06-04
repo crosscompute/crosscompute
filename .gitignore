@@ -9,6 +9,7 @@
 .cache
 .coverage
 .ipynb_checkpoints
+*.ipynb
 build
 dist
 # Transient
