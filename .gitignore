@@ -20,4 +20,4 @@ data_*
 *.sw[op]
 *~
 # Tests
-dummy/cc.ini
+dummy.ini

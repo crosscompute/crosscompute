@@ -3,7 +3,7 @@ from os.path import join
 
 
 FOLDER = "./dummy/"
-FILE = join(FOLDER, "cc.ini")
+FILE = join(FOLDER, "dummy.ini")
 
 
 def test_get_tool_definition_by_name_from_path():
