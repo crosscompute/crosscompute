@@ -9,12 +9,7 @@ Install
 -------
 ::
 
-    pip install -U crosscompute
-    pip install -U crosscompute-integer
-    pip install -U crosscompute-text
-    pip install -U crosscompute-image
-    pip install -U crosscompute-table
-    pip install -U crosscompute-geotable
+    pip install -U crosscompute crosscompute-types
 
 
 Use

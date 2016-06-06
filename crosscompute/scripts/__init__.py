@@ -28,6 +28,7 @@ from ..fallbacks import (
     COMMAND_LINE_JOIN, SCRIPT_EXTENSION, SCRIPT_ENVIRONMENT,
     prepare_path_argument)
 from ..types import parse_data_dictionary
+from .convert import prepare_tool_from_notebook
 
 
 EXCLUDED_FILE_NAMES = [
@@ -126,8 +127,8 @@ def launch(argv=sys.argv):
 
 
 def prepare_tool_definition(tool_name):
-    # if tool_name.endswith('.ipynb'):
-        # tool_name = prepare_tool_from_notebook(tool_name)
+    if tool_name.endswith('.ipynb'):
+        tool_name = prepare_tool_from_notebook(tool_name)
     if tool_name:
         tool_name = tool_name.rstrip(os.sep)  # Remove folder slash
         tool_name = tool_name.replace('_', '-')

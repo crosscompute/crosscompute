@@ -1,3 +1,10 @@
+0.5
+---
+- Serve Python Jupyter Notebooks
+- Support Python 3
+- Support Unicode
+- Support Windows
+
 0.4
 ---
 - Add tool scaffold
