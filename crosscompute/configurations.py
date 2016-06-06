@@ -71,7 +71,6 @@ def get_tool_definition_by_name_from_path(
     """ Gets the tool definition from the configuration file """
     tool_definition_by_name = {}
     configuration_path = abspath(configuration_path)
-    # TODO: add doc string for this function
     configuration = RawCaseSensitiveConfigParser()
     configuration.read(configuration_path)
     d = {

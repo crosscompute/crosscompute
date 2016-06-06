@@ -4,32 +4,27 @@ from os.path import join
 
 FOLDER = "./dummy/"
 FILE = join(FOLDER, "dummy.ini")
+TEMPLATE = "[crosscompute {n}]\ncommand_template = python run.py {a}\n{d}\n"
 
 
 def test_get_tool_definition_by_name_from_path():
-    tool_template = "[crosscompute tool]"
-    command_template = "command_template = python run.py"
     with open(FILE, 'w') as f:
-        f.write(tool_template + "\n")
-        f.write(command_template)
+        f.write(TEMPLATE.format(n="tool", a="", d=""))
     res = configurations.get_tool_definition_by_name_from_path(
             FILE, FOLDER)
     assert 'tool' in res
     x = res['tool']
-    assert x['command_template'] == 'python run.py'
-    assert x['tool_name'] == 'tool'
+    assert x['command_template'].strip() == 'python run.py'
+    assert x['tool_name'].strip() == 'tool'
     assert not x['argument_names']
 
 
 def test_default_tool():
     """multiple tools of the same name, last one is default goto tool"""
     with open(FILE, 'w') as f:
-        f.write(
-          "[crosscompute]\ncommand_template=python run.py\n\t{x}\n\t{y}\n")
-        f.write(
-          "[crosscompute]\ncommand_template=python run.py\n\t{x}\n")
-        f.write(
-          "[crosscompute t]\ncommand_template=python run.py\n\t{x}\n")
+        f.write(TEMPLATE.format(a="\n\t".join(["{x}", "{y}"]), d="", n=""))
+        f.write(TEMPLATE.format(a="\n\t".join(["{x}"]), d="", n=""))
+        f.write(TEMPLATE.format(a="\n\t".join(["{x}"]), d="", n="t"))
     tools = (
         configurations.get_tool_definition_by_name_from_path(FILE, FOLDER))
     assert len(tools) == 2
@@ -51,12 +46,13 @@ def test_argument_parser():
 
 def test_get_tool_definition_by_name_from_folder():
     """multiple tools of the same name, last one is default goto tool"""
-    template = "[crosscompute {n}]\ncommand_template = python run.py {args}\n"
     with open(FILE, 'w') as f:
-        f.write(template.format(n="", args="\n\t".join(["{x}", "{y}"])))
-        f.write(template.format(
-                n="", args="\n\t".join(["{x}", "{y}", "{z}"])))
-        f.write(template.format(n="t", args="\n\t".join(["{x}"])))
+        f.write(TEMPLATE.format(d="",
+                n="", a="\n\t".join(["{x}", "{y}"])))
+        f.write(TEMPLATE.format(d="",
+                n="", a="\n\t".join(["{x}", "{y}", "{z}"])))
+        f.write(TEMPLATE.format(d="",
+                n="t", a="\n\t".join(["{x}"])))
     tools = configurations.get_tool_definition_by_name_from_folder(FOLDER)
     assert len(tools) == 2
     assert 't' in tools
@@ -64,12 +60,14 @@ def test_get_tool_definition_by_name_from_folder():
 
 def test_get_tool_def():
     """multiple tools of the same name, last one is default goto tool"""
-    template = "[crosscompute {n}]\ncommand_template = python run.py {args}\n"
+    TEMPLATE = "[crosscompute {n}]\ncommand_template = python run.py {args}\n"
     with open(FILE, 'w') as f:
-        f.write(template.format(n="", args="\n\t".join(["{x}", "{y}"])))
-        f.write(template.format(
-                n="", args="\n\t".join(["{x}", "{y}", "{z}"])))
-        f.write(template.format(n="t", args="\n\t".join(["{x}"])))
+        f.write(TEMPLATE.format(d="",
+                n="", args="\n\t".join(["{x}", "{y}"])))
+        f.write(TEMPLATE.format(d="",
+                n="", a="\n\t".join(["{x}", "{y}", "{z}"])))
+        f.write(TEMPLATE.format(d="",
+                n="t", args="\n\t".join(["{x}"])))
     tool = (configurations.get_tool_definition(FOLDER, 't'))
     assert tool['argument_names'] == ('x', )
     assert tool['tool_name'] == "t"
