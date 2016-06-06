@@ -19,3 +19,5 @@ data_*
 # Vim
 *.sw[op]
 *~
+# Tests
+dummy/cc.ini
