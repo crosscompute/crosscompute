@@ -58,16 +58,12 @@ def test_get_tool_definition_by_name_from_folder():
     assert 't' in tools
 
 
-def test_get_tool_def():
-    """multiple tools of the same name, last one is default goto tool"""
-    TEMPLATE = "[crosscompute {n}]\ncommand_template = python run.py {args}\n"
+def test_get_tool_definition():
     with open(FILE, 'w') as f:
-        f.write(TEMPLATE.format(d="",
-                n="", args="\n\t".join(["{x}", "{y}"])))
+        f.write(TEMPLATE.format(d="", n="", args="\n\t".join(["{x}", "{y}"])))
         f.write(TEMPLATE.format(d="",
                 n="", a="\n\t".join(["{x}", "{y}", "{z}"])))
-        f.write(TEMPLATE.format(d="",
-                n="t", args="\n\t".join(["{x}"])))
-    tool = (configurations.get_tool_definition(FOLDER, 't'))
+        f.write(TEMPLATE.format(d="", n="t", args="\n\t".join(["{x}"])))
+    tool = configurations.get_tool_definition(FOLDER, 't')
     assert tool['argument_names'] == ('x', )
     assert tool['tool_name'] == "t"
