@@ -20,6 +20,7 @@ REQUIREMENTS = [
     'invisibleroads_posts>=0.4.9.1',
     'invisibleroads_uploads>=0.0.3',
     'mistune',
+    'nbconvert',
     'pyramid',
     'pyramid_jinja2',
     'six',
