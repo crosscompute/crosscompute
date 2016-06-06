@@ -13,9 +13,14 @@ from .exceptions import ConfigurationNotFound, ToolNotFound, ToolNotSpecified
 TOOL_NAME_PATTERN = re.compile(r'crosscompute\s*(.*)')
 ARGUMENT_NAME_PATTERN = re.compile(r'\{(.+?)\}')
 RESERVED_ARGUMENT_NAMES = ['target_folder']
+CONFIG_FILE = "*.ini"
 
 
 def get_tool_definition(tool_folder=None, tool_name='', default_tool_name=''):
+    """Get a tool definition from a specified tool or the
+    only tool available
+    raise an exception if multiple tools exist and tool not specified
+    or if tool specified does not exist"""
     if not tool_folder:
         tool_folder = getcwd()
     tool_definition_by_name = get_tool_definition_by_name_from_folder(
@@ -27,19 +32,21 @@ def get_tool_definition(tool_folder=None, tool_name='', default_tool_name=''):
     if len(tool_definition_by_name) == 1:
         return list(tool_definition_by_name.values())[0]
     if not tool_name:
-        raise ToolNotSpecified('Tool not specified. %s' % (
-            format_available_tools(tool_definition_by_name)))
+        raise ToolNotSpecified('Tool not specified. {0}'.format(
+                            format_available_tools(tool_definition_by_name)))
     tool_name = tool_name or tool_definition_by_name.keys()[0]
     try:
         tool_definition = tool_definition_by_name[tool_name]
     except KeyError:
-        raise ToolNotFound('Tool not found (%s). %s' % (
-            tool_name, format_available_tools(tool_definition_by_name)))
+        raise ToolNotFound('Tool not found ({t}). {c}'.format(
+            t=tool_name, c=format_available_tools(tool_definition_by_name)))
     return tool_definition
 
 
 def get_tool_definition_by_name_from_folder(
         tool_folder, default_tool_name=None):
+    """Gets all the tool definitions in a directory and its
+    subdirectories from configuration files"""
     tool_definition_by_name = {}
     tool_folder = unicode_safely(tool_folder)
     default_tool_name = unicode_safely(default_tool_name)
@@ -49,7 +56,7 @@ def get_tool_definition_by_name_from_folder(
         else:
             tool_name = basename(root_folder)
         for file_name in file_names:
-            if not fnmatch(file_name, '*.ini'):
+            if not fnmatch(file_name, CONFIG_FILE):
                 continue
             configuration_path = join(root_folder, file_name)
             tool_definition_by_name.update(
@@ -61,6 +68,7 @@ def get_tool_definition_by_name_from_folder(
 
 def get_tool_definition_by_name_from_path(
         configuration_path, default_tool_name=None):
+    """ Gets the tool definition from the configuration file """
     tool_definition_by_name = {}
     configuration_path = abspath(configuration_path)
     # TODO: add doc string for this function
