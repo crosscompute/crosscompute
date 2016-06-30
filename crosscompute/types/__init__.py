@@ -2,7 +2,6 @@ import codecs
 import logging
 from abc import ABCMeta
 from collections import OrderedDict
-from invisibleroads_macros.iterable import merge_dictionaries
 from invisibleroads_macros.log import parse_nested_dictionary
 from invisibleroads_uploads.views import get_upload, make_upload_folder
 from os.path import expanduser, isabs, join, splitext
@@ -14,6 +13,7 @@ from ..exceptions import DataTypeError
 
 
 LOG = logging.getLogger(__name__)
+DATA_TYPE_BY_SUFFIX = {}
 
 
 class DataItem(object):
@@ -81,34 +81,24 @@ class StringType(DataType):
         return text.decode('utf-8')
 
 
-def get_data_type(key, data_type_by_suffix):
-    for suffix in data_type_by_suffix:
-        if key.endswith('_' + suffix):
-            return data_type_by_suffix[suffix]
-    return StringType
-
-
-def get_data_type_by_name():
-    data_type_by_name = {}
-    x_manager = ExtensionManager('crosscompute.types')
-    for data_type_name, x in zip(x_manager.names(), x_manager.extensions):
-        data_type_by_name[data_type_name] = x.plugin
+def initialize_data_types():
+    data_type_extensions = ExtensionManager('crosscompute.types').extensions
+    data_type_by_name = {x.name: x.plugin for x in data_type_extensions}
+    for data_type in data_type_by_name.values():
+        for suffix in data_type.suffixes:
+            DATA_TYPE_BY_SUFFIX[suffix] = data_type
     return data_type_by_name
 
 
-def get_data_type_by_suffix(data_type_by_suffix=None):
-    d = {}
-    x_manager = ExtensionManager('crosscompute.types')
-    for x in x_manager.extensions:
-        data_type = x.plugin
-        for suffix in data_type.suffixes:
-            d[suffix] = data_type
-    return merge_dictionaries(d, data_type_by_suffix or {})
+def get_data_type(key):
+    for suffix, data_type in DATA_TYPE_BY_SUFFIX.items():
+        if key.endswith('_' + suffix):
+            return data_type
+    return StringType
 
 
 def get_result_arguments(
-        tool_definition, raw_arguments, data_type_by_suffix, data_folder,
-        user_id=0):
+        tool_definition, raw_arguments, data_folder, user_id=0):
     d, errors = {}, []
     configuration_folder = tool_definition['configuration_folder']
     for tool_argument_name in tool_definition['argument_names']:
@@ -116,7 +106,7 @@ def get_result_arguments(
             value = raw_arguments[tool_argument_name]
         elif tool_argument_name.endswith('_path'):
             tool_argument_noun = tool_argument_name[:-5]
-            data_type = get_data_type(tool_argument_noun, data_type_by_suffix)
+            data_type = get_data_type(tool_argument_noun)
             default_path = join(
                 configuration_folder, tool_definition[tool_argument_name],
             ) if tool_argument_name in tool_definition else None
@@ -135,8 +125,7 @@ def get_result_arguments(
                 errors.append((tool_argument_name, 'required'))
             continue
         d[tool_argument_name] = value
-    d, more_errors = parse_data_dictionary_from(
-        d, data_type_by_suffix, configuration_folder)
+    d, more_errors = parse_data_dictionary_from(d, configuration_folder)
     errors.extend(more_errors)
     if errors:
         raise DataTypeError(*errors)
@@ -183,18 +172,17 @@ def save_upload(data_folder, user_id, file_name, file_content):
     return file_path
 
 
-def parse_data_dictionary(text, data_type_by_suffix, root_folder):
+def parse_data_dictionary(text, root_folder):
     d = parse_nested_dictionary(
         text, is_key=lambda x: ':' not in x and ' ' not in x)
-    return parse_data_dictionary_from(d, data_type_by_suffix, root_folder)
+    return parse_data_dictionary_from(d, root_folder)
 
 
-def parse_data_dictionary_from(
-        raw_dictionary, data_type_by_suffix, root_folder):
+def parse_data_dictionary_from(raw_dictionary, root_folder):
     d = make_absolute_paths(raw_dictionary, root_folder)
     errors = []
     for key, value in d.items():
-        data_type = get_data_type(key, data_type_by_suffix)
+        data_type = get_data_type(key)
         try:
             value = data_type.parse(value)
         except DataTypeError as e:
@@ -206,7 +194,7 @@ def parse_data_dictionary_from(
         if not key.endswith('_path'):
             continue
         noun = key[:-5]
-        data_type = get_data_type(noun, data_type_by_suffix)
+        data_type = get_data_type(noun)
         try:
             data_type.load(value)
         except DataTypeError as e:

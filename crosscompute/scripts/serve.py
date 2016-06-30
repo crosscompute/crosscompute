@@ -5,6 +5,7 @@ from collections import OrderedDict
 from importlib import import_module
 from invisibleroads_macros.disk import compress_zip, resolve_relative_path
 from invisibleroads_macros.iterable import merge_dictionaries
+from invisibleroads_posts import add_routes_for_fused_assets
 from invisibleroads_posts.views import expect_param
 from invisibleroads_uploads.views import get_upload_from
 from markupsafe import Markup
@@ -16,7 +17,6 @@ from pyramid.httpexceptions import (
     HTTPBadRequest, HTTPForbidden, HTTPNotFound, HTTPSeeOther)
 from pyramid.renderers import get_renderer
 from pyramid.response import FileResponse, Response
-from pyramid.settings import aslist
 from six import string_types, text_type
 from traceback import format_exc
 from wsgiref.simple_server import make_server
@@ -24,8 +24,7 @@ from wsgiref.simple_server import make_server
 from ..configurations import ARGUMENT_NAME_PATTERN, RESERVED_ARGUMENT_NAMES
 from ..exceptions import DataTypeError
 from ..types import (
-    DataItem, get_data_type, get_data_type_by_name, get_data_type_by_suffix,
-    get_result_arguments)
+    DataItem, get_data_type, get_result_arguments, initialize_data_types)
 from . import (
     ToolScript, load_result_configuration, prepare_result_response_folder,
     run_script, EXCLUDED_FILE_NAMES)
@@ -88,22 +87,11 @@ def get_app(tool_definition, data_folder, website_name, website_author):
     config = Configurator(settings=settings)
     includeme(config)
     add_routes(config)
+    add_routes_for_fused_assets(config)
     return config.make_wsgi_app()
 
 
 def includeme(config):
-    data_type_by_suffix = get_data_type_by_suffix()
-    data_types = set(data_type_by_suffix.values())
-    website_dependencies = [
-        'invisibleroads_posts',
-        'invisibleroads_uploads',
-    ] + [x.__module__ for x in data_types]
-
-    settings = config.registry.settings
-    settings['website.dependencies'] = website_dependencies + aslist(
-        settings.get('website.dependencies', []))
-    settings['data_type_by_suffix'] = data_type_by_suffix
-
     config.include('invisibleroads_posts')
     config.include('invisibleroads_uploads')
     configure_jinja2_environment(config)
@@ -192,8 +180,9 @@ def add_routes(config):
 
 
 def add_routes_for_data_types(config):
-    data_type_by_name = get_data_type_by_name()
-    for data_type_name, data_type in data_type_by_name.items():
+    settings = config.registry.settings
+    website_dependencies = settings['website.dependencies']
+    for data_type_name, data_type in initialize_data_types().items():
         root_module_name = data_type.__module__
         for relative_view_url in data_type.views:
             # Get route_url
@@ -207,6 +196,7 @@ def add_routes_for_data_types(config):
             # Add view
             config.add_route(route_name, route_url)
             config.add_view(view, permission='run_tool', route_name=route_name)
+        website_dependencies.append(root_module_name)
 
 
 def index(request):
@@ -215,11 +205,9 @@ def index(request):
 
 def show_tool(request):
     settings = request.registry.settings
-    data_type_by_suffix = settings['data_type_by_suffix']
     tool_definition = settings['tool_definition']
     tool_arguments = get_tool_arguments(tool_definition)
-    tool_items = get_data_items(
-        tool_arguments, tool_definition, data_type_by_suffix)
+    tool_items = get_data_items(tool_arguments, tool_definition)
     return merge_dictionaries(
         get_template_variables(tool_definition, 'tool', tool_items), {
             'data_types': set(x.data_type for x in tool_items),
@@ -230,17 +218,16 @@ def show_tool(request):
 def run_tool(request):
     settings = request.registry.settings
     tool_definition = settings['tool_definition']
-    data_type_by_suffix = settings['data_type_by_suffix']
     data_folder = settings['data.folder']
     try:
         result_arguments = get_result_arguments(
-            tool_definition, request.params, data_type_by_suffix, data_folder,
+            tool_definition, request.params, data_folder,
             request.authenticated_userid)
     except DataTypeError as e:
         raise HTTPBadRequest(dict(e.args))
     result_id, target_folder = prepare_result_response_folder(data_folder)
     run_script(
-        target_folder, tool_definition, result_arguments, data_type_by_suffix)
+        target_folder, tool_definition, result_arguments)
     compress_zip(target_folder, excludes=EXCLUDED_FILE_NAMES)
     return HTTPSeeOther(request.route_path(
         'result', id=result_id, _anchor='properties'))
@@ -257,18 +244,15 @@ def show_result(request):
         raise HTTPNotFound
     result_arguments, result_properties = load_result_configuration(
         result_response_folder)
-    data_type_by_suffix = get_data_type_by_suffix()
-    tool_items = get_data_items(
-        result_arguments, tool_definition, data_type_by_suffix)
+    tool_items = get_data_items(result_arguments, tool_definition)
     result_errors = get_data_items(merge_dictionaries(
         result_properties.pop('standard_errors', {}),
         result_properties.pop('type_errors', {}),
-    ), tool_definition, data_type_by_suffix)
+    ), tool_definition)
     result_items = get_data_items(
-        result_properties.pop('standard_outputs', {}), tool_definition,
-        data_type_by_suffix)
+        result_properties.pop('standard_outputs', {}), tool_definition)
     result_properties = get_data_items(
-        result_properties, tool_definition, data_type_by_suffix)
+        result_properties, tool_definition)
     return merge_dictionaries(
         get_template_variables(tool_definition, 'tool', tool_items),
         get_template_variables(tool_definition, 'result', result_items), {
@@ -346,17 +330,17 @@ def get_tool_arguments(tool_definition):
     return value_by_key
 
 
-def get_data_items(value_by_key, tool_definition, data_type_by_suffix):
+def get_data_items(value_by_key, tool_definition):
     data_items = []
     for key, value in value_by_key.items():
         if key.startswith('_') or key in RESERVED_ARGUMENT_NAMES:
             continue
         if key.endswith('_path'):
             key = key[:-5]
-            data_type = get_data_type(key, data_type_by_suffix)
+            data_type = get_data_type(key)
             value = data_type.load_safely(value)
         else:
-            data_type = get_data_type(key, data_type_by_suffix)
+            data_type = get_data_type(key)
             if isinstance(value, string_types):
                 value = data_type.parse(value)
         help_text = tool_definition.get(key + '.help', HELP.get(key, ''))
