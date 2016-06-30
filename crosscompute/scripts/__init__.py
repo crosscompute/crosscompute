@@ -18,7 +18,7 @@ from invisibleroads_macros.disk import cd, make_enumerated_folder, make_folder
 from invisibleroads_macros.log import (
     format_hanging_indent, format_summary, parse_nested_dictionary_from,
     sort_dictionary)
-from os.path import abspath, basename, isabs, join
+from os.path import abspath, basename, isabs, join, splitext
 from six import text_type
 from tempfile import gettempdir
 
@@ -42,14 +42,14 @@ class ToolScript(Script):
 
     def configure(self, argument_subparser):
         argument_subparser.add_argument(
-            'tool_name', nargs='?', type=unicode_safely)
+            'tool_name', nargs='?', type=unicode_safely, default='')
         argument_subparser.add_argument(
             '--data_folder', metavar='FOLDER', type=unicode_safely)
         argument_subparser.add_argument(
             '--verbose', action='store_true')
 
     def run(self, args):
-        tool_definition = load_tool_definition(args.tool_name)
+        tool_definition = prepare_tool_definition(args.tool_name)
         tool_name = tool_definition['tool_name']
         data_folder = args.data_folder or join(
             gettempdir(), 'crosscompute', tool_name)
@@ -125,11 +125,13 @@ def launch(argv=sys.argv):
     run_scripts(scripts_by_name, args)
 
 
-def load_tool_definition(tool_name):
+def prepare_tool_definition(tool_name):
+    # if tool_name.endswith('.ipynb'):
+        # tool_name = prepare_tool_from_notebook(tool_name)
     if tool_name:
         tool_name = tool_name.rstrip(os.sep)  # Remove folder slash
         tool_name = tool_name.replace('_', '-')
-        tool_name = tool_name.replace('.py', '')
+        tool_name = splitext(tool_name)[0]
     try:
         tool_definition = get_tool_definition(tool_name=tool_name)
     except CrossComputeError as e:

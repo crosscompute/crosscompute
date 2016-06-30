@@ -1,7 +1,7 @@
 import json
 from bs4 import BeautifulSoup
 from crosscompute.scripts import (
-    load_tool_definition, prepare_result_response_folder, run_script)
+    prepare_tool_definition, prepare_result_response_folder, run_script)
 from crosscompute.scripts.serve import get_app
 from six.moves.urllib.parse import urlparse as parse_url
 from werkzeug.test import Client
@@ -10,7 +10,7 @@ from werkzeug.wrappers import BaseResponse
 
 def run(data_folder, tool_name, result_arguments=None):
     target_folder = prepare_result_response_folder(data_folder)[1]
-    tool_definition = load_tool_definition(tool_name)
+    tool_definition = prepare_tool_definition(tool_name)
     return run_script(target_folder, tool_definition, result_arguments or {})
 
 
@@ -32,7 +32,7 @@ def serve_bad_request(data_folder, tool_name, result_arguments=None):
 
 
 def _prepare_response(data_folder, tool_name, result_arguments):
-    tool_definition = load_tool_definition(tool_name)
+    tool_definition = prepare_tool_definition(tool_name)
     app = get_app(tool_definition, data_folder, 'Test', 'Python')
     client = Client(app, BaseResponse)
     with client.post('/t/1', data=result_arguments or {}) as response:

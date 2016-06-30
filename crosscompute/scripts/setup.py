@@ -4,7 +4,7 @@ except ImportError:
     import subprocess
 from invisibleroads.scripts import Script
 
-from . import load_tool_definition
+from . import prepare_tool_definition
 from ..exceptions import DependencyError
 
 
@@ -17,7 +17,7 @@ class SetupScript(Script):
             help='upgrade dependencies')
 
     def run(self, args):
-        tool_definition = load_tool_definition(args.tool_name)
+        tool_definition = prepare_tool_definition(args.tool_name)
         try:
             install_dependencies(tool_definition, args.upgrade)
         except DependencyError as e:
