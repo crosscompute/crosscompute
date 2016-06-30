@@ -1,6 +1,5 @@
 import json
 from bs4 import BeautifulSoup
-from crosscompute.types import get_data_type_by_suffix
 from crosscompute.scripts import (
     prepare_tool_definition, prepare_result_response_folder, run_script)
 from crosscompute.scripts.serve import get_app
@@ -12,9 +11,7 @@ from werkzeug.wrappers import BaseResponse
 def run(data_folder, tool_name, result_arguments=None):
     target_folder = prepare_result_response_folder(data_folder)[1]
     tool_definition = prepare_tool_definition(tool_name)
-    return run_script(
-        target_folder, tool_definition, result_arguments or {},
-        get_data_type_by_suffix())
+    return run_script(target_folder, tool_definition, result_arguments or {})
 
 
 def serve(data_folder, tool_name, result_arguments=None):

@@ -158,8 +158,7 @@ def prepare_result_response_folder(data_folder):
 
 
 def run_script(
-        target_folder, tool_definition, result_arguments, data_type_by_suffix,
-        environment=None):
+        target_folder, tool_definition, result_arguments, environment=None):
     result_properties, timestamp = OrderedDict(), time.time()
     result_arguments = dict(result_arguments, target_folder=target_folder)
     result_configuration = _ResultConfiguration(target_folder)
@@ -179,8 +178,7 @@ def run_script(
         if command_process.returncode:
             result_properties['return_code'] = command_process.returncode
     result_properties.update(_process_streams(
-        standard_output, standard_error, target_folder, tool_definition,
-        data_type_by_suffix))
+        standard_output, standard_error, target_folder, tool_definition))
     result_properties['execution_time_in_seconds'] = time.time() - timestamp
     result_configuration.write_footer(result_properties)
     return result_properties
@@ -200,8 +198,7 @@ def render_command(command_template, result_arguments):
 
 
 def _process_streams(
-        standard_output, standard_error, target_folder, tool_definition,
-        data_type_by_suffix):
+        standard_output, standard_error, target_folder, tool_definition):
     d, type_errors = OrderedDict(), OrderedDict()
     for stream_name, stream_content in [
         ('standard_output', standard_output),
@@ -215,7 +212,7 @@ def _process_streams(
             screen_text='[%s]\n%s\n' % (stream_name, stream_content),
             file_text=stream_content)
         value_by_key, errors = parse_data_dictionary(
-            stream_content, data_type_by_suffix, target_folder)
+            stream_content, target_folder)
         for k, v in errors:
             type_errors['%s.error' % k] = v
         if tool_definition.get('show_' + stream_name):
