@@ -12,7 +12,6 @@ from .exceptions import ConfigurationNotFound, ToolNotFound, ToolNotSpecified
 
 TOOL_NAME_PATTERN = re.compile(r'crosscompute\s*(.*)')
 ARGUMENT_NAME_PATTERN = re.compile(r'\{(.+?)\}')
-RESERVED_ARGUMENT_NAMES = ['target_folder']
 
 
 def get_tool_definition(tool_folder=None, tool_name='', default_tool_name=''):

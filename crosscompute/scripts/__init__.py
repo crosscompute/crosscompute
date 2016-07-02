@@ -2,6 +2,7 @@ import codecs
 import logging
 import os
 import re
+import simplejson as json
 try:
     import subprocess32 as subprocess
 except ImportError:
@@ -27,7 +28,7 @@ from ..exceptions import CrossComputeError
 from ..fallbacks import (
     COMMAND_LINE_JOIN, SCRIPT_EXTENSION, SCRIPT_ENVIRONMENT,
     prepare_path_argument)
-from ..types import parse_data_dictionary
+from ..types import initialize_data_types, parse_data_dictionary
 from .convert import prepare_tool_from_notebook
 
 
@@ -47,9 +48,12 @@ class ToolScript(Script):
         argument_subparser.add_argument(
             '--data_folder', metavar='FOLDER', type=unicode_safely)
         argument_subparser.add_argument(
+            '--suffix_by_data_type', metavar='JSON', type=json.loads)
+        argument_subparser.add_argument(
             '--verbose', action='store_true')
 
     def run(self, args):
+        initialize_data_types(args.suffix_by_data_type)
         tool_definition = prepare_tool_definition(args.tool_name)
         tool_name = tool_definition['tool_name']
         data_folder = args.data_folder or join(

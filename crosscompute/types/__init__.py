@@ -3,17 +3,19 @@ import logging
 from abc import ABCMeta
 from collections import OrderedDict
 from invisibleroads_macros.log import parse_nested_dictionary
+from invisibleroads_macros.configuration import resolve_attribute
 from invisibleroads_uploads.views import get_upload, make_upload_folder
 from os.path import expanduser, isabs, join, splitext
 from six import add_metaclass, text_type
 from stevedore.extension import ExtensionManager
 
-from ..configurations import RESERVED_ARGUMENT_NAMES
 from ..exceptions import DataTypeError
 
 
-LOG = logging.getLogger(__name__)
+DATA_TYPE_BY_NAME = {}
 DATA_TYPE_BY_SUFFIX = {}
+RESERVED_ARGUMENT_NAMES = ['target_folder']
+LOG = logging.getLogger(__name__)
 
 
 class DataItem(object):
@@ -81,13 +83,15 @@ class StringType(DataType):
         return text.decode('utf-8')
 
 
-def initialize_data_types():
-    data_type_extensions = ExtensionManager('crosscompute.types').extensions
-    data_type_by_name = {x.name: x.plugin for x in data_type_extensions}
-    for data_type in data_type_by_name.values():
+def initialize_data_types(suffix_by_data_type=None):
+    for x in ExtensionManager('crosscompute.types').extensions:
+        data_type = x.plugin
         for suffix in data_type.suffixes:
             DATA_TYPE_BY_SUFFIX[suffix] = data_type
-    return data_type_by_name
+        DATA_TYPE_BY_NAME[x.name] = data_type
+    for suffix, data_type_specification in (suffix_by_data_type or {}).items():
+        data_type = resolve_attribute(data_type_specification)
+        DATA_TYPE_BY_SUFFIX[suffix] = data_type
 
 
 def get_data_type(key):

@@ -4,11 +4,11 @@ import nbformat
 import shutil
 import tempfile
 from collections import OrderedDict
-from crosscompute.configurations import RESERVED_ARGUMENT_NAMES
 from os import chdir
 from os.path import basename, join, splitext
 
 from ..exceptions import CrossComputeError
+from ..types import RESERVED_ARGUMENT_NAMES
 
 
 def prepare_tool_from_notebook(notebook_path):

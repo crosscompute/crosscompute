@@ -21,10 +21,11 @@ from six import string_types, text_type
 from traceback import format_exc
 from wsgiref.simple_server import make_server
 
-from ..configurations import ARGUMENT_NAME_PATTERN, RESERVED_ARGUMENT_NAMES
+from ..configurations import ARGUMENT_NAME_PATTERN
 from ..exceptions import DataTypeError
 from ..types import (
-    DataItem, get_data_type, get_result_arguments, initialize_data_types)
+    DataItem, get_data_type, get_result_arguments, DATA_TYPE_BY_NAME,
+    RESERVED_ARGUMENT_NAMES)
 from . import (
     ToolScript, load_result_configuration, prepare_result_response_folder,
     run_script, EXCLUDED_FILE_NAMES)
@@ -182,7 +183,7 @@ def add_routes(config):
 def add_routes_for_data_types(config):
     settings = config.registry.settings
     website_dependencies = settings['website.dependencies']
-    for data_type_name, data_type in initialize_data_types().items():
+    for data_type_name, data_type in DATA_TYPE_BY_NAME.items():
         root_module_name = data_type.__module__
         for relative_view_url in data_type.views:
             # Get route_url

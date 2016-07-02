@@ -2,9 +2,9 @@ from argparse import ArgumentParser, SUPPRESS
 from invisibleroads_macros.configuration import unicode_safely
 from sys import argv
 
-from ..configurations import RESERVED_ARGUMENT_NAMES
 from ..exceptions import DataTypeError
-from ..types import get_result_arguments, DATA_TYPE_BY_SUFFIX
+from ..types import (
+    get_result_arguments, DATA_TYPE_BY_SUFFIX, RESERVED_ARGUMENT_NAMES)
 from . import ToolScript, prepare_result_response_folder, run_script
 
 
