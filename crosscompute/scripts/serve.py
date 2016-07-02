@@ -81,8 +81,8 @@ def get_app(tool_definition, data_folder, website_name, website_author):
         'jinja2.trim_blocks': True,
         'crosscompute.base_template':
             'invisibleroads_posts:templates/base.jinja2',
-        'crosscompute.page_template':
-            'crosscompute:templates/page.jinja2',
+        'crosscompute.item_template':
+            'crosscompute:templates/item.jinja2',
     }
     settings['tool_definition'] = tool_definition
     config = Configurator(settings=settings)
@@ -107,7 +107,7 @@ def configure_jinja2_environment(config):
     })
     jinja2_environment.globals.update({
         'base_template': settings['crosscompute.base_template'],
-        'page_template': settings['crosscompute.page_template'],
+        'item_template': settings['crosscompute.item_template'],
         'get_os_environment_variable': environ.get,
     })
 
