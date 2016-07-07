@@ -2,7 +2,6 @@ import codecs
 import re
 import webbrowser
 from collections import OrderedDict
-from importlib import import_module
 from invisibleroads_macros.disk import compress_zip, resolve_relative_path
 from invisibleroads_macros.iterable import merge_dictionaries
 from invisibleroads_posts import add_routes_for_fused_assets
@@ -184,20 +183,17 @@ def add_routes_for_data_types(config):
     settings = config.registry.settings
     website_dependencies = settings['website.dependencies']
     for data_type_name, data_type in DATA_TYPE_BY_NAME.items():
-        root_module_name = data_type.__module__
+        module_name = data_type.__module__
         for relative_view_url in data_type.views:
             # Get route_url
             route_name = '%s/%s' % (data_type_name, relative_view_url)
             route_url = '/c/' + route_name
             # Get view
-            view_url = root_module_name + '.' + relative_view_url
-            module_url, view_name = view_url.rsplit('.', 1)
-            module = import_module(module_url)
-            view = getattr(module, view_name)
+            view = config.maybe_dotted(module_name + '.' + relative_view_url)
             # Add view
             config.add_route(route_name, route_url)
             config.add_view(view, permission='run_tool', route_name=route_name)
-        website_dependencies.append(root_module_name)
+        website_dependencies.append(module_name)
 
 
 def index(request):

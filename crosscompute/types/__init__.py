@@ -89,8 +89,8 @@ def initialize_data_types(suffix_by_data_type=None):
         for suffix in data_type.suffixes:
             DATA_TYPE_BY_SUFFIX[suffix] = data_type
         DATA_TYPE_BY_NAME[x.name] = data_type
-    for suffix, data_type_specification in (suffix_by_data_type or {}).items():
-        data_type = resolve_attribute(data_type_specification)
+    for suffix, data_type_spec in (suffix_by_data_type or {}).items():
+        data_type = resolve_attribute(data_type_spec)
         DATA_TYPE_BY_SUFFIX[suffix] = data_type
 
 
