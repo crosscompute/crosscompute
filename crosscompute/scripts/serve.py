@@ -85,6 +85,7 @@ def get_app(tool_definition, data_folder, website_name, website_owner):
     }
     settings['tool_definition'] = tool_definition
     config = Configurator(settings=settings)
+    config.include('invisibleroads_posts')
     includeme(config)
     add_routes(config)
     add_routes_for_fused_assets(config)
@@ -92,7 +93,6 @@ def get_app(tool_definition, data_folder, website_name, website_owner):
 
 
 def includeme(config):
-    config.include('invisibleroads_posts')
     config.include('invisibleroads_uploads')
     configure_jinja2_environment(config)
     add_routes_for_data_types(config)
