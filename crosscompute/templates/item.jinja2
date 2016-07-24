@@ -15,7 +15,7 @@
 
 {% block head_script_inline %}
 {{ super() -}}
-d.crosscompute = {};
+var CC = {};
 {% for data_type in data_types %}{% from data_type.template import head_script_inline %}{{ head_script_inline() }}{% endfor %}
 {% endblock %}
 

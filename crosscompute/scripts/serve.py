@@ -2,7 +2,6 @@ import codecs
 import re
 import webbrowser
 from collections import OrderedDict
-from importlib import import_module
 from invisibleroads_macros.disk import compress_zip, resolve_relative_path
 from invisibleroads_macros.iterable import merge_dictionaries
 from invisibleroads_posts import add_routes_for_fused_assets
@@ -50,13 +49,13 @@ class ServeScript(ToolScript):
         argument_subparser.add_argument(
             '--website_name', default='CrossCompute')
         argument_subparser.add_argument(
-            '--website_author', default='CrossCompute Inc')
+            '--website_owner', default='CrossCompute Inc.')
 
     def run(self, args):
         tool_definition, data_folder = super(ServeScript, self).run(args)
         app = get_app(
             tool_definition, data_folder, args.website_name,
-            args.website_author)
+            args.website_owner)
         app_url = 'http://%s:%s/t/1' % (args.host, args.port)
         webbrowser.open_new_tab(app_url)
         server = make_server(args.host, args.port, app)
@@ -67,11 +66,11 @@ class ServeScript(ToolScript):
             pass
 
 
-def get_app(tool_definition, data_folder, website_name, website_author):
+def get_app(tool_definition, data_folder, website_name, website_owner):
     settings = {
         'data.folder': data_folder,
         'website.name': website_name,
-        'website.author': website_author,
+        'website.owner': website_owner,
         'website.root_assets': [
             'invisibleroads_posts:assets/favicon.ico',
             'invisibleroads_posts:assets/robots.txt',
@@ -82,6 +81,7 @@ def get_app(tool_definition, data_folder, website_name, website_author):
     }
     settings['tool_definition'] = tool_definition
     config = Configurator(settings=settings)
+    config.include('invisibleroads_posts')
     includeme(config)
     add_routes(config)
     add_routes_for_fused_assets(config)
@@ -89,7 +89,6 @@ def get_app(tool_definition, data_folder, website_name, website_author):
 
 
 def includeme(config):
-    config.include('invisibleroads_posts')
     config.include('invisibleroads_uploads')
     configure_jinja2_environment(config)
     add_routes_for_data_types(config)
@@ -184,20 +183,17 @@ def add_routes_for_data_types(config):
     settings = config.registry.settings
     website_dependencies = settings['website.dependencies']
     for data_type_name, data_type in DATA_TYPE_BY_NAME.items():
-        root_module_name = data_type.__module__
+        module_name = data_type.__module__
         for relative_view_url in data_type.views:
             # Get route_url
             route_name = '%s/%s' % (data_type_name, relative_view_url)
             route_url = '/c/' + route_name
             # Get view
-            view_url = root_module_name + '.' + relative_view_url
-            module_url, view_name = view_url.rsplit('.', 1)
-            module = import_module(module_url)
-            view = getattr(module, view_name)
+            view = config.maybe_dotted(module_name + '.' + relative_view_url)
             # Add view
             config.add_route(route_name, route_url)
             config.add_view(view, permission='run_tool', route_name=route_name)
-        website_dependencies.append(root_module_name)
+        website_dependencies.append(module_name)
 
 
 def index(request):

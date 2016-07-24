@@ -1,16 +1,15 @@
-# SQLite
-*.db
-*.db-journal
 # Python
-*.egg
-*.egg-info
-*.eggs
+*.egg*
 *.py[co]
-.cache
-.coverage
+__pycache__
 .ipynb_checkpoints
 build
 dist
+# Sass
+.sass-cache
+# SQLite
+*.db
+*.db-journal
 # Transient
 *.log
 *.tmp
