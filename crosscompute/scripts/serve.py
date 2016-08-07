@@ -49,7 +49,7 @@ class ServeScript(ToolScript):
         argument_subparser.add_argument(
             '--website_name', default='CrossCompute')
         argument_subparser.add_argument(
-            '--website_owner', default='CrossCompute Inc.')
+            '--website_owner', default='CrossCompute')
 
     def run(self, args):
         tool_definition, data_folder = super(ServeScript, self).run(args)
@@ -90,8 +90,14 @@ def get_app(tool_definition, data_folder, website_name, website_owner):
 
 def includeme(config):
     config.include('invisibleroads_uploads')
+    configure_settings(config)
     configure_jinja2_environment(config)
     add_routes_for_data_types(config)
+
+
+def configure_settings(config):
+    settings = config.registry.settings
+    settings['website.dependencies'].append(config.package_name)
 
 
 def configure_jinja2_environment(config):
@@ -109,6 +115,23 @@ def configure_jinja2_environment(config):
             'crosscompute:templates/item.jinja2'),
         'get_os_environment_variable': environ.get,
     })
+
+
+def add_routes_for_data_types(config):
+    settings = config.registry.settings
+    website_dependencies = settings['website.dependencies']
+    for data_type_name, data_type in DATA_TYPE_BY_NAME.items():
+        module_name = data_type.__module__
+        for relative_view_url in data_type.views:
+            # Get route_url
+            route_name = '%s/%s' % (data_type_name, relative_view_url)
+            route_url = '/c/' + route_name
+            # Get view
+            view = config.maybe_dotted(module_name + '.' + relative_view_url)
+            # Add view
+            config.add_route(route_name, route_url)
+            config.add_view(view, permission='run_tool', route_name=route_name)
+        website_dependencies.append(module_name)
 
 
 def get_template_variables(tool_definition, template_type, data_items):
@@ -179,23 +202,6 @@ def add_routes(config):
         route_name='result')
 
 
-def add_routes_for_data_types(config):
-    settings = config.registry.settings
-    website_dependencies = settings['website.dependencies']
-    for data_type_name, data_type in DATA_TYPE_BY_NAME.items():
-        module_name = data_type.__module__
-        for relative_view_url in data_type.views:
-            # Get route_url
-            route_name = '%s/%s' % (data_type_name, relative_view_url)
-            route_url = '/c/' + route_name
-            # Get view
-            view = config.maybe_dotted(module_name + '.' + relative_view_url)
-            # Add view
-            config.add_route(route_name, route_url)
-            config.add_view(view, permission='run_tool', route_name=route_name)
-        website_dependencies.append(module_name)
-
-
 def index(request):
     return HTTPSeeOther(request.route_path('tool', id=1))
 
@@ -203,13 +209,7 @@ def index(request):
 def show_tool(request):
     settings = request.registry.settings
     tool_definition = settings['tool_definition']
-    tool_arguments = get_tool_arguments(tool_definition)
-    tool_items = get_data_items(tool_arguments, tool_definition)
-    return merge_dictionaries(
-        get_template_variables(tool_definition, 'tool', tool_items), {
-            'data_types': set(x.data_type for x in tool_items),
-            'tool_id': 1,
-        })
+    return get_tool_template_variables(tool_definition, tool_id=1)
 
 
 def run_tool(request):
@@ -314,6 +314,16 @@ def import_upload(request, DataType, render_property_kw):
     html = template.make_module().render_property(
         data_item, **render_property_kw)
     return Response(html)
+
+
+def get_tool_template_variables(tool_definition, tool_id):
+    tool_arguments = get_tool_arguments(tool_definition)
+    tool_items = get_data_items(tool_arguments, tool_definition)
+    return merge_dictionaries(
+        get_template_variables(tool_definition, 'tool', tool_items), {
+            'data_types': set(x.data_type for x in tool_items),
+            'tool_id': tool_id,
+        })
 
 
 def get_tool_arguments(tool_definition):

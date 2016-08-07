@@ -8,9 +8,7 @@
 
 {% block head_style_inline %}
 {{ super() -}}
-#tool-form {margin-bottom: 1em}
 {% for data_type in data_types %}{% from data_type.template import head_style_inline %}{{ head_style_inline() }}{% endfor %}
-.error {background-color: yellow}
 {% endblock %}
 
 {% block head_script_inline %}
@@ -21,11 +19,9 @@ var CC = {};
 
 {% block body_content %}
 {% block body_title %}{% endblock %}
-<div class="row">
-<div class="col-xs-9"><h1>{% block body_subtitle %}{% endblock %}</h1></div>
-<div class="col-xs-3 text-right h1">{% block body_subtitle_toolbar %}{% endblock %}</div>
-</div>
-<form id="tool-form" action="{{ request.route_path('tool', id=tool_id) }}" method="post">
+<h1>{% block body_subtitle %}{% endblock %}</h1>
+
+<form id="tool-form" method="post">
 {% for x in tool_template_parts %}
 {%- if x is string -%}
 {{ x | markdown }}
@@ -54,5 +50,4 @@ var CC = {};
 {% block body_script_inline %}
 {{ super() -}}
 {% for data_type in data_types %}{% from data_type.template import body_script_inline %}{{ body_script_inline() }}{% endfor %}
-$('[data-toggle="popover"]').popover({'trigger': 'click hover focus'});
 {% endblock %}

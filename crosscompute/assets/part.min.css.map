@@ -1,0 +1,7 @@
+{
+"version": 3,
+"mappings": "AAAA,OAAQ;EACN,WAAW,EAAE,eAAe;EAC5B,UAAU,EAAE,cAAc;;AAE5B,MAAO;EACL,gBAAgB,EAAE,MAAM;;AAE1B,UAAW;EACT,aAAa,EAAE,eAAe;EAE9B,yEAAmB;IACjB,UAAU,EAAE,cAAc;IAC1B,aAAa,EAAE,cAAc;EAG/B,sBAAY;IACV,UAAU,EAAE,eAAe;IAC3B,aAAa,EAAE,eAAe;EAGhC,yBAAe;IACb,SAAS,EAAE,IAAI;IACf,WAAW,EAAE,MAAM",
+"sources": ["../../sass_modules/crosscompute.scss"],
+"names": [],
+"file": "part.min.css"
+}
