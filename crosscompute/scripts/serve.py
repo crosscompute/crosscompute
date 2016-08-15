@@ -107,9 +107,6 @@ def configure_jinja2_environment(config):
         'markdown': lambda x: Markup(markdown(x, escape=True, hard_wrap=True)),
     })
     jinja2_environment.globals.update({
-        'base_template': settings.get(
-            'posts.base_template',
-            'invisibleroads_posts:templates/base.jinja2'),
         'item_template': settings.get(
             'crosscompute.item_template',
             'crosscompute:templates/item.jinja2'),
