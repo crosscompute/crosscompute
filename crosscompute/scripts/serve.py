@@ -180,22 +180,22 @@ def add_routes(config):
         index,
         route_name='index')
     config.add_view(
-        show_tool, renderer='tool.jinja2', request_method='GET',
+        see_tool, renderer='tool.jinja2', request_method='GET',
         route_name='tool')
     config.add_view(
         run_tool, request_method='POST',
         route_name='tool')
     config.add_view(
-        show_result_json, renderer='json', request_method='GET',
+        see_result_json, renderer='json', request_method='GET',
         route_name='result.json')
     config.add_view(
-        show_result_zip, request_method='GET',
+        see_result_zip, request_method='GET',
         route_name='result.zip')
     config.add_view(
-        show_result_file, request_method='GET',
+        see_result_file, request_method='GET',
         route_name='result_file')
     config.add_view(
-        show_result, renderer='result.jinja2', request_method='GET',
+        see_result, renderer='result.jinja2', request_method='GET',
         route_name='result')
 
 
@@ -203,7 +203,7 @@ def index(request):
     return HTTPSeeOther(request.route_path('tool', id=1))
 
 
-def show_tool(request):
+def see_tool(request):
     settings = request.registry.settings
     tool_definition = settings['tool_definition']
     return get_tool_template_variables(tool_definition, tool_id=1)
@@ -227,7 +227,7 @@ def run_tool(request):
         'result', id=result_id, _anchor='properties'))
 
 
-def show_result(request):
+def see_result(request):
     settings = request.registry.settings
     data_folder = settings['data.folder']
     tool_definition = settings['tool_definition']
@@ -258,11 +258,11 @@ def show_result(request):
         })
 
 
-def show_result_json(request):
+def see_result_json(request):
     pass
 
 
-def show_result_zip(request):
+def see_result_zip(request):
     settings = request.registry.settings
     data_folder = settings['data.folder']
     result_id = request.matchdict['id']
@@ -271,7 +271,7 @@ def show_result_zip(request):
     return FileResponse(result_archive_path, request=request)
 
 
-def show_result_file(request):
+def see_result_file(request):
     settings = request.registry.settings
     data_folder = settings['data.folder']
     result_id = request.matchdict['id']
