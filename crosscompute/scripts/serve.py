@@ -170,6 +170,7 @@ def parse_template(template_text, data_items):
 
 
 def add_routes(config):
+    config.add_route('tool.json', '/t/{id}.json')
     config.add_route('tool', '/t/{id}')
     config.add_route('result.json', '/r/{id}.json')
     config.add_route('result.zip', '/r/{id}/{name}.zip')
@@ -183,8 +184,8 @@ def add_routes(config):
         see_tool, renderer='tool.jinja2', request_method='GET',
         route_name='tool')
     config.add_view(
-        run_tool, request_method='POST',
-        route_name='tool')
+        run_tool_json, renderer='json', request_method='POST',
+        route_name='tool.json')
     config.add_view(
         see_result_json, renderer='json', request_method='GET',
         route_name='result.json')
@@ -209,7 +210,7 @@ def see_tool(request):
     return get_tool_template_variables(tool_definition, tool_id=1)
 
 
-def run_tool(request):
+def run_tool_json(request):
     settings = request.registry.settings
     tool_definition = settings['tool_definition']
     data_folder = settings['data.folder']
@@ -223,8 +224,10 @@ def run_tool(request):
     run_script(
         target_folder, tool_definition, result_arguments)
     compress_zip(target_folder, excludes=EXCLUDED_FILE_NAMES)
-    return HTTPSeeOther(request.route_path(
-        'result', id=result_id, _anchor='properties'))
+    return {
+        'result_url': request.route_path(
+            'result', id=result_id, _anchor='properties'),
+    }
 
 
 def see_result(request):

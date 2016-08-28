@@ -14,6 +14,7 @@
 {% block head_script_inline %}
 {{ super() -}}
 var CC = {};
+CC.tool_json_url = "{{ request.route_path('tool.json', id=tool_id) }}";
 {% for data_type in data_types %}{% from data_type.template import head_script_inline %}{{ head_script_inline() }}{% endfor %}
 {% endblock %}
 
@@ -21,7 +22,7 @@ var CC = {};
 {% block body_title %}{% endblock %}
 <h1>{% block body_subtitle %}{% endblock %}</h1>
 
-<form id="tool-form" method="post">
+<form id="arguments" class="result">
 {% for x in tool_template_parts %}
 {%- if x is string -%}
 {{ x | markdown }}

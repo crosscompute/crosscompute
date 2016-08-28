@@ -1,8 +1,10 @@
 {% macro render_properties(data_items, stamp='') %}
 {%- for x in data_items %}
 {% from x.data_type.template import render_property %}
+<div class="form-group">
 {{- render_key(x, stamp=stamp) }}
 {{- render_property(x, stamp=stamp) }}
+</div>
 {%- endfor %}
 {% endmacro %}
 

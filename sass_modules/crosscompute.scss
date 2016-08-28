@@ -5,21 +5,22 @@ h1, .h1 {
 .error {
   background-color: yellow;
 }
-#tool-form {
-  margin-bottom: 30px !important;
-
+.result {
   h2, h3, h4, h5, h6 {
     margin-top: 1em !important;
     margin-bottom: 1em !important;
-  }
-
-  .form-group {
-    margin-top: 30px !important;
-    margin-bottom: 30px !important;
   }
 
   .control-label {
     font-size: 175%;
     font-weight: normal;
   }
+
+  .form-group {
+    margin-top: 30px !important;
+    margin-bottom: 30px !important;
+  }
+}
+#arguments {
+  margin-bottom: 30px !important;
 }

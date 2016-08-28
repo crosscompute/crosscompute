@@ -5,16 +5,17 @@ h1, .h1 {
 .error {
   background-color: yellow; }
 
-#tool-form {
+.result h2, .result h3, .result h4, .result h5, .result h6 {
+  margin-top: 1em !important;
+  margin-bottom: 1em !important; }
+.result .control-label {
+  font-size: 175%;
+  font-weight: normal; }
+.result .form-group {
+  margin-top: 30px !important;
   margin-bottom: 30px !important; }
-  #tool-form h2, #tool-form h3, #tool-form h4, #tool-form h5, #tool-form h6 {
-    margin-top: 1em !important;
-    margin-bottom: 1em !important; }
-  #tool-form .form-group {
-    margin-top: 30px !important;
-    margin-bottom: 30px !important; }
-  #tool-form .control-label {
-    font-size: 175%;
-    font-weight: normal; }
+
+#arguments {
+  margin-bottom: 30px !important; }
 
 /*# sourceMappingURL=part.min.css.map */

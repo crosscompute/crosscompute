@@ -13,8 +13,8 @@
 
 {% block body_content %}
 {{ super() -}}
-<a id="properties"></a>
 {% if result_properties -%}
+<div id="properties" class="result">
 
 {% if result_errors -%}
 <div class="error">
@@ -28,11 +28,13 @@
 {% set has_result_template = True %}
 
 {%- else -%}
+<div class="form-group">
 {% from x.data_type.template import render_property %}
 {% if not has_result_template %}
 {{- render_key(x, stamp='-result') }}
 {% endif %}
 {{- render_property(x, stamp='-result') -}}
+</div>
 
 {%- endif -%}
 {% endfor -%}
@@ -42,5 +44,6 @@
 </div>
 
 {{- render_properties(result_properties, stamp='-meta') -}}
+</div>
 {% endif %}
 {% endblock %}
