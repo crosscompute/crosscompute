@@ -170,12 +170,12 @@ def parse_template(template_text, data_items):
 
 
 def add_routes(config):
-    config.add_route('tool.json', '/t/{id}.json')
-    config.add_route('tool', '/t/{id}')
-    config.add_route('result.json', '/r/{id}.json')
-    config.add_route('result.zip', '/r/{id}/{name}.zip')
-    config.add_route('result_file', '/r/{id}/_/{path:.+}')
-    config.add_route('result', '/r/{id}')
+    config.add_route('tool.json', '/t/{tool_id}.json')
+    config.add_route('tool', '/t/{tool_id}')
+    config.add_route('result.json', '/r/{result_id}.json')
+    config.add_route('result.zip', '/r/{result_id}/{result_name}.zip')
+    config.add_route('result_file', '/r/{result_id}/_/{result_path:.+}')
+    config.add_route('result', '/r/{result_id}')
 
     config.add_view(
         index,
@@ -201,7 +201,7 @@ def add_routes(config):
 
 
 def index(request):
-    return HTTPSeeOther(request.route_path('tool', id=1))
+    return HTTPSeeOther(request.route_path('tool', tool_id=1))
 
 
 def see_tool(request):
@@ -226,7 +226,7 @@ def run_tool_json(request):
     compress_zip(target_folder, excludes=EXCLUDED_FILE_NAMES)
     return {
         'result_url': request.route_path(
-            'result', id=result_id, _anchor='properties'),
+            'result', result_id=result_id, _anchor='properties'),
     }
 
 
@@ -234,7 +234,7 @@ def see_result(request):
     settings = request.registry.settings
     data_folder = settings['data.folder']
     tool_definition = settings['tool_definition']
-    result_id = basename(request.matchdict['id'])
+    result_id = basename(request.matchdict['result_id'])
     result_response_folder = join(
         data_folder, 'results', result_id, 'response')
     if not exists(result_response_folder):
@@ -268,7 +268,7 @@ def see_result_json(request):
 def see_result_zip(request):
     settings = request.registry.settings
     data_folder = settings['data.folder']
-    result_id = request.matchdict['id']
+    result_id = request.matchdict['result_id']
     target_folder = join(data_folder, 'results', result_id, 'response')
     result_archive_path = target_folder + '.zip'
     return FileResponse(result_archive_path, request=request)
@@ -277,11 +277,11 @@ def see_result_zip(request):
 def see_result_file(request):
     settings = request.registry.settings
     data_folder = settings['data.folder']
-    result_id = request.matchdict['id']
+    result_id = request.matchdict['result_id']
     target_folder = join(data_folder, 'results', result_id, 'response')
     try:
         result_file_path = resolve_relative_path(
-            request.matchdict['path'], target_folder)
+            request.matchdict['result_path'], target_folder)
     except IOError:
         raise HTTPForbidden
     if basename(result_file_path) in EXCLUDED_FILE_NAMES:

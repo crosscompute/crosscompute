@@ -6,11 +6,6 @@
 {% block body_subtitle %}{{ result_name }}{% endblock %} &middot; Results &middot; {{ website_name -}}
 {% endblock %}
 
-{% block head_style_inline %}
-{{ super() -}}
-.download {margin-top: 2em}
-{% endblock %}
-
 {% block body_content %}
 {{ super() -}}
 {% if result_properties -%}
@@ -40,7 +35,7 @@
 {% endfor -%}
 
 <div>
-<a href="{{ request.route_path('result.zip', id=result_id, name=result_name) }}" class="btn btn-success btn-lg download" role="button" download>Download</a>
+<a href="{{ request.route_path('result.zip', result_id=result_id, result_name=result_name) }}" class="btn btn-success btn-lg download" role="button" download>Download</a>
 </div>
 
 {{- render_properties(result_properties, stamp='-meta') -}}
