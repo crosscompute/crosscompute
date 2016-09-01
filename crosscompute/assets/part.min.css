@@ -1,6 +1,5 @@
 h1, .h1 {
-  font-weight: bold !important;
-  margin-top: 0px !important; }
+  font-weight: bold !important; }
 
 .error {
   background-color: yellow; }
@@ -17,5 +16,3 @@ h1, .h1 {
 
 #arguments {
   margin-bottom: 30px !important; }
-
-/*# sourceMappingURL=part.min.css.map */
