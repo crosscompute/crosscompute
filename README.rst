@@ -23,6 +23,4 @@ Use
 
 Credits
 -------
-The concept for this application framework grew from specifications drafted in NSF SBIR Proposal #7589589, which was not funded, but we built it regardless because we believed in it.
-
-Thanks to our project manager `Jennifer Ruda <https://github.com/jenniferrrr>`_ for reviewing the initial specifications and supporting the overall development process. Thanks to `Salah Ahmed <https://github.com/salah93>`_ for testing our framework on Mac OS X and to `Aida Shoydokova <https://github.com/AShoydokova>`_ for testing our framework on Windows.
+Thanks to `Salah Ahmed <https://github.com/salah93>`_ for testing our framework on Mac OS X and to `Aida Shoydokova <https://github.com/AShoydokova>`_ for testing our framework on Windows.
