@@ -5,7 +5,7 @@ except ImportError:
 from invisibleroads.scripts import Script
 
 from . import prepare_tool_definition
-from ..exceptions import DependencyError
+from ..exceptions import ToolDependencyError
 
 
 class SetupScript(Script):
@@ -20,7 +20,7 @@ class SetupScript(Script):
         tool_definition = prepare_tool_definition(args.tool_name)
         try:
             install_dependencies(tool_definition, args.upgrade)
-        except DependencyError as e:
+        except ToolDependencyError as e:
             exit(e)
 
 
@@ -38,5 +38,6 @@ def install_python_dependencies(python_dependencies, upgrade=False):
     try:
         subprocess.check_call(command_terms + python_dependencies)
     except subprocess.CalledProcessError:
-        raise DependencyError('Dependencies not installed (%s).' % ', '.join(
-            python_dependencies))
+        raise ToolDependencyError(
+            'Could not install dependencies (%s)' % ', '.join(
+                python_dependencies))
