@@ -23,7 +23,8 @@ from os.path import abspath, basename, isabs, join, splitext
 from six import text_type
 from tempfile import gettempdir
 
-from ..configurations import get_tool_definition
+from ..configurations import (
+    get_tool_definition, get_tool_definition_from_result)
 from ..exceptions import CrossComputeError
 from ..fallbacks import (
     COMMAND_LINE_JOIN, SCRIPT_EXTENSION, SCRIPT_ENVIRONMENT,
@@ -58,8 +59,8 @@ class ToolScript(Script):
         tool_name = tool_definition['tool_name']
         data_folder = args.data_folder or join(
             gettempdir(), 'crosscompute', tool_name)
-        if args.verbose:
-            logging.basicConfig(level=logging.DEBUG)
+        logging.basicConfig(
+            level=logging.DEBUG if args.verbose else logging.WARNING)
         return tool_definition, data_folder
 
 
@@ -131,7 +132,9 @@ def launch(argv=sys.argv):
 
 
 def prepare_tool_definition(tool_name):
-    if tool_name.endswith('.ipynb'):
+    if tool_name.endswith('.cfg'):
+        return get_tool_definition_from_result(tool_name)
+    elif tool_name.endswith('.ipynb'):
         tool_name = prepare_tool_from_notebook(tool_name)
     if tool_name:
         tool_name = tool_name.rstrip(os.sep)  # Remove folder slash

@@ -6,11 +6,11 @@ class DataTypeError(CrossComputeError):
     pass
 
 
-class ConfigurationNotFound(CrossComputeError):
+class DependencyError(CrossComputeError):
     pass
 
 
-class DependencyError(CrossComputeError):
+class ToolConfigurationNotFound(CrossComputeError):
     pass
 
 

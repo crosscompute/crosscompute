@@ -1,5 +1,6 @@
 from argparse import ArgumentParser, SUPPRESS
 from invisibleroads_macros.configuration import unicode_safely
+from os.path import abspath
 from sys import argv
 
 from ..exceptions import DataTypeError
@@ -29,8 +30,8 @@ class RunScript(ToolScript):
                 tool_definition, raw_arguments, data_folder)
         except DataTypeError as e:
             return [(k + '.error', v) for k, v in e.args]
-        target_folder = result_arguments.get(
-            'target_folder') or prepare_result_response_folder(data_folder)[1]
+        target_folder = abspath(result_arguments.get(
+            'target_folder') or prepare_result_response_folder(data_folder)[1])
         run_script(target_folder, tool_definition, result_arguments)
 
 

@@ -16,6 +16,7 @@ DATA_TYPE_BY_NAME = {}
 DATA_TYPE_BY_SUFFIX = {}
 RESERVED_ARGUMENT_NAMES = ['target_folder']
 LOG = logging.getLogger(__name__)
+LOG.addHandler(logging.NullHandler())
 
 
 class DataItem(object):
@@ -192,7 +193,7 @@ def parse_data_dictionary_from(raw_dictionary, root_folder):
         except DataTypeError as e:
             errors.append((key, text_type(e)))
         except Exception as e:
-            LOG.debug(e)
+            LOG.error(e)
             errors.append((key, 'could_not_parse'))
         d[key] = value
         if not key.endswith('_path'):
@@ -204,10 +205,10 @@ def parse_data_dictionary_from(raw_dictionary, root_folder):
         except DataTypeError as e:
             errors.append((noun, text_type(e)))
         except IOError as e:
-            LOG.debug(e)
+            LOG.error(e)
             errors.append((noun, 'not_found'))
         except Exception as e:
-            LOG.debug(e)
+            LOG.error(e)
             errors.append((noun, 'could_not_load'))
     return d, errors
 
