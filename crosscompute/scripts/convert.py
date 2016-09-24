@@ -4,6 +4,7 @@ import nbformat
 import shutil
 import tempfile
 from collections import OrderedDict
+from invisibleroads_macros.disk import get_file_extension, make_unique_path
 from os import chdir
 from os.path import basename, join, splitext
 
@@ -35,8 +36,11 @@ def prepare_script_folder(target_folder, notebook, notebook_name):
     tool_arguments = load_tool_arguments(notebook)
     # Prepare paths
     for k, v in tool_arguments.items():
-        if k.endswith('_path'):
-            shutil.copy(v, target_folder)
+        if not k.endswith('_path'):
+            continue
+        with make_unique_path(target_folder, get_file_extension(v)) as path:
+            shutil.copy(v, path)
+            tool_arguments[k] = basename(path)
     # Prepare command-line script
     script_lines = []
     script_lines.append('from sys import argv')
