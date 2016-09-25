@@ -22,6 +22,8 @@ class RunScript(ToolScript):
         argument_parser = ArgumentParser(tool_name)
         argument_parser.add_argument(
             'tool_name', nargs='?', help=SUPPRESS, type=unicode_safely)
+        argument_parser.add_argument(
+            '--target_folder', type=unicode_safely, metavar='FOLDER')
         argument_parser = configure_argument_parser(
             argument_parser, tool_definition)
         raw_arguments = argument_parser.parse_known_args(argv[2:])[0].__dict__
@@ -30,17 +32,20 @@ class RunScript(ToolScript):
                 tool_definition, raw_arguments, data_folder)
         except DataTypeError as e:
             return [(k + '.error', v) for k, v in e.args]
-        target_folder = abspath(result_arguments.get(
+        # Prepare target_folder only if there are no errors
+        target_folder = abspath(raw_arguments.get(
             'target_folder') or prepare_result_response_folder(data_folder)[1])
         run_script(target_folder, tool_definition, result_arguments)
 
 
 def configure_argument_parser(argument_parser, tool_definition):
     for x in tool_definition['argument_names']:
+        if x in RESERVED_ARGUMENT_NAMES:
+            continue
         d = {}
         if x in tool_definition:
             d['default'] = tool_definition[x]
-        elif x not in RESERVED_ARGUMENT_NAMES:
+        else:
             d['required'] = True
         for suffix in DATA_TYPE_BY_SUFFIX:
             if x.endswith('_' + suffix):

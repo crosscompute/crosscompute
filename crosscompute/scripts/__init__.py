@@ -25,8 +25,7 @@ from six import text_type
 from tempfile import gettempdir
 
 from ..configurations import (
-    get_result_arguments_from_result, get_tool_definition,
-    get_tool_definition_from_result)
+    find_tool_definition, load_result_arguments, load_tool_definition)
 from ..exceptions import CrossComputeError
 from ..fallbacks import (
     COMMAND_LINE_JOIN, SCRIPT_EXTENSION, SCRIPT_ENVIRONMENT,
@@ -69,7 +68,7 @@ class ToolScript(Script):
 class _ResultConfiguration(object):
 
     def __init__(self, target_folder):
-        self.target_folder = target_folder
+        self.target_folder = make_folder(target_folder)
         self.target_file = codecs.open(
             join(target_folder, 'result.cfg'), 'w', encoding='utf-8')
 
@@ -135,8 +134,8 @@ def launch(argv=sys.argv):
 
 def prepare_tool_definition(tool_name):
     if tool_name.endswith('.cfg'):
-        tool_definition = get_tool_definition_from_result(tool_name)
-        result_arguments = get_result_arguments_from_result(tool_name)
+        tool_definition = load_tool_definition(tool_name)
+        result_arguments = load_result_arguments(tool_name)
         return merge_dictionaries(tool_definition, result_arguments)
     elif tool_name.endswith('.ipynb'):
         tool_name = prepare_tool_from_notebook(tool_name)
@@ -145,7 +144,7 @@ def prepare_tool_definition(tool_name):
         tool_name = tool_name.replace('_', '-')
         tool_name = splitext(tool_name)[0]
     try:
-        tool_definition = get_tool_definition(tool_name=tool_name)
+        tool_definition = find_tool_definition(tool_name=tool_name)
     except CrossComputeError as e:
         sys.exit(e)
     return tool_definition
