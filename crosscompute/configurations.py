@@ -16,7 +16,6 @@ ARGUMENT_NAME_PATTERN = re.compile(r'\{(.+?)\}')
 
 
 def get_tool_definition_from_result(result_configuration_path):
-    result_configuration_folder = dirname(abspath(result_configuration_path))
     result_configuration = RawCaseSensitiveConfigParser()
     result_configuration.read(result_configuration_path)
     tool_definition_configuration = dict(result_configuration.items(
@@ -24,15 +23,22 @@ def get_tool_definition_from_result(result_configuration_path):
     tool_configuration_path = tool_definition_configuration[
         'configuration_path']
     tool_name = tool_definition_configuration['tool_name']
-    tool_definition = get_tool_definition_by_name_from_path(
+    return get_tool_definition_by_name_from_path(
         tool_configuration_path, tool_name)[tool_name]
+
+
+def get_result_arguments_from_result(result_configuration_path):
+    result_configuration = RawCaseSensitiveConfigParser()
+    result_configuration.read(result_configuration_path)
+    result_configuration_folder = dirname(abspath(result_configuration_path))
+    result_arguments = {}
     for k, v in result_configuration.items('result_arguments'):
         if k == 'target_folder':
             continue
         if (k.endswith('_path') or k.endswith('_folder')) and not isabs(v):
             v = join(result_configuration_folder, v)
-        tool_definition[k] = v
-    return tool_definition
+        result_arguments[k] = v
+    return result_arguments
 
 
 def get_tool_definition(tool_folder=None, tool_name='', default_tool_name=''):

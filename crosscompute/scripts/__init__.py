@@ -16,6 +16,7 @@ from invisibleroads.scripts import (
 from invisibleroads_macros.configuration import (
     RawCaseSensitiveConfigParser, split_arguments, unicode_safely)
 from invisibleroads_macros.disk import cd, make_enumerated_folder, make_folder
+from invisibleroads_macros.iterable import merge_dictionaries
 from invisibleroads_macros.log import (
     format_hanging_indent, format_summary, parse_nested_dictionary_from,
     sort_dictionary)
@@ -24,7 +25,8 @@ from six import text_type
 from tempfile import gettempdir
 
 from ..configurations import (
-    get_tool_definition, get_tool_definition_from_result)
+    get_result_arguments_from_result, get_tool_definition,
+    get_tool_definition_from_result)
 from ..exceptions import CrossComputeError
 from ..fallbacks import (
     COMMAND_LINE_JOIN, SCRIPT_EXTENSION, SCRIPT_ENVIRONMENT,
@@ -133,7 +135,9 @@ def launch(argv=sys.argv):
 
 def prepare_tool_definition(tool_name):
     if tool_name.endswith('.cfg'):
-        return get_tool_definition_from_result(tool_name)
+        tool_definition = get_tool_definition_from_result(tool_name)
+        result_arguments = get_result_arguments_from_result(tool_name)
+        return merge_dictionaries(tool_definition, result_arguments)
     elif tool_name.endswith('.ipynb'):
         tool_name = prepare_tool_from_notebook(tool_name)
     if tool_name:
