@@ -1,4 +1,5 @@
 import codecs
+import logging
 import re
 import webbrowser
 from collections import OrderedDict
@@ -35,6 +36,8 @@ HELP = {
     'standard_error': 'The script wrote to the standard error stream.',
     'standard_output': 'The script wrote to the standard output stream.',
 }
+LOG = logging.getLogger(__name__)
+LOG.addHandler(logging.NullHandler())
 MARKDOWN_TITLE_PATTERN = re.compile(r'^#[^#]\s*(.+)')
 
 
@@ -305,6 +308,7 @@ def import_upload(request, DataType, render_property_kw):
         if isinstance(e, DataTypeError):
             message = text_type(e)
         else:
+            LOG.error(e)
             message = 'Import failed'
         raise HTTPBadRequest({name: message})
     DataType.save(join(upload.folder, '%s.%s' % (
