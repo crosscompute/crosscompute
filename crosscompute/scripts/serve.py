@@ -302,13 +302,14 @@ def import_upload(request, DataType, render_property_kw):
     try:
         value = DataType.load(upload.path)
     except Exception as e:
+        traceback_text = format_exc()
         codecs.open(join(
             upload.folder, 'error.log'), 'w', encoding='utf-8',
-        ).write(format_exc())
+        ).write(traceback_text)
         if isinstance(e, DataTypeError):
             message = text_type(e)
         else:
-            LOG.error(e)
+            LOG.error(traceback_text)
             message = 'Import failed'
         raise HTTPBadRequest({name: message})
     DataType.save(join(upload.folder, '%s.%s' % (
