@@ -53,12 +53,14 @@ class ServeScript(ToolScript):
             '--website_name', default='CrossCompute')
         argument_subparser.add_argument(
             '--website_owner', default='CrossCompute')
+        argument_subparser.add_argument(
+            '--website_url', default='https://crosscompute.com')
 
     def run(self, args):
         tool_definition, data_folder = super(ServeScript, self).run(args)
         app = get_app(
             tool_definition, data_folder, args.website_name,
-            args.website_owner)
+            args.website_owner, args.website_url)
         app_url = 'http://%s:%s/t/1' % (args.host, args.port)
         webbrowser.open_new_tab(app_url)
         server = make_server(args.host, args.port, app)
@@ -69,11 +71,14 @@ class ServeScript(ToolScript):
             pass
 
 
-def get_app(tool_definition, data_folder, website_name, website_owner):
+def get_app(
+        tool_definition, data_folder, website_name, website_owner,
+        website_url):
     settings = {
         'data.folder': data_folder,
         'website.name': website_name,
         'website.owner': website_owner,
+        'website.url': website_url,
         'website.root_assets': [
             'invisibleroads_posts:assets/favicon.ico',
             'invisibleroads_posts:assets/robots.txt',
@@ -189,9 +194,11 @@ def add_routes(config):
     config.add_view(
         run_tool_json, renderer='json', request_method='POST',
         route_name='tool.json')
+    """
     config.add_view(
         see_result_json, renderer='json', request_method='GET',
         route_name='result.json')
+    """
     config.add_view(
         see_result_zip, request_method='GET',
         route_name='result.zip')
@@ -264,8 +271,10 @@ def see_result(request):
         })
 
 
+"""
 def see_result_json(request):
     pass
+"""
 
 
 def see_result_zip(request):
@@ -297,7 +306,7 @@ def see_result_file(request):
 def import_upload(request, DataType, render_property_kw):
     params = request.params
     upload = get_upload_from(request)
-    name = expect_param('name', params)
+    name = expect_param('argument_name', params)
     help_text = params.get('help', '')
     try:
         value = DataType.load(upload.path)
