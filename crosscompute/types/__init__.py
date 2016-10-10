@@ -140,37 +140,44 @@ def get_result_arguments(
 def prepare_file_path(
         data_folder, data_type, raw_arguments, tool_argument_noun, user_id,
         default_path):
+    # If the client sent the content directly, save the content as a file
     for file_format in data_type.formats:
         raw_argument_name = '%s-%s' % (tool_argument_noun, file_format)
         if raw_argument_name in raw_arguments:
             file_name = '%s.%s' % (tool_argument_noun, file_format)
             file_content = raw_arguments[raw_argument_name]
             return save_upload(data_folder, user_id, file_name, file_content)
+
+    # If the client sent the content via the user interface,
     raw_argument_name = '%s-upload' % tool_argument_noun
     if raw_argument_name in raw_arguments:
-        upload_id = raw_arguments[raw_argument_name]
-        if upload_id:
+        # If the client uploaded a file, resolve the file_id
+        file_id = raw_arguments[raw_argument_name]
+        if file_id:
             try:
-                upload = get_upload(data_folder, user_id, upload_id)
+                upload = get_upload(data_folder, user_id, file_id)
             except IOError:
                 raise
             else:
                 return join(upload.folder, '%s.%s' % (
                     data_type.suffixes[0], data_type.formats[0]))
+        # Otherwise, use the default_path for this argument
         if default_path:
             # TODO: Think of a better way to do this
             file_name = tool_argument_noun + splitext(default_path)[1]
             file_content = codecs.open(default_path, encoding='utf-8').read()
             return save_upload(data_folder, user_id, file_name, file_content)
+    """
     if tool_argument_noun in raw_arguments:
         file_name = tool_argument_noun
         file_content = raw_arguments[tool_argument_noun]
         return save_upload(data_folder, user_id, file_name, file_content)
+    """
     raise KeyError
 
 
-def save_upload(data_folder, user_id, file_name, file_content):
-    source_folder = make_upload_folder(data_folder, user_id)
+def save_upload(data_folder, user_id, file_name, file_content, token_length):
+    source_folder = make_upload_folder(data_folder, user_id, token_length)
     file_path = join(source_folder, file_name)
     with codecs.open(file_path, 'w', encoding='utf-8') as f:
         f.write(file_content)
