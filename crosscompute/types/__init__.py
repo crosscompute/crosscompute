@@ -1,11 +1,13 @@
 import codecs
 import logging
+import shutil
 from abc import ABCMeta
 from collections import OrderedDict
+from invisibleroads_macros.disk import get_file_extension
 from invisibleroads_macros.log import log_traceback, parse_nested_dictionary
 from invisibleroads_macros.configuration import resolve_attribute
 from invisibleroads_uploads.views import get_upload, make_upload_folder
-from os.path import expanduser, isabs, join, splitext
+from os.path import basename, expanduser, isabs, join
 from six import add_metaclass, text_type
 from stevedore.extension import ExtensionManager
 
@@ -102,74 +104,99 @@ def get_data_type(key):
     return StringType
 
 
-def get_result_arguments(
-        tool_definition, raw_arguments, data_folder, user_id=0):
-    d, errors = OrderedDict(), OrderedDict()
+class ResultRequest(object):
+
+    def __init__(self):
+        pass
+
+    def get_arguments(self):
+    def parse_arguments(self):
+    def prepare_arguments(self):
+        pass
+
+
+def get_result_arguments(request, tool_definition, get_result_file_path):
+    result_arguments, errors = OrderedDict(), OrderedDict()
+    params, settings = request.params, request.registry.settings
+    data_folder = settings['data_folder']
+
+    file_folder = 
+
     configuration_folder = tool_definition['configuration_folder']
-    for tool_argument_name in tool_definition['argument_names']:
-        if tool_argument_name in raw_arguments:
-            value = raw_arguments[tool_argument_name]
-        elif tool_argument_name.endswith('_path'):
-            tool_argument_noun = tool_argument_name[:-5]
-            data_type = get_data_type(tool_argument_noun)
-            default_path = join(
-                configuration_folder, tool_definition[tool_argument_name],
-            ) if tool_argument_name in tool_definition else None
+    for argument_name in tool_definition['argument_names']:
+        if argument_name.endswith('_path'):
+            argument_noun = argument_name[:-5]
+
+            default_path
+
             try:
-                value = prepare_file_path(
-                    data_folder, data_type, raw_arguments, tool_argument_noun,
-                    user_id, default_path)
+                value = prepare_file_path(request, argument_noun, 
+                    default_path, file_folder, get_result_file_path)
             except IOError:
-                errors[tool_argument_name] = 'invalid'
+                errors[argument_name] = 'invalid'
                 continue
             except KeyError:
-                errors[tool_argument_name] = 'required'
+                errors[argument_name] = 'required'
                 continue
+        elif argument_name in params:
+            value = params[argument_name]
         else:
-            if tool_argument_name not in RESERVED_ARGUMENT_NAMES:
-                errors[tool_argument_name] = 'required'
+            if argument_name not in RESERVED_ARGUMENT_NAMES:
+                errors[argument_name] = 'required'
             continue
-        d[tool_argument_name] = value
-    return parse_data_dictionary_from(d, configuration_folder)
+        result_arguments[argument_name] = value
+    if errors:
+        raise DataParseError(errors, result_arguments)
+    # Parse strings and validate data types
+    return parse_data_dictionary_from(result_arguments, configuration_folder)
 
 
 def prepare_file_path(
-        data_folder, data_type, raw_arguments, tool_argument_noun, user_id,
-        default_path):
-    # If the client sent the content directly, save the content as a file
+        argument_noun, raw_arguments, default_path, file_folder, data_folder,
+        user_id, get_result_file_path):
+    data_type = get_data_type(argument_noun)
+    # If the client sent direct content (x_table_csv), save it
     for file_format in data_type.formats:
-        raw_argument_name = '%s-%s' % (tool_argument_noun, file_format)
+        raw_argument_name = '%s_%s' % (argument_noun, file_format)
         if raw_argument_name in raw_arguments:
-            file_name = '%s.%s' % (tool_argument_noun, file_format)
-            file_content = raw_arguments[raw_argument_name]
-            return save_upload(data_folder, user_id, file_name, file_content)
+            continue
+        file_path = join(file_folder, '%s.%s' % (argument_noun, file_format))
+        open(file_path, 'wb').write(raw_arguments[raw_argument_name])
+        return file_path
+    # Raise KeyError if client did not specify noun (x_table)
+    value = raw_arguments[argument_noun].strip()
+    # If the client sent empty content (x_table=''), use default
+    if not value:
+        if not default_path:
+            raise KeyError
+        file_path = join(file_folder, argument_noun + get_file_extension(
+            default_path))
+        shutil.copy(default_path, file_path)
+        return file_path
+    # If the client sent multipart content, save it
+    if hasattr(value, 'file'):
+        file_path = join(file_folder, argument_noun + get_file_extension(
+            value.filename))
+        shutil.copyfileobj(value.file, file_path)
+        return file_path
+    # If the client sent indirect content, find it
+    if '/' in value:
+        result_id, relative_path = value.split('/')
+        result_file_path = get_result_file_path(
+            data_folder, result_id, relative_path)
+        shutil.copy(result_file_path, file_folder)
+        return join(file_folder, basename(result_file_path))
+    try:
+        upload = get_upload(data_folder, user_id, file_id=value)
+    except IOError:
+        raise
+    file_name = '%s.%s' % (data_type.suffixes[0], data_type.formats[0])
+    shutil.move(join(upload.folder, file_name), file_folder)
+    return join(file_folder, file_name)
 
-    # If the client sent the content via the user interface,
-    raw_argument_name = '%s-upload' % tool_argument_noun
-    if raw_argument_name in raw_arguments:
-        # If the client uploaded a file, resolve the file_id
-        file_id = raw_arguments[raw_argument_name]
-        if file_id:
-            try:
-                upload = get_upload(data_folder, user_id, file_id)
-            except IOError:
-                raise
-            else:
-                return join(upload.folder, '%s.%s' % (
-                    data_type.suffixes[0], data_type.formats[0]))
-        # Otherwise, use the default_path for this argument
-        if default_path:
-            # TODO: Think of a better way to do this
-            file_name = tool_argument_noun + splitext(default_path)[1]
-            file_content = codecs.open(default_path, encoding='utf-8').read()
-            return save_upload(data_folder, user_id, file_name, file_content)
-    """
-    if tool_argument_noun in raw_arguments:
-        file_name = tool_argument_noun
-        file_content = raw_arguments[tool_argument_noun]
-        return save_upload(data_folder, user_id, file_name, file_content)
-    """
-    raise KeyError
+
+def save_file():
+    pass
 
 
 def save_upload(data_folder, user_id, file_name, file_content, token_length):

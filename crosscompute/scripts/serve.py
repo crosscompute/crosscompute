@@ -225,14 +225,11 @@ def run_tool_json(request):
     tool_definition = settings['tool_definition']
     data_folder = settings['data.folder']
     try:
-        result_arguments = get_result_arguments(
-            tool_definition, request.params, data_folder,
-            request.authenticated_userid)
+        result_arguments = get_result_arguments(request, tool_definition)
     except DataParseError as e:
         raise HTTPBadRequest(e.message_by_name)
     result_id, target_folder = prepare_result_response_folder(data_folder)
-    run_script(
-        target_folder, tool_definition, result_arguments)
+    run_script(target_folder, tool_definition, result_arguments)
     compress_zip(target_folder, excludes=EXCLUDED_FILE_NAMES)
     return {
         'result_url': request.route_path(
