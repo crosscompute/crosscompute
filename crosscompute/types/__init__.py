@@ -110,7 +110,6 @@ class ResultRequest(object):
         pass
 
     def get_arguments(self):
-    def parse_arguments(self):
     def prepare_arguments(self):
         pass
 

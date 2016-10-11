@@ -224,14 +224,31 @@ def run_tool_json(request):
     settings = request.registry.settings
     tool_definition = settings['tool_definition']
     data_folder = settings['data.folder']
+
+    result_request = ResultRequest(request)
+    try:
+        result_arguments = result_request.get_arguments(tool_definition)
+    except DataParseError as e:
+        raise HTTPBadRequest(e.message_by_name)
+
+    result_id = result_request.reserve_folder
+    result_id = result_request.reserve_id
+    result_id = result_request.get_id
+
+    result_id, result_folder = prepare_result_folder
+    result_request.set_source_folder(join(result_folder, 'x'))
+
     try:
         result_arguments = get_result_arguments(request, tool_definition)
     except DataParseError as e:
         raise HTTPBadRequest(e.message_by_name)
     result_id, target_folder = prepare_result_response_folder(data_folder)
+
     run_script(target_folder, tool_definition, result_arguments)
     compress_zip(target_folder, excludes=EXCLUDED_FILE_NAMES)
+
     return {
+        'result_id': result_id,
         'result_url': request.route_path(
             'result', result_id=result_id, _anchor='properties'),
     }
