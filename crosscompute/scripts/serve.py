@@ -245,6 +245,16 @@ def run_tool_json(request):
         raise HTTPBadRequest(e.message_by_name)
     result_id, target_folder = prepare_result_response_folder(data_folder)
 
+    result_request.commit()
+    result_request.save()
+
+    result_request.target_folder
+    result_request.x_folder
+    result_request.y_folder
+
+    result_id = request_request.result_id
+    target_folder = result_request.target_folder
+
     run_script(target_folder, tool_definition, result_arguments)
     compress_zip(target_folder, excludes=EXCLUDED_FILE_NAMES)
     return {
