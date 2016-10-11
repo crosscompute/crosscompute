@@ -237,6 +237,7 @@ def run_tool_json(request):
 
     result_id, result_folder = prepare_result_folder
     result_request.set_source_folder(join(result_folder, 'x'))
+    result_request.move_source_folder(join(result_folder, 'x'))
 
     try:
         result_arguments = get_result_arguments(request, tool_definition)
@@ -246,7 +247,6 @@ def run_tool_json(request):
 
     run_script(target_folder, tool_definition, result_arguments)
     compress_zip(target_folder, excludes=EXCLUDED_FILE_NAMES)
-
     return {
         'result_id': result_id,
         'result_url': request.route_path(
