@@ -22,7 +22,7 @@ from traceback import format_exc
 from wsgiref.simple_server import make_server
 
 from ..configurations import ARGUMENT_NAME_PATTERN
-from ..exceptions import DataTypeError
+from ..exceptions import DataParseError, DataTypeError
 from ..types import (
     DataItem, get_data_type, get_result_arguments, DATA_TYPE_BY_NAME,
     RESERVED_ARGUMENT_NAMES)
@@ -228,8 +228,8 @@ def run_tool_json(request):
         result_arguments = get_result_arguments(
             tool_definition, request.params, data_folder,
             request.authenticated_userid)
-    except DataTypeError as e:
-        raise HTTPBadRequest(dict(e.args))
+    except DataParseError as e:
+        raise HTTPBadRequest(e.message_by_name)
     result_id, target_folder = prepare_result_response_folder(data_folder)
     run_script(
         target_folder, tool_definition, result_arguments)

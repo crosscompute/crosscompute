@@ -3,9 +3,9 @@ from invisibleroads_macros.configuration import unicode_safely
 from os.path import abspath
 from sys import argv
 
-from ..exceptions import DataTypeError
+from ..exceptions import DataParseError
 from ..types import (
-    get_result_arguments, DATA_TYPE_BY_SUFFIX, RESERVED_ARGUMENT_NAMES)
+    parse_data_dictionary_from, DATA_TYPE_BY_SUFFIX, RESERVED_ARGUMENT_NAMES)
 from . import ToolScript, prepare_result_response_folder, run_script
 
 
@@ -28,11 +28,11 @@ class RunScript(ToolScript):
             argument_parser, tool_definition)
         raw_arguments = argument_parser.parse_known_args(argv[2:])[0].__dict__
         try:
-            result_arguments = get_result_arguments(
-                tool_definition, raw_arguments, data_folder)
-        except DataTypeError as e:
-            return [(k + '.error', v) for k, v in e.args]
-        # Prepare target_folder only if there are no errors
+            result_arguments = parse_data_dictionary_from({
+                k: raw_arguments[k] for k in tool_definition['argument_names']
+            }, tool_definition['configuration_folder'])
+        except DataParseError as e:
+            return [(k + '.error', v) for k, v in e.message_by_name.items()]
         target_folder = abspath(raw_arguments.get(
             'target_folder') or prepare_result_response_folder(data_folder)[1])
         run_script(target_folder, tool_definition, result_arguments)

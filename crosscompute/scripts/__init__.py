@@ -26,7 +26,7 @@ from tempfile import gettempdir
 
 from ..configurations import (
     find_tool_definition, load_result_arguments, load_tool_definition)
-from ..exceptions import CrossComputeError
+from ..exceptions import CrossComputeError, DataParseError
 from ..fallbacks import (
     COMMAND_LINE_JOIN, SCRIPT_EXTENSION, SCRIPT_ENVIRONMENT,
     prepare_path_argument)
@@ -211,9 +211,8 @@ def _process_streams(
         standard_output, standard_error, target_folder, tool_definition):
     d, type_errors = OrderedDict(), OrderedDict()
     for stream_name, stream_content in [
-        ('standard_output', standard_output),
-        ('standard_error', standard_error),
-    ]:
+            ('standard_output', standard_output),
+            ('standard_error', standard_error)]:
         if not stream_content:
             continue
         _write(
@@ -221,10 +220,12 @@ def _process_streams(
                 target_folder, '%s.log' % stream_name), 'w', encoding='utf-8'),
             screen_text='[%s]\n%s\n' % (stream_name, stream_content),
             file_text=stream_content)
-        value_by_key, errors = parse_data_dictionary(
-            stream_content, target_folder)
-        for k, v in errors:
-            type_errors['%s.error' % k] = v
+        try:
+            value_by_key = parse_data_dictionary(stream_content, target_folder)
+        except DataParseError as e:
+            for k, v in e.message_by_name.items():
+                type_errors['%s.error' % k] = v
+            value_by_key = e.value_by_key
         if tool_definition.get('show_' + stream_name):
             d[stream_name] = stream_content
         if value_by_key:
