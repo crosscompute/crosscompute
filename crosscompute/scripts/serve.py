@@ -3,11 +3,13 @@ import logging
 import re
 import webbrowser
 from collections import OrderedDict
-from invisibleroads_macros.disk import compress_zip, resolve_relative_path
+from invisibleroads_macros.disk import (
+    compress_zip, copy_content, copy_file, copy_path, get_file_extension,
+    make_folder, make_unique_folder, move_path, resolve_relative_path)
 from invisibleroads_macros.iterable import merge_dictionaries
 from invisibleroads_posts import add_routes_for_fused_assets
 from invisibleroads_posts.views import expect_param
-from invisibleroads_uploads.views import get_upload_from
+from invisibleroads_uploads.views import get_upload, get_upload_from
 from markupsafe import Markup
 from mistune import markdown
 from os import environ
@@ -22,13 +24,13 @@ from traceback import format_exc
 from wsgiref.simple_server import make_server
 
 from ..configurations import ARGUMENT_NAME_PATTERN
-from ..exceptions import DataParseError, DataTypeError
+from ..exceptions import DataTypeError
 from ..types import (
-    DataItem, get_data_type, get_result_arguments, DATA_TYPE_BY_NAME,
+    DataItem, parse_data_dictionary_from, get_data_type, DATA_TYPE_BY_NAME,
     RESERVED_ARGUMENT_NAMES)
 from . import (
-    ToolScript, load_result_configuration, prepare_result_response_folder,
-    run_script, EXCLUDED_FILE_NAMES)
+    ToolScript, load_result_configuration, prepare_result_folder, run_script,
+    EXCLUDED_FILE_NAMES)
 
 
 HELP = {
@@ -39,6 +41,7 @@ HELP = {
 LOG = logging.getLogger(__name__)
 LOG.addHandler(logging.NullHandler())
 MARKDOWN_TITLE_PATTERN = re.compile(r'^#[^#]\s*(.+)')
+RESULT_PATH_PATTERN = re.compile(r'results/(\w+)/y/(.+)')
 
 
 class ServeScript(ToolScript):
@@ -69,6 +72,112 @@ class ServeScript(ToolScript):
             server.serve_forever()
         except KeyboardInterrupt:
             pass
+
+
+class ResultRequest(object):
+
+    reserved_argument_names = RESERVED_ARGUMENT_NAMES
+
+    def __init__(self, request, tool_definition):
+        self.request = request
+        self.tool_definition = tool_definition
+
+        settings = request.registry.settings
+        self.data_folder = settings['data.folder']
+
+        result_arguments = self.prepare_arguments(request.params)
+        self.result_id, result_folder = self.prepare_result()
+        self.result_arguments = self.migrate_arguments(
+            result_arguments, join(result_folder, 'x'))
+        self.target_folder = join(result_folder, 'y')
+
+    def prepare_arguments(self, raw_arguments):
+        result_arguments, errors = OrderedDict(), OrderedDict()
+        configuration_folder = self.tool_definition['configuration_folder']
+        file_folder = make_unique_folder(join(self.data_folder, 'drafts'))
+        for argument_name in self.tool_definition['argument_names']:
+            if argument_name.endswith('_path'):
+                default_path = join(
+                    configuration_folder, self.tool_definition[argument_name],
+                ) if argument_name in self.tool_definition else None
+                try:
+                    v = self.prepare_argument_path(
+                        argument_name, raw_arguments, file_folder,
+                        default_path)
+                except IOError:
+                    errors[argument_name] = 'invalid'
+                    continue
+                except KeyError:
+                    errors[argument_name] = 'required'
+                    continue
+            elif argument_name in raw_arguments:
+                v = raw_arguments[argument_name].strip()
+            else:
+                if argument_name not in self.reserved_argument_names:
+                    errors[argument_name] = 'required'
+                # Ignore irrelevant arguments
+                continue
+            result_arguments[argument_name] = v
+        if errors:
+            raise HTTPBadRequest(errors)
+        # Parse strings and validate data types
+        return parse_data_dictionary_from(
+            result_arguments, configuration_folder)
+
+    def prepare_result(self):
+        return prepare_result_folder(self.data_folder)
+
+    def migrate_arguments(self, result_arguments, file_folder):
+        d = {}
+        make_folder(file_folder)
+        for k, v in result_arguments.items():
+            if k.endswith('_path'):
+                v = move_path(file_folder, basename(v), v)
+            d[k] = v
+        return d
+
+    def prepare_argument_path(
+            self, argument_name, raw_arguments, file_folder, default_path):
+        argument_noun = argument_name[:-5]
+        data_type = get_data_type(argument_noun)
+        # If the client sent direct content (x_table_csv), save it
+        for file_format in data_type.formats:
+            raw_argument_name = '%s_%s' % (argument_noun, file_format)
+            if raw_argument_name not in raw_arguments:
+                continue
+            return copy_content(file_folder, '%s.%s' % (
+                argument_noun, file_format), raw_arguments[raw_argument_name])
+        # Raise KeyError if client did not specify noun (x_table)
+        v = raw_arguments[argument_noun].strip()
+        # If the client sent empty content, use default
+        if not v:
+            if not default_path:
+                raise KeyError
+            return copy_path(file_folder, argument_noun + get_file_extension(
+                default_path), default_path)
+        # If the client sent multipart content, save it
+        if hasattr(v, 'file'):
+            return copy_file(file_folder, argument_noun + get_file_extension(
+                v.filename), v.file)
+        # If the client sent a result identifier (x_table=11/x.csv), find it
+        if '/' in v:
+            source_path = self.get_result_path(*v.split('/'))
+            return copy_path(file_folder, argument_noun + get_file_extension(
+                source_path), source_path)
+        # If the client sent a file identifier (x_table=x), find it
+        try:
+            upload = get_upload(self.request, upload_id=v)
+        except IOError:
+            raise
+        source_path = join(upload.folder, data_type.default_name)
+        file_path = move_path(file_folder, argument_noun + get_file_extension(
+            source_path), source_path)
+        del upload
+        return file_path
+
+    def get_result_path(self, result_id, relative_path):
+        target_folder = join(self.data_folder, 'results', result_id, 'y')
+        return resolve_relative_path(relative_path, target_folder)
 
 
 def get_app(
@@ -223,44 +332,13 @@ def see_tool(request):
 def run_tool_json(request):
     settings = request.registry.settings
     tool_definition = settings['tool_definition']
-    data_folder = settings['data.folder']
-
-    result_request = ResultRequest(request)
-    try:
-        result_arguments = result_request.get_arguments(tool_definition)
-    except DataParseError as e:
-        raise HTTPBadRequest(e.message_by_name)
-
-    result_id = result_request.reserve_folder
-    result_id = result_request.reserve_id
-    result_id = result_request.get_id
-
-    result_id, result_folder = prepare_result_folder
-    result_request.set_source_folder(join(result_folder, 'x'))
-    result_request.move_source_folder(join(result_folder, 'x'))
-
-    try:
-        result_arguments = get_result_arguments(request, tool_definition)
-    except DataParseError as e:
-        raise HTTPBadRequest(e.message_by_name)
-    result_id, target_folder = prepare_result_response_folder(data_folder)
-
-    result_request.commit()
-    result_request.save()
-
-    result_request.target_folder
-    result_request.x_folder
-    result_request.y_folder
-
-    result_id = request_request.result_id
-    target_folder = result_request.target_folder
-
-    run_script(target_folder, tool_definition, result_arguments)
-    compress_zip(target_folder, excludes=EXCLUDED_FILE_NAMES)
+    r = ResultRequest(request, tool_definition)
+    run_script(tool_definition, r.result_arguments, r.target_folder)
+    compress_zip(r.target_folder, excludes=EXCLUDED_FILE_NAMES)
     return {
-        'result_id': result_id,
+        'result_id': r.result_id,
         'result_url': request.route_path(
-            'result', result_id=result_id, _anchor='properties'),
+            'result', result_id=r.result_id, _anchor='properties'),
     }
 
 
@@ -345,8 +423,7 @@ def import_upload(request, DataType, render_property_kw):
             LOG.error(traceback_text)
             message = 'Import failed'
         raise HTTPBadRequest({name: message})
-    DataType.save(join(upload.folder, '%s.%s' % (
-        DataType.suffixes[0], DataType.formats[0])), value)
+    DataType.save(join(upload.folder, DataType.default_name), value)
     template = get_renderer(DataType.template).template_loader()
     data_item = DataItem(name, value, DataType, help_text)
     html = template.make_module().render_property(
@@ -394,10 +471,9 @@ def get_data_items(value_by_key, tool_definition):
 
 
 def get_file_url(result_path):
-    result_path_expression = r'results/(\d+)/response/(.+)'
     try:
-        result_id, file_path = re.search(
-            result_path_expression, result_path).groups()
+        result_id, relative_path = RESULT_PATH_PATTERN.search(
+            result_path).groups()
     except AttributeError:
         return ''
-    return '/r/%s/_/%s' % (result_id, file_path)
+    return '/r/%s/_/%s' % (result_id, relative_path)

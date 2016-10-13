@@ -25,7 +25,6 @@ def load_notebook(notebook_path):
     for version in sorted(nbformat.versions, reverse=True):
         try:
             return nbformat.read(notebook_path, as_version=version)
-            break
         except Exception:
             pass
     else:
@@ -38,9 +37,9 @@ def prepare_script_folder(target_folder, notebook, notebook_name):
     for k, v in tool_arguments.items():
         if not k.endswith('_path'):
             continue
-        with make_unique_path(target_folder, get_file_extension(v)) as path:
-            shutil.copy(v, path)
-            tool_arguments[k] = basename(path)
+        path = make_unique_path(target_folder, get_file_extension(v))
+        shutil.copy(v, path)
+        tool_arguments[k] = basename(path)
     # Prepare command-line script
     script_lines = []
     script_lines.append('from sys import argv')

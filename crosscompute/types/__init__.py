@@ -1,13 +1,10 @@
 import codecs
 import logging
-import shutil
 from abc import ABCMeta
 from collections import OrderedDict
-from invisibleroads_macros.disk import get_file_extension
 from invisibleroads_macros.log import log_traceback, parse_nested_dictionary
 from invisibleroads_macros.configuration import resolve_attribute
-from invisibleroads_uploads.views import get_upload, make_upload_folder
-from os.path import basename, expanduser, isabs, join
+from os.path import expanduser, isabs, join
 from six import add_metaclass, text_type
 from stevedore.extension import ExtensionManager
 
@@ -70,6 +67,10 @@ class DataType(object):
     def match(Class, value):
         return True
 
+    @property
+    def default_name(self):
+        return '%s.%s' % (self.suffixes[0], self.formats[0])
+
 
 class StringType(DataType):
     formats = 'txt',
@@ -102,108 +103,6 @@ def get_data_type(key):
         if key.endswith('_' + suffix):
             return data_type
     return StringType
-
-
-class ResultRequest(object):
-
-    def __init__(self):
-        pass
-
-    def get_arguments(self):
-    def prepare_arguments(self):
-        pass
-
-
-def get_result_arguments(request, tool_definition, get_result_file_path):
-    result_arguments, errors = OrderedDict(), OrderedDict()
-    params, settings = request.params, request.registry.settings
-    data_folder = settings['data_folder']
-
-    file_folder = 
-
-    configuration_folder = tool_definition['configuration_folder']
-    for argument_name in tool_definition['argument_names']:
-        if argument_name.endswith('_path'):
-            argument_noun = argument_name[:-5]
-
-            default_path
-
-            try:
-                value = prepare_file_path(request, argument_noun, 
-                    default_path, file_folder, get_result_file_path)
-            except IOError:
-                errors[argument_name] = 'invalid'
-                continue
-            except KeyError:
-                errors[argument_name] = 'required'
-                continue
-        elif argument_name in params:
-            value = params[argument_name]
-        else:
-            if argument_name not in RESERVED_ARGUMENT_NAMES:
-                errors[argument_name] = 'required'
-            continue
-        result_arguments[argument_name] = value
-    if errors:
-        raise DataParseError(errors, result_arguments)
-    # Parse strings and validate data types
-    return parse_data_dictionary_from(result_arguments, configuration_folder)
-
-
-def prepare_file_path(
-        argument_noun, raw_arguments, default_path, file_folder, data_folder,
-        user_id, get_result_file_path):
-    data_type = get_data_type(argument_noun)
-    # If the client sent direct content (x_table_csv), save it
-    for file_format in data_type.formats:
-        raw_argument_name = '%s_%s' % (argument_noun, file_format)
-        if raw_argument_name in raw_arguments:
-            continue
-        file_path = join(file_folder, '%s.%s' % (argument_noun, file_format))
-        open(file_path, 'wb').write(raw_arguments[raw_argument_name])
-        return file_path
-    # Raise KeyError if client did not specify noun (x_table)
-    value = raw_arguments[argument_noun].strip()
-    # If the client sent empty content (x_table=''), use default
-    if not value:
-        if not default_path:
-            raise KeyError
-        file_path = join(file_folder, argument_noun + get_file_extension(
-            default_path))
-        shutil.copy(default_path, file_path)
-        return file_path
-    # If the client sent multipart content, save it
-    if hasattr(value, 'file'):
-        file_path = join(file_folder, argument_noun + get_file_extension(
-            value.filename))
-        shutil.copyfileobj(value.file, file_path)
-        return file_path
-    # If the client sent indirect content, find it
-    if '/' in value:
-        result_id, relative_path = value.split('/')
-        result_file_path = get_result_file_path(
-            data_folder, result_id, relative_path)
-        shutil.copy(result_file_path, file_folder)
-        return join(file_folder, basename(result_file_path))
-    try:
-        upload = get_upload(data_folder, user_id, file_id=value)
-    except IOError:
-        raise
-    file_name = '%s.%s' % (data_type.suffixes[0], data_type.formats[0])
-    shutil.move(join(upload.folder, file_name), file_folder)
-    return join(file_folder, file_name)
-
-
-def save_file():
-    pass
-
-
-def save_upload(data_folder, user_id, file_name, file_content, token_length):
-    source_folder = make_upload_folder(data_folder, user_id, token_length)
-    file_path = join(source_folder, file_name)
-    with codecs.open(file_path, 'w', encoding='utf-8') as f:
-        f.write(file_content)
-    return file_path
 
 
 def parse_data_dictionary(text, root_folder):
