@@ -10,6 +10,9 @@ crosscompute = crosscompute.scripts:launch
 setup = crosscompute.scripts.setup:SetupScript
 run = crosscompute.scripts.run:RunScript
 serve = crosscompute.scripts.serve:ServeScript
+[crosscompute.types]
+integer = crosscompute.types:IntegerType
+text = crosscompute.types:TextType
 [pyramid.scaffold]
 cc-python = crosscompute.scaffolds:PythonToolTemplate
 """
@@ -58,6 +61,7 @@ setup(
     install_requires=REQUIREMENTS,
     tests_require=[
         'beautifulsoup4',
+        'mock',
         'pytest',
         'werkzeug',
     ],

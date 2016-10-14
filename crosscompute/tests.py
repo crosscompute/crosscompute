@@ -5,14 +5,13 @@ from werkzeug.test import Client
 from werkzeug.wrappers import BaseResponse
 
 from .types import initialize_data_types
-from .scripts import (
-    prepare_tool_definition, prepare_result_response_folder, run_script)
+from .scripts import prepare_tool_definition, prepare_target_folder, run_script
 from .scripts.serve import get_app
 
 
 def run(data_folder, tool_name, result_arguments=None):
     initialize_data_types()
-    target_folder = prepare_result_response_folder(data_folder)[1]
+    target_folder = prepare_target_folder(data_folder)
     tool_definition = prepare_tool_definition(tool_name)
     return run_script(target_folder, tool_definition, result_arguments or {})
 
@@ -36,7 +35,7 @@ def serve_bad_request(data_folder, tool_name, result_arguments=None):
 
 def _prepare_response(data_folder, tool_name, result_arguments):
     tool_definition = prepare_tool_definition(tool_name)
-    app = get_app(tool_definition, data_folder, 'Test', 'Python')
+    app = get_app(tool_definition, data_folder)
     client = Client(app, BaseResponse)
     with client.post('/t/1.json', data=result_arguments or {}) as response:
         return response, client

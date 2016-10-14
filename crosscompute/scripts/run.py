@@ -6,7 +6,7 @@ from sys import argv
 from ..exceptions import DataParseError
 from ..types import (
     parse_data_dictionary_from, DATA_TYPE_BY_SUFFIX, RESERVED_ARGUMENT_NAMES)
-from . import ToolScript, prepare_result_response_folder, run_script
+from . import ToolScript, prepare_target_folder, run_script
 
 
 class RunScript(ToolScript):
@@ -33,9 +33,9 @@ class RunScript(ToolScript):
             }, tool_definition['configuration_folder'])
         except DataParseError as e:
             return [(k + '.error', v) for k, v in e.message_by_name.items()]
-        target_folder = abspath(raw_arguments.get(
-            'target_folder') or prepare_result_response_folder(data_folder)[1])
-        run_script(target_folder, tool_definition, result_arguments)
+        target_folder = raw_arguments.get(
+            'target_folder') or prepare_target_folder(data_folder)
+        run_script(abspath(target_folder), tool_definition, result_arguments)
 
 
 def configure_argument_parser(argument_parser, tool_definition):

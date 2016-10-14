@@ -1,17 +1,41 @@
-import os
-import sys
-from invisibleroads_macros.disk import get_package_folder
+from invisibleroads_macros.disk import get_package_folder, remove_safely
 from os.path import join
+from pyramid import testing
+from pytest import fixture
 
 
 TOOL_FOLDER = join(get_package_folder(__file__), 'tools')
 
 
-def extract_text(soup, element_id):
-    text = soup.find(id=element_id).text.strip()
-    if os.name == 'nt' and sys.version_info[0] > 2:
-        try:
-            text = text.encode('mbcs').decode('utf-8')
-        except UnicodeEncodeError:
-            pass
-    return text
+@fixture
+def tool_definition():
+    return {
+        'argument_names': (),
+        'configuration_folder': TOOL_FOLDER,
+    }
+
+
+@fixture
+def pyramid_request(config):
+    return testing.DummyRequest()
+
+
+@fixture
+def config(settings):
+    config = testing.setUp(settings=settings)
+    yield config
+    testing.tearDown()
+
+
+@fixture
+def settings(data_folder):
+    return {
+        'data.folder': data_folder,
+    }
+
+
+@fixture
+def data_folder(tmpdir):
+    data_folder = str(tmpdir)
+    yield data_folder
+    remove_safely(data_folder)

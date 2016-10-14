@@ -1,3 +1,5 @@
+import os
+import sys
 import codecs
 import tempfile
 from crosscompute.tests import run, serve
@@ -5,7 +7,7 @@ from os.path import join
 from six import BytesIO
 from zipfile import ZipFile
 
-from conftest import TOOL_FOLDER, extract_text
+from conftest import TOOL_FOLDER
 
 
 TEXT = (
@@ -42,7 +44,7 @@ def test_file_name_with_spaces(tmpdir):
 def test_file_content(tmpdir, file_path='assets/string.txt'):
     file_content = codecs.open(join(
         TOOL_FOLDER, file_path), encoding='utf-8').read()
-    args = str(tmpdir), 'file-content', {'x_path': file_path}
+    args = str(tmpdir), 'file-content', {'x_txt': file_content}
     s, c = serve(*args)
     assert extract_text(s, 'a-result') == file_content.strip()
     response = c.get(s.find('a', {'class': 'download'})['href'])
@@ -54,3 +56,13 @@ def test_target_folder(tmpdir):
     args = str(tmpdir), 'target-folder'
     r = run(*args)
     assert r['standard_output'].startswith(tempfile.gettempdir())
+
+
+def extract_text(soup, element_id):
+    text = soup.find(id=element_id).text.strip()
+    if os.name == 'nt' and sys.version_info[0] > 2:
+        try:
+            text = text.encode('mbcs').decode('utf-8')
+        except UnicodeEncodeError:
+            pass
+    return text

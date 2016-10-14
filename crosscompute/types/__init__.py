@@ -20,10 +20,11 @@ LOG.addHandler(logging.NullHandler())
 
 class DataItem(object):
 
-    def __init__(self, key, value, data_type, help_text=''):
+    def __init__(self, key, value, data_type, file_location='', help_text=''):
         self.key = key
         self.value = value
         self.data_type = data_type
+        self.file_location = file_location
         self.help_text = help_text
 
     def format_value(self, *args, **kw):
@@ -64,12 +65,8 @@ class DataType(object):
         return value
 
     @classmethod
-    def match(Class, value):
-        return True
-
-    @property
-    def default_name(self):
-        return '%s.%s' % (self.suffixes[0], self.formats[0])
+    def get_file_name(Class):
+        return '%s.%s' % (Class.suffixes[0], Class.formats[0])
 
 
 class StringType(DataType):
@@ -77,14 +74,42 @@ class StringType(DataType):
     template = 'crosscompute:types/string.jinja2'
 
     @classmethod
-    def load(Class, path):
-        return codecs.open(path, encoding='utf-8').read()
-
-    @classmethod
     def parse(Class, text):
         if not isinstance(text, str) or isinstance(text, text_type):
             return text
         return text.decode('utf-8')
+
+
+class TextType(StringType):
+    suffixes = 'text',
+    formats = 'txt',
+    template = 'crosscompute:types/text.jinja2'
+
+
+class IntegerType(DataType):
+    suffixes = 'integer', 'int', 'count', 'length'
+    formats = 'txt',
+    template = 'crosscompute:types/integer.jinja2'
+
+    @classmethod
+    def save(Class, path, integer):
+        open(path, 'w').write(str(integer))
+
+    @classmethod
+    def load(Class, path):
+        return Class.parse(open(path).read())
+
+    @classmethod
+    def parse(Class, text):
+        try:
+            integer = int(text)
+        except (TypeError, ValueError):
+            raise DataTypeError('integer expected')
+        return integer
+
+    @classmethod
+    def format(Class, integer):
+        return '%d' % integer
 
 
 def initialize_data_types(suffix_by_data_type=None):
