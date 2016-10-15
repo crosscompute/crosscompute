@@ -160,17 +160,17 @@ class ResultRequest(object):
             return copy_text(draft_folder, '%s.%s' % (
                 argument_noun, file_format), raw_arguments[raw_argument_name])
         # Raise KeyError if client did not specify noun (x_table)
-        v = raw_arguments[argument_noun].strip()
-        # If client sent empty content, use default
-        if not v:
-            if not default_path:
-                raise KeyError
-            return link_path(draft_folder, argument_noun + get_file_extension(
-                default_path), default_path)
+        v = raw_arguments[argument_noun]
         # If client sent multipart content, save it
         if hasattr(v, 'file'):
             return copy_file(draft_folder, argument_noun + get_file_extension(
                 v.filename), v.file)
+        # If client sent empty content, use default
+        if v == '':
+            if not default_path:
+                raise KeyError
+            return link_path(draft_folder, argument_noun + get_file_extension(
+                default_path), default_path)
         # If client sent a relative path (x_table=11/x/y.csv), find it
         if '/' in v:
             source_path = self.get_file_path(*parse_result_relative_path(v))

@@ -70,6 +70,7 @@ class DataType(object):
 
 
 class StringType(DataType):
+    suffixes = 'string',
     formats = 'txt',
     template = 'crosscompute:types/string.jinja2'
 
@@ -104,7 +105,7 @@ class IntegerType(DataType):
         try:
             integer = int(text)
         except (TypeError, ValueError):
-            raise DataTypeError('integer expected')
+            raise DataTypeError('expected integer')
         return integer
 
     @classmethod
