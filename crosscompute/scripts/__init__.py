@@ -16,10 +16,9 @@ from invisibleroads.scripts import (
 from invisibleroads_macros.configuration import (
     RawCaseSensitiveConfigParser, split_arguments, unicode_safely)
 from invisibleroads_macros.disk import cd, make_enumerated_folder, make_folder
-from invisibleroads_macros.iterable import merge_dictionaries
+from invisibleroads_macros.iterable import merge_dictionaries, sort_dictionary
 from invisibleroads_macros.log import (
-    format_hanging_indent, format_summary, parse_nested_dictionary_from,
-    sort_dictionary)
+    format_hanging_indent, format_summary, parse_nested_dictionary_from)
 from os.path import abspath, basename, isabs, join, splitext
 from six import text_type
 from tempfile import gettempdir
@@ -28,7 +27,7 @@ from ..configurations import (
     find_tool_definition, load_result_arguments, load_tool_definition)
 from ..exceptions import CrossComputeError, DataParseError
 from ..fallbacks import (
-    COMMAND_LINE_JOIN, SCRIPT_EXTENSION, SCRIPT_ENVIRONMENT,
+    COMMAND_LINE_JOIN, SCRIPT_ENVIRONMENT, SCRIPT_EXTENSION,
     prepare_path_argument)
 from ..types import initialize_data_types, parse_data_dictionary
 from .convert import prepare_tool_from_notebook
