@@ -3,6 +3,8 @@ from os.path import join
 from pyramid import testing
 from pytest import fixture
 
+from crosscompute.scripts.serve import ResultRequest
+
 
 TOOL_FOLDER = join(get_package_folder(__file__), 'tools')
 
@@ -13,6 +15,11 @@ def tool_definition():
         'argument_names': (),
         'configuration_folder': TOOL_FOLDER,
     }
+
+
+@fixture
+def result_request(pyramid_request):
+    return ResultRequest(pyramid_request)
 
 
 @fixture

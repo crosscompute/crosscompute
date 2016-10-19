@@ -87,7 +87,7 @@ def load_tool_definition_by_name(
 
 
 def load_tool_definition(result_configuration_path):
-    s = load_settings(result_configuration_path, 'tool_definition')
+    s = load_settings(result_configuration_path, 'tool_location')
     tool_configuration_path = s['configuration_path']
     tool_name = s['tool_name']
     if not isabs(tool_configuration_path):

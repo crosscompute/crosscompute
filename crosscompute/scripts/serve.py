@@ -102,7 +102,6 @@ class ResultRequest(object):
         self.result_id = result_id = self.prepare_result()
         self.result_arguments = self.migrate_arguments(
             result_arguments, get_source_folder(data_folder, result_id))
-        self.target_folder = get_target_folder(data_folder, result_id)
         remove_safely(draft_folder)
 
     def prepare_arguments(self, raw_arguments, draft_folder):
@@ -340,9 +339,11 @@ def see_tool(request):
 def run_tool_json(request):
     settings = request.registry.settings
     tool_definition = settings['tool_definition']
+    data_folder = settings['data.folder']
     r = ResultRequest(request, tool_definition)
-    run_script(r.target_folder, tool_definition, r.result_arguments)
-    compress_zip(r.target_folder, excludes=EXCLUDED_FILE_NAMES)
+    target_folder = get_target_folder(data_folder, r.result_id)
+    run_script(target_folder, tool_definition, r.result_arguments)
+    compress_zip(target_folder, excludes=EXCLUDED_FILE_NAMES)
     return {
         'result_id': r.result_id,
         'result_url': request.route_path(
