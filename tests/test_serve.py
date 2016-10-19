@@ -6,17 +6,16 @@ from pytest import raises
 from six import StringIO
 
 from crosscompute.types import StringType
-from crosscompute.scripts.serve import (
-    ResultRequest, parse_result_relative_path)
+from crosscompute.scripts.serve import parse_result_relative_path
 
 
 class TestResultRequest(object):
 
-    def test_ignore_explicit_path(self, pyramid_request, tool_definition):
+    def test_ignore_explicit_path(self, result_request, tool_definition):
         tool_definition['argument_names'] = ('x_path',)
-        pyramid_request.params = {'x_path': 'cc.ini'}
+        raw_arguments = {'x_path': 'cc.ini'}
         with raises(HTTPBadRequest) as e:
-            ResultRequest(pyramid_request, tool_definition)
+            result_request.prepare_arguments(raw_arguments, tool_definition)
         assert e.value.detail['x'] == 'required'
 
     def test_ignore_reserved_argument_name(
