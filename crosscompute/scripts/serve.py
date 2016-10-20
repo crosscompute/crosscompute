@@ -19,6 +19,7 @@ from pyramid.config import Configurator
 from pyramid.httpexceptions import (
     HTTPBadRequest, HTTPForbidden, HTTPNotFound, HTTPSeeOther)
 from pyramid.renderers import get_renderer
+from pyramid.request import Request
 from pyramid.response import FileResponse, Response
 from six import string_types, text_type
 from traceback import format_exc
@@ -31,7 +32,7 @@ from ..types import (
     RESERVED_ARGUMENT_NAMES)
 from . import (
     ToolScript, get_source_folder, get_target_folder,
-    load_result_configuration, prepare_result_id, run_script,
+    load_result_configuration, prepare_result, run_script,
     EXCLUDED_FILE_NAMES)
 
 
@@ -81,40 +82,39 @@ class ServeScript(ToolScript):
             pass
 
 
-class ResultRequest(object):
+class ResultRequest(Request):
 
     reserved_argument_names = RESERVED_ARGUMENT_NAMES
 
-    def __init__(self, request, tool_definition):
-        self.request = request
-        self.tool_definition = tool_definition
+    def __init__(self, request):
+        self.__dict__.update(request.__dict__)
+        self.data_folder = request.data_folder
 
-        settings = request.registry.settings
-        self.data_folder = data_folder = settings['data.folder']
-
-        params = request.params
+    def prepare_arguments(self, tool_definition, raw_arguments):
         draft_folder = make_unique_folder(join(
-            data_folder, 'drafts', 'results'))
+            self.data_folder, 'drafts', 'results'))
         try:
-            result_arguments = self.prepare_arguments(params, draft_folder)
+            result_arguments = self.collect_arguments(
+                tool_definition, raw_arguments, draft_folder)
         except DataParseError as e:
             raise HTTPBadRequest(e.message_by_name)
-        self.result_id = result_id = self.prepare_result()
-        self.result_arguments = self.migrate_arguments(
-            result_arguments, get_source_folder(data_folder, result_id))
+        result_id, result_folder = self.prepare_result()
+        result_arguments = self.migrate_arguments(
+            result_arguments, get_source_folder(result_folder))
         remove_safely(draft_folder)
+        return result_id, result_folder, result_arguments
 
-    def prepare_arguments(self, raw_arguments, draft_folder):
+    def collect_arguments(self, tool_definition, raw_arguments, draft_folder):
         arguments, errors = OrderedDict(), OrderedDict()
-        configuration_folder = self.tool_definition['configuration_folder']
-        for argument_name in self.tool_definition['argument_names']:
+        configuration_folder = tool_definition['configuration_folder']
+        for argument_name in tool_definition['argument_names']:
             if argument_name in self.reserved_argument_names:
                 continue
             if argument_name.endswith('_path'):
                 argument_noun = argument_name[:-5]
                 default_path = join(
-                    configuration_folder, self.tool_definition[argument_name],
-                ) if argument_name in self.tool_definition else None
+                    configuration_folder, tool_definition[argument_name],
+                ) if argument_name in tool_definition else None
                 try:
                     v = self.prepare_argument_path(
                         argument_noun, raw_arguments, draft_folder,
@@ -137,7 +137,7 @@ class ResultRequest(object):
         return parse_data_dictionary_from(arguments, configuration_folder)
 
     def prepare_result(self):
-        return prepare_result_id(self.data_folder)
+        return prepare_result(self.data_folder)
 
     def migrate_arguments(self, result_arguments, source_folder):
         d = {}
@@ -176,7 +176,7 @@ class ResultRequest(object):
             return link_path(draft_folder, argument_noun + get_file_extension(
                 source_path), source_path)
         # If client sent an upload id (x_table=x), find it
-        upload = get_upload(self.request, upload_id=v)
+        upload = get_upload(self, upload_id=v)
         source_path = join(upload.folder, data_type.get_file_name())
         return link_path(draft_folder, argument_noun + get_file_extension(
             source_path), source_path)
@@ -339,24 +339,26 @@ def see_tool(request):
 def run_tool_json(request):
     settings = request.registry.settings
     tool_definition = settings['tool_definition']
-    data_folder = settings['data.folder']
-    r = ResultRequest(request, tool_definition)
-    target_folder = get_target_folder(data_folder, r.result_id)
-    run_script(target_folder, tool_definition, r.result_arguments)
+    result_request = ResultRequest(request)
+    result_id, result_folder, arguments = result_request.prepare_arguments(
+        tool_definition, request.params)
+    target_folder = get_target_folder(result_folder)
+    run_script(target_folder, tool_definition, arguments)
     compress_zip(target_folder, excludes=EXCLUDED_FILE_NAMES)
     return {
-        'result_id': r.result_id,
+        'result_id': result_id,
         'result_url': request.route_path(
-            'result', result_id=r.result_id, _anchor='properties'),
+            'result', result_id=result_id, _anchor='properties'),
     }
 
 
 def see_result(request):
     settings = request.registry.settings
-    data_folder = settings['data.folder']
+    data_folder = request.data_folder
     tool_definition = settings['tool_definition']
     result_id = basename(request.matchdict['result_id'])
-    target_folder = get_target_folder(data_folder, result_id)
+    result_folder = join(data_folder, 'results', result_id)
+    target_folder = get_target_folder(result_folder)
     if not exists(target_folder):
         raise HTTPNotFound
     result_arguments, result_properties = load_result_configuration(
@@ -388,10 +390,10 @@ def see_result_json(request):
 
 
 def see_result_zip(request):
-    settings = request.registry.settings
-    data_folder = settings['data.folder']
+    data_folder = request.data_folder
     result_id = request.matchdict['result_id']
-    result_archive_path = get_target_folder(data_folder, result_id) + '.zip'
+    result_folder = join(data_folder, 'results', result_id)
+    result_archive_path = get_target_folder(result_folder) + '.zip'
     return FileResponse(result_archive_path, request=request)
 
 
@@ -400,8 +402,7 @@ def see_result_file(request):
     folder_name = matchdict['folder_name']
     if folder_name not in ('x', 'y'):
         raise HTTPForbidden
-    settings = request.registry.settings
-    data_folder = settings['data.folder']
+    data_folder = request.data_folder
     result_id = matchdict['result_id']
     parent_folder = join(data_folder, 'results', result_id, folder_name)
     try:

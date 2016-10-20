@@ -160,23 +160,23 @@ def load_result_configuration(result_folder):
 
 
 def prepare_target_folder(data_folder):
-    result_id = prepare_result_id(data_folder)
-    return get_target_folder(data_folder, result_id)
+    result_folder = prepare_result(data_folder)[1]
+    return get_target_folder(result_folder)
 
 
-def prepare_result_id(data_folder):
+def prepare_result(data_folder):
     parent_folder = join(data_folder, 'results')
     result_folder = make_enumerated_folder(parent_folder)
     result_id = basename(result_folder)
-    return result_id
+    return result_id, result_folder
 
 
-def get_source_folder(data_folder, result_id):
-    return join(data_folder, 'results', result_id, 'x')
+def get_source_folder(result_folder):
+    return join(result_folder, 'x')
 
 
-def get_target_folder(data_folder, result_id):
-    return join(data_folder, 'results', result_id, 'y')
+def get_target_folder(result_folder):
+    return join(result_folder, 'y')
 
 
 def run_script(

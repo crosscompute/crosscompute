@@ -23,8 +23,8 @@ def result_request(pyramid_request):
 
 
 @fixture
-def pyramid_request(config):
-    return testing.DummyRequest()
+def pyramid_request(config, data_folder):
+    return testing.DummyRequest(data_folder=data_folder)
 
 
 @fixture
