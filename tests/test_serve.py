@@ -28,11 +28,17 @@ class TestResultRequest(object):
 
     def test_reject_mismatched_data_type(
             self, result_request, tool_definition):
-        tool_definition['argument_names'] = ('x_integer',)
-        raw_arguments = {'x_integer': 'abc'}
+        tool_definition['argument_names'] = ('x_whee',)
+        # Run with incompatible value
+        raw_arguments = {'x_whee': 'x'}
         with raises(HTTPBadRequest) as e:
             result_request.prepare_arguments(tool_definition, raw_arguments)
-        assert e.value.detail['x_integer'] == 'expected integer'
+        assert e.value.detail['x_whee'] == 'expected whee'
+        # Run with compatible value
+        raw_arguments = {'x_whee': 'whee'}
+        arguments = result_request.prepare_arguments(
+            tool_definition, raw_arguments)[-1]
+        assert arguments == {'x_whee': 'whee'}
 
     def test_accept_direct_content(self, result_request, tool_definition):
         tool_definition['argument_names'] = ('x_path',)

@@ -8,7 +8,8 @@ from invisibleroads_macros.disk import (
     make_folder, make_unique_folder, move_path, remove_safely,
     resolve_relative_path)
 from invisibleroads_macros.iterable import merge_dictionaries
-from invisibleroads_posts import add_routes_for_fused_assets
+from invisibleroads_posts import (
+    add_routes_for_fused_assets, add_website_dependency)
 from invisibleroads_posts.views import expect_param
 from invisibleroads_uploads.views import get_upload, get_upload_from
 from markupsafe import Markup
@@ -25,7 +26,7 @@ from six import string_types, text_type
 from traceback import format_exc
 from wsgiref.simple_server import make_server
 
-from ..configurations import ARGUMENT_NAME_PATTERN
+from ..configurations import ARGUMENT_NAME_PATTERN, load_tool_definition
 from ..exceptions import DataParseError, DataTypeError
 from ..types import (
     DataItem, parse_data_dictionary_from, get_data_type, DATA_TYPE_BY_NAME,
@@ -214,14 +215,9 @@ def get_app(
 
 def includeme(config):
     config.include('invisibleroads_uploads')
-    configure_settings(config)
     configure_jinja2_environment(config)
+    add_website_dependency(config)
     add_routes_for_data_types(config)
-
-
-def configure_settings(config):
-    settings = config.registry.settings
-    settings['website.dependencies'].append(config.package_name)
 
 
 def configure_jinja2_environment(config):
@@ -239,8 +235,6 @@ def configure_jinja2_environment(config):
 
 
 def add_routes_for_data_types(config):
-    settings = config.registry.settings
-    website_dependencies = settings['website.dependencies']
     for data_type_name, data_type in DATA_TYPE_BY_NAME.items():
         module_name = data_type.__module__
         for relative_view_url in data_type.views:
@@ -252,7 +246,7 @@ def add_routes_for_data_types(config):
             # Add view
             config.add_route(route_name, route_url)
             config.add_view(view, permission='run_tool', route_name=route_name)
-        website_dependencies.append(module_name)
+        add_website_dependency(config, module_name)
 
 
 def get_template_variables(tool_definition, template_type, data_items):
@@ -353,34 +347,13 @@ def run_tool_json(request):
 
 
 def see_result(request):
-    settings = request.registry.settings
     data_folder = request.data_folder
-    tool_definition = settings['tool_definition']
     result_id = basename(request.matchdict['result_id'])
     result_folder = join(data_folder, 'results', result_id)
     target_folder = get_target_folder(result_folder)
     if not exists(target_folder):
         raise HTTPNotFound
-    result_arguments, result_properties = load_result_configuration(
-        target_folder)
-    tool_items = get_data_items(result_arguments, tool_definition)
-    result_errors = get_data_items(merge_dictionaries(
-        result_properties.pop('standard_errors', {}),
-        result_properties.pop('type_errors', {}),
-    ), tool_definition)
-    result_items = get_data_items(
-        result_properties.pop('standard_outputs', {}), tool_definition)
-    result_properties = get_data_items(
-        result_properties, tool_definition)
-    return merge_dictionaries(
-        get_template_variables(tool_definition, 'tool', tool_items),
-        get_template_variables(tool_definition, 'result', result_items), {
-            'data_types': set(x.data_type for x in tool_items + result_items),
-            'tool_id': 1,
-            'result_id': result_id,
-            'result_errors': result_errors,
-            'result_properties': result_properties,
-        })
+    return get_result_template_variables(target_folder, result_id, tool_id=1)
 
 
 """
@@ -482,6 +455,29 @@ def get_data_items(value_by_key, tool_definition):
         data_items.append(DataItem(
             key, value, data_type, file_location, help_text))
     return data_items
+
+
+def get_result_template_variables(target_folder, result_id, tool_id):
+    result_configuration_path = join(target_folder, 'result.cfg')
+    result_arguments, result_properties = load_result_configuration(
+        result_configuration_path)
+    tool_definition = load_tool_definition(result_configuration_path)
+    tool_items = get_data_items(result_arguments, tool_definition)
+    result_errors = get_data_items(merge_dictionaries(
+        result_properties.pop('standard_errors', {}),
+        result_properties.pop('type_errors', {})), tool_definition)
+    result_items = get_data_items(
+        result_properties.pop('standard_outputs', {}), tool_definition)
+    result_properties = get_data_items(result_properties, tool_definition)
+    return merge_dictionaries(
+        get_template_variables(tool_definition, 'tool', tool_items),
+        get_template_variables(tool_definition, 'result', result_items), {
+            'data_types': set(x.data_type for x in tool_items + result_items),
+            'tool_id': 1,
+            'result_id': result_id,
+            'result_errors': result_errors,
+            'result_properties': result_properties,
+        })
 
 
 def get_file_url(result_path):

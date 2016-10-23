@@ -10,18 +10,15 @@ crosscompute = crosscompute.scripts:launch
 setup = crosscompute.scripts.setup:SetupScript
 run = crosscompute.scripts.run:RunScript
 serve = crosscompute.scripts.serve:ServeScript
-[crosscompute.types]
-integer = crosscompute.types:IntegerType
-text = crosscompute.types:TextType
 [pyramid.scaffold]
 cc-python = crosscompute.scaffolds:PythonToolTemplate
 """
 
 
 REQUIREMENTS = [
-    'invisibleroads_macros>=0.7.2',
-    'invisibleroads_posts>=0.5.1',
-    'invisibleroads_uploads>=0.0.5',
+    'invisibleroads_macros>=0.7.3',
+    'invisibleroads_posts>=0.5.2',
+    'invisibleroads_uploads>=0.0.6',
     'mistune',
     'nbconvert',
     'pyramid',
@@ -38,7 +35,7 @@ DESCRIPTION = '\n\n'.join(open(join(FOLDER, x)).read().strip() for x in [
     'README.rst', 'CHANGES.rst'])
 setup(
     name='crosscompute',
-    version='0.5.5',
+    version='0.5.6',
     description='Publish your own tools by writing a configuration file',
     long_description=DESCRIPTION,
     classifiers=[
@@ -61,7 +58,6 @@ setup(
     install_requires=REQUIREMENTS,
     tests_require=[
         'beautifulsoup4',
-        'mock',
         'pytest',
         'werkzeug',
     ],

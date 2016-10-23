@@ -2,7 +2,7 @@ import re
 from fnmatch import fnmatch
 from invisibleroads_macros.configuration import (
     RawCaseSensitiveConfigParser, load_settings, unicode_safely)
-from invisibleroads_macros.disk import are_same_path
+from invisibleroads_macros.disk import are_same_path, expand_path
 from os import getcwd, walk
 from os.path import abspath, basename, dirname, isabs, join
 from pyramid.settings import asbool, aslist
@@ -57,7 +57,6 @@ def find_tool_definition(folder=None, tool_name='', default_tool_name=''):
 def load_tool_definition_by_name(
         tool_configuration_path, default_tool_name=None):
     tool_definition_by_name = {}
-    tool_configuration_path = abspath(tool_configuration_path)
     tool_configuration = RawCaseSensitiveConfigParser()
     tool_configuration.read(tool_configuration_path)
     d = {
@@ -87,15 +86,16 @@ def load_tool_definition_by_name(
 
 
 def load_tool_definition(result_configuration_path):
-    s = load_settings(result_configuration_path, 'tool_location')
-    tool_configuration_path = s['configuration_path']
+    s = load_settings(result_configuration_path, 'tool_configuration')
+    tool_configuration_path = expand_path(s['configuration_path'])
     tool_name = s['tool_name']
     if not isabs(tool_configuration_path):
         result_configuration_folder = dirname(result_configuration_path)
         tool_configuration_path = join(
             result_configuration_folder, tool_configuration_path)
-    return load_tool_definition_by_name(tool_configuration_path, tool_name)[
-        tool_name]
+    tool_definition_by_name = load_tool_definition_by_name(
+        tool_configuration_path, tool_name)
+    return tool_definition_by_name[tool_name]
 
 
 def load_result_arguments(result_configuration_path):

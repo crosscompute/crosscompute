@@ -77,8 +77,8 @@ class _ResultConfiguration(object):
     def write_header(self, tool_definition, result_arguments):
         configuration_folder = tool_definition['configuration_folder']
         tool_argument_names = list(tool_definition['argument_names'])
-        # Write tool_definition
-        template = '[tool_definition]\n%s'
+        # Write tool_configuration
+        template = '[tool_configuration]\n%s'
         command_path = self.write_script(tool_definition, result_arguments)
         self.write(template % format_summary(OrderedDict([
             ('tool_name', tool_definition['tool_name']),
@@ -149,9 +149,9 @@ def prepare_tool_definition(tool_name):
     return tool_definition
 
 
-def load_result_configuration(result_folder):
+def load_result_configuration(result_configuration_path):
     result_configuration = RawCaseSensitiveConfigParser()
-    result_configuration.read(join(result_folder, 'result.cfg'))
+    result_configuration.read(result_configuration_path)
     result_arguments = OrderedDict(
         result_configuration.items('result_arguments'))
     result_properties = parse_nested_dictionary_from(OrderedDict(

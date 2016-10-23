@@ -81,38 +81,6 @@ class StringType(DataType):
         return text.decode('utf-8')
 
 
-class TextType(StringType):
-    suffixes = 'text',
-    formats = 'txt',
-    template = 'crosscompute:types/text.jinja2'
-
-
-class IntegerType(DataType):
-    suffixes = 'integer', 'int', 'count', 'length'
-    formats = 'txt',
-    template = 'crosscompute:types/integer.jinja2'
-
-    @classmethod
-    def save(Class, path, integer):
-        open(path, 'w').write(str(integer))
-
-    @classmethod
-    def load(Class, path):
-        return Class.parse(open(path).read())
-
-    @classmethod
-    def parse(Class, text):
-        try:
-            integer = int(text)
-        except (TypeError, ValueError):
-            raise DataTypeError('expected integer')
-        return integer
-
-    @classmethod
-    def format(Class, integer):
-        return '%d' % integer
-
-
 def initialize_data_types(suffix_by_data_type=None):
     for x in ExtensionManager('crosscompute.types').extensions:
         data_type = x.plugin

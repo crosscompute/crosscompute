@@ -4,9 +4,16 @@ from pyramid import testing
 from pytest import fixture
 
 from crosscompute.scripts.serve import ResultRequest
+from crosscompute.types import DataType, DataTypeError, DATA_TYPE_BY_SUFFIX
 
 
-TOOL_FOLDER = join(get_package_folder(__file__), 'tools')
+class WheeType(DataType):
+
+    @classmethod
+    def parse(Class, text):
+        if text != 'whee':
+            raise DataTypeError('expected whee')
+        return text
 
 
 @fixture
@@ -46,3 +53,7 @@ def data_folder(tmpdir):
     data_folder = str(tmpdir)
     yield data_folder
     remove_safely(data_folder)
+
+
+DATA_TYPE_BY_SUFFIX['whee'] = WheeType
+TOOL_FOLDER = join(get_package_folder(__file__), 'tools')
