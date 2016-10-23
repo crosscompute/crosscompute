@@ -348,7 +348,7 @@ def run_tool_json(request):
 
 def see_result(request):
     data_folder = request.data_folder
-    result_id = basename(request.matchdict['result_id'])
+    result_id = request.matchdict['result_id']
     result_folder = join(data_folder, 'results', result_id)
     target_folder = get_target_folder(result_folder)
     if not exists(target_folder):
