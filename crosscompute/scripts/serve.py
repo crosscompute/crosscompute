@@ -353,7 +353,8 @@ def see_result(request):
     target_folder = get_target_folder(result_folder)
     if not exists(target_folder):
         raise HTTPNotFound
-    return get_result_template_variables(target_folder, result_id, tool_id=1)
+    return get_result_template_variables(
+        join(target_folder, 'result.cfg'), result_id, tool_id=1)
 
 
 """
@@ -457,8 +458,8 @@ def get_data_items(value_by_key, tool_definition):
     return data_items
 
 
-def get_result_template_variables(target_folder, result_id, tool_id):
-    result_configuration_path = join(target_folder, 'result.cfg')
+def get_result_template_variables(
+        result_configuration_path, result_id, tool_id):
     result_arguments, result_properties = load_result_configuration(
         result_configuration_path)
     tool_definition = load_tool_definition(result_configuration_path)

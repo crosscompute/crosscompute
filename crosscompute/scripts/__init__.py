@@ -21,6 +21,7 @@ from invisibleroads_macros.log import (
     format_hanging_indent, format_summary, parse_nested_dictionary_from)
 from os.path import abspath, basename, isabs, join, splitext
 from six import text_type
+from six.moves.configparser import NoSectionError
 from tempfile import gettempdir
 
 from ..configurations import (
@@ -150,13 +151,14 @@ def prepare_tool_definition(tool_name):
 
 
 def load_result_configuration(result_configuration_path):
-    result_configuration = RawCaseSensitiveConfigParser()
-    result_configuration.read(result_configuration_path)
-    result_arguments = OrderedDict(
-        result_configuration.items('result_arguments'))
-    result_properties = parse_nested_dictionary_from(OrderedDict(
-        result_configuration.items('result_properties')), max_depth=1)
-    return result_arguments, result_properties
+    configuration = RawCaseSensitiveConfigParser()
+    configuration.read(result_configuration_path)
+    arguments = OrderedDict(configuration.items('result_arguments'))
+    try:
+        properties = OrderedDict(configuration.items('result_properties'))
+    except NoSectionError:
+        properties = {}
+    return arguments, parse_nested_dictionary_from(properties, max_depth=1)
 
 
 def prepare_target_folder(data_folder):
