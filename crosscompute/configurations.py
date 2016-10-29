@@ -2,7 +2,9 @@ import re
 from fnmatch import fnmatch
 from invisibleroads_macros.configuration import (
     RawCaseSensitiveConfigParser, load_settings, unicode_safely)
-from invisibleroads_macros.disk import are_same_path, expand_path
+from invisibleroads_macros.disk import (
+    are_same_path, expand_path, resolve_relative_path)
+from invisibleroads_macros.log import parse_nested_dictionary_from
 from os import getcwd, walk
 from os.path import abspath, basename, dirname, isabs, join
 from pyramid.settings import asbool, aslist
@@ -99,16 +101,26 @@ def load_tool_definition(result_configuration_path):
 
 
 def load_result_arguments(result_configuration_path):
-    result_arguments = {}
-    result_configuration_folder = dirname(abspath(result_configuration_path))
-    for k, v in load_settings(
-            result_configuration_path, 'result_arguments').items():
-        if k == 'target_folder':
-            continue
-        if (k.endswith('_path') or k.endswith('_folder')) and not isabs(v):
-            v = join(result_configuration_folder, v)
-        result_arguments[k] = v
-    return result_arguments
+    arguments = load_result_settings(
+        result_configuration_path, 'result_arguments')
+    arguments.pop('target_folder')
+    return arguments
+
+
+def load_result_properties(result_configuration_path):
+    properties = load_result_settings(
+        result_configuration_path, 'result_properties')
+    return parse_nested_dictionary_from(properties, max_depth=1)
+
+
+def load_result_settings(result_configuration_path, section_name):
+    settings = {}
+    configuration_folder = dirname(abspath(result_configuration_path))
+    for k, v in load_settings(result_configuration_path, section_name).items():
+        if k.endswith('_path') or k.endswith('_folder'):
+            v = resolve_relative_path(v, configuration_folder)
+        settings[k] = v
+    return settings
 
 
 def format_available_tools(tool_definition_by_name):

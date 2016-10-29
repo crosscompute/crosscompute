@@ -13,15 +13,12 @@ from collections import OrderedDict
 from invisibleroads.scripts import (
     Script, StoicArgumentParser, configure_subparsers, get_scripts_by_name,
     run_scripts)
-from invisibleroads_macros.configuration import (
-    RawCaseSensitiveConfigParser, split_arguments, unicode_safely)
+from invisibleroads_macros.configuration import split_arguments, unicode_safely
 from invisibleroads_macros.disk import cd, make_enumerated_folder, make_folder
 from invisibleroads_macros.iterable import merge_dictionaries, sort_dictionary
-from invisibleroads_macros.log import (
-    format_hanging_indent, format_summary, parse_nested_dictionary_from)
+from invisibleroads_macros.log import format_hanging_indent, format_summary
 from os.path import abspath, basename, isabs, join, splitext
 from six import text_type
-from six.moves.configparser import NoSectionError
 from tempfile import gettempdir
 
 from ..configurations import (
@@ -148,17 +145,6 @@ def prepare_tool_definition(tool_name):
     except CrossComputeError as e:
         sys.exit(e)
     return tool_definition
-
-
-def load_result_configuration(result_configuration_path):
-    configuration = RawCaseSensitiveConfigParser()
-    configuration.read(result_configuration_path)
-    arguments = OrderedDict(configuration.items('result_arguments'))
-    try:
-        properties = OrderedDict(configuration.items('result_properties'))
-    except NoSectionError:
-        properties = {}
-    return arguments, parse_nested_dictionary_from(properties, max_depth=1)
 
 
 def prepare_target_folder(data_folder):

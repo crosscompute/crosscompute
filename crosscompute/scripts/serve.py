@@ -26,15 +26,16 @@ from six import string_types, text_type
 from traceback import format_exc
 from wsgiref.simple_server import make_server
 
-from ..configurations import ARGUMENT_NAME_PATTERN, load_tool_definition
+from ..configurations import (
+    ARGUMENT_NAME_PATTERN, load_result_arguments, load_result_properties,
+    load_tool_definition)
 from ..exceptions import DataParseError, DataTypeError
 from ..types import (
     DataItem, parse_data_dictionary_from, get_data_type, DATA_TYPE_BY_NAME,
     RESERVED_ARGUMENT_NAMES)
 from . import (
     ToolScript, get_source_folder, get_target_folder,
-    load_result_configuration, prepare_result, run_script,
-    EXCLUDED_FILE_NAMES)
+    prepare_result, run_script, EXCLUDED_FILE_NAMES)
 
 
 HELP = {
@@ -353,8 +354,13 @@ def see_result(request):
     target_folder = get_target_folder(result_folder)
     if not exists(target_folder):
         raise HTTPNotFound
+    result_configuration_path = join(target_folder, 'result.cfg')
+    result_arguments = load_result_arguments(result_configuration_path)
+    result_properties = load_result_properties(result_configuration_path)
+    tool_definition = load_tool_definition(result_configuration_path)
     return get_result_template_variables(
-        join(target_folder, 'result.cfg'), result_id, tool_id=1)
+        result_arguments, result_properties, result_id, tool_definition,
+        tool_id=1)
 
 
 """
@@ -459,10 +465,8 @@ def get_data_items(value_by_key, tool_definition):
 
 
 def get_result_template_variables(
-        result_configuration_path, result_id, tool_id):
-    result_arguments, result_properties = load_result_configuration(
-        result_configuration_path)
-    tool_definition = load_tool_definition(result_configuration_path)
+        result_arguments, result_properties, result_id, tool_definition,
+        tool_id):
     tool_items = get_data_items(result_arguments, tool_definition)
     result_errors = get_data_items(merge_dictionaries(
         result_properties.pop('standard_errors', {}),
