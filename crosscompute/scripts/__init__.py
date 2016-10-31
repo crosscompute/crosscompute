@@ -75,8 +75,8 @@ class _ResultConfiguration(object):
     def write_header(self, tool_definition, result_arguments):
         configuration_folder = tool_definition['configuration_folder']
         tool_argument_names = list(tool_definition['argument_names'])
-        # Write tool_configuration
-        template = '[tool_configuration]\n%s'
+        # Write tool_location
+        template = '[tool_location]\n%s'
         command_path = self.write_script(tool_definition, result_arguments)
         self.write(template % format_summary(OrderedDict([
             ('tool_name', tool_definition['tool_name']),
@@ -167,12 +167,17 @@ def get_target_folder(result_folder):
     return join(result_folder, 'y')
 
 
-def run_script(
-        target_folder, tool_definition, result_arguments, environment=None):
+def run_script(result_folder, tool_definition, result_arguments, environment=None):
+def run_script(result_folder, tool_definition, result_arguments, target_folder=None, environment=None):
+def run_script(result_folder, tool_definition, result_arguments, environment_variables=None, target_folder=None):
+    save_tool_location(join(result_folder, 'f.cfg'), tool_definition)
+    save_result_arguments(join(result_folder, 'x.cfg'), result_arguments)
+
+
     result_properties, timestamp = OrderedDict(), time.time()
     result_arguments = dict(result_arguments, target_folder=target_folder)
-    result_configuration = _ResultConfiguration(target_folder)
-    result_configuration.write_header(tool_definition, result_arguments)
+
+
     command_terms = split_arguments(render_command(tool_definition[
         'command_template'], result_arguments).replace('\n', ' '))
     try:
@@ -190,7 +195,9 @@ def run_script(
     result_properties.update(_process_streams(
         standard_output, standard_error, target_folder, tool_definition))
     result_properties['execution_time_in_seconds'] = time.time() - timestamp
-    result_configuration.write_footer(result_properties)
+
+
+    save_result_properties(join(result_folder, 'y.cfg'), result_properties)
     return result_properties
 
 
