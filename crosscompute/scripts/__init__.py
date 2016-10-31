@@ -167,11 +167,16 @@ def get_target_folder(result_folder):
     return join(result_folder, 'y')
 
 
-def run_script(result_folder, tool_definition, result_arguments, environment=None):
-def run_script(result_folder, tool_definition, result_arguments, target_folder=None, environment=None):
-def run_script(result_folder, tool_definition, result_arguments, environment_variables=None, target_folder=None):
+
+def run_script(
+        tool_definition, result_arguments, result_folder,
+        result_environment=None, target_folder=None):
     save_tool_location(join(result_folder, 'f.cfg'), tool_definition)
-    save_result_arguments(join(result_folder, 'x.cfg'), result_arguments)
+    save_result_arguments(join(
+        result_folder, 'x.cfg'), result_arguments, result_environment)
+
+    # if target_folder is not specifed, then use default
+    # if specified, then make and link to it in default location
 
 
     result_properties, timestamp = OrderedDict(), time.time()
