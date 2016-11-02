@@ -1,12 +1,12 @@
 from argparse import ArgumentParser, SUPPRESS
 from invisibleroads_macros.configuration import unicode_safely
-from os.path import abspath
 from sys import argv
 
 from ..exceptions import DataParseError
+from ..models import Result
 from ..types import (
     parse_data_dictionary_from, DATA_TYPE_BY_SUFFIX, RESERVED_ARGUMENT_NAMES)
-from . import ToolScript, prepare_target_folder, run_script
+from . import ToolScript, run_script
 
 
 class RunScript(ToolScript):
@@ -33,9 +33,10 @@ class RunScript(ToolScript):
             }, tool_definition['configuration_folder'])
         except DataParseError as e:
             return [(k + '.error', v) for k, v in e.message_by_name.items()]
-        target_folder = raw_arguments.get(
-            'target_folder') or prepare_target_folder(data_folder)
-        run_script(abspath(target_folder), tool_definition, result_arguments)
+        result_folder = Result.spawn_folder(data_folder)
+        target_folder = raw_arguments.get('target_folder')
+        run_script(
+            tool_definition, result_arguments, result_folder, target_folder)
 
 
 def configure_argument_parser(argument_parser, tool_definition):

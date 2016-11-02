@@ -1,7 +1,7 @@
 import re
 from fnmatch import fnmatch
 from invisibleroads_macros.configuration import (
-    RawCaseSensitiveConfigParser, load_settings, unicode_safely)
+    RawCaseSensitiveConfigParser, load_settings, save_settings, unicode_safely)
 from invisibleroads_macros.disk import (
     are_same_path, expand_path, resolve_relative_path)
 from invisibleroads_macros.log import parse_nested_dictionary_from
@@ -15,6 +15,31 @@ from .exceptions import (
 
 TOOL_NAME_PATTERN = re.compile(r'crosscompute\s*(.*)')
 ARGUMENT_NAME_PATTERN = re.compile(r'\{(.+?)\}')
+
+
+class ResultConfiguration(object):
+
+    def __init__(self, result_folder):
+        self.result_folder = result_folder
+
+    def save_tool_location(self, tool_definition):
+        return save_settings(join(self.result_folder, 'f.cfg'), **{
+            'tool_location': {
+                'configuration_path': tool_definition['configuration_path'],
+                'tool_name': tool_definition['tool_name'],
+            },
+        })
+
+    def save_result_arguments(self, result_arguments, environment):
+        return save_settings(join(self.result_folder, 'x.cfg'), **{
+            'result_arguments': result_arguments,
+            'result_environment': environment,
+        })
+
+    def save_result_properties(self, result_properties):
+        return save_settings(join(self.result_folder, 'y.cfg'), **{
+            'result_properties': result_properties,
+        })
 
 
 def find_tool_definition_by_name(folder, default_tool_name=None):
@@ -89,6 +114,8 @@ def load_tool_definition_by_name(
 
 def load_tool_definition(result_configuration_path):
     s = load_settings(result_configuration_path, 'tool_location')
+    print result_configuration_path
+    print s
     tool_configuration_path = expand_path(s['configuration_path'])
     tool_name = s['tool_name']
     if not isabs(tool_configuration_path):
@@ -103,7 +130,7 @@ def load_tool_definition(result_configuration_path):
 def load_result_arguments(result_configuration_path):
     arguments = load_result_settings(
         result_configuration_path, 'result_arguments')
-    arguments.pop('target_folder')
+    arguments.pop('target_folder', None)
     return arguments
 
 

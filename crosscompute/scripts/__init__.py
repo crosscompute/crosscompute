@@ -14,19 +14,20 @@ from invisibleroads.scripts import (
     Script, StoicArgumentParser, configure_subparsers, get_scripts_by_name,
     run_scripts)
 from invisibleroads_macros.configuration import split_arguments, unicode_safely
-from invisibleroads_macros.disk import cd, make_enumerated_folder, make_folder
+from invisibleroads_macros.disk import cd, link_path, make_folder
 from invisibleroads_macros.iterable import merge_dictionaries, sort_dictionary
 from invisibleroads_macros.log import format_hanging_indent, format_summary
-from os.path import abspath, basename, isabs, join, splitext
+from os.path import abspath, isabs, join, splitext
 from six import text_type
 from tempfile import gettempdir
 
 from ..configurations import (
-    find_tool_definition, load_result_arguments, load_tool_definition)
+    ResultConfiguration, find_tool_definition, load_result_arguments,
+    load_tool_definition)
 from ..exceptions import CrossComputeError, DataParseError
 from ..fallbacks import (
-    COMMAND_LINE_JOIN, SCRIPT_ENVIRONMENT, SCRIPT_EXTENSION,
-    prepare_path_argument)
+    prepare_path_argument, COMMAND_LINE_JOIN, SCRIPT_ENVIRONMENT,
+    SCRIPT_EXTENSION)
 from ..types import initialize_data_types, parse_data_dictionary
 from .convert import prepare_tool_from_notebook
 
@@ -63,14 +64,6 @@ class ToolScript(Script):
 
 
 class _ResultConfiguration(object):
-
-    def __init__(self, target_folder):
-        self.target_folder = make_folder(target_folder)
-        self.target_file = codecs.open(
-            join(target_folder, 'result.cfg'), 'w', encoding='utf-8')
-
-    def write(self, screen_text, file_text=None):
-        _write(self.target_file, screen_text, file_text)
 
     def write_header(self, tool_definition, result_arguments):
         configuration_folder = tool_definition['configuration_folder']
@@ -147,49 +140,26 @@ def prepare_tool_definition(tool_name):
     return tool_definition
 
 
-def prepare_target_folder(data_folder):
-    result_folder = prepare_result(data_folder)[1]
-    return get_target_folder(result_folder)
-
-
-def prepare_result(data_folder):
-    parent_folder = join(data_folder, 'results')
-    result_folder = make_enumerated_folder(parent_folder)
-    result_id = basename(result_folder)
-    return result_id, result_folder
-
-
-def get_source_folder(result_folder):
-    return join(result_folder, 'x')
-
-
-def get_target_folder(result_folder):
-    return join(result_folder, 'y')
-
-
-
 def run_script(
-        tool_definition, result_arguments, result_folder,
-        result_environment=None, target_folder=None):
-    save_tool_location(join(result_folder, 'f.cfg'), tool_definition)
-    save_result_arguments(join(
-        result_folder, 'x.cfg'), result_arguments, result_environment)
-
-    # if target_folder is not specifed, then use default
-    # if specified, then make and link to it in default location
-
-
-    result_properties, timestamp = OrderedDict(), time.time()
+        tool_definition, result_arguments, result_folder, target_folder=None,
+        environment=None):
+    timestamp = time.time()
+    target_folder = link_path(result_folder, 'y', make_folder(abspath(
+        target_folder or join(result_folder, 'y'))))
     result_arguments = dict(result_arguments, target_folder=target_folder)
-
-
+    # Record
+    result_configuration = ResultConfiguration(result_folder)
+    result_configuration.save_tool_location(tool_definition)
+    result_configuration.save_result_arguments(result_arguments, environment)
+    # Run
     command_terms = split_arguments(render_command(tool_definition[
         'command_template'], result_arguments).replace('\n', ' '))
+    result_properties = OrderedDict()
     try:
         with cd(tool_definition['configuration_folder']):
             command_process = subprocess.Popen(
                 command_terms, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                env=environment or SCRIPT_ENVIRONMENT)
+                env=merge_dictionaries(environment or {}, SCRIPT_ENVIRONMENT))
     except OSError:
         standard_output, standard_error = None, 'Command not found'
     else:
@@ -197,12 +167,11 @@ def run_script(
             x.rstrip().decode('utf-8') for x in command_process.communicate()]
         if command_process.returncode:
             result_properties['return_code'] = command_process.returncode
+    # Save
     result_properties.update(_process_streams(
         standard_output, standard_error, target_folder, tool_definition))
     result_properties['execution_time_in_seconds'] = time.time() - timestamp
-
-
-    save_result_properties(join(result_folder, 'y.cfg'), result_properties)
+    result_configuration.save_result_properties(result_properties)
     return result_properties
 
 
