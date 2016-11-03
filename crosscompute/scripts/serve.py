@@ -91,7 +91,7 @@ class ResultRequest(Request):
 
     def prepare_arguments(self, tool_definition, raw_arguments):
         draft_folder = make_unique_folder(join(
-            self.data_folder, 'draft', Result.__tablename__))
+            self.data_folder, 'drafts', Result._plural))
         try:
             result_arguments = self.collect_arguments(
                 tool_definition, raw_arguments, draft_folder)

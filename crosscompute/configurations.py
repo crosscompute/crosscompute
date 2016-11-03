@@ -1,7 +1,9 @@
 import re
+from collections import OrderedDict
 from fnmatch import fnmatch
 from invisibleroads_macros.configuration import (
     RawCaseSensitiveConfigParser, load_settings, save_settings, unicode_safely)
+from invisibleroads_macros.descriptor import cached_property
 from invisibleroads_macros.disk import (
     are_same_path, expand_path, resolve_relative_path)
 from invisibleroads_macros.log import parse_nested_dictionary_from
@@ -40,6 +42,18 @@ class ResultConfiguration(object):
         return save_settings(join(self.result_folder, 'y.cfg'), **{
             'result_properties': result_properties,
         })
+
+    @cached_property
+    def tool_definition(self):
+        return load_tool_definition(join(self.result_folder, 'f.cfg'))
+
+    @cached_property
+    def result_arguments(self):
+        return load_result_arguments(join(self.result_folder, 'x.cfg'))
+
+    @cached_property
+    def result_properties(self):
+        return load_result_properties(join(self.result_folder, 'y.cfg'))
 
 
 def find_tool_definition_by_name(folder, default_tool_name=None):
@@ -114,8 +128,6 @@ def load_tool_definition_by_name(
 
 def load_tool_definition(result_configuration_path):
     s = load_settings(result_configuration_path, 'tool_location')
-    print result_configuration_path
-    print s
     tool_configuration_path = expand_path(s['configuration_path'])
     tool_name = s['tool_name']
     if not isabs(tool_configuration_path):
@@ -141,7 +153,7 @@ def load_result_properties(result_configuration_path):
 
 
 def load_result_settings(result_configuration_path, section_name):
-    settings = {}
+    settings = OrderedDict()
     configuration_folder = dirname(abspath(result_configuration_path))
     for k, v in load_settings(result_configuration_path, section_name).items():
         if k.endswith('_path') or k.endswith('_folder'):
