@@ -25,7 +25,7 @@ class ResultConfiguration(object):
         self.result_folder = result_folder
 
     def save_tool_location(self, tool_definition):
-        return save_settings(join(self.result_folder, 'f.cfg'), **{
+        return save_settings(join(self.result_folder, 'f.cfg'), {
             'tool_location': {
                 'configuration_path': tool_definition['configuration_path'],
                 'tool_name': tool_definition['tool_name'],
@@ -33,15 +33,15 @@ class ResultConfiguration(object):
         })
 
     def save_result_arguments(self, result_arguments, environment):
-        return save_settings(join(self.result_folder, 'x.cfg'), **{
+        return save_settings(join(self.result_folder, 'x.cfg'), {
             'result_arguments': result_arguments,
             'result_environment': environment,
-        })
+        }, censored=True)
 
     def save_result_properties(self, result_properties):
-        return save_settings(join(self.result_folder, 'y.cfg'), **{
+        return save_settings(join(self.result_folder, 'y.cfg'), {
             'result_properties': result_properties,
-        })
+        }, censored=True)
 
     @cached_property
     def tool_definition(self):

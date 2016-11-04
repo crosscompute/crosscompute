@@ -143,7 +143,7 @@ def prepare_tool_definition(tool_name):
 def run_script(
         tool_definition, result_arguments, result_folder, target_folder=None,
         environment=None):
-    timestamp = time.time()
+    timestamp, environment = time.time(), environment or {}
     target_folder = link_path(result_folder, 'y', make_folder(abspath(
         target_folder or join(result_folder, 'y'))))
     result_arguments = dict(result_arguments, target_folder=target_folder)
@@ -159,7 +159,7 @@ def run_script(
         with cd(tool_definition['configuration_folder']):
             command_process = subprocess.Popen(
                 command_terms, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                env=merge_dictionaries(environment or {}, SCRIPT_ENVIRONMENT))
+                env=merge_dictionaries(environment, SCRIPT_ENVIRONMENT))
     except OSError:
         standard_output, standard_error = None, 'Command not found'
     else:
