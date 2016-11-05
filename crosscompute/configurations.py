@@ -7,10 +7,10 @@ from invisibleroads_macros.configuration import (
     save_settings, unicode_safely)
 from invisibleroads_macros.descriptor import cached_property
 from invisibleroads_macros.disk import (
-    are_same_path, expand_path, resolve_relative_path)
+    are_same_path, expand_path, link_path, resolve_relative_path)
 from invisibleroads_macros.log import (
     filter_nested_dictionary, format_hanging_indent, format_path,
-    parse_nested_dictionary_from)
+    make_absolute_paths, make_relative_paths, parse_nested_dictionary_from)
 from os import getcwd, walk
 from os.path import abspath, basename, dirname, isabs, join
 from pyramid.settings import asbool, aslist
@@ -40,6 +40,8 @@ class ResultConfiguration(object):
         }
         print(format_settings(d))
         print('')
+        link_path(self.result_folder, 'f', tool_definition[
+            'configuration_folder'])
         return save_settings(join(self.result_folder, 'f.cfg'), d)
 
     def save_result_arguments(self, result_arguments, environment):
@@ -50,9 +52,10 @@ class ResultConfiguration(object):
             d['result_environment'] = environment
         print(format_settings(d))
         print('')
-        return save_settings(
-            join(self.result_folder, 'x.cfg'), filter_nested_dictionary(
-                d, lambda x: x.startswith('_') or x in ['target_folder']))
+        d = filter_nested_dictionary(
+            d, lambda x: x.startswith('_') or x in ['target_folder'])
+        d = make_relative_paths(d, self.result_folder)
+        return save_settings(join(self.result_folder, 'x.cfg'), d)
 
     def save_result_properties(self, result_properties):
         d = {
@@ -60,9 +63,9 @@ class ResultConfiguration(object):
         }
         print(format_settings(filter_nested_dictionary(d, lambda x: x in [
             'standard_output', 'standard_error'])))
-        return save_settings(
-            join(self.result_folder, 'y.cfg'), filter_nested_dictionary(
-                d, lambda x: x.startswith('_')))
+        d = filter_nested_dictionary(d, lambda x: x.startswith('_'))
+        d = make_relative_paths(d, self.result_folder)
+        return save_settings(join(self.result_folder, 'y.cfg'), d)
 
     def save_result_script(self, tool_definition, result_arguments):
         target_path = join(self.result_folder, 'x' + SCRIPT_EXTENSION)
@@ -83,11 +86,13 @@ class ResultConfiguration(object):
 
     @cached_property
     def result_arguments(self):
-        return load_result_arguments(join(self.result_folder, 'x.cfg'))
+        d = load_result_arguments(join(self.result_folder, 'x.cfg'))
+        return make_absolute_paths(d, self.result_folder)
 
     @cached_property
     def result_properties(self):
-        return load_result_properties(join(self.result_folder, 'y.cfg'))
+        d = load_result_properties(join(self.result_folder, 'y.cfg'))
+        return make_absolute_paths(d, self.result_folder)
 
 
 def find_tool_definition_by_name(folder, default_tool_name=None):
