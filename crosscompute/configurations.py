@@ -1,18 +1,25 @@
+import codecs
 import re
 from collections import OrderedDict
 from fnmatch import fnmatch
 from invisibleroads_macros.configuration import (
-    RawCaseSensitiveConfigParser, load_settings, save_settings, unicode_safely)
+    RawCaseSensitiveConfigParser, format_settings, load_settings,
+    save_settings, unicode_safely)
 from invisibleroads_macros.descriptor import cached_property
 from invisibleroads_macros.disk import (
     are_same_path, expand_path, resolve_relative_path)
-from invisibleroads_macros.log import parse_nested_dictionary_from
+from invisibleroads_macros.log import (
+    filter_nested_dictionary, format_hanging_indent, format_path,
+    parse_nested_dictionary_from)
 from os import getcwd, walk
 from os.path import abspath, basename, dirname, isabs, join
 from pyramid.settings import asbool, aslist
+from six import text_type
 
 from .exceptions import (
     ToolConfigurationNotFound, ToolNotFound, ToolNotSpecified)
+from .fallbacks import (
+    prepare_path_argument, COMMAND_LINE_JOIN, SCRIPT_EXTENSION)
 
 
 TOOL_NAME_PATTERN = re.compile(r'crosscompute\s*(.*)')
@@ -25,23 +32,50 @@ class ResultConfiguration(object):
         self.result_folder = result_folder
 
     def save_tool_location(self, tool_definition):
-        return save_settings(join(self.result_folder, 'f.cfg'), {
-            'tool_location': {
-                'configuration_path': tool_definition['configuration_path'],
-                'tool_name': tool_definition['tool_name'],
-            },
-        })
+        d = {
+            'tool_location': OrderedDict([
+                ('tool_name', tool_definition['tool_name']),
+                ('configuration_path', tool_definition['configuration_path']),
+            ]),
+        }
+        print(format_settings(d))
+        print('')
+        return save_settings(join(self.result_folder, 'f.cfg'), d)
 
     def save_result_arguments(self, result_arguments, environment):
-        return save_settings(join(self.result_folder, 'x.cfg'), {
+        d = {
             'result_arguments': result_arguments,
-            'result_environment': environment,
-        }, censored=True)
+        }
+        if environment:
+            d['result_environment'] = environment
+        print(format_settings(d))
+        print('')
+        return save_settings(
+            join(self.result_folder, 'x.cfg'), filter_nested_dictionary(
+                d, lambda x: x.startswith('_') or x in ['target_folder']))
 
     def save_result_properties(self, result_properties):
-        return save_settings(join(self.result_folder, 'y.cfg'), {
+        d = {
             'result_properties': result_properties,
-        }, censored=True)
+        }
+        print(format_settings(filter_nested_dictionary(d, lambda x: x in [
+            'standard_output', 'standard_error'])))
+        return save_settings(
+            join(self.result_folder, 'y.cfg'), filter_nested_dictionary(
+                d, lambda x: x.startswith('_')))
+
+    def save_result_script(self, tool_definition, result_arguments):
+        target_path = join(self.result_folder, 'x' + SCRIPT_EXTENSION)
+        command = render_command(tool_definition[
+            'command_template'], result_arguments)
+        command_parts = [
+            'cd "%s"' % tool_definition['configuration_folder'],
+            format_hanging_indent(command.replace(
+                '\n', ' %s\n' % COMMAND_LINE_JOIN))]
+        with codecs.open(target_path, 'w', encoding='utf-8') as target_file:
+            target_file.write('\n'.join(command_parts) + '\n')
+        print('command_path = %s' % format_path(target_path))
+        return target_path
 
     @cached_property
     def tool_definition(self):
@@ -170,3 +204,16 @@ def format_available_tools(tool_definition_by_name):
 
 def parse_tool_argument_names(command_template):
     return tuple(ARGUMENT_NAME_PATTERN.findall(command_template))
+
+
+def render_command(command_template, result_arguments):
+    d = {}
+    quote_pattern = re.compile(r"""["'].*["']""")
+    for k, v in result_arguments.items():
+        v = text_type(v).strip()
+        if k.endswith('_path') or k.endswith('_folder'):
+            v = prepare_path_argument(v)
+        if ' ' in v and not quote_pattern.match(v):
+            v = '"%s"' % v
+        d[k] = v
+    return command_template.format(**d)

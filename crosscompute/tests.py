@@ -13,7 +13,7 @@ from .scripts.serve import get_app
 def run(data_folder, tool_name, result_arguments=None):
     initialize_data_types()
     tool_definition = prepare_tool_definition(tool_name)
-    result = Result.spawn_folder(data_folder)
+    result = Result.spawn(data_folder)
     target_folder = result.get_target_folder(data_folder)
     return run_script(
         tool_definition, result_arguments or {}, result.folder, target_folder)

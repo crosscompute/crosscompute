@@ -1,7 +1,6 @@
 import codecs
 import logging
 import os
-import re
 import simplejson as json
 try:
     import subprocess32 as subprocess
@@ -13,31 +12,19 @@ from collections import OrderedDict
 from invisibleroads.scripts import (
     Script, StoicArgumentParser, configure_subparsers, get_scripts_by_name,
     run_scripts)
-from invisibleroads_macros.configuration import split_arguments, unicode_safely
+from invisibleroads_macros.configuration import (
+    split_arguments, unicode_safely, SECTION_TEMPLATE)
 from invisibleroads_macros.disk import cd, link_path, make_folder
-from invisibleroads_macros.iterable import merge_dictionaries, sort_dictionary
-from invisibleroads_macros.log import format_hanging_indent, format_summary
-from os.path import abspath, isabs, join, splitext
-from six import text_type
-from tempfile import gettempdir
+from invisibleroads_macros.iterable import merge_dictionaries
+from os.path import abspath, expanduser, join, splitext
 
 from ..configurations import (
     ResultConfiguration, find_tool_definition, load_result_arguments,
-    load_tool_definition)
+    load_tool_definition, render_command)
 from ..exceptions import CrossComputeError, DataParseError
-from ..fallbacks import (
-    prepare_path_argument, COMMAND_LINE_JOIN, SCRIPT_ENVIRONMENT,
-    SCRIPT_EXTENSION)
+from ..fallbacks import SCRIPT_ENVIRONMENT
 from ..types import initialize_data_types, parse_data_dictionary
 from .convert import prepare_tool_from_notebook
-
-
-EXCLUDED_FILE_NAMES = [
-    'run.bat',
-    'run.sh',
-    'standard_output.log',
-    'standard_error.log',
-]
 
 
 class ToolScript(Script):
@@ -57,60 +44,10 @@ class ToolScript(Script):
         tool_definition = prepare_tool_definition(args.tool_name)
         tool_name = tool_definition['tool_name']
         data_folder = args.data_folder or join(
-            gettempdir(), 'crosscompute', tool_name)
+            expanduser('~'), '.crosscompute', tool_name)
         logging.basicConfig(
             level=logging.DEBUG if args.verbose else logging.WARNING)
         return tool_definition, data_folder
-
-
-class _ResultConfiguration(object):
-
-    def write_header(self, tool_definition, result_arguments):
-        configuration_folder = tool_definition['configuration_folder']
-        tool_argument_names = list(tool_definition['argument_names'])
-        # Write tool_location
-        template = '[tool_location]\n%s'
-        command_path = self.write_script(tool_definition, result_arguments)
-        self.write(template % format_summary(OrderedDict([
-            ('tool_name', tool_definition['tool_name']),
-            ('configuration_path', tool_definition['configuration_path']),
-        ])))
-        print(format_summary({'command_path': command_path}))
-        # Put target_folder at end of result_arguments
-        target_folder = result_arguments['target_folder']
-        try:
-            tool_argument_names.remove('target_folder')
-        except ValueError:
-            pass
-        result_arguments = sort_dictionary(
-            result_arguments, tool_argument_names)
-        # Write result_arguments
-        template = '\n[result_arguments]\n%s\n'
-        result_arguments['target_folder'] = target_folder
-        for k, v in result_arguments.items():
-            if not k.endswith('_path') or isabs(v):
-                continue
-            result_arguments[k] = abspath(join(configuration_folder, v))
-        self.write(template % format_summary(result_arguments))
-
-    def write_script(self, tool_definition, result_arguments):
-        configuration_folder = tool_definition['configuration_folder']
-        script_path = join(self.target_folder, 'run' + SCRIPT_EXTENSION)
-        command = render_command(
-            tool_definition['command_template'], result_arguments)
-        with codecs.open(script_path, 'w', encoding='utf-8') as script_file:
-            script_file.write('cd "%s"\n' % configuration_folder)
-            script_file.write(format_hanging_indent(
-                command.replace('\n', ' %s\n' % COMMAND_LINE_JOIN)) + '\n')
-        return script_path
-
-    def write_footer(self, result_properties):
-        template = '[result_properties]\n%s'
-        self.write(
-            screen_text=template % format_summary(
-                result_properties, censored=False),
-            file_text=template % format_summary(
-                result_properties, censored=True))
 
 
 def launch(argv=sys.argv):
@@ -144,9 +81,9 @@ def run_script(
         tool_definition, result_arguments, result_folder, target_folder=None,
         environment=None):
     timestamp, environment = time.time(), environment or {}
-    target_folder = link_path(result_folder, 'y', make_folder(abspath(
-        target_folder or join(result_folder, 'y'))))
-    result_arguments = dict(result_arguments, target_folder=target_folder)
+    if 'target_folder' in tool_definition['argument_names']:
+        y = make_folder(abspath(target_folder or join(result_folder, 'y')))
+        result_arguments = OrderedDict(result_arguments, target_folder=y)
     # Record
     result_configuration = ResultConfiguration(result_folder)
     result_configuration.save_tool_location(tool_definition)
@@ -163,46 +100,36 @@ def run_script(
     except OSError:
         standard_output, standard_error = None, 'Command not found'
     else:
-        standard_output, standard_error = [
-            x.rstrip().decode('utf-8') for x in command_process.communicate()]
+        standard_output, standard_error = [x.rstrip().decode(
+            'utf-8') for x in command_process.communicate()]
         if command_process.returncode:
             result_properties['return_code'] = command_process.returncode
     # Save
     result_properties.update(_process_streams(
-        standard_output, standard_error, target_folder, tool_definition))
+        standard_output, standard_error, result_folder, tool_definition))
     result_properties['execution_time_in_seconds'] = time.time() - timestamp
     result_configuration.save_result_properties(result_properties)
+    result_configuration.save_result_script(tool_definition, result_arguments)
+    if 'target_folder' in tool_definition['argument_names']:
+        link_path(result_folder, 'y', result_arguments['target_folder'])
     return result_properties
 
 
-def render_command(command_template, result_arguments):
-    d = {}
-    quote_pattern = re.compile(r"""["'].*["']""")
-    for k, v in result_arguments.items():
-        v = text_type(v).strip()
-        if k.endswith('_path') or k.endswith('_folder'):
-            v = prepare_path_argument(v)
-        if ' ' in v and not quote_pattern.match(v):
-            v = '"%s"' % v
-        d[k] = v
-    return command_template.format(**d)
-
-
 def _process_streams(
-        standard_output, standard_error, target_folder, tool_definition):
+        standard_output, standard_error, result_folder, tool_definition):
     d, type_errors = OrderedDict(), OrderedDict()
-    for stream_name, stream_content in [
-            ('standard_output', standard_output),
-            ('standard_error', standard_error)]:
+    for file_name, stream_name, stream_content in [
+            ('stdout.log', 'standard_output', standard_output),
+            ('stderr.log', 'standard_error', standard_error)]:
         if not stream_content:
             continue
-        _write(
-            codecs.open(join(
-                target_folder, '%s.log' % stream_name), 'w', encoding='utf-8'),
-            screen_text='[%s]\n%s\n' % (stream_name, stream_content),
-            file_text=stream_content)
+        print(SECTION_TEMPLATE % (stream_name, stream_content))
+        codecs.open(join(
+            result_folder, file_name), 'w', encoding='utf-8').write(
+                stream_content + '\n')
         try:
-            value_by_key = parse_data_dictionary(stream_content, target_folder)
+            value_by_key = parse_data_dictionary(
+                stream_content, join(result_folder, 'y'))
         except DataParseError as e:
             for k, v in e.message_by_name.items():
                 type_errors['%s.error' % k] = v
@@ -214,10 +141,3 @@ def _process_streams(
     if type_errors:
         d['type_errors'] = type_errors
     return d
-
-
-def _write(target_file, screen_text, file_text=None):
-    if not file_text:
-        file_text = screen_text
-    print(screen_text)
-    target_file.write(file_text + '\n')

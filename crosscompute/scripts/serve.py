@@ -32,7 +32,7 @@ from ..models import Result
 from ..types import (
     DataItem, parse_data_dictionary_from, get_data_type, DATA_TYPE_BY_NAME,
     RESERVED_ARGUMENT_NAMES)
-from . import ToolScript, run_script, EXCLUDED_FILE_NAMES
+from . import ToolScript, run_script
 
 
 HELP = {
@@ -201,6 +201,8 @@ def get_app(
             'invisibleroads_posts:assets/favicon.ico',
             'invisibleroads_posts:assets/robots.txt',
         ],
+        'uploads.upload.id.length': 32,
+        'client_cache.http.expiration_time': 3600,
         'jinja2.directories': 'crosscompute:templates',
         'jinja2.lstrip_blocks': True,
         'jinja2.trim_blocks': True,
@@ -339,7 +341,7 @@ def run_tool_json(request):
     result = result_request.prepare_arguments(tool_definition, request.params)
     target_folder = result.get_target_folder(data_folder)
     run_script(tool_definition, result.arguments, result.folder, target_folder)
-    compress_zip(target_folder, excludes=EXCLUDED_FILE_NAMES)
+    compress_zip(target_folder)
     return {
         'result_id': result.id,
         'result_url': request.route_path(
@@ -386,8 +388,6 @@ def see_result_file(request):
     try:
         file_path = resolve_relative_path(matchdict['path'], parent_folder)
     except IOError:
-        raise HTTPForbidden
-    if basename(file_path) in EXCLUDED_FILE_NAMES:
         raise HTTPForbidden
     if not exists(file_path):
         raise HTTPNotFound
