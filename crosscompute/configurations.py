@@ -40,7 +40,7 @@ class ResultConfiguration(object):
         }
         print(format_settings(d))
         print('')
-        link_path(self.result_folder, 'f', tool_definition[
+        link_path(join(self.result_folder, 'f'), tool_definition[
             'configuration_folder'])
         return save_settings(join(self.result_folder, 'f.cfg'), d)
 

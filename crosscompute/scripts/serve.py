@@ -143,7 +143,7 @@ class ResultRequest(Request):
         make_folder(source_folder)
         for k, v in result_arguments.items():
             if k.endswith('_path'):
-                v = move_path(source_folder, basename(v), v)
+                v = move_path(join(source_folder, basename(v)), v)
             d[k] = v
         return d
 
@@ -155,30 +155,31 @@ class ResultRequest(Request):
             raw_argument_name = '%s_%s' % (argument_noun, file_format)
             if raw_argument_name not in raw_arguments:
                 continue
-            return copy_text(draft_folder, '%s.%s' % (
-                argument_noun, file_format), raw_arguments[raw_argument_name])
+            source_text = raw_arguments[raw_argument_name]
+            target_name = '%s.%s' % (argument_noun, file_format)
+            return copy_text(join(draft_folder, target_name), source_text)
         # Raise KeyError if client did not specify noun (x_table)
         v = raw_arguments[argument_noun]
         # If client sent multipart content, save it
         if hasattr(v, 'file'):
-            return copy_file(draft_folder, argument_noun + get_file_extension(
-                v.filename), v.file)
+            target_name = argument_noun + get_file_extension(v.filename)
+            return copy_file(join(draft_folder, target_name), v.file)
         # If client sent empty content, use default
         if v == '':
             if not default_path:
                 raise KeyError
-            return link_path(draft_folder, argument_noun + get_file_extension(
-                default_path), default_path)
+            target_name = argument_noun + get_file_extension(default_path)
+            return link_path(join(draft_folder, target_name), default_path)
         # If client sent a relative path (x_table=11/x/y.csv), find it
         if '/' in v:
             source_path = self.get_file_path(*parse_result_relative_path(v))
-            return link_path(draft_folder, argument_noun + get_file_extension(
-                source_path), source_path)
+            target_name = argument_noun + get_file_extension(source_path)
+            return link_path(join(draft_folder, target_name), source_path)
         # If client sent an upload id (x_table=x), find it
         upload = get_upload(self, upload_id=v)
         source_path = join(upload.folder, data_type.get_file_name())
         target_name = argument_noun + get_file_extension(source_path)
-        target_path = move_path(draft_folder, target_name, source_path)
+        target_path = move_path(join(draft_folder, target_name), source_path)
         remove_safely(upload.folder)
         return target_path
 

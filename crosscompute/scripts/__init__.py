@@ -15,6 +15,7 @@ from invisibleroads.scripts import (
 from invisibleroads_macros.configuration import (
     split_arguments, unicode_safely, SECTION_TEMPLATE)
 from invisibleroads_macros.disk import cd, link_path, make_folder
+from invisibleroads_macros.fallbacks import COMMAND_LINE_HOME
 from invisibleroads_macros.iterable import merge_dictionaries
 from os.path import abspath, expanduser, join, splitext
 
@@ -111,7 +112,7 @@ def run_script(
     result_configuration.save_result_properties(result_properties)
     result_configuration.save_result_script(tool_definition, result_arguments)
     if 'target_folder' in tool_definition['argument_names']:
-        link_path(result_folder, 'y', result_arguments['target_folder'])
+        link_path(join(result_folder, 'y'), result_arguments['target_folder'])
     return result_properties
 
 
@@ -123,6 +124,8 @@ def _process_streams(
             ('stderr.log', 'standard_error', standard_error)]:
         if not stream_content:
             continue
+        stream_content = stream_content.replace(expanduser(
+            '~'), COMMAND_LINE_HOME)
         print(SECTION_TEMPLATE % (stream_name, stream_content))
         codecs.open(join(
             result_folder, file_name), 'w', encoding='utf-8').write(
