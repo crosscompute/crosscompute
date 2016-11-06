@@ -3,16 +3,15 @@ import re
 from collections import OrderedDict
 from fnmatch import fnmatch
 from invisibleroads_macros.configuration import (
-    RawCaseSensitiveConfigParser, format_settings, load_settings,
+    RawCaseSensitiveConfigParser, format_settings, load_relative_settings,
     save_settings, unicode_safely)
 from invisibleroads_macros.descriptor import cached_property
-from invisibleroads_macros.disk import (
-    are_same_path, expand_path, link_path, resolve_relative_path)
+from invisibleroads_macros.disk import are_same_path, link_path
 from invisibleroads_macros.log import (
     filter_nested_dictionary, format_hanging_indent, format_path,
-    make_absolute_paths, make_relative_paths, parse_nested_dictionary_from)
+    make_relative_paths, parse_nested_dictionary_from)
 from os import getcwd, walk
-from os.path import abspath, basename, dirname, isabs, join
+from os.path import basename, dirname, isabs, join
 from pyramid.settings import asbool, aslist
 from six import text_type
 
@@ -42,6 +41,8 @@ class ResultConfiguration(object):
         print('')
         link_path(join(self.result_folder, 'f'), tool_definition[
             'configuration_folder'])
+        d['tool_location']['configuration_path'] = join('f', basename(
+            tool_definition['configuration_path']))
         return save_settings(join(self.result_folder, 'f.cfg'), d)
 
     def save_result_arguments(self, result_arguments, environment):
@@ -86,13 +87,11 @@ class ResultConfiguration(object):
 
     @cached_property
     def result_arguments(self):
-        d = load_result_arguments(join(self.result_folder, 'x.cfg'))
-        return make_absolute_paths(d, self.result_folder)
+        return load_result_arguments(join(self.result_folder, 'x.cfg'))
 
     @cached_property
     def result_properties(self):
-        d = load_result_properties(join(self.result_folder, 'y.cfg'))
-        return make_absolute_paths(d, self.result_folder)
+        return load_result_properties(join(self.result_folder, 'y.cfg'))
 
 
 def find_tool_definition_by_name(folder, default_tool_name=None):
@@ -166,8 +165,8 @@ def load_tool_definition_by_name(
 
 
 def load_tool_definition(result_configuration_path):
-    s = load_settings(result_configuration_path, 'tool_location')
-    tool_configuration_path = expand_path(s['configuration_path'])
+    s = load_relative_settings(result_configuration_path, 'tool_location')
+    tool_configuration_path = s['configuration_path']
     tool_name = s['tool_name']
     if not isabs(tool_configuration_path):
         result_configuration_folder = dirname(result_configuration_path)
@@ -179,26 +178,16 @@ def load_tool_definition(result_configuration_path):
 
 
 def load_result_arguments(result_configuration_path):
-    arguments = load_result_settings(
+    arguments = load_relative_settings(
         result_configuration_path, 'result_arguments')
     arguments.pop('target_folder', None)
     return arguments
 
 
 def load_result_properties(result_configuration_path):
-    properties = load_result_settings(
+    properties = load_relative_settings(
         result_configuration_path, 'result_properties')
     return parse_nested_dictionary_from(properties, max_depth=1)
-
-
-def load_result_settings(result_configuration_path, section_name):
-    settings = OrderedDict()
-    configuration_folder = dirname(abspath(result_configuration_path))
-    for k, v in load_settings(result_configuration_path, section_name).items():
-        if k.endswith('_path') or k.endswith('_folder'):
-            v = resolve_relative_path(v, configuration_folder)
-        settings[k] = v
-    return settings
 
 
 def format_available_tools(tool_definition_by_name):

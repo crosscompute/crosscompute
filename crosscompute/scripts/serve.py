@@ -361,7 +361,7 @@ def see_result(request):
     return get_result_template_variables(
         result_configuration.tool_definition,
         result_configuration.result_arguments,
-        result_configuration.result_properties, result_id, tool_id=1)
+        result_configuration.result_properties, result.id, tool_id=1)
 
 
 # def see_result_json(request): pass
