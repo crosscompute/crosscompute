@@ -2,9 +2,9 @@ import codecs
 import logging
 from abc import ABCMeta
 from collections import OrderedDict
+from invisibleroads_macros.configuration import (
+    make_absolute_paths, resolve_attribute)
 from invisibleroads_macros.log import log_traceback, parse_nested_dictionary
-from invisibleroads_macros.configuration import resolve_attribute
-from os.path import expanduser, isabs, join
 from six import add_metaclass, text_type
 from stevedore.extension import ExtensionManager
 
@@ -49,7 +49,7 @@ class DataType(object):
         try:
             value = Class.load(path)
         except (IOError, DataTypeError):
-            value = None
+            value = ''
         return value
 
     @classmethod
@@ -134,15 +134,4 @@ def parse_data_dictionary_from(raw_dictionary, root_folder):
             errors[noun] = 'could_not_load'
     if errors:
         raise DataParseError(errors, d)
-    return d
-
-
-def make_absolute_paths(value_by_key, root_folder):
-    d = OrderedDict()
-    for key, value in OrderedDict(value_by_key).items():
-        if key.endswith('_path'):
-            value = expanduser(value)
-            if not isabs(value):
-                value = join(root_folder, value)
-        d[key] = value
     return d

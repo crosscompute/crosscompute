@@ -4,12 +4,12 @@ from collections import OrderedDict
 from fnmatch import fnmatch
 from invisibleroads_macros.configuration import (
     RawCaseSensitiveConfigParser, format_settings, load_relative_settings,
-    save_settings, unicode_safely)
+    make_absolute_paths, make_relative_paths, save_settings, unicode_safely)
 from invisibleroads_macros.descriptor import cached_property
 from invisibleroads_macros.disk import are_same_path, link_path
 from invisibleroads_macros.log import (
     filter_nested_dictionary, format_hanging_indent, format_path,
-    make_relative_paths, parse_nested_dictionary_from)
+    parse_nested_dictionary_from)
 from os import getcwd, walk
 from os.path import basename, dirname, isabs, join
 from pyramid.settings import asbool, aslist
@@ -136,13 +136,14 @@ def find_tool_definition(folder=None, tool_name='', default_tool_name=''):
 def load_tool_definition_by_name(
         tool_configuration_path, default_tool_name=None):
     tool_definition_by_name = {}
-    tool_configuration = RawCaseSensitiveConfigParser()
-    tool_configuration.read(tool_configuration_path)
+    configuration = RawCaseSensitiveConfigParser()
+    configuration.read(tool_configuration_path)
+    configuration_folder = dirname(tool_configuration_path)
     d = {
         u'configuration_path': tool_configuration_path,
-        u'configuration_folder': dirname(tool_configuration_path),
+        u'configuration_folder': configuration_folder,
     }
-    for section_name in tool_configuration.sections():
+    for section_name in configuration.sections():
         try:
             tool_name = TOOL_NAME_PATTERN.match(section_name).group(1).strip()
         except AttributeError:
@@ -151,9 +152,9 @@ def load_tool_definition_by_name(
             tool_name = default_tool_name
         tool_definition = {
             unicode_safely(k): unicode_safely(v)
-            for k, v in tool_configuration.items(section_name)}
+            for k, v in configuration.items(section_name)}
         for key in tool_definition:
-            if key.startswith('show_'):
+            if key in ('show_standard_output', 'show_standard_error'):
                 tool_definition[key] = asbool(tool_definition[key])
             elif key.endswith('.dependencies'):
                 tool_definition[key] = aslist(tool_definition[key])
@@ -161,7 +162,7 @@ def load_tool_definition_by_name(
         tool_definition[u'argument_names'] = parse_tool_argument_names(
             tool_definition.get('command_template', u''))
         tool_definition_by_name[tool_name] = dict(tool_definition, **d)
-    return tool_definition_by_name
+    return make_absolute_paths(tool_definition_by_name, configuration_folder)
 
 
 def load_tool_definition(result_configuration_path):

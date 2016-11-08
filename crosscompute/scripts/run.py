@@ -1,5 +1,7 @@
 from argparse import ArgumentParser, SUPPRESS
 from invisibleroads_macros.configuration import unicode_safely
+from invisibleroads_macros.iterable import sort_dictionary
+from os import getcwdu
 from sys import argv
 
 from ..exceptions import DataParseError
@@ -28,9 +30,8 @@ class RunScript(ToolScript):
             argument_parser, tool_definition)
         raw_arguments = argument_parser.parse_known_args(argv[2:])[0].__dict__
         try:
-            result_arguments = parse_data_dictionary_from({
-                k: raw_arguments[k] for k in tool_definition['argument_names']
-            }, tool_definition['configuration_folder'])
+            result_arguments = parse_data_dictionary_from(sort_dictionary(
+                raw_arguments, tool_definition['argument_names']), getcwdu())
         except DataParseError as e:
             return [(k + '.error', v) for k, v in e.message_by_name.items()]
         result_folder = Result.spawn_folder(data_folder)
@@ -40,22 +41,23 @@ class RunScript(ToolScript):
 
 
 def configure_argument_parser(argument_parser, tool_definition):
-    for x in tool_definition['argument_names']:
-        if x in RESERVED_ARGUMENT_NAMES:
+    'Expose tool arguments as command-line arguments'
+    for k in tool_definition['argument_names']:
+        if k in RESERVED_ARGUMENT_NAMES:
             continue
         d = {}
-        if x in tool_definition:
-            d['default'] = tool_definition[x]
+        if k in tool_definition:
+            d['default'] = tool_definition[k]
         else:
             d['required'] = True
         for suffix in DATA_TYPE_BY_SUFFIX:
-            if x.endswith('_' + suffix):
+            if k.endswith('_' + suffix):
                 d['metavar'] = suffix.upper()
                 break
         else:
-            if x.endswith('_folder'):
+            if k.endswith('_folder'):
                 d['metavar'] = 'FOLDER'
-            elif x.endswith('_path'):
+            elif k.endswith('_path'):
                 d['metavar'] = 'PATH'
-        argument_parser.add_argument('--' + x, type=unicode_safely, **d)
+        argument_parser.add_argument('--' + k, type=unicode_safely, **d)
     return argument_parser

@@ -5,9 +5,9 @@ import shutil
 import tempfile
 from collections import OrderedDict
 from invisibleroads_macros.disk import get_file_extension, make_unique_path
-from os import chdir
 from os.path import basename, join, splitext
 
+from ..configurations import find_tool_definition
 from ..exceptions import CrossComputeError
 from ..types import RESERVED_ARGUMENT_NAMES
 
@@ -17,8 +17,7 @@ def prepare_tool_from_notebook(notebook_path):
     notebook = load_notebook(notebook_path)
     script_folder = prepare_script_folder(
         tempfile.mkdtemp(), notebook, notebook_name)
-    chdir(script_folder)
-    return notebook_name
+    return find_tool_definition(script_folder, default_tool_name=notebook_name)
 
 
 def load_notebook(notebook_path):

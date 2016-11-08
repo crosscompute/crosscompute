@@ -61,12 +61,14 @@ def launch(argv=sys.argv):
 
 
 def prepare_tool_definition(tool_name):
-    if tool_name.endswith('.cfg'):
-        tool_definition = load_tool_definition(tool_name)
-        result_arguments = load_result_arguments(tool_name)
-        return merge_dictionaries(tool_definition, result_arguments)
-    elif tool_name.endswith('.ipynb'):
-        tool_name = prepare_tool_from_notebook(tool_name)
+    tool_definition = load_tool_definition('f.cfg')
+    if tool_definition:
+        tool_definition.update(load_result_arguments('x.cfg'))
+        return tool_definition
+
+    if tool_name.endswith('.ipynb'):
+        return prepare_tool_from_notebook(tool_name)
+
     if tool_name:
         tool_name = tool_name.rstrip(os.sep)  # Remove folder slash
         tool_name = tool_name.replace('_', '-')

@@ -15,7 +15,7 @@ from invisibleroads_uploads.views import get_upload, get_upload_from
 from markupsafe import Markup
 from mistune import markdown
 from os import environ
-from os.path import basename, exists, isabs, join
+from os.path import basename, exists, join
 from pyramid.config import Configurator
 from pyramid.httpexceptions import (
     HTTPBadRequest, HTTPForbidden, HTTPNotFound, HTTPSeeOther)
@@ -111,9 +111,7 @@ class ResultRequest(Request):
                 continue
             if argument_name.endswith('_path'):
                 argument_noun = argument_name[:-5]
-                default_path = join(
-                    configuration_folder, tool_definition[argument_name],
-                ) if argument_name in tool_definition else None
+                default_path = tool_definition.get(argument_name)
                 try:
                     v = self.prepare_argument_path(
                         argument_noun, raw_arguments, draft_folder,
@@ -139,7 +137,7 @@ class ResultRequest(Request):
         return Result.spawn(self.data_folder)
 
     def migrate_arguments(self, result_arguments, source_folder):
-        d = {}
+        d = OrderedDict()
         make_folder(source_folder)
         for k, v in result_arguments.items():
             if k.endswith('_path'):
@@ -433,12 +431,8 @@ def get_tool_template_variables(tool_definition, tool_id):
 
 def get_tool_arguments(tool_definition):
     value_by_key = OrderedDict()
-    configuration_folder = tool_definition['configuration_folder']
     for key in tool_definition['argument_names']:
-        value = tool_definition.get(key, '')
-        if key.endswith('_path') and not isabs(value):
-            value = join(configuration_folder, value)
-        value_by_key[key] = value
+        value_by_key[key] = tool_definition.get(key, '')
     return value_by_key
 
 

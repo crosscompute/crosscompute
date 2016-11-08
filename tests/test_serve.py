@@ -57,11 +57,12 @@ class TestResultRequest(object):
             result_request.prepare_arguments(tool_definition, raw_arguments)
         assert e.value.detail['x'] == 'required'
         # Run with default_path
-        tool_definition['x_path'] = 'cc.ini'
+        default_path = join(tool_definition['configuration_folder'], 'cc.ini')
+        tool_definition['x_path'] = default_path
         result = result_request.prepare_arguments(
             tool_definition, raw_arguments)
-        assert open(result.arguments['x_path']).read() == open(join(
-            tool_definition['configuration_folder'], 'cc.ini')).read()
+        assert open(result.arguments['x_path']).read() == open(
+            default_path).read()
 
     def test_accept_multipart_content(self, result_request, tool_definition):
         field_storage = FieldStorage()
