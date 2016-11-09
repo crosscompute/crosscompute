@@ -18,8 +18,7 @@ from invisibleroads_macros.configuration import (
 from invisibleroads_macros.disk import cd, make_enumerated_folder, make_folder
 from invisibleroads_macros.iterable import merge_dictionaries
 from invisibleroads_macros.log import (
-    format_hanging_indent, format_summary, parse_nested_dictionary_from,
-    sort_dictionary)
+    format_hanging_indent, format_summary, parse_nested_dictionary_from)
 from os.path import abspath, basename, isabs, join, splitext
 from six import text_type
 from tempfile import gettempdir
@@ -86,22 +85,23 @@ class _ResultConfiguration(object):
             ('configuration_path', tool_definition['configuration_path']),
         ])))
         print(format_summary({'command_path': command_path}))
-        # Put target_folder at end of result_arguments
-        target_folder = result_arguments['target_folder']
+	# Put target_folder at end of result_arguments
         try:
-            tool_argument_names.remove('target_folder')
-        except ValueError:
+            target_folder = result_arguments['target_folder']
+            result_arguments.pop('target_folder')
+        except KeyError:
             pass
-        result_arguments = sort_dictionary(
-            result_arguments, tool_argument_names)
+        ordered_arguments = OrderedDict(sorted(result_arguments.items(), key=lambda x: x[0]))
+        ordered_arguments['target_folder'] = target_folder
+        result_arguments['target_folder'] = target_folder
+        # result_arguments = sort_dictionary(result_arguments, tool_argument_names)
         # Write result_arguments
         template = '\n[result_arguments]\n%s\n'
-        result_arguments['target_folder'] = target_folder
-        for k, v in result_arguments.items():
+        for k, v in ordered_arguments.items():
             if not k.endswith('_path') or isabs(v):
                 continue
-            result_arguments[k] = abspath(join(configuration_folder, v))
-        self.write(template % format_summary(result_arguments))
+            ordered_arguments[k] = abspath(join(configuration_folder, v))
+        self.write(template % format_summary(ordered_arguments))
 
     def write_script(self, tool_definition, result_arguments):
         configuration_folder = tool_definition['configuration_folder']
