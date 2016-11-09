@@ -348,26 +348,12 @@ def run_tool_json(request):
     }
 
 
-def see_result(request):
-    data_folder = request.data_folder
-    result_id = request.matchdict['result_id']
-    result = Result(id=result_id)
-    result_folder = result.get_folder(data_folder)
-    if not exists(result_folder):
-        raise HTTPNotFound
-    result_configuration = ResultConfiguration(result_folder)
-    return get_result_template_variables(
-        result_configuration.tool_definition,
-        result_configuration.result_arguments,
-        result_configuration.result_properties, result.id, tool_id=1)
-
-
 # def see_result_json(request): pass
 
 
 def see_result_zip(request):
-    data_folder = request.data_folder
     matchdict = request.matchdict
+    data_folder = request.data_folder
     result_id = matchdict['result_id']
     result = Result(id=result_id)
     archive_path = result.get_target_folder(data_folder) + '.zip'
@@ -391,6 +377,20 @@ def see_result_file(request):
     if not exists(file_path):
         raise HTTPNotFound
     return FileResponse(file_path, request=request)
+
+
+def see_result(request):
+    data_folder = request.data_folder
+    result_id = request.matchdict['result_id']
+    result = Result(id=result_id)
+    result_folder = result.get_folder(data_folder)
+    if not exists(result_folder):
+        raise HTTPNotFound
+    result_configuration = ResultConfiguration(result_folder)
+    return get_result_template_variables(
+        result_configuration.tool_definition,
+        result_configuration.result_arguments,
+        result_configuration.result_properties, result.id, tool_id=1)
 
 
 def import_upload(request, DataType, render_property_kw):
