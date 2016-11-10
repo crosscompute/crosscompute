@@ -28,7 +28,8 @@ class DataItem(object):
         self.help_text = help_text
 
     def format_value(self, *args, **kw):
-        return self.data_type.format(self.value, *args, **kw)
+        x = self.data_type.format(self.value, *args, **kw)
+        return '' if x is None else x
 
 
 @add_metaclass(ABCMeta)
@@ -49,7 +50,7 @@ class DataType(object):
         try:
             value = Class.load(path)
         except (IOError, DataTypeError):
-            value = ''
+            value = None
         return value
 
     @classmethod

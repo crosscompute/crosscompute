@@ -17,7 +17,7 @@ from invisibleroads_macros.configuration import (
 from invisibleroads_macros.disk import cd, link_path, make_folder
 from invisibleroads_macros.fallbacks import COMMAND_LINE_HOME
 from invisibleroads_macros.iterable import merge_dictionaries
-from os.path import abspath, expanduser, join, splitext
+from os.path import abspath, exists, expanduser, join, splitext
 
 from ..configurations import (
     ResultConfiguration, find_tool_definition, load_result_arguments,
@@ -61,8 +61,8 @@ def launch(argv=sys.argv):
 
 
 def prepare_tool_definition(tool_name):
-    tool_definition = load_tool_definition('f.cfg')
-    if tool_definition:
+    if exists('f.cfg'):
+        tool_definition = load_tool_definition('f.cfg')
         tool_definition.update(load_result_arguments('x.cfg'))
         return tool_definition
 

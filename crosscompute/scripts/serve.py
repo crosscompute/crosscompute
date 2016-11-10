@@ -28,7 +28,7 @@ from wsgiref.simple_server import make_server
 
 from ..configurations import ResultConfiguration, ARGUMENT_NAME_PATTERN
 from ..exceptions import DataParseError, DataTypeError
-from ..models import Result
+from ..models import Result, Tool, TOOL_ID
 from ..types import (
     DataItem, parse_data_dictionary_from, get_data_type, DATA_TYPE_BY_NAME,
     RESERVED_ARGUMENT_NAMES)
@@ -323,13 +323,12 @@ def add_routes(config):
 
 
 def index(request):
-    return HTTPSeeOther(request.route_path('tool', tool_id=1))
+    return HTTPSeeOther(request.route_path('tool', tool_id=TOOL_ID))
 
 
 def see_tool(request):
-    settings = request.registry.settings
-    tool_definition = settings['tool_definition']
-    return get_tool_template_variables(tool_definition, tool_id=1)
+    tool = Tool.get_from(request)
+    return get_tool_template_variables(tool)
 
 
 def run_tool_json(request):
@@ -352,45 +351,15 @@ def run_tool_json(request):
 
 
 def see_result_zip(request):
-    matchdict = request.matchdict
-    data_folder = request.data_folder
-    result_id = matchdict['result_id']
-    result = Result(id=result_id)
-    archive_path = result.get_target_folder(data_folder) + '.zip'
-    return FileResponse(archive_path, request=request)
+    return get_result_zip_response(request, Result)
 
 
 def see_result_file(request):
-    matchdict = request.matchdict
-    folder_name = matchdict['folder_name']
-    if folder_name not in ('x', 'y'):
-        raise HTTPForbidden
-    data_folder = request.data_folder
-    result_id = matchdict['result_id']
-    result = Result(id=result_id)
-    result_folder = result.get_folder(data_folder)
-    parent_folder = join(result_folder, folder_name)
-    try:
-        file_path = resolve_relative_path(matchdict['path'], parent_folder)
-    except IOError:
-        raise HTTPForbidden
-    if not exists(file_path):
-        raise HTTPNotFound
-    return FileResponse(file_path, request=request)
+    return get_result_file_response(request, Result)
 
 
 def see_result(request):
-    data_folder = request.data_folder
-    result_id = request.matchdict['result_id']
-    result = Result(id=result_id)
-    result_folder = result.get_folder(data_folder)
-    if not exists(result_folder):
-        raise HTTPNotFound
-    result_configuration = ResultConfiguration(result_folder)
-    return get_result_template_variables(
-        result_configuration.tool_definition,
-        result_configuration.result_arguments,
-        result_configuration.result_properties, result.id, tool_id=1)
+    return get_result_template_variables(request, Result)
 
 
 def import_upload(request, DataType, render_property_kw):
@@ -419,13 +388,14 @@ def import_upload(request, DataType, render_property_kw):
     return Response(html)
 
 
-def get_tool_template_variables(tool_definition, tool_id):
+def get_tool_template_variables(tool):
+    tool_definition = tool.definition
     tool_arguments = get_tool_arguments(tool_definition)
     tool_items = get_data_items(tool_arguments, tool_definition)
     return merge_dictionaries(
         get_template_variables(tool_definition, 'tool', tool_items), {
             'data_types': set(x.data_type for x in tool_items),
-            'tool_id': tool_id,
+            'tool_id': tool.id,
         })
 
 
@@ -444,7 +414,7 @@ def get_data_items(value_by_key, tool_definition):
         if key.endswith('_path'):
             key = key[:-5]
             data_type = get_data_type(key)
-            file_location = get_file_location(value)
+            file_location = get_result_file_location(value)
             value = data_type.load_safely(value)
         else:
             data_type = get_data_type(key)
@@ -457,9 +427,44 @@ def get_data_items(value_by_key, tool_definition):
     return data_items
 
 
-def get_result_template_variables(
-        tool_definition, result_arguments, result_properties, result_id,
-        tool_id):
+def get_result_zip_response(request, Class):
+    result = Class.get_from(request)
+    data_folder = request.data_folder
+    file_path = result.get_target_folder(data_folder) + '.zip'
+    if not exists(file_path):
+        raise HTTPNotFound
+    return FileResponse(file_path, request=request)
+
+
+def get_result_file_response(request, Class):
+    result = Class.get_from(request)
+    matchdict = request.matchdict
+    folder_name = matchdict['folder_name']
+    if folder_name not in ('x', 'y'):
+        raise HTTPForbidden
+    data_folder = request.data_folder
+    result_folder = result.get_folder(data_folder)
+    file_folder = join(result_folder, folder_name)
+    try:
+        file_path = resolve_relative_path(matchdict['path'], file_folder)
+    except IOError:
+        raise HTTPNotFound
+    if not exists(file_path):
+        raise HTTPNotFound
+    return FileResponse(file_path, request=request)
+
+
+def get_result_template_variables(request, Class):
+    result = Class.get_from(request)
+
+    data_folder = request.data_folder
+    result_folder = result.get_folder(data_folder)
+
+    result_configuration = ResultConfiguration(result_folder)
+    tool_definition = result_configuration.tool_definition
+    result_arguments = result_configuration.result_arguments
+    result_properties = result_configuration.result_properties
+
     tool_items = get_data_items(result_arguments, tool_definition)
     result_errors = get_data_items(merge_dictionaries(
         result_properties.pop('standard_errors', {}),
@@ -471,14 +476,14 @@ def get_result_template_variables(
         get_template_variables(tool_definition, 'tool', tool_items),
         get_template_variables(tool_definition, 'result', result_items), {
             'data_types': set(x.data_type for x in tool_items + result_items),
-            'tool_id': 1,
-            'result_id': result_id,
+            'tool_id': result.tool_id,
+            'result_id': result.id,
             'result_errors': result_errors,
             'result_properties': result_properties,
         })
 
 
-def get_file_url(result_path):
+def get_result_file_url(result_path):
     try:
         result_id, folder_name, path = RESULT_PATH_PATTERN.search(
             result_path).groups()
@@ -487,7 +492,7 @@ def get_file_url(result_path):
     return '/r/%s/%s/%s' % (result_id, folder_name, path)
 
 
-def get_file_location(result_path):
+def get_result_file_location(result_path):
     try:
         result_id, folder_name, path = RESULT_PATH_PATTERN.search(
             result_path).groups()
