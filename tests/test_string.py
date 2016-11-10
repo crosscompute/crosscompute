@@ -55,7 +55,7 @@ def test_file_content(tmpdir, file_path='assets/string.txt'):
 def test_target_folder(tmpdir):
     args = str(tmpdir), 'target-folder'
     r = run(*args)
-    assert r['standard_output'].startswith(tempfile.gettempdir())
+    assert r['standard_output'].startswith(str(tmpdir))
 
 
 def extract_text(soup, element_id):

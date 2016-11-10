@@ -28,6 +28,8 @@ REQUIREMENTS = [
     'pyramid_jinja2',
     'six',
     'stevedore',
+    'bs4',
+    'werkzeug'
 ]
 if sys.version_info[0] < 3:
     REQUIREMENTS.append('subprocess32')
@@ -60,9 +62,9 @@ setup(
     ],
     install_requires=REQUIREMENTS,
     tests_require=[
-        'beautifulsoup4',
+        'bs4',
         'mock',
         'pytest',
-        'werkzeug',
+        'werkzeug'
     ],
     entry_points=ENTRY_POINTS)
