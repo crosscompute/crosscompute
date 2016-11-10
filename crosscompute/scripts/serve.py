@@ -28,7 +28,7 @@ from wsgiref.simple_server import make_server
 
 from ..configurations import ResultConfiguration, ARGUMENT_NAME_PATTERN
 from ..exceptions import DataParseError, DataTypeError
-from ..models import Result, Tool, TOOL_ID
+from ..models import Result, Tool
 from ..types import (
     DataItem, parse_data_dictionary_from, get_data_type, DATA_TYPE_BY_NAME,
     RESERVED_ARGUMENT_NAMES)
@@ -323,12 +323,14 @@ def add_routes(config):
 
 
 def index(request):
-    return HTTPSeeOther(request.route_path('tool', tool_id=TOOL_ID))
+    return HTTPSeeOther(request.route_path('tool', tool_id=Tool.id))
 
 
 def see_tool(request):
+    settings = request.registry.settings
     tool = Tool.get_from(request)
-    return get_tool_template_variables(tool)
+    tool_definition = settings['tool_definition']
+    return get_tool_template_variables(tool, tool_definition)
 
 
 def run_tool_json(request):
@@ -351,15 +353,20 @@ def run_tool_json(request):
 
 
 def see_result_zip(request):
-    return get_result_zip_response(request, Result)
+    result = Result.get_from(request)
+    return get_result_zip_response(result, request)
 
 
 def see_result_file(request):
-    return get_result_file_response(request, Result)
+    result = Result.get_from(request)
+    return get_result_file_response(result, request)
 
 
 def see_result(request):
-    return get_result_template_variables(request, Result)
+    data_folder = request.data_folder
+    result = Result.get_from(request)
+    result_folder = result.get_folder(data_folder)
+    return get_result_template_variables(result, result_folder)
 
 
 def import_upload(request, DataType, render_property_kw):
@@ -388,14 +395,13 @@ def import_upload(request, DataType, render_property_kw):
     return Response(html)
 
 
-def get_tool_template_variables(tool):
-    tool_definition = tool.definition
+def get_tool_template_variables(tool, tool_definition):
     tool_arguments = get_tool_arguments(tool_definition)
     tool_items = get_data_items(tool_arguments, tool_definition)
     return merge_dictionaries(
         get_template_variables(tool_definition, 'tool', tool_items), {
             'data_types': set(x.data_type for x in tool_items),
-            'tool_id': tool.id,
+            'tool': tool,
         })
 
 
@@ -427,8 +433,7 @@ def get_data_items(value_by_key, tool_definition):
     return data_items
 
 
-def get_result_zip_response(request, Class):
-    result = Class.get_from(request)
+def get_result_zip_response(result, request):
     data_folder = request.data_folder
     file_path = result.get_target_folder(data_folder) + '.zip'
     if not exists(file_path):
@@ -436,8 +441,7 @@ def get_result_zip_response(request, Class):
     return FileResponse(file_path, request=request)
 
 
-def get_result_file_response(request, Class):
-    result = Class.get_from(request)
+def get_result_file_response(result, request):
     matchdict = request.matchdict
     folder_name = matchdict['folder_name']
     if folder_name not in ('x', 'y'):
@@ -454,12 +458,7 @@ def get_result_file_response(request, Class):
     return FileResponse(file_path, request=request)
 
 
-def get_result_template_variables(request, Class):
-    result = Class.get_from(request)
-
-    data_folder = request.data_folder
-    result_folder = result.get_folder(data_folder)
-
+def get_result_template_variables(result, result_folder):
     result_configuration = ResultConfiguration(result_folder)
     tool_definition = result_configuration.tool_definition
     result_arguments = result_configuration.result_arguments
@@ -476,8 +475,8 @@ def get_result_template_variables(request, Class):
         get_template_variables(tool_definition, 'tool', tool_items),
         get_template_variables(tool_definition, 'result', result_items), {
             'data_types': set(x.data_type for x in tool_items + result_items),
-            'tool_id': result.tool_id,
-            'result_id': result.id,
+            'tool': result.tool,
+            'result': result,
             'result_errors': result_errors,
             'result_properties': result_properties,
         })

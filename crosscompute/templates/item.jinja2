@@ -14,7 +14,7 @@
 {% block head_script_inline %}
 {{ super() -}}
 var CC = {};
-CC.tool_json_url = "{{ request.route_path('tool.json', tool_id=tool_id) }}";
+CC.tool_json_url = "{{ request.route_path('tool.json', tool_id=tool.id) }}";
 {% for data_type in data_types %}{% from data_type.template import head_script_inline %}{{ head_script_inline() }}{% endfor %}
 {% endblock %}
 
