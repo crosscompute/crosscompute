@@ -14,10 +14,10 @@ from invisibleroads.scripts import (
     run_scripts)
 from invisibleroads_macros.configuration import (
     split_arguments, unicode_safely, SECTION_TEMPLATE)
-from invisibleroads_macros.disk import cd, link_path, make_folder
-from invisibleroads_macros.fallbacks import COMMAND_LINE_HOME
+from invisibleroads_macros.disk import (
+    cd, link_path, make_folder, COMMAND_LINE_HOME, HOME_FOLDER)
 from invisibleroads_macros.iterable import merge_dictionaries
-from os.path import abspath, exists, expanduser, join, splitext
+from os.path import abspath, exists, join, splitext
 
 from ..configurations import (
     ResultConfiguration, find_tool_definition, load_result_arguments,
@@ -45,7 +45,7 @@ class ToolScript(Script):
         tool_definition = prepare_tool_definition(args.tool_name)
         tool_name = tool_definition['tool_name']
         data_folder = args.data_folder or join(
-            expanduser('~'), '.crosscompute', tool_name)
+            HOME_FOLDER, '.crosscompute', tool_name)
         logging.basicConfig(
             level=logging.DEBUG if args.verbose else logging.WARNING)
         return tool_definition, data_folder
@@ -126,8 +126,7 @@ def _process_streams(
             ('stderr.log', 'standard_error', standard_error)]:
         if not stream_content:
             continue
-        stream_content = stream_content.replace(expanduser(
-            '~'), COMMAND_LINE_HOME)
+        stream_content = stream_content.replace(HOME_FOLDER, COMMAND_LINE_HOME)
         print(SECTION_TEMPLATE % (stream_name, stream_content))
         codecs.open(join(
             result_folder, file_name), 'w', encoding='utf-8').write(
