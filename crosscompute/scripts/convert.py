@@ -2,6 +2,7 @@ import codecs
 import nbconvert
 import nbformat
 import shutil
+import subprocess
 import tempfile
 from collections import OrderedDict
 from invisibleroads_macros.disk import get_file_extension, make_unique_path
@@ -43,7 +44,12 @@ def prepare_script_folder(target_folder, notebook, notebook_name):
     # Prepare command-line script
     script_lines = []
     script_lines.append('from sys import argv')
-    script_lines.append('%s = argv[1:]' % ', '.join(tool_arguments))
+    for i, arg in zip(range(1, len(tool_arguments) + 1), tool_arguments):
+        if arg.endswith('_integer'):
+            script_lines.append('%s = int(argv[%s])' % (arg, i))
+        else:
+            script_lines.append('%s = argv[%s]' % (arg, i))
+    #script_lines.append('%s = argv[1:]' % ', '.join(tool_arguments))
     notebook.cells[0]['source'] = '\n'.join(script_lines)
     script_content, script_info = nbconvert.export_script(notebook)
     script_name = 'run' + script_info['output_extension']
@@ -75,3 +81,9 @@ def load_tool_arguments(notebook):
     block_content = notebook['cells'][0]['source']
     exec(block_content, g, l)
     return l
+
+
+if __name__ == '__main__':
+    notebook = 'scripts/add_integers.ipynb'
+    tool = prepare_tool_from_notebook(notebook)
+    subprocess.call(['crosscompute', 'serve', '%s' % tool])
