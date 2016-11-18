@@ -2,7 +2,6 @@ import codecs
 import nbconvert
 import nbformat
 import shutil
-import subprocess
 import tempfile
 from collections import OrderedDict
 from invisibleroads_macros.disk import get_file_extension, make_unique_path
@@ -81,9 +80,3 @@ def load_tool_arguments(notebook):
     block_content = notebook['cells'][0]['source']
     exec(block_content, g, l)
     return l
-
-
-if __name__ == '__main__':
-    notebook = 'scripts/add_integers.ipynb'
-    tool = prepare_tool_from_notebook(notebook)
-    subprocess.call(['crosscompute', 'serve', '%s' % tool])
