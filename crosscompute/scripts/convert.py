@@ -43,7 +43,12 @@ def prepare_script_folder(target_folder, notebook, notebook_name):
     # Prepare command-line script
     script_lines = []
     script_lines.append('from sys import argv')
-    script_lines.append('%s = argv[1:]' % ', '.join(tool_arguments))
+    for i, arg in zip(range(1, len(tool_arguments) + 1), tool_arguments):
+        if arg.endswith('_integer'):
+            script_lines.append('%s = int(argv[%s])' % (arg, i))
+        else:
+            script_lines.append('%s = argv[%s]' % (arg, i))
+    #script_lines.append('%s = argv[1:]' % ', '.join(tool_arguments))
     notebook.cells[0]['source'] = '\n'.join(script_lines)
     script_content, script_info = nbconvert.export_script(notebook)
     script_name = 'run' + script_info['output_extension']
