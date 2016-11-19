@@ -1,9 +1,13 @@
 {% extends item_template %}
 {% from 'type.jinja2' import render_key, render_properties %}
-{% set result_name = result_name or '%s (%s)' % (result.id, result_title) %}
+{% set result_name = '%s (%s)' % (result.id[:5], result_title) %}
 
 {% block page_title %}
-{% block body_subtitle %}{{ result_name }}{% endblock %} &middot; Results &middot; {{ website_name -}}
+{{ result_name }} &middot; Results &middot; {{ website_name -}}
+{% endblock %}
+
+{% block body_subtitle %}
+{{ result.id[:5] }} (<a href="{{ request.route_path('tool', tool_id=result.tool_id) }}">{{ result_title }}</a>)
 {% endblock %}
 
 {% block body_content %}
