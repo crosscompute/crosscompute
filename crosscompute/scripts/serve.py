@@ -247,7 +247,9 @@ def add_routes_for_data_types(config):
             view = config.maybe_dotted(module_name + '.' + relative_view_url)
             # Add view
             config.add_route(route_name, route_url)
-            config.add_view(view, permission='run_tool', route_name=route_name)
+            config.add_view(
+                view, permission='run-tool', require_csrf=False,
+                route_name=route_name)
         add_website_dependency(config, module_name)
 
 
