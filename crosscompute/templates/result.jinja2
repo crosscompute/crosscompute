@@ -12,6 +12,9 @@
 
 {% block body_content %}
 {{ super() -}}
+
+{% block result_progress %}{% endblock %}
+
 {% if result_properties -%}
 <div id="properties" class="result">
 

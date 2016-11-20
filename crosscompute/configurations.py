@@ -11,7 +11,7 @@ from invisibleroads_macros.log import (
     filter_nested_dictionary, format_hanging_indent, format_path,
     parse_nested_dictionary_from)
 from os import getcwd, walk
-from os.path import basename, dirname, isabs, join, relpath
+from os.path import basename, dirname, isabs, join
 from pyramid.settings import asbool, aslist
 from six import text_type
 
@@ -31,13 +31,12 @@ class ResultConfiguration(object):
         self.result_folder = result_folder
 
     def save_tool_location(self, tool_definition):
-        configuration_path = tool_definition['configuration_path']
         try:
             link_path(join(self.result_folder, 'f'), tool_definition[
                 'configuration_folder'])
         except ValueError:
-            configuration_path = relpath(
-                configuration_path, self.result_folder)
+            pass
+        configuration_path = tool_definition['configuration_path']
         d = {
             'tool_location': OrderedDict([
                 ('tool_name', tool_definition['tool_name']),
@@ -46,6 +45,8 @@ class ResultConfiguration(object):
         }
         print(format_settings(d))
         print('')
+        d['tool_location']['configuration_path'] = join('f', basename(
+            configuration_path))
         return save_settings(join(self.result_folder, 'f.cfg'), d)
 
     def save_result_arguments(self, result_arguments, environment):
