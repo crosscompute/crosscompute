@@ -10,13 +10,14 @@ crosscompute = crosscompute.scripts:launch
 setup = crosscompute.scripts.setup:SetupScript
 run = crosscompute.scripts.run:RunScript
 serve = crosscompute.scripts.serve:ServeScript
+work = crosscompute.scripts.work:WorkScript
 [pyramid.scaffold]
 cc-python = crosscompute.scaffolds:PythonToolTemplate
 """
 
 
 REQUIREMENTS = [
-    'invisibleroads_macros>=0.7.3',
+    'invisibleroads_macros>=0.7.4',
     'invisibleroads_posts>=0.5.2',
     'invisibleroads_uploads>=0.0.6',
     'mistune',
