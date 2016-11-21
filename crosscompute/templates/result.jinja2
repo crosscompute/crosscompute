@@ -15,14 +15,14 @@
 
 {% block result_progress %}{% endblock %}
 
-{% if result_properties -%}
 <div id="properties" class="result">
-
 {% if result_errors -%}
 <div class="error">
 {{ render_properties(result_errors, stamp='-error') -}}
 </div>
 {% endif -%}
+
+{% if result_properties -%}
 
 {% for x in result_template_parts %}
 {%- if x is string -%}
@@ -32,20 +32,19 @@
 {%- else -%}
 <div class="form-group">
 {% from x.data_type.template import render_property %}
+
 {% if not has_result_template %}
 {{- render_key(x, stamp='-result') }}
 {% endif %}
+
 {{- render_property(x, stamp='-result') -}}
 </div>
-
 {%- endif -%}
 {% endfor -%}
 
-<div>
-<a href="{{ request.route_path('result.zip', result_id=result.id, result_name=result_name) }}" class="btn btn-success btn-lg download" role="button" download>Download</a>
-</div>
+<div><a href="{{ request.route_path('result.zip', result_id=result.id, result_name=result_name) }}" class="btn btn-success btn-lg download" role="button" download>Download</a></div>
 
 {{- render_properties(result_properties, stamp='-meta') -}}
-</div>
 {% endif %}
+</div>
 {% endblock %}
