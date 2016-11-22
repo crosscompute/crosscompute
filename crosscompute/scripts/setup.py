@@ -1,8 +1,8 @@
+from invisibleroads.scripts import Script
 try:
     import subprocess32 as subprocess
 except ImportError:
     import subprocess
-from invisibleroads.scripts import Script
 
 from . import prepare_tool_definition
 from ..exceptions import ToolDependencyError

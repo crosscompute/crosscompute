@@ -1,4 +1,4 @@
-from invisibleroads_macros.database import DummyBase, FolderMixin
+from invisibleroads_posts.models import DummyBase, FolderMixin
 from os.path import join
 
 

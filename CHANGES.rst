@@ -1,3 +1,8 @@
+0.6
+---
+- Add work script
+- Rearrange result folder
+
 0.5
 ---
 - Serve Python Jupyter Notebooks
@@ -8,22 +13,22 @@
 0.4
 ---
 - Add tool scaffold
-- Support data_types that require extra stylesheets, scripts, api_keys
-- Make files inside result available from server
+- Support data types that require extra stylesheets, scripts, api_keys
+- Make result files available from server
 - Use DataTypeError to detect data_type errors
 - Use DataType classmethods without instantiation
 
 0.3
 ---
-- Validate standard_outputs and standard_errors against data_types
-- Support popovers via key.help in tool_definition
+- Validate standard outputs and standard errors against data types
+- Support popovers via help in tool definition
 
 0.2
 ---
 - Support data type plugins
-- Add setup
+- Add setup script
 
 0.1
 ---
-- Add run
-- Add serve
+- Add run script
+- Add serve script
