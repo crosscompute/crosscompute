@@ -43,8 +43,9 @@ class WorkScript(Script):
             print_error('The relay is down. Try again later.')
         except HTTPBadRequest:
             print_error(
-                'There was an error processing your request. '
-                'You may need to update to the latest version.')
+                'There was an error processing your request.\n'
+                '- Check that the server URL is correct (--server_url).\n'
+                '- Upgrade the framework (pip install -U crosscompute).')
         except HTTPUnauthorized:
             print_error(
                 'The server rejected the token. '
@@ -94,12 +95,14 @@ class Namespace(SocketIONamespace):
 def receive_result_request(endpoint_url, queue_token, parent_folder):
     response = requests.get(endpoint_url, headers={
         'Authorization': 'Bearer ' + queue_token})
-    if response.status_code == 204:
+    if response.status_code == 200:
+        pass
+    elif response.status_code == 204:
         raise HTTPNoContent
-    elif response.status_code == 400:
-        raise HTTPBadRequest
     elif response.status_code == 401:
         raise HTTPUnauthorized
+    else:
+        raise HTTPBadRequest
     archive_path = make_unique_path(parent_folder, '.zip', length=16)
     open(archive_path, 'wb').write(response.content)
     result_folder = uncompress(archive_path)

@@ -64,6 +64,7 @@ setup(
     tests_require=[
         'beautifulsoup4',
         'pytest',
+        'pytest-mock',
         'werkzeug',
     ],
     entry_points=ENTRY_POINTS)
