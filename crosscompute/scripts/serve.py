@@ -232,8 +232,8 @@ def configure_jinja2_environment(config):
         'item_template': settings.get(
             'crosscompute.item_template',
             'crosscompute:templates/item.jinja2'),
-        'get_environment_variable': lambda x: settings.get(
-            x.lower(), environ.get(x.upper())),
+        'get_environment_variable': lambda key, default: settings.get(
+            key.lower(), environ.get(key.upper(), default)),
     })
 
 
