@@ -8,7 +8,7 @@ from invisibleroads_macros.disk import get_file_extension, make_unique_path
 from os.path import basename, join, splitext
 
 from ..configurations import find_tool_definition
-from ..exceptions import CrossComputeError
+from ..exceptions import CrossComputeError, suppress
 from ..types import RESERVED_ARGUMENT_NAMES
 
 
@@ -22,10 +22,8 @@ def prepare_tool_from_notebook(notebook_path):
 
 def load_notebook(notebook_path):
     for version in sorted(nbformat.versions, reverse=True):
-        try:
+        with suppress(Exception):
             return nbformat.read(notebook_path, as_version=version)
-        except Exception:
-            pass
     else:
         raise CrossComputeError
 

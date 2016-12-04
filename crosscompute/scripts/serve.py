@@ -27,7 +27,7 @@ from traceback import format_exc
 from wsgiref.simple_server import make_server
 
 from ..configurations import ResultConfiguration, ARGUMENT_NAME_PATTERN
-from ..exceptions import DataParseError, DataTypeError
+from ..exceptions import DataParseError, DataTypeError, suppress
 from ..models import Result, Tool
 from ..types import (
     DataItem, parse_data_dictionary_from, get_data_type, DATA_TYPE_BY_NAME,
@@ -75,10 +75,8 @@ class ServeScript(ToolScript):
         webbrowser.open_new_tab(app_url)
         server = make_server(args.host, args.port, app)
         print('Running on http://%s:%s' % (args.host, args.port))
-        try:
+        with suppress(KeyboardInterrupt):
             server.serve_forever()
-        except KeyboardInterrupt:
-            pass
 
 
 class ResultRequest(Request):

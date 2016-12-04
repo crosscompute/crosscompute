@@ -16,7 +16,7 @@ from pyramid.settings import asbool, aslist
 from six import text_type
 
 from .exceptions import (
-    ToolConfigurationNotFound, ToolNotFound, ToolNotSpecified)
+    ToolConfigurationNotFound, ToolNotFound, ToolNotSpecified, suppress)
 from .fallbacks import (
     prepare_path_argument, COMMAND_LINE_JOIN, SCRIPT_EXTENSION)
 
@@ -31,11 +31,9 @@ class ResultConfiguration(object):
         self.result_folder = result_folder
 
     def save_tool_location(self, tool_definition):
-        try:
+        with suppress(ValueError):
             link_path(join(self.result_folder, 'f'), tool_definition[
                 'configuration_folder'])
-        except ValueError:
-            pass
         configuration_path = tool_definition['configuration_path']
         d = {
             'tool_location': OrderedDict([

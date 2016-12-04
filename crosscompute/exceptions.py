@@ -1,3 +1,6 @@
+from contextlib import contextmanager
+
+
 class CrossComputeError(Exception):
     pass
 
@@ -28,3 +31,11 @@ class ToolNotFound(CrossComputeError):
 
 class ToolNotSpecified(CrossComputeError):
     pass
+
+
+@contextmanager
+def suppress(*exceptions):
+    try:
+        yield
+    except exceptions:
+        pass
