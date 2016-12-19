@@ -5,8 +5,7 @@ import webbrowser
 from collections import OrderedDict
 from invisibleroads_macros.disk import (
     compress_zip, copy_file, copy_text, get_file_extension, link_path,
-    make_folder, make_unique_folder, move_path, remove_safely,
-    resolve_relative_path)
+    make_unique_folder, move_path, remove_safely, resolve_relative_path)
 from invisibleroads_macros.iterable import merge_dictionaries
 from invisibleroads_posts import (
     add_routes_for_fused_assets, add_website_dependency)
@@ -15,7 +14,7 @@ from invisibleroads_uploads.views import get_upload, get_upload_from
 from markupsafe import Markup
 from mistune import markdown
 from os import environ
-from os.path import basename, exists, join
+from os.path import exists, join
 from pyramid.config import Configurator
 from pyramid.httpexceptions import (
     HTTPBadRequest, HTTPForbidden, HTTPNotFound, HTTPSeeOther)
@@ -32,7 +31,7 @@ from ..models import Result, Tool
 from ..types import (
     DataItem, parse_data_dictionary_from, get_data_type, DATA_TYPE_BY_NAME,
     RESERVED_ARGUMENT_NAMES)
-from . import ToolScript, run_script
+from . import ToolScript, corral_arguments, run_script
 
 
 HELP = {
@@ -65,6 +64,8 @@ class ServeScript(ToolScript):
             '--website_owner', default=WEBSITE['owner'])
         argument_subparser.add_argument(
             '--website_url', default=WEBSITE['url'])
+        argument_subparser.add_argument(
+            '--without_browser', action='store_true')
 
     def run(self, args):
         tool_definition, data_folder = super(ServeScript, self).run(args)
@@ -72,7 +73,8 @@ class ServeScript(ToolScript):
             tool_definition, data_folder, args.website_name,
             args.website_owner, args.website_url)
         app_url = 'http://%s:%s/t/1' % (args.host, args.port)
-        webbrowser.open_new_tab(app_url)
+        if not args.without_browser:
+            webbrowser.open_new_tab(app_url)
         server = make_server(args.host, args.port, app)
         print('Running on http://%s:%s' % (args.host, args.port))
         try:
@@ -98,8 +100,8 @@ class ResultRequest(Request):
         except DataParseError as e:
             raise HTTPBadRequest(e.message_by_name)
         result = self.spawn_result()
-        result.arguments = self.migrate_arguments(
-            result_arguments, result.get_source_folder(self.data_folder))
+        result.arguments = corral_arguments(result.get_source_folder(
+            self.data_folder), result_arguments, move_path)
         remove_safely(draft_folder)
         return result
 
@@ -135,15 +137,6 @@ class ResultRequest(Request):
 
     def spawn_result(self):
         return Result.spawn(self.data_folder)
-
-    def migrate_arguments(self, result_arguments, source_folder):
-        d = OrderedDict()
-        make_folder(source_folder)
-        for k, v in result_arguments.items():
-            if k.endswith('_path'):
-                v = move_path(join(source_folder, basename(v)), v)
-            d[k] = v
-        return d
 
     def prepare_argument_path(
             self, argument_noun, raw_arguments, draft_folder, default_path):

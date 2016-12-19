@@ -1,6 +1,5 @@
 import codecs
 import logging
-import os
 import simplejson as json
 try:
     import subprocess32 as subprocess
@@ -17,15 +16,16 @@ from invisibleroads_macros.configuration import (
 from invisibleroads_macros.disk import (
     cd, link_path, make_folder, COMMAND_LINE_HOME, HOME_FOLDER)
 from invisibleroads_macros.iterable import merge_dictionaries
-from os.path import abspath, exists, join, splitext
+from os.path import abspath, basename, exists, join
+from stevedore.extension import ExtensionManager
 
 from ..configurations import (
-    ResultConfiguration, find_tool_definition, load_result_arguments,
-    load_tool_definition, render_command)
+    ResultConfiguration, load_result_arguments, load_tool_definition,
+    render_command)
 from ..exceptions import CrossComputeError, DataParseError
+from ..extensions import DefaultTool
 from ..fallbacks import SCRIPT_ENVIRONMENT
 from ..types import initialize_data_types, parse_data_dictionary
-from .convert import prepare_tool_from_notebook
 
 
 class ToolScript(Script):
@@ -66,18 +66,27 @@ def prepare_tool_definition(tool_name):
         tool_definition.update(load_result_arguments('x.cfg'))
         return tool_definition
 
-    if tool_name.endswith('.ipynb'):
-        return prepare_tool_from_notebook(tool_name)
+    for x in ExtensionManager('crosscompute.extensions').extensions:
+        if tool_name.endswith('.' + x.name):
+            ToolExtension = x.plugin
+            break
+    else:
+        ToolExtension = DefaultTool
 
-    if tool_name:
-        tool_name = tool_name.rstrip(os.sep)  # Remove folder slash
-        tool_name = tool_name.replace('_', '-')
-        tool_name = splitext(tool_name)[0]
     try:
-        tool_definition = find_tool_definition(tool_name=tool_name)
+        tool_definition = ToolExtension.prepare_tool_definition(tool_name)
     except CrossComputeError as e:
-        sys.exit(e)
+        exit(e)
     return tool_definition
+
+
+def corral_arguments(argument_folder, result_arguments, use=link_path):
+    d = result_arguments.copy()
+    make_folder(argument_folder)
+    for k, v in result_arguments.items():
+        if k.endswith('_path'):
+            d[k] = use(join(argument_folder, basename(v)), v)
+    return d
 
 
 def run_script(

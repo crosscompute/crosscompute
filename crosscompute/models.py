@@ -13,6 +13,8 @@ class Tool(FolderMixin, DummyBase):
 
 class Result(FolderMixin, DummyBase):
 
+    tool_id = Tool.id
+
     @classmethod
     def get_from(Class, request):
         instance = super(Result, Class).get_from(request)
