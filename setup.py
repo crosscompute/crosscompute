@@ -20,15 +20,15 @@ REQUIREMENTS = [
     'invisibleroads-macros>=0.7.4',
     'invisibleroads-posts>=0.5.2',
     'invisibleroads-uploads>=0.1.0',
+    'invisibleroads>=0.1.7',
     'markupsafe',
     'mistune',
-    'nbconvert',
     'pyramid',
     'pyramid_jinja2',
     'requests',
     'simplejson',
     'six',
-    'socketIO_client>=0.7.1',
+    'socketIO_client>=0.7.2',
     'stevedore',
 ]
 if sys.version_info[0] < 3:
