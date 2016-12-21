@@ -110,9 +110,12 @@ def find_tool_definition_by_name(folder, default_tool_name=None):
         for file_name in file_names:
             if not fnmatch(file_name, '*.ini'):
                 continue
-            tool_definition_by_name.update(load_tool_definition_by_name(
-                join(root_folder, file_name),
-                default_tool_name=tool_name))
+            tool_configuration_path = join(root_folder, file_name)
+            for tool_name, tool_definition in load_tool_definition_by_name(
+                    tool_configuration_path, tool_name).items():
+                tool_name = _get_unique_tool_name(
+                    tool_name, tool_definition_by_name)
+                tool_definition_by_name[tool_name] = tool_definition
     return tool_definition_by_name
 
 
@@ -126,13 +129,13 @@ def find_tool_definition(folder=None, tool_name='', default_tool_name=''):
     if len(tool_definition_by_name) == 1:
         return list(tool_definition_by_name.values())[0]
     if not tool_name:
-        raise ToolNotSpecified('Tool not specified. %s' % (
+        raise ToolNotSpecified('Tool not specified. {}'.format(
             format_available_tools(tool_definition_by_name)))
     tool_name = tool_name or tool_definition_by_name.keys()[0]
     try:
         tool_definition = tool_definition_by_name[tool_name]
     except KeyError:
-        raise ToolNotFound('Tool not found (%s). %s' % (
+        raise ToolNotFound('Tool not found ({}). {}'.format(
             tool_name, format_available_tools(tool_definition_by_name)))
     return tool_definition
 
@@ -165,8 +168,9 @@ def load_tool_definition_by_name(
         tool_definition[u'tool_name'] = tool_name
         tool_definition[u'argument_names'] = parse_tool_argument_names(
             tool_definition.get('command_template', u''))
-        tool_definition_by_name[tool_name] = dict(tool_definition, **d)
-    return make_absolute_paths(tool_definition_by_name, configuration_folder)
+        tool_definition_by_name[tool_name] = dict(make_absolute_paths(
+            tool_definition, configuration_folder), **d)
+    return tool_definition_by_name
 
 
 def load_tool_definition(result_configuration_path):
@@ -197,7 +201,7 @@ def load_result_properties(result_configuration_path):
 
 def format_available_tools(tool_definition_by_name):
     tool_count = len(tool_definition_by_name)
-    return '%s available:\n%s' % (
+    return '{} available:\n{}'.format(
         tool_count, '\n'.join(tool_definition_by_name))
 
 
@@ -216,3 +220,14 @@ def render_command(command_template, result_arguments):
             v = '"%s"' % v
         d[k] = v
     return command_template.format(**d)
+
+
+def _get_unique_tool_name(tool_name, existing_tool_names):
+    suggested_tool_name = tool_name
+    i = 2
+    while True:
+        if suggested_tool_name not in existing_tool_names:
+            break
+        suggested_tool_name = '%s-%s' % (tool_name, i)
+        i += 1
+    return suggested_tool_name

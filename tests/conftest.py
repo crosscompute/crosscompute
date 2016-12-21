@@ -56,4 +56,5 @@ def data_folder(tmpdir):
 
 
 DATA_TYPE_BY_SUFFIX['whee'] = WheeType
-TOOL_FOLDER = join(get_package_folder(__file__), 'tools')
+PACKAGE_FOLDER = get_package_folder(__file__)
+TOOL_FOLDER = join(PACKAGE_FOLDER, 'tools')
