@@ -17,8 +17,8 @@ from six import text_type
 
 from .exceptions import (
     ToolConfigurationNotFound, ToolNotFound, ToolNotSpecified)
-from .fallbacks import (
-    prepare_path_argument, COMMAND_LINE_JOIN, SCRIPT_EXTENSION)
+from .symmetries import (
+    prepare_path_argument, suppress, COMMAND_LINE_JOIN, SCRIPT_EXTENSION)
 
 
 TOOL_NAME_PATTERN = re.compile(r'crosscompute\s*(.*)')
@@ -31,11 +31,9 @@ class ResultConfiguration(object):
         self.result_folder = result_folder
 
     def save_tool_location(self, tool_definition):
-        try:
+        with suppress(ValueError):
             link_path(join(self.result_folder, 'f'), tool_definition[
                 'configuration_folder'])
-        except ValueError:
-            pass
         configuration_path = tool_definition['configuration_path']
         d = {
             'tool_location': OrderedDict([

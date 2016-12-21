@@ -1,4 +1,5 @@
 import os
+from contextlib import contextmanager
 
 
 SCRIPT_ENVIRONMENT = os.environ.copy()
@@ -20,3 +21,14 @@ else:
 
     def prepare_path_argument(path):
         return path
+
+
+try:
+    from contextlib import suppress
+except ImportError:
+    @contextmanager
+    def suppress(*exceptions):
+        try:
+            yield
+        except exceptions:
+            pass
