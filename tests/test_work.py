@@ -11,7 +11,7 @@ from crosscompute.scripts.work import (
     receive_result_request, run_tool, send_result_response)
 
 
-RESULT_FOLDER = join(dirname(__file__), 'result')
+RESULT_FOLDER = join(dirname(__file__), 'results', 'make-story')
 TARGET_FOLDER = join(RESULT_FOLDER, 'y')
 
 
