@@ -13,7 +13,8 @@ Install
 -------
 ::
 
-    pip install -U crosscompute crosscompute-types
+    pip install -U crosscompute
+    pip install -U crosscompute-types
 
 
 Use
@@ -31,6 +32,7 @@ Links
 - https://github.com/crosscompute/crosscompute-types
 - https://github.com/crosscompute/crosscompute-examples
 - https://github.com/crosscompute/crosscompute-docs
+- https://github.com/crosscompute/crosscompute-environments-ansible
 
 
 Credits
