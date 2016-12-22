@@ -24,7 +24,7 @@ from ..configurations import (
     render_command)
 from ..exceptions import CrossComputeError, DataParseError
 from ..extensions import DefaultTool
-from ..fallbacks import SCRIPT_ENVIRONMENT
+from ..symmetries import SCRIPT_ENVIRONMENT
 from ..types import initialize_data_types, parse_data_dictionary
 
 
