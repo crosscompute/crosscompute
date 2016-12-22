@@ -4,7 +4,7 @@ from invisibleroads_uploads.models import Upload
 from os.path import join
 from pyramid.httpexceptions import HTTPBadRequest
 from pytest import raises
-from six import StringIO
+from six import BytesIO
 
 from crosscompute.models import Result
 from crosscompute.types import StringType
@@ -67,7 +67,7 @@ class TestResultRequest(object):
     def test_accept_multipart_content(self, result_request, tool_definition):
         field_storage = FieldStorage()
         field_storage.filename = 'x.txt'
-        field_storage.file = StringIO('whee')
+        field_storage.file = BytesIO(b'whee')
         tool_definition['argument_names'] = ('x_path',)
         raw_arguments = {'x': field_storage}
         result = result_request.prepare_arguments(
