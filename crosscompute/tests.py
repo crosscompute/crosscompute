@@ -1,4 +1,4 @@
-import json
+import simplejson as json
 from bs4 import BeautifulSoup
 from six.moves.urllib.parse import urlparse as parse_url
 from werkzeug.test import Client
