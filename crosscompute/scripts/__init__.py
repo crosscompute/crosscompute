@@ -16,7 +16,7 @@ from invisibleroads_macros.configuration import (
 from invisibleroads_macros.disk import (
     cd, link_path, make_folder, COMMAND_LINE_HOME, HOME_FOLDER)
 from invisibleroads_macros.iterable import merge_dictionaries
-from os.path import abspath, basename, exists, join
+from os.path import abspath, basename, exists, isabs, join
 from stevedore.extension import ExtensionManager
 
 from ..configurations import (
@@ -85,6 +85,7 @@ def corral_arguments(argument_folder, result_arguments, use=link_path):
     make_folder(argument_folder)
     for k, v in result_arguments.items():
         if k.endswith('_path'):
+            assert isabs(v)
             d[k] = use(join(argument_folder, basename(v)), v)
     return d
 
