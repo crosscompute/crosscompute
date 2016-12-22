@@ -6,4 +6,4 @@ python:
 install:
   - pip install -e .
   - pip install -U beautifulsoup4 pytest pytest-mock werkzeug
-script: pytest
+script: py.test
