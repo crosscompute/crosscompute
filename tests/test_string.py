@@ -31,7 +31,7 @@ def test_stream_parsing(tmpdir, text=TEXT):
     assert r['standard_errors']['a'] == text
     s = serve(*args)[0]
     assert extract_text(s, 'a-result') == text
-    assert extract_text(s, 'a-error') == text
+    assert extract_text(s, 'a-feedback') == text
 
 
 def test_file_name_with_spaces(tmpdir):

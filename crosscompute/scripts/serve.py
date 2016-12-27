@@ -30,8 +30,8 @@ from ..exceptions import DataParseError, DataTypeError
 from ..models import Result, Tool
 from ..symmetries import suppress
 from ..types import (
-    DataItem, parse_data_dictionary_from, get_data_type, DATA_TYPE_BY_NAME,
-    RESERVED_ARGUMENT_NAMES)
+    DataItem, StringType, parse_data_dictionary_from, get_data_type,
+    DATA_TYPE_BY_NAME, RESERVED_ARGUMENT_NAMES)
 from . import ToolScript, corral_arguments, run_script
 
 
@@ -420,7 +420,10 @@ def get_data_items(value_by_key, tool_definition):
         else:
             data_type = get_data_type(key)
             if isinstance(value, string_types):
-                value = data_type.parse(value)
+                try:
+                    value = data_type.parse(value)
+                except DataTypeError:
+                    data_type = StringType
             file_location = ''
         help_text = tool_definition.get(key + '.help', HELP.get(key, ''))
         data_items.append(DataItem(
