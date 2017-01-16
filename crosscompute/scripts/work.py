@@ -21,7 +21,7 @@ from ..scripts import run_script
 class WorkScript(Script):
 
     def configure(self, argument_subparser):
-        argument_subparser.add_argument('queue_token')
+        argument_subparser.add_argument('result_queue_token')
         argument_subparser.add_argument(
             '--relay_url', metavar='URL', default=RELAY_URL)
         argument_subparser.add_argument(
@@ -30,9 +30,9 @@ class WorkScript(Script):
     def run(self, args):
         print('Listening to %s' % args.relay_url)
         try:
-            worker = Worker(args.server_url, args.queue_token)
+            worker = Worker(args.server_url, args.result_queue_token)
             worker.work()
-            Namespace.channel = 'q/' + args.queue_token
+            Namespace.channel = 'q/' + args.result_queue_token
             Namespace.worker = worker
             socket = SocketIO(
                 args.relay_url, Namespace=Namespace, wait_for_connection=False)
@@ -56,9 +56,9 @@ class WorkScript(Script):
 
 class Worker(object):
 
-    def __init__(self, server_url, queue_token):
+    def __init__(self, server_url, result_queue_token):
         self.server_url = server_url
-        self.queue_token = queue_token
+        self.result_queue_token = result_queue_token
 
         self.parent_folder = join(HOME_FOLDER, '.crosscompute', parse_url(
             server_url).hostname, 'results')
@@ -72,7 +72,8 @@ class Worker(object):
             while True:
                 try:
                     result_folder = receive_result_request(
-                        self.pull_url, self.queue_token, self.parent_folder)
+                        self.pull_url, self.result_queue_token,
+                        self.parent_folder)
                 except HTTPNoContent:
                     break
                 print('\nresult_folder = %s\n' % result_folder)
@@ -92,9 +93,9 @@ class Namespace(SocketIONamespace):
         self.worker.work()
 
 
-def receive_result_request(endpoint_url, queue_token, parent_folder):
+def receive_result_request(endpoint_url, result_queue_token, parent_folder):
     response = requests.get(endpoint_url, headers={
-        'Authorization': 'Bearer ' + queue_token})
+        'Authorization': 'Bearer ' + result_queue_token})
     if response.status_code == 200:
         pass
     elif response.status_code == 204:
