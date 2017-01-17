@@ -23,16 +23,18 @@ class WorkScript(Script):
     def configure(self, argument_subparser):
         argument_subparser.add_argument('queue_token')
         argument_subparser.add_argument(
-            '--relay_url', metavar='URL', default=RELAY_URL)
-        argument_subparser.add_argument(
             '--server_url', metavar='URL', default=SERVER_URL)
+        argument_subparser.add_argument(
+            '--relay_url', metavar='URL', default=RELAY_URL)
 
     def run(self, args):
-        print('Listening to %s' % args.relay_url)
+        print('server_url = %s' % args.server_url)
+        print('relay_url = %s' % args.relay_url)
         try:
             worker = Worker(args.server_url, args.queue_token)
             worker.work()
-            Namespace.channel = 'q/' + args.queue_token
+            print('queue_id = %s' % worker.queue_id)
+            Namespace.channel = 'q/' + worker.queue_id
             Namespace.worker = worker
             socket = SocketIO(
                 args.relay_url, Namespace=Namespace, wait_for_connection=False)
@@ -73,7 +75,8 @@ class Worker(object):
                 try:
                     result_folder = receive_result_request(
                         self.pull_url, self.queue_token, self.parent_folder)
-                except HTTPNoContent:
+                except HTTPNoContent as e:
+                    self.queue_id = e.headers['CrossCompute-Queue-ID']
                     break
                 print('\nresult_folder = %s\n' % result_folder)
                 run_tool(result_folder)
@@ -98,7 +101,7 @@ def receive_result_request(endpoint_url, queue_token, parent_folder):
     if response.status_code == 200:
         pass
     elif response.status_code == 204:
-        raise HTTPNoContent
+        raise HTTPNoContent(headers=response.headers)
     elif response.status_code == 401:
         raise HTTPUnauthorized
     else:
