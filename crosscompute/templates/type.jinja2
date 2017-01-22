@@ -1,14 +1,14 @@
-{% macro render_properties(data_items, stamp='') %}
+{% macro render_properties(request, data_items, stamp='') %}
 {%- for x in data_items %}
 {% from x.data_type.template import render_property %}
 <div class="form-group">
-{{- render_key(x, stamp=stamp) }}
-{{- render_property(x, stamp=stamp) }}
+{{- render_key(request, x, stamp=stamp) }}
+{{- render_property(request, x, stamp=stamp) }}
 </div>
 {%- endfor %}
 {% endmacro %}
 
-{% macro render_key(data_item, stamp='') %}
+{% macro render_key(request, data_item, stamp='') %}
 {% set key = data_item.key %}
 {% set help_text = data_item.help_text %}
 <label for="{{ key }}{{ stamp }}" class="control-label">{{ key }}</label>

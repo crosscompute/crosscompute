@@ -8,14 +8,14 @@ from invisibleroads_macros.disk import (
     make_unique_folder, move_path, remove_safely, resolve_relative_path)
 from invisibleroads_macros.iterable import merge_dictionaries
 from invisibleroads_posts import (
-    add_routes_for_fused_assets, add_website_dependency)
+    InvisibleRoadsConfigurator, add_routes_for_fused_assets,
+    add_website_dependency)
 from invisibleroads_posts.views import expect_param
 from invisibleroads_uploads.views import get_upload, get_upload_from
 from markupsafe import Markup
 from mistune import markdown
 from os import environ
 from os.path import exists, join
-from pyramid.config import Configurator
 from pyramid.httpexceptions import (
     HTTPBadRequest, HTTPForbidden, HTTPNotFound, HTTPSeeOther)
 from pyramid.renderers import get_renderer
@@ -44,11 +44,9 @@ LOG = logging.getLogger(__name__)
 LOG.addHandler(logging.NullHandler())
 MARKDOWN_TITLE_PATTERN = re.compile(r'^#[^#]\s*(.+)')
 RESULT_PATH_PATTERN = re.compile(r'results/(\w+)/([xy])/(.+)')
-WEBSITE = {
-    'name': 'CrossCompute',
-    'owner': 'CrossCompute Inc',
-    'url': 'https://crosscompute.com',
-}
+BRAND_URL = 'https://crosscompute.com'
+WEBSITE_NAME = 'CrossCompute'
+WEBSITE_OWNER = 'CrossCompute Inc'
 
 
 class ServeScript(ToolScript):
@@ -60,11 +58,13 @@ class ServeScript(ToolScript):
         argument_subparser.add_argument(
             '--port', default=4444, type=int)
         argument_subparser.add_argument(
-            '--website_name', default=WEBSITE['name'])
+            '--base_url', default='/')
         argument_subparser.add_argument(
-            '--website_owner', default=WEBSITE['owner'])
+            '--brand_url', default=BRAND_URL)
         argument_subparser.add_argument(
-            '--website_url', default=WEBSITE['url'])
+            '--website_name', default=WEBSITE_NAME)
+        argument_subparser.add_argument(
+            '--website_owner', default=WEBSITE_OWNER)
         argument_subparser.add_argument(
             '--without_browser', action='store_true')
 
@@ -72,7 +72,7 @@ class ServeScript(ToolScript):
         tool_definition, data_folder = super(ServeScript, self).run(args)
         app = get_app(
             tool_definition, data_folder, args.website_name,
-            args.website_owner, args.website_url)
+            args.website_owner, args.brand_url, args.base_url)
         app_url = 'http://%s:%s/t/1' % (args.host, args.port)
         if not args.without_browser:
             webbrowser.open_new_tab(app_url)
@@ -181,25 +181,30 @@ class ResultRequest(Request):
 
 
 def get_app(
-        tool_definition, data_folder, website_name=None, website_owner=None,
-        website_url=None):
+        tool_definition, data_folder, website_name=WEBSITE_NAME,
+        website_owner=WEBSITE_OWNER, brand_url=BRAND_URL, base_url='/'):
     settings = {
         'data.folder': data_folder,
-        'website.name': website_name or WEBSITE['name'],
-        'website.owner': website_owner or WEBSITE['owner'],
-        'website.url': website_url or WEBSITE['url'],
+        'website.name': website_name,
+        'website.owner': website_owner,
+        'website.brand_url': brand_url,
+        'website.base_url': base_url,
+        'website.base_template':
+            'invisibleroads_posts:templates/base.jinja2',
+        'website.page_not_found_template':
+            'invisibleroads_posts:templates/404.jinja2',
         'website.root_assets': [
             'invisibleroads_posts:assets/favicon.ico',
             'invisibleroads_posts:assets/robots.txt',
         ],
-        'uploads.upload.id.length': 32,
+        'upload.id.length': 32,
         'client_cache.http.expiration_time': 3600,
         'jinja2.directories': 'crosscompute:templates',
         'jinja2.lstrip_blocks': True,
         'jinja2.trim_blocks': True,
     }
     settings['tool_definition'] = tool_definition
-    config = Configurator(settings=settings)
+    config = InvisibleRoadsConfigurator(settings=settings)
     config.include('invisibleroads_posts')
     includeme(config)
     add_routes(config)
@@ -386,7 +391,7 @@ def import_upload(request, DataType, render_property_kw):
     template = get_renderer(DataType.template).template_loader()
     data_item = DataItem(name, value, DataType, help_text)
     html = template.make_module().render_property(
-        data_item, **render_property_kw)
+        request, data_item, **render_property_kw)
     return Response(html)
 
 

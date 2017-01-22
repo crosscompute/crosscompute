@@ -3,19 +3,19 @@
 
 {% block head_style_loaded %}
 {{ super() -}}
-{% for data_type in data_types %}{% from data_type.template import head_style_loaded %}{{ head_style_loaded() }}{% endfor %}
+{% for data_type in data_types %}{% from data_type.template import head_style_loaded %}{{ head_style_loaded(request) }}{% endfor %}
 {% endblock %}
 
 {% block head_style_inline %}
 {{ super() -}}
-{% for data_type in data_types %}{% from data_type.template import head_style_inline %}{{ head_style_inline() }}{% endfor %}
+{% for data_type in data_types %}{% from data_type.template import head_style_inline %}{{ head_style_inline(request) }}{% endfor %}
 {% endblock %}
 
 {% block head_script_inline %}
 {{ super() -}}
 var CC = {};
 CC.tool_json_url = "{{ request.route_path('tool.json', tool_id=tool.id) }}";
-{% for data_type in data_types %}{% from data_type.template import head_script_inline %}{{ head_script_inline() }}{% endfor %}
+{% for data_type in data_types %}{% from data_type.template import head_script_inline %}{{ head_script_inline(request) }}{% endfor %}
 {% endblock %}
 
 {% block body_content %}
@@ -32,9 +32,9 @@ CC.tool_json_url = "{{ request.route_path('tool.json', tool_id=tool.id) }}";
 {% from x.data_type.template import render_argument %}
 <div class="form-group">
 {% if not has_tool_template %}
-{{- render_key(x) -}}
+{{- render_key(request, x) -}}
 {% endif %}
-{{- render_argument(x) -}}
+{{- render_argument(request, x) -}}
 </div>
 
 {%- endif -%}
@@ -45,10 +45,10 @@ CC.tool_json_url = "{{ request.route_path('tool.json', tool_id=tool.id) }}";
 
 {% block body_script_loaded %}
 {{ super() -}}
-{% for data_type in data_types %}{% from data_type.template import body_script_loaded %}{{ body_script_loaded() }}{% endfor %}
+{% for data_type in data_types %}{% from data_type.template import body_script_loaded %}{{ body_script_loaded(request) }}{% endfor %}
 {% endblock %}
 
 {% block body_script_inline %}
 {{ super() -}}
-{% for data_type in data_types %}{% from data_type.template import body_script_inline %}{{ body_script_inline() }}{% endfor %}
+{% for data_type in data_types %}{% from data_type.template import body_script_inline %}{{ body_script_inline(request) }}{% endfor %}
 {% endblock %}

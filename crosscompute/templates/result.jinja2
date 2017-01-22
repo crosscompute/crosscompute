@@ -18,7 +18,7 @@
 <div id="properties" class="result">
 {% if result_errors -%}
 <div class="error">
-{{ render_properties(result_errors, stamp='-feedback') -}}
+{{ render_properties(request, result_errors, stamp='-feedback') -}}
 </div>
 {% endif -%}
 
@@ -34,17 +34,17 @@
 {% from x.data_type.template import render_property %}
 
 {% if not has_result_template %}
-{{- render_key(x, stamp='-result') }}
+{{- render_key(request, x, stamp='-result') }}
 {% endif %}
 
-{{- render_property(x, stamp='-result') -}}
+{{- render_property(request, x, stamp='-result') -}}
 </div>
 {%- endif -%}
 {% endfor -%}
 
 <div><a href="{{ request.route_path('result.zip', result_id=result.id, result_name=result_name) }}" class="btn btn-success btn-lg download" role="button" download>Download</a></div>
 
-{{- render_properties(result_properties, stamp='-meta') -}}
+{{- render_properties(request, result_properties, stamp='-meta') -}}
 {% endif %}
 </div>
 {% endblock %}
