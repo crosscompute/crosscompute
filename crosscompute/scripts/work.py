@@ -21,7 +21,7 @@ from ..scripts import run_script
 class WorkScript(Script):
 
     def configure(self, argument_subparser):
-        argument_subparser.add_argument('result_queue_token')
+        argument_subparser.add_argument('queue_token')
         argument_subparser.add_argument(
             '--server_url', metavar='URL', default=SERVER_URL)
         argument_subparser.add_argument(
