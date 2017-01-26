@@ -31,7 +31,7 @@ class WorkScript(Script):
         print('server_url = %s' % args.server_url)
         print('relay_url = %s' % args.relay_url)
         try:
-            worker = Worker(args.server_url, args.result_queue_token)
+            worker = Worker(args.server_url, args.queue_token)
             worker.work()
             print('queue_id = %s' % worker.queue_id)
             Namespace.channel = 'q/' + worker.queue_id
@@ -58,9 +58,9 @@ class WorkScript(Script):
 
 class Worker(object):
 
-    def __init__(self, server_url, result_queue_token):
+    def __init__(self, server_url, queue_token):
         self.server_url = server_url
-        self.result_queue_token = result_queue_token
+        self.queue_token = queue_token
 
         self.parent_folder = join(HOME_FOLDER, '.crosscompute', parse_url(
             server_url).hostname, 'results')
@@ -95,9 +95,9 @@ class Namespace(SocketIONamespace):
         self.worker.work()
 
 
-def receive_result_request(endpoint_url, result_queue_token, parent_folder):
+def receive_result_request(endpoint_url, queue_token, parent_folder):
     response = requests.get(endpoint_url, headers={
-        'Authorization': 'Bearer ' + result_queue_token})
+        'Authorization': 'Bearer ' + queue_token})
     if response.status_code == 200:
         pass
     elif response.status_code == 204:
