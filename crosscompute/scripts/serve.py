@@ -240,7 +240,7 @@ def add_routes_for_data_types(config):
         for relative_view_url in data_type.views:
             # Get route_url
             route_name = '%s/%s' % (data_type_name, relative_view_url)
-            route_url = '/c/' + route_name
+            route_url = '/c/' + route_name.replace('_', '-')
             # Get view
             view = config.maybe_dotted(module_name + '.' + relative_view_url)
             # Add view

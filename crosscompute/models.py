@@ -7,8 +7,8 @@ class Tool(FolderMixin, DummyBase):
     id = 1
 
     @classmethod
-    def get_from(Class, request):
-        return Class()
+    def get_from(Class, request, record_id=None):
+        return Class(id=record_id)
 
 
 class Result(FolderMixin, DummyBase):
@@ -16,9 +16,9 @@ class Result(FolderMixin, DummyBase):
     tool_id = Tool.id
 
     @classmethod
-    def get_from(Class, request):
-        instance = super(Result, Class).get_from(request)
-        instance.tool = Tool()
+    def get_from(Class, request, record_id=None):
+        instance = super(Result, Class).get_from(request, record_id)
+        instance.tool = Tool(id=instance.tool_id)
         return instance
 
     def get_source_folder(self, data_folder):
