@@ -1,4 +1,5 @@
 import codecs
+import datetime
 import logging
 import re
 import webbrowser
@@ -187,6 +188,7 @@ def get_app(
         'data.folder': data_folder,
         'website.name': website_name,
         'website.owner': website_owner,
+        'website.year': datetime.datetime.now().year,
         'website.brand_url': brand_url,
         'website.base_url': base_url,
         'website.base_template':
