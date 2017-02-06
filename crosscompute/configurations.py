@@ -58,6 +58,7 @@ class ResultConfiguration(object):
         d = filter_nested_dictionary(
             d, lambda x: x.startswith('_') or x in ['target_folder'])
         d = make_relative_paths(d, self.result_folder)
+        # !!! Send format_by_suffix
         return save_settings(join(self.result_folder, 'x.cfg'), d)
 
     def save_result_properties(self, result_properties):
@@ -211,6 +212,7 @@ def render_command(command_template, result_arguments):
     d = {}
     quote_pattern = re.compile(r"""["'].*["']""")
     for k, v in result_arguments.items():
+        # !!! Replace text_type with get_data_type and data_type.format
         v = text_type(v).strip()
         if k.endswith('_path') or k.endswith('_folder'):
             v = prepare_path_argument(v)
