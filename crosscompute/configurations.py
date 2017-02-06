@@ -189,6 +189,7 @@ def load_result_arguments(result_configuration_path):
     arguments = load_relative_settings(
         result_configuration_path, 'result_arguments')
     arguments.pop('target_folder', None)
+    # !!! Parse arguments by data type here
     return arguments
 
 
