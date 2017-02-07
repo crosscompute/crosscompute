@@ -62,6 +62,10 @@ class DataType(object):
         return text
 
     @classmethod
+    def merge(Class, old_value, new_value):
+        return new_value
+
+    @classmethod
     def format(Class, value):
         return value
 

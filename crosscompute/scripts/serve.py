@@ -431,8 +431,9 @@ def get_data_items(value_by_key, tool_definition):
                     value = data_type.parse(value)
                 except DataTypeError:
                     data_type = StringType
-            # !!! If data_type.merge is defined, then
-            # call data_type.merge(parse(tool_definition[key]), parse(value))
+            if key in tool_definition:
+                value = data_type.merge(data_type.parse(
+                    tool_definition[key]), value)
             file_location = ''
         help_text = tool_definition.get(key + '.help', HELP.get(key, ''))
         data_items.append(DataItem(

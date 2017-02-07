@@ -13,12 +13,13 @@ from invisibleroads_macros.log import (
 from os import getcwd, walk
 from os.path import basename, dirname, isabs, join
 from pyramid.settings import asbool, aslist
-from six import text_type
 
 from .exceptions import (
     ToolConfigurationNotFound, ToolNotFound, ToolNotSpecified)
 from .symmetries import (
     prepare_path_argument, suppress, COMMAND_LINE_JOIN, SCRIPT_EXTENSION)
+from .types import (
+    get_data_type, parse_data_dictionary_from, DATA_TYPE_BY_SUFFIX)
 
 
 TOOL_NAME_PATTERN = re.compile(r'crosscompute\s*(.*)')
@@ -48,18 +49,20 @@ class ResultConfiguration(object):
         return save_settings(join(self.result_folder, 'f.cfg'), d)
 
     def save_result_arguments(self, result_arguments, environment):
-        d = {
-            'result_arguments': result_arguments,
-        }
+        d = {'result_arguments': result_arguments}
         if environment:
             d['result_environment'] = environment
-        print(format_settings(d))
+        suffix_format_packs = [(
+            suffix, data_type.format
+        ) for suffix, data_type in DATA_TYPE_BY_SUFFIX.items()]
+
+        print(format_settings(d, suffix_format_packs))
         print('')
         d = filter_nested_dictionary(
             d, lambda x: x.startswith('_') or x in ['target_folder'])
         d = make_relative_paths(d, self.result_folder)
-        # !!! Send format_by_suffix
-        return save_settings(join(self.result_folder, 'x.cfg'), d)
+        return save_settings(join(
+            self.result_folder, 'x.cfg'), d, suffix_format_packs)
 
     def save_result_properties(self, result_properties):
         d = {
@@ -189,8 +192,8 @@ def load_result_arguments(result_configuration_path):
     arguments = load_relative_settings(
         result_configuration_path, 'result_arguments')
     arguments.pop('target_folder', None)
-    # !!! Parse arguments by data type here
-    return arguments
+    result_configuration_folder = dirname(result_configuration_path)
+    return parse_data_dictionary_from(arguments, result_configuration_folder)
 
 
 def load_result_properties(result_configuration_path):
@@ -213,8 +216,7 @@ def render_command(command_template, result_arguments):
     d = {}
     quote_pattern = re.compile(r"""["'].*["']""")
     for k, v in result_arguments.items():
-        # !!! Replace text_type with get_data_type and data_type.format
-        v = text_type(v).strip()
+        v = get_data_type(k).format(v).strip()
         if k.endswith('_path') or k.endswith('_folder'):
             v = prepare_path_argument(v)
         if ' ' in v and not quote_pattern.match(v):
