@@ -129,6 +129,7 @@ class ResultRequest(Request):
             else:
                 errors[argument_name] = 'required'
                 continue
+            # !!! Accept duplicate argument_name in request.params
             arguments[argument_name] = v
         if errors:
             raise DataParseError(errors, arguments)
@@ -414,7 +415,7 @@ def get_tool_arguments(tool_definition):
     return value_by_key
 
 
-def get_data_items(value_by_key, tool_definition):
+def get_data_items(value_by_key, tool_definition, merge=False):
     data_items = []
     for key, value in value_by_key.items():
         if key.startswith('_') or key in RESERVED_ARGUMENT_NAMES:
@@ -431,7 +432,7 @@ def get_data_items(value_by_key, tool_definition):
                     value = data_type.parse(value)
                 except DataTypeError:
                     data_type = StringType
-            if key in tool_definition:
+            if merge and key in tool_definition:
                 value = data_type.merge(data_type.parse(
                     tool_definition[key]), value)
             file_location = ''
@@ -472,7 +473,7 @@ def get_result_template_variables(result, result_folder):
     result_arguments = result_configuration.result_arguments
     result_properties = result_configuration.result_properties
 
-    tool_items = get_data_items(result_arguments, tool_definition)
+    tool_items = get_data_items(result_arguments, tool_definition, merge=True)
     result_errors = get_data_items(merge_dictionaries(
         result_properties.pop('standard_errors', {}),
         result_properties.pop('type_errors', {})), tool_definition)
