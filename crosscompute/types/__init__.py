@@ -62,8 +62,8 @@ class DataType(object):
         return text
 
     @classmethod
-    def merge(Class, old_value, new_value):
-        return new_value
+    def merge(Class, default_value, value):
+        return value
 
     @classmethod
     def render(Class, value):
