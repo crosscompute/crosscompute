@@ -5,6 +5,7 @@ from os.path import join
 from pyramid.httpexceptions import HTTPBadRequest
 from pytest import raises
 from six import BytesIO
+from webob.multidict import MultiDict
 
 from crosscompute.models import Result
 from crosscompute.types import StringType
@@ -15,7 +16,7 @@ class TestResultRequest(object):
 
     def test_ignore_explicit_path(self, result_request, tool_definition):
         tool_definition['argument_names'] = ('x_path',)
-        raw_arguments = {'x_path': 'cc.ini'}
+        raw_arguments = MultiDict({'x_path': 'cc.ini'})
         with raises(HTTPBadRequest) as e:
             result_request.prepare_arguments(tool_definition, raw_arguments)
         assert e.value.detail['x'] == 'required'
@@ -23,7 +24,7 @@ class TestResultRequest(object):
     def test_ignore_reserved_argument_name(
             self, result_request, tool_definition):
         tool_definition['argument_names'] = ('target_folder',)
-        raw_arguments = {'target_folder': '/tmp'}
+        raw_arguments = MultiDict({'target_folder': '/tmp'})
         result = result_request.prepare_arguments(
             tool_definition, raw_arguments)
         assert result.arguments == {}
@@ -32,26 +33,26 @@ class TestResultRequest(object):
             self, result_request, tool_definition):
         tool_definition['argument_names'] = ('x_whee',)
         # Run with incompatible value
-        raw_arguments = {'x_whee': 'x'}
+        raw_arguments = MultiDict({'x_whee': 'x'})
         with raises(HTTPBadRequest) as e:
             result_request.prepare_arguments(tool_definition, raw_arguments)
         assert e.value.detail['x_whee'] == 'expected whee'
         # Run with compatible value
-        raw_arguments = {'x_whee': 'whee'}
+        raw_arguments = MultiDict({'x_whee': 'whee'})
         result = result_request.prepare_arguments(
             tool_definition, raw_arguments)
         assert result.arguments == {'x_whee': 'whee'}
 
     def test_accept_direct_content(self, result_request, tool_definition):
         tool_definition['argument_names'] = ('x_path',)
-        raw_arguments = {'x_txt': 'whee'}
+        raw_arguments = MultiDict({'x_txt': 'whee'})
         result = result_request.prepare_arguments(
             tool_definition, raw_arguments)
         assert open(result.arguments['x_path']).read() == 'whee'
 
     def test_accept_empty_content(self, result_request, tool_definition):
         tool_definition['argument_names'] = ('x_path',)
-        raw_arguments = {'x': ''}
+        raw_arguments = MultiDict({'x': ''})
         # Run without default_path
         with raises(HTTPBadRequest) as e:
             result_request.prepare_arguments(tool_definition, raw_arguments)
@@ -69,7 +70,7 @@ class TestResultRequest(object):
         field_storage.filename = 'x.txt'
         field_storage.file = BytesIO(b'whee')
         tool_definition['argument_names'] = ('x_path',)
-        raw_arguments = {'x': field_storage}
+        raw_arguments = MultiDict({'x': field_storage})
         result = result_request.prepare_arguments(
             tool_definition, raw_arguments)
         assert open(result.arguments['x_path']).read() == 'whee'
@@ -85,27 +86,27 @@ class TestResultRequest(object):
         x_folder = make_folder(join(result_folder, 'x'))
         open(join(x_folder, 'x.txt'), 'wt').write('whee')
         # Use bad result_id
-        raw_arguments = {'x': 'bad/x/x.txt'}
+        raw_arguments = MultiDict({'x': 'bad/x/x.txt'})
         with raises(HTTPBadRequest) as e:
             result_request.prepare_arguments(tool_definition, raw_arguments)
         assert e.value.detail['x'] == 'invalid'
         # Use bad folder_name
-        raw_arguments = {'x': 'xyz/bad/x.txt'}
+        raw_arguments = MultiDict({'x': 'xyz/bad/x.txt'})
         with raises(HTTPBadRequest) as e:
             result_request.prepare_arguments(tool_definition, raw_arguments)
         assert e.value.detail['x'] == 'invalid'
         # Use bad path
-        raw_arguments = {'x': 'xyz/x/bad'}
+        raw_arguments = MultiDict({'x': 'xyz/x/bad'})
         with raises(HTTPBadRequest) as e:
             result_request.prepare_arguments(tool_definition, raw_arguments)
         assert e.value.detail['x'] == 'invalid'
         # Use bad path
-        raw_arguments = {'x': 'xyz/x/../bad/run.py'}
+        raw_arguments = MultiDict({'x': 'xyz/x/../bad/run.py'})
         with raises(HTTPBadRequest) as e:
             result_request.prepare_arguments(tool_definition, raw_arguments)
         assert e.value.detail['x'] == 'invalid'
         # Use good path
-        raw_arguments = {'x': 'xyz/x/x.txt'}
+        raw_arguments = MultiDict({'x': 'xyz/x/x.txt'})
         result = result_request.prepare_arguments(
             tool_definition, raw_arguments)
         assert open(result.arguments['x_path']).read() == 'whee'
@@ -119,12 +120,12 @@ class TestResultRequest(object):
         open(join(upload_folder, 'raw.txt'), 'wt')
         open(join(upload_folder, 'name.txt'), 'wt')
         # Use bad upload_id
-        raw_arguments = {'x': 'a'}
+        raw_arguments = MultiDict({'x': 'a'})
         with raises(HTTPBadRequest) as e:
             result_request.prepare_arguments(tool_definition, raw_arguments)
         assert e.value.detail['x'] == 'invalid'
         # Use upload_id that does not have expected data_type
-        raw_arguments = {'x': 'xyz'}
+        raw_arguments = MultiDict({'x': 'xyz'})
         with raises(HTTPBadRequest) as e:
             result_request.prepare_arguments(tool_definition, raw_arguments)
         assert e.value.detail['x'] == 'invalid'

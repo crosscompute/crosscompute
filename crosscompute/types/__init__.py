@@ -122,8 +122,10 @@ def parse_data_dictionary_from(raw_dictionary, root_folder, tool_definition):
         except Exception as e:
             log_traceback(LOG, {'key': key, 'value': value})
             errors[key] = 'could_not_parse'
-        d[key] = data_type.merge(data_type.parse(tool_definition.get(
-            key, '')), value)
+        if key in tool_definition:
+            value = data_type.merge(data_type.parse(
+                tool_definition[key]), value)
+        d[key] = value
         if not key.endswith('_path'):
             continue
         noun = key[:-5]
