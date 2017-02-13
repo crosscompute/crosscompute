@@ -125,14 +125,12 @@ class ResultRequest(Request):
                     errors[argument_noun] = 'required'
                     continue
             elif argument_name in raw_arguments:
-                v = raw_arguments[argument_name].strip()
+                v = '\n'.join(x.strip() for x in raw_arguments.getall(
+                    argument_name))
             else:
                 errors[argument_name] = 'required'
                 continue
-            if argument_name in arguments:
-                arguments[argument_name] += '\n' + v
-            else:
-                arguments[argument_name] = v
+            arguments[argument_name] = v
         if errors:
             raise DataParseError(errors, arguments)
         # Parse strings and validate data types
