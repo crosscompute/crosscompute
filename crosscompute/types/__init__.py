@@ -123,8 +123,9 @@ def parse_data_dictionary_from(raw_dictionary, root_folder, tool_definition):
             log_traceback(LOG, {'key': key, 'value': value})
             errors[key] = 'could_not_parse'
         if key in tool_definition:
-            value = data_type.merge(data_type.parse(
-                tool_definition[key]), value)
+            old_value = data_type.parse(tool_definition[key])
+            if old_value != value:
+                value = data_type.merge(old_value, value)
         d[key] = value
         if not key.endswith('_path'):
             continue
@@ -134,10 +135,7 @@ def parse_data_dictionary_from(raw_dictionary, root_folder, tool_definition):
             data_type.load(value)
         except DataTypeError as e:
             errors[noun] = text_type(e)
-        except IOError as e:
-            log_traceback(LOG, {'key': key, 'value': value})
-            errors[noun] = 'not_found'
-        except Exception as e:
+        except (IOError, Exception) as e:
             log_traceback(LOG, {'key': key, 'value': value})
             errors[noun] = 'could_not_load'
     if errors:
