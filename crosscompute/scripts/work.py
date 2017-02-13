@@ -117,7 +117,8 @@ def run_tool(result_folder):
     x_configuration_path = join(result_folder, 'x.cfg')
     target_folder = join(result_folder, 'y')
     tool_definition = load_tool_definition(f_configuration_path)
-    result_arguments = load_result_arguments(x_configuration_path)
+    result_arguments = load_result_arguments(
+        x_configuration_path, tool_definition)
     environment = load_settings(x_configuration_path, 'result_environment')
     return run_script(
         tool_definition, result_arguments, result_folder, target_folder,

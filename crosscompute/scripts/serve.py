@@ -133,8 +133,8 @@ class ResultRequest(Request):
             arguments[argument_name] = v
         if errors:
             raise DataParseError(errors, arguments)
-        # Parse strings and validate data types
-        return parse_data_dictionary_from(arguments, configuration_folder)
+        return parse_data_dictionary_from(
+            arguments, configuration_folder, tool_definition)
 
     def spawn_result(self):
         return Result.spawn(self.data_folder)
@@ -415,7 +415,7 @@ def get_tool_arguments(tool_definition):
     return value_by_key
 
 
-def get_data_items(value_by_key, tool_definition, merge=False):
+def get_data_items(value_by_key, tool_definition):
     data_items = []
     for key, value in value_by_key.items():
         if key.startswith('_') or key in RESERVED_ARGUMENT_NAMES:
@@ -432,9 +432,6 @@ def get_data_items(value_by_key, tool_definition, merge=False):
                     value = data_type.parse(value)
                 except DataTypeError:
                     data_type = StringType
-            if merge and key in tool_definition:
-                value = data_type.merge(data_type.parse(
-                    tool_definition[key]), value)
             file_location = ''
         help_text = tool_definition.get(key + '.help', HELP.get(key, ''))
         data_items.append(DataItem(
@@ -473,7 +470,7 @@ def get_result_template_variables(result, result_folder):
     result_arguments = result_configuration.result_arguments
     result_properties = result_configuration.result_properties
 
-    tool_items = get_data_items(result_arguments, tool_definition, merge=True)
+    tool_items = get_data_items(result_arguments, tool_definition)
     result_errors = get_data_items(merge_dictionaries(
         result_properties.pop('standard_errors', {}),
         result_properties.pop('type_errors', {})), tool_definition)

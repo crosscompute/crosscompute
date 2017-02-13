@@ -28,10 +28,11 @@ class RunScript(ToolScript):
             '--target_folder', type=unicode_safely, metavar='FOLDER')
         argument_parser = configure_argument_parser(
             argument_parser, tool_definition)
-        raw_arguments = argument_parser.parse_known_args(argv[2:])[0].__dict__
+        raw_arguments = sort_dictionary(argument_parser.parse_known_args(
+            argv[2:])[0].__dict__, tool_definition['argument_names'])
         try:
-            result_arguments = parse_data_dictionary_from(sort_dictionary(
-                raw_arguments, tool_definition['argument_names']), getcwdu())
+            result_arguments = parse_data_dictionary_from(
+                raw_arguments, getcwdu(), tool_definition)
         except DataParseError as e:
             return [(k + '.error', v) for k, v in e.message_by_name.items()]
         result_folder = Result.spawn_folder(data_folder)

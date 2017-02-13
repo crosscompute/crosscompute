@@ -27,8 +27,8 @@ class DataItem(object):
         self.file_location = file_location
         self.help_text = help_text
 
-    def format_value(self, *args, **kw):
-        x = self.data_type.format(self.value, *args, **kw)
+    def render_value(self, *args, **kw):
+        x = self.data_type.render(self.value, *args, **kw)
         return '' if x is None else x
 
 
@@ -66,7 +66,7 @@ class DataType(object):
         return new_value
 
     @classmethod
-    def format(Class, value):
+    def render(Class, value):
         return value
 
     @classmethod
@@ -104,13 +104,13 @@ def get_data_type(key):
     return StringType
 
 
-def parse_data_dictionary(text, root_folder):
+def parse_data_dictionary(text, root_folder, tool_definition):
     d = parse_nested_dictionary(
         text, is_key=lambda x: ':' not in x and ' ' not in x)
-    return parse_data_dictionary_from(d, root_folder)
+    return parse_data_dictionary_from(d, root_folder, tool_definition)
 
 
-def parse_data_dictionary_from(raw_dictionary, root_folder):
+def parse_data_dictionary_from(raw_dictionary, root_folder, tool_definition):
     d = make_absolute_paths(raw_dictionary, root_folder)
     errors = OrderedDict()
     for key, value in d.items():
@@ -122,7 +122,8 @@ def parse_data_dictionary_from(raw_dictionary, root_folder):
         except Exception as e:
             log_traceback(LOG, {'key': key, 'value': value})
             errors[key] = 'could_not_parse'
-        d[key] = value
+        d[key] = data_type.merge(data_type.parse(tool_definition.get(
+            key, '')), value)
         if not key.endswith('_path'):
             continue
         noun = key[:-5]

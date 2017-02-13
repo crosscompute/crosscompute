@@ -53,9 +53,8 @@ class ResultConfiguration(object):
         if environment:
             d['result_environment'] = environment
         suffix_format_packs = [(
-            suffix, data_type.format
+            suffix, data_type.render
         ) for suffix, data_type in DATA_TYPE_BY_SUFFIX.items()]
-
         print(format_settings(d, suffix_format_packs))
         print('')
         d = filter_nested_dictionary(
@@ -93,7 +92,8 @@ class ResultConfiguration(object):
 
     @cached_property
     def result_arguments(self):
-        return load_result_arguments(join(self.result_folder, 'x.cfg'))
+        return load_result_arguments(join(
+            self.result_folder, 'x.cfg'), self.tool_definition)
 
     @cached_property
     def result_properties(self):
@@ -188,12 +188,13 @@ def load_tool_definition(result_configuration_path):
     return tool_definition_by_name[tool_name]
 
 
-def load_result_arguments(result_configuration_path):
+def load_result_arguments(result_configuration_path, tool_definition):
     arguments = load_relative_settings(
         result_configuration_path, 'result_arguments')
     arguments.pop('target_folder', None)
     result_configuration_folder = dirname(result_configuration_path)
-    return parse_data_dictionary_from(arguments, result_configuration_folder)
+    return parse_data_dictionary_from(
+        arguments, result_configuration_folder, tool_definition)
 
 
 def load_result_properties(result_configuration_path):
@@ -216,7 +217,7 @@ def render_command(command_template, result_arguments):
     d = {}
     quote_pattern = re.compile(r"""["'].*["']""")
     for k, v in result_arguments.items():
-        v = get_data_type(k).format(v).strip()
+        v = get_data_type(k).render(v).strip()
         if k.endswith('_path') or k.endswith('_folder'):
             v = prepare_path_argument(v)
         if ' ' in v and not quote_pattern.match(v):

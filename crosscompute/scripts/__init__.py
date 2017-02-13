@@ -63,7 +63,7 @@ def launch(argv=sys.argv):
 def prepare_tool_definition(tool_name):
     if exists('f.cfg'):
         tool_definition = load_tool_definition('f.cfg')
-        tool_definition.update(load_result_arguments('x.cfg'))
+        tool_definition.update(load_result_arguments('x.cfg', tool_definition))
         return tool_definition
 
     for x in ExtensionManager('crosscompute.extensions').extensions:
@@ -143,7 +143,7 @@ def _process_streams(
                 stream_content + '\n')
         try:
             value_by_key = parse_data_dictionary(
-                stream_content, join(result_folder, 'y'))
+                stream_content, join(result_folder, 'y'), tool_definition)
         except DataParseError as e:
             for k, v in e.message_by_name.items():
                 type_errors['%s.error' % k] = v

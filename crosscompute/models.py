@@ -8,7 +8,7 @@ class Tool(FolderMixin, DummyBase):
 
     @classmethod
     def get_from(Class, request, record_id=None):
-        return Class(id=record_id)
+        return Class(id=record_id or Class.id)
 
 
 class Result(FolderMixin, DummyBase):
