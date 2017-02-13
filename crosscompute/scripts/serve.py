@@ -129,8 +129,10 @@ class ResultRequest(Request):
             else:
                 errors[argument_name] = 'required'
                 continue
-            # !!! Accept duplicate argument_name in request.params
-            arguments[argument_name] = v
+            if argument_name in arguments:
+                arguments[argument_name] += '\n' + v
+            else:
+                arguments[argument_name] = v
         if errors:
             raise DataParseError(errors, arguments)
         # Parse strings and validate data types
