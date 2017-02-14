@@ -10,6 +10,7 @@ from invisibleroads_macros.disk import are_same_path, link_path
 from invisibleroads_macros.log import (
     filter_nested_dictionary, format_indented_block, format_path,
     parse_nested_dictionary_from)
+from invisibleroads_macros.text import has_whitespace
 from os import getcwd, walk
 from os.path import basename, dirname, isabs, join
 from pyramid.settings import asbool, aslist
@@ -75,11 +76,10 @@ class ResultConfiguration(object):
 
     def save_result_script(self, tool_definition, result_arguments):
         target_path = join(self.result_folder, 'x' + SCRIPT_EXTENSION)
-        command = render_command(tool_definition['command_template'].replace(
-            '\n', ' %s\n' % COMMAND_LINE_JOIN), result_arguments)
         command_parts = [
             'cd "%s"' % tool_definition['configuration_folder'],
-            format_indented_block(command).strip()]
+            render_command(tool_definition['command_template'].replace(
+                '\n', ' %s\n' % COMMAND_LINE_JOIN), result_arguments)]
         with codecs.open(target_path, 'w', encoding='utf-8') as target_file:
             target_file.write('\n'.join(command_parts) + '\n')
         print('command_path = %s' % format_path(target_path))
@@ -219,7 +219,7 @@ def render_command(command_template, result_arguments):
         v = get_data_type(k).render(v)
         if k.endswith('_path') or k.endswith('_folder'):
             v = prepare_path_argument(v)
-        if ' ' in v and not quote_pattern.match(v):
+        if has_whitespace(v) and not quote_pattern.match(v):
             v = '"%s"' % v
         d[k] = v
     return command_template.format(**d)
