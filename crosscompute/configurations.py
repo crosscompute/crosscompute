@@ -8,8 +8,7 @@ from invisibleroads_macros.configuration import (
 from invisibleroads_macros.descriptor import cached_property
 from invisibleroads_macros.disk import are_same_path, link_path
 from invisibleroads_macros.log import (
-    filter_nested_dictionary, format_indented_block, format_path,
-    parse_nested_dictionary_from)
+    filter_nested_dictionary, format_path, parse_nested_dictionary_from)
 from invisibleroads_macros.text import has_whitespace
 from os import getcwd, walk
 from os.path import basename, dirname, isabs, join
@@ -50,13 +49,9 @@ class ResultConfiguration(object):
         return save_settings(join(self.result_folder, 'f.cfg'), d)
 
     def save_result_arguments(self, result_arguments, environment):
-        rendered_arguments = OrderedDict()
-        for k, v in result_arguments.items():
-            v = get_data_type(k).render(v)
-            if '\n' in v:
-                v = format_indented_block(v)
-            rendered_arguments[k] = v
-        d = {'result_arguments': rendered_arguments}
+        d = {'result_arguments': OrderedDict((
+            k, get_data_type(k).render(v)
+        ) for k, v in result_arguments.items())}
         if environment:
             d['result_environment'] = environment
         print(format_settings(d))
