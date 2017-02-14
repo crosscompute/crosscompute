@@ -8,7 +8,7 @@ from invisibleroads_macros.configuration import (
 from invisibleroads_macros.descriptor import cached_property
 from invisibleroads_macros.disk import are_same_path, link_path
 from invisibleroads_macros.log import (
-    filter_nested_dictionary, format_hanging_indent, format_path,
+    filter_nested_dictionary, format_indented_block, format_path,
     parse_nested_dictionary_from)
 from os import getcwd, walk
 from os.path import basename, dirname, isabs, join
@@ -19,7 +19,7 @@ from .exceptions import (
 from .symmetries import (
     prepare_path_argument, suppress, COMMAND_LINE_JOIN, SCRIPT_EXTENSION)
 from .types import (
-    get_data_type, parse_data_dictionary_from, DATA_TYPE_BY_SUFFIX)
+    get_data_type, parse_data_dictionary_from, RESERVED_ARGUMENT_NAMES)
 
 
 TOOL_NAME_PATTERN = re.compile(r'crosscompute\s*(.*)')
@@ -49,24 +49,24 @@ class ResultConfiguration(object):
         return save_settings(join(self.result_folder, 'f.cfg'), d)
 
     def save_result_arguments(self, result_arguments, environment):
-        d = {'result_arguments': result_arguments}
+        rendered_arguments = OrderedDict()
+        for k, v in result_arguments.items():
+            v = get_data_type(k).render(v)
+            if '\n' in v:
+                v = format_indented_block(v)
+            rendered_arguments[k] = v
+        d = {'result_arguments': rendered_arguments}
         if environment:
             d['result_environment'] = environment
-        suffix_format_packs = [(
-            suffix, data_type.render
-        ) for suffix, data_type in DATA_TYPE_BY_SUFFIX.items()]
-        print(format_settings(d, suffix_format_packs))
+        print(format_settings(d))
         print('')
-        d = filter_nested_dictionary(
-            d, lambda x: x.startswith('_') or x in ['target_folder'])
+        d = filter_nested_dictionary(d, lambda x: x.startswith(
+            '_') or x in RESERVED_ARGUMENT_NAMES)
         d = make_relative_paths(d, self.result_folder)
-        return save_settings(join(
-            self.result_folder, 'x.cfg'), d, suffix_format_packs)
+        return save_settings(join(self.result_folder, 'x.cfg'), d)
 
     def save_result_properties(self, result_properties):
-        d = {
-            'result_properties': result_properties,
-        }
+        d = {'result_properties': result_properties}
         print(format_settings(filter_nested_dictionary(d, lambda x: x in [
             'standard_output', 'standard_error'])))
         d = filter_nested_dictionary(d, lambda x: x.startswith('_'))
@@ -75,12 +75,11 @@ class ResultConfiguration(object):
 
     def save_result_script(self, tool_definition, result_arguments):
         target_path = join(self.result_folder, 'x' + SCRIPT_EXTENSION)
-        command = render_command(tool_definition[
-            'command_template'], result_arguments)
+        command = render_command(tool_definition['command_template'].replace(
+            '\n', ' %s\n' % COMMAND_LINE_JOIN), result_arguments)
         command_parts = [
             'cd "%s"' % tool_definition['configuration_folder'],
-            format_hanging_indent(command.replace(
-                '\n', ' %s\n' % COMMAND_LINE_JOIN))]
+            format_indented_block(command).strip()]
         with codecs.open(target_path, 'w', encoding='utf-8') as target_file:
             target_file.write('\n'.join(command_parts) + '\n')
         print('command_path = %s' % format_path(target_path))
@@ -217,7 +216,7 @@ def render_command(command_template, result_arguments):
     d = {}
     quote_pattern = re.compile(r"""["'].*["']""")
     for k, v in result_arguments.items():
-        v = get_data_type(k).render(v).strip()
+        v = get_data_type(k).render(v)
         if k.endswith('_path') or k.endswith('_folder'):
             v = prepare_path_argument(v)
         if ' ' in v and not quote_pattern.match(v):

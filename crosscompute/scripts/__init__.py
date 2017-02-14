@@ -103,7 +103,7 @@ def run_script(
     result_configuration.save_result_arguments(result_arguments, environment)
     # Run
     command_terms = split_arguments(render_command(tool_definition[
-        'command_template'], result_arguments).replace('\n', ' '))
+        'command_template'].replace('\n', ' '), result_arguments))
     result_properties = OrderedDict()
     try:
         with cd(tool_definition['configuration_folder']):
