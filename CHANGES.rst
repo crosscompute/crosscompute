@@ -2,6 +2,7 @@
 ---
 - Add work script
 - Rearrange result folder
+- Expand support for DataType.parse, DataType.render
 
 0.5
 ---
