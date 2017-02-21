@@ -257,12 +257,12 @@ def add_routes_for_data_types(config):
 def get_template_variables(tool_definition, template_type, data_items):
     template_path = get_template_path(tool_definition, template_type)
     if not template_path or not exists(template_path) or not data_items:
-        title, parts = tool_definition['tool_name'], data_items
+        title, parts = '', data_items
     else:
         template_text = codecs.open(template_path, 'r', 'utf-8').read()
         title, parts = parse_template(template_text, data_items)
     return {
-        template_type + '_title': title,
+        template_type + '_title': title or tool_definition['tool_name'],
         template_type + '_template_parts': parts,
     }
 
@@ -276,7 +276,10 @@ def get_template_path(tool_definition, template_type):
 
 
 def parse_template(template_text, data_items):
-    title = MARKDOWN_TITLE_PATTERN.search(template_text).group(1)
+    try:
+        title = MARKDOWN_TITLE_PATTERN.search(template_text).group(1)
+    except AttributeError:
+        title = ''
     content = MARKDOWN_TITLE_PATTERN.sub('', template_text).strip()
     parts = []
     data_item_by_key = {x.key: x for x in data_items}

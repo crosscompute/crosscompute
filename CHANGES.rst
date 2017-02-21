@@ -1,5 +1,6 @@
 0.6
 ---
+- Accept markdown templates that lack titles
 - Add work script
 - Rearrange result folder
 - Expand support for DataType.parse, DataType.render
