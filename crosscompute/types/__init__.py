@@ -26,6 +26,7 @@ class DataItem(object):
         self.data_type = data_type
         self.file_location = file_location
         self.help_text = help_text
+        self.name = key.replace('_', ' ')
 
     def render_value(self, *args, **kw):
         x = self.data_type.render(self.value, *args, **kw)

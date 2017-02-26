@@ -26,14 +26,11 @@ CC.tool_json_url = "{{ request.route_path('tool.json', tool_id=tool.id) }}";
 {% for x in tool_template_parts %}
 {%- if x is string -%}
 {{ x | markdown }}
-{% set has_tool_template = True %}
 
 {%- else -%}
 {% from x.data_type.template import render_argument %}
 <div class="form-group">
-{% if not has_tool_template %}
 {{- render_key(request, x) -}}
-{% endif %}
 {{- render_argument(request, x) -}}
 </div>
 

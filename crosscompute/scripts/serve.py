@@ -284,13 +284,19 @@ def parse_template(template_text, data_items):
     parts = []
     data_item_by_key = {x.key: x for x in data_items}
     for index, x in enumerate(ARGUMENT_NAME_PATTERN.split(content)):
-        if not x.strip():
+        x = x.strip()
+        if not x:
             continue
         if index % 2 == 1:
+            key, _, name = x.partition(' ')
             try:
-                x = data_item_by_key[x]
+                x = data_item_by_key[key]
             except KeyError:
                 x = '{ %s }' % x
+            else:
+                name = name.strip()
+                if name:
+                    x.name = name
         parts.append(x)
     return title, parts
 

@@ -9,9 +9,8 @@
 {% endmacro %}
 
 {% macro render_key(request, data_item, stamp='') %}
-{% set key = data_item.key %}
 {% set help_text = data_item.help_text %}
-<label for="{{ key }}{{ stamp }}" class="control-label">{{ key }}</label>
+<label for="{{ data_item.key }}{{ stamp }}" class="control-label">{{ data_item.name }}</label>
 {% if help_text %}
 <span class="glyphicon glyphicon-question-sign btn-lg" data-toggle="popover" data-content="{{ help_text }}"></span>
 {% endif %}
