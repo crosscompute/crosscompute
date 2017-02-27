@@ -198,8 +198,7 @@ def get_app(
             'invisibleroads_posts:templates/404.jinja2',
         'website.root_assets': [
             'invisibleroads_posts:assets/favicon.ico',
-            'invisibleroads_posts:assets/robots.txt',
-        ],
+            'invisibleroads_posts:assets/robots.txt'],
         'upload.id.length': 32,
         'client_cache.http.expiration_time': 3600,
         'jinja2.directories': 'crosscompute:templates',
@@ -288,7 +287,8 @@ def parse_template(template_text, data_items):
         if not x:
             continue
         if index % 2 == 1:
-            key, _, name = x.partition(' ')
+            key, _, name = x.partition(':')
+            key = key.strip()
             try:
                 x = data_item_by_key[key]
             except KeyError:

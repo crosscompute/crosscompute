@@ -8,9 +8,26 @@ from six import BytesIO
 from webob.multidict import MultiDict
 
 from crosscompute.models import Result
-from crosscompute.types import StringType
+from crosscompute.types import DataItem, StringType
 from crosscompute.scripts.serve import (
     parse_result_relative_path, parse_template)
+
+
+class TestParseTemplate(object):
+
+    def test_accept_whitespace(self):
+        data_item = DataItem('x', '')
+        data_items = [data_item]
+        y = '', data_items
+        assert y == parse_template('{x}', data_items)
+        assert y == parse_template('{x }', data_items)
+        assert y == parse_template('{ x}', data_items)
+        assert y == parse_template('{ x }', data_items)
+
+    def test_recognize_names(self):
+        data_item = DataItem('x', '')
+        parse_template('{ x : a }', [data_item])
+        assert data_item.name == 'a'
 
 
 class TestResultRequest(object):
@@ -144,7 +161,3 @@ def test_parse_result_relative_path():
         with raises(ValueError):
             f(x)
     f('1/x/a')
-
-
-# def test_parse_template():
-    # parse_template('')

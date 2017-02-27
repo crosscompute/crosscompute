@@ -20,10 +20,11 @@ LOG.addHandler(logging.NullHandler())
 
 class DataItem(object):
 
-    def __init__(self, key, value, data_type, file_location='', help_text=''):
+    def __init__(
+            self, key, value, data_type=None, file_location='', help_text=''):
         self.key = key
         self.value = value
-        self.data_type = data_type
+        self.data_type = data_type or get_data_type(key)
         self.file_location = file_location
         self.help_text = help_text
         self.name = key.replace('_', ' ')
