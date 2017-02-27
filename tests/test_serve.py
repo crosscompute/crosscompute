@@ -9,7 +9,8 @@ from webob.multidict import MultiDict
 
 from crosscompute.models import Result
 from crosscompute.types import StringType
-from crosscompute.scripts.serve import parse_result_relative_path
+from crosscompute.scripts.serve import (
+    parse_result_relative_path, parse_template)
 
 
 class TestResultRequest(object):
@@ -143,3 +144,7 @@ def test_parse_result_relative_path():
         with raises(ValueError):
             f(x)
     f('1/x/a')
+
+
+# def test_parse_template():
+    # parse_template('')
