@@ -38,7 +38,7 @@
 {%- endif -%}
 {% endfor -%}
 
-<div><a href="{{ request.route_path('result.zip', result_id=result.id, result_name=result_name) }}" class="btn btn-success btn-lg download" role="button" download>Download</a></div>
+<div><a href="{{ request.route_path('result.zip', result_id=result.id, result_name=result_name) }}" class="btn btn-lg btn-success download" role="button" download>Download</a></div>
 
 {{- render_properties(request, result_properties, stamp='-meta') -}}
 {% endif %}
