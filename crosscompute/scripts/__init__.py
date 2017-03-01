@@ -12,10 +12,11 @@ from invisibleroads.scripts import (
     Script, StoicArgumentParser, configure_subparsers, get_scripts_by_name,
     run_scripts)
 from invisibleroads_macros.configuration import (
-    split_arguments, unicode_safely, SECTION_TEMPLATE)
+    split_arguments, SECTION_TEMPLATE)
 from invisibleroads_macros.disk import (
     cd, link_path, make_folder, COMMAND_LINE_HOME, HOME_FOLDER)
 from invisibleroads_macros.iterable import merge_dictionaries
+from invisibleroads_macros.text import unicode_safely
 from os.path import abspath, basename, exists, isabs, join
 from stevedore.extension import ExtensionManager
 
