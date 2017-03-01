@@ -4,10 +4,10 @@ from invisibleroads_macros.iterable import sort_dictionary
 from os import getcwdu
 from sys import argv
 
+from ..configurations import get_default_value, parse_data_dictionary_from
 from ..exceptions import DataParseError
 from ..models import Result
-from ..types import (
-    parse_data_dictionary_from, DATA_TYPE_BY_SUFFIX, RESERVED_ARGUMENT_NAMES)
+from ..types import StringType, get_data_type, RESERVED_ARGUMENT_NAMES
 from . import ToolScript, run_script
 
 
@@ -47,18 +47,21 @@ def configure_argument_parser(argument_parser, tool_definition):
         if k in RESERVED_ARGUMENT_NAMES:
             continue
         d = {}
-        if k in tool_definition:
-            d['default'] = tool_definition[k]
-        else:
+        d['metavar'] = get_metavar(k)
+        try:
+            d['default'] = get_default_value(k, tool_definition)
+        except KeyError:
             d['required'] = True
-        for suffix in DATA_TYPE_BY_SUFFIX:
-            if k.endswith('_' + suffix):
-                d['metavar'] = suffix.upper()
-                break
-        else:
-            if k.endswith('_folder'):
-                d['metavar'] = 'FOLDER'
-            elif k.endswith('_path'):
-                d['metavar'] = 'PATH'
         argument_parser.add_argument('--' + k, type=unicode_safely, **d)
     return argument_parser
+
+
+def get_metavar(key):
+    data_type = get_data_type(key)
+    metavar = data_type.suffixes[0]
+    if data_type == StringType:
+        if key.endswith('_folder'):
+            metavar = 'FOLDER'
+        elif key.endswith('_path'):
+            metavar = 'PATH'
+    return metavar.upper()

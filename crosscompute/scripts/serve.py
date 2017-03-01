@@ -26,13 +26,15 @@ from six import string_types, text_type
 from traceback import format_exc
 from wsgiref.simple_server import make_server
 
-from ..configurations import ResultConfiguration, ARGUMENT_NAME_PATTERN
+from ..configurations import (
+    ResultConfiguration, get_default_value, parse_data_dictionary_from,
+    ARGUMENT_NAME_PATTERN)
 from ..exceptions import DataParseError, DataTypeError
 from ..models import Result, Tool
 from ..symmetries import suppress
 from ..types import (
-    DataItem, StringType, parse_data_dictionary_from, get_data_type,
-    DATA_TYPE_BY_NAME, RESERVED_ARGUMENT_NAMES)
+    DataItem, StringType, get_data_type, DATA_TYPE_BY_NAME,
+    RESERVED_ARGUMENT_NAMES)
 from . import ToolScript, corral_arguments, run_script
 
 
@@ -420,7 +422,11 @@ def get_tool_template_variables(tool, tool_definition):
 def get_tool_arguments(tool_definition):
     value_by_key = OrderedDict()
     for key in tool_definition['argument_names']:
-        value_by_key[key] = tool_definition.get(key, '')
+        try:
+            value = get_default_value(key, tool_definition)
+        except KeyError:
+            value = ''
+        value_by_key[key] = value
     return value_by_key
 
 
