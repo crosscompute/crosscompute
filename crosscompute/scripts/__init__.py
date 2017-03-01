@@ -21,11 +21,11 @@ from stevedore.extension import ExtensionManager
 
 from ..configurations import (
     ResultConfiguration, load_result_arguments, load_tool_definition,
-    render_command)
+    parse_data_dictionary, render_command)
 from ..exceptions import CrossComputeError, DataParseError
 from ..extensions import DefaultTool
 from ..symmetries import SCRIPT_ENVIRONMENT
-from ..types import initialize_data_types, parse_data_dictionary
+from ..types import initialize_data_types
 
 
 class ToolScript(Script):

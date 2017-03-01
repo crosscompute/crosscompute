@@ -1,21 +1,15 @@
 import codecs
-import logging
 from abc import ABCMeta
-from collections import OrderedDict
-from invisibleroads_macros.configuration import (
-    make_absolute_paths, resolve_attribute)
-from invisibleroads_macros.log import log_traceback, parse_nested_dictionary
+from invisibleroads_macros.configuration import resolve_attribute
 from six import add_metaclass, text_type
 from stevedore.extension import ExtensionManager
 
-from ..exceptions import DataParseError, DataTypeError
+from ..exceptions import DataTypeError
 
 
 DATA_TYPE_BY_NAME = {}
 DATA_TYPE_BY_SUFFIX = {}
 RESERVED_ARGUMENT_NAMES = ['target_folder']
-LOG = logging.getLogger(__name__)
-LOG.addHandler(logging.NullHandler())
 
 
 class DataItem(object):
@@ -104,42 +98,3 @@ def get_data_type(key):
         if key.endswith('_' + suffix):
             return data_type
     return StringType
-
-
-def parse_data_dictionary(text, root_folder, tool_definition):
-    d = parse_nested_dictionary(
-        text, is_key=lambda x: ':' not in x and ' ' not in x)
-    return parse_data_dictionary_from(d, root_folder, tool_definition)
-
-
-def parse_data_dictionary_from(raw_dictionary, root_folder, tool_definition):
-    d = make_absolute_paths(raw_dictionary, root_folder)
-    errors = OrderedDict()
-    for key, value in d.items():
-        data_type = get_data_type(key)
-        try:
-            value = data_type.parse(value)
-        except DataTypeError as e:
-            errors[key] = text_type(e)
-        except Exception as e:
-            log_traceback(LOG, {'key': key, 'value': value})
-            errors[key] = 'could_not_parse'
-        if key in tool_definition:
-            old_value = data_type.parse(tool_definition[key])
-            if old_value != value:
-                value = data_type.merge(old_value, value)
-        d[key] = value
-        if not key.endswith('_path'):
-            continue
-        noun = key[:-5]
-        data_type = get_data_type(noun)
-        try:
-            data_type.load(value)
-        except DataTypeError as e:
-            errors[noun] = text_type(e)
-        except (IOError, Exception) as e:
-            log_traceback(LOG, {'key': key, 'value': value})
-            errors[noun] = 'could_not_load'
-    if errors:
-        raise DataParseError(errors, d)
-    return d

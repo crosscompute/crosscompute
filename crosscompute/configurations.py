@@ -8,22 +8,25 @@ from invisibleroads_macros.configuration import (
 from invisibleroads_macros.descriptor import cached_property
 from invisibleroads_macros.disk import are_same_path, link_path
 from invisibleroads_macros.log import (
-    filter_nested_dictionary, format_path, parse_nested_dictionary_from)
+    filter_nested_dictionary, format_path, get_log, log_traceback,
+    parse_nested_dictionary, parse_nested_dictionary_from)
 from invisibleroads_macros.text import has_whitespace
 from os import getcwd, walk
 from os.path import basename, dirname, isabs, join
 from pyramid.settings import asbool, aslist
+from six import text_type
 
 from .exceptions import (
-    ToolConfigurationNotFound, ToolNotFound, ToolNotSpecified)
+    DataParseError, DataTypeError, ToolConfigurationNotFound, ToolNotFound,
+    ToolNotSpecified)
 from .symmetries import (
     prepare_path_argument, suppress, COMMAND_LINE_JOIN, SCRIPT_EXTENSION)
-from .types import (
-    get_data_type, parse_data_dictionary_from, RESERVED_ARGUMENT_NAMES)
+from .types import get_data_type, RESERVED_ARGUMENT_NAMES
 
 
 TOOL_NAME_PATTERN = re.compile(r'crosscompute\s*(.*)')
 ARGUMENT_NAME_PATTERN = re.compile(r'\{(.+?)\}')
+LOG = get_log(__name__)
 
 
 class ResultConfiguration(object):
@@ -205,6 +208,59 @@ def format_available_tools(tool_definition_by_name):
 
 def parse_tool_argument_names(command_template):
     return tuple(ARGUMENT_NAME_PATTERN.findall(command_template))
+
+
+def parse_data_dictionary(text, root_folder, tool_definition):
+    d = parse_nested_dictionary(
+        text, is_key=lambda x: ':' not in x and ' ' not in x)
+    return parse_data_dictionary_from(d, root_folder, tool_definition)
+
+
+def parse_data_dictionary_from(raw_dictionary, root_folder, tool_definition):
+    d = make_absolute_paths(raw_dictionary, root_folder)
+    errors = OrderedDict()
+    for key, value in d.items():
+        data_type = get_data_type(key)
+        try:
+            value = data_type.parse(value)
+        except DataTypeError as e:
+            errors[key] = text_type(e)
+        except Exception as e:
+            log_traceback(LOG, {'key': key, 'value': value})
+            errors[key] = 'could_not_parse'
+        try:
+            old_value = get_default_value(key, tool_definition)
+        except KeyError:
+            pass
+        else:
+            old_value = data_type.parse(old_value)
+            if old_value != value:
+                value = data_type.merge(old_value, value)
+        d[key] = value
+        if not key.endswith('_path'):
+            continue
+        noun = key[:-5]
+        data_type = get_data_type(noun)
+        try:
+            data_type.load(value)
+        except DataTypeError as e:
+            errors[noun] = text_type(e)
+        except (IOError, Exception) as e:
+            log_traceback(LOG, {'key': key, 'value': value})
+            errors[noun] = 'could_not_load'
+    if errors:
+        raise DataParseError(errors, d)
+    return d
+
+
+def get_default_value(key, tool_definition):
+    if key in tool_definition:
+        value = tool_definition[key]
+    elif key + '_path' in tool_definition:
+        value = get_data_type(key).load(tool_definition[key + '_path'])
+    else:
+        raise KeyError(key)
+    return value
 
 
 def render_command(command_template, result_arguments):
