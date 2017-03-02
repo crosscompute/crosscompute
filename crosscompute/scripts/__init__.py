@@ -1,4 +1,3 @@
-import codecs
 import logging
 import simplejson as json
 try:
@@ -11,10 +10,9 @@ from collections import OrderedDict
 from invisibleroads.scripts import (
     Script, StoicArgumentParser, configure_subparsers, get_scripts_by_name,
     run_scripts)
-from invisibleroads_macros.configuration import (
-    split_arguments, SECTION_TEMPLATE)
+from invisibleroads_macros.configuration import split_arguments
 from invisibleroads_macros.disk import (
-    cd, link_path, make_folder, COMMAND_LINE_HOME, HOME_FOLDER)
+    cd, copy_text, link_path, make_folder, COMMAND_LINE_HOME, HOME_FOLDER)
 from invisibleroads_macros.iterable import merge_dictionaries
 from invisibleroads_macros.text import unicode_safely
 from os.path import abspath, basename, exists, isabs, join
@@ -38,8 +36,6 @@ class ToolScript(Script):
             '--data_folder', metavar='FOLDER', type=unicode_safely)
         argument_subparser.add_argument(
             '--suffix_by_data_type', metavar='JSON', type=json.loads)
-        argument_subparser.add_argument(
-            '--verbose', action='store_true')
 
     def run(self, args):
         initialize_data_types(args.suffix_by_data_type)
@@ -47,8 +43,7 @@ class ToolScript(Script):
         tool_name = tool_definition['tool_name']
         data_folder = args.data_folder or join(
             HOME_FOLDER, '.crosscompute', tool_name)
-        logging.basicConfig(
-            level=logging.DEBUG if args.verbose else logging.WARNING)
+        logging.basicConfig(level=logging.WARNING)
         return tool_definition, data_folder
 
 
@@ -93,13 +88,13 @@ def corral_arguments(argument_folder, result_arguments, use=link_path):
 
 def run_script(
         tool_definition, result_arguments, result_folder, target_folder=None,
-        environment=None):
+        environment=None, quietly=False):
     timestamp, environment = time.time(), environment or {}
     if 'target_folder' in tool_definition['argument_names']:
         y = make_folder(abspath(target_folder or join(result_folder, 'y')))
         result_arguments = OrderedDict(result_arguments, target_folder=y)
     # Record
-    result_configuration = ResultConfiguration(result_folder)
+    result_configuration = ResultConfiguration(result_folder, quietly)
     result_configuration.save_tool_location(tool_definition)
     result_configuration.save_result_arguments(result_arguments, environment)
     # Run
@@ -138,10 +133,7 @@ def _process_streams(
         if not stream_content:
             continue
         stream_content = stream_content.replace(HOME_FOLDER, COMMAND_LINE_HOME)
-        print(SECTION_TEMPLATE % (stream_name, stream_content))
-        codecs.open(join(
-            result_folder, file_name), 'w', encoding='utf-8').write(
-                stream_content + '\n')
+        copy_text(join(result_folder, file_name), stream_content + '\n')
         try:
             value_by_key = parse_data_dictionary(
                 stream_content, join(result_folder, 'y'), tool_definition)

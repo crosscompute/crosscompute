@@ -70,12 +70,14 @@ class ServeScript(ToolScript):
             '--website_owner', default=WEBSITE_OWNER)
         argument_subparser.add_argument(
             '--without_browser', action='store_true')
+        argument_subparser.add_argument(
+            '--quietly', action='store_true')
 
     def run(self, args):
         tool_definition, data_folder = super(ServeScript, self).run(args)
         app = get_app(
             tool_definition, data_folder, args.website_name,
-            args.website_owner, args.brand_url, args.base_url)
+            args.website_owner, args.brand_url, args.base_url, args.quietly)
         app_url = 'http://%s:%s/t/1' % (args.host, args.port)
         if not args.without_browser:
             webbrowser.open_new_tab(app_url)
@@ -186,7 +188,8 @@ class ResultRequest(Request):
 
 def get_app(
         tool_definition, data_folder, website_name=WEBSITE_NAME,
-        website_owner=WEBSITE_OWNER, brand_url=BRAND_URL, base_url='/'):
+        website_owner=WEBSITE_OWNER, brand_url=BRAND_URL, base_url='/',
+        quietly=False):
     settings = {
         'data.folder': data_folder,
         'website.name': website_name,
@@ -206,6 +209,7 @@ def get_app(
         'jinja2.directories': 'crosscompute:templates',
         'jinja2.lstrip_blocks': True,
         'jinja2.trim_blocks': True,
+        'quietly': quietly,
     }
     settings['tool_definition'] = tool_definition
     config = InvisibleRoadsConfigurator(settings=settings)
@@ -354,7 +358,9 @@ def run_tool_json(request):
     result_request = ResultRequest(request)
     result = result_request.prepare_arguments(tool_definition, request.params)
     target_folder = result.get_target_folder(data_folder)
-    run_script(tool_definition, result.arguments, result.folder, target_folder)
+    run_script(
+        tool_definition, result.arguments, result.folder, target_folder,
+        quietly=settings['quietly'])
     compress_zip(target_folder)
     return {
         'result_id': result.id,

@@ -4,7 +4,7 @@ from collections import OrderedDict
 from fnmatch import fnmatch
 from invisibleroads_macros.configuration import (
     RawCaseSensitiveConfigParser, format_settings, load_relative_settings,
-    make_absolute_paths, make_relative_paths, save_settings)
+    make_absolute_paths, make_relative_paths, save_settings, SECTION_TEMPLATE)
 from invisibleroads_macros.descriptor import cached_property
 from invisibleroads_macros.disk import are_same_path, link_path
 from invisibleroads_macros.log import (
@@ -31,8 +31,9 @@ LOG = get_log(__name__)
 
 class ResultConfiguration(object):
 
-    def __init__(self, result_folder):
+    def __init__(self, result_folder, quiet=False):
         self.result_folder = result_folder
+        self.quiet = quiet
 
     def save_tool_location(self, tool_definition):
         with suppress(ValueError):
@@ -45,8 +46,9 @@ class ResultConfiguration(object):
                 ('configuration_path', configuration_path),
             ]),
         }
-        print(format_settings(d))
-        print('')
+        if not self.quiet:
+            print(format_settings(d))
+            print('')
         d['tool_location']['configuration_path'] = join('f', basename(
             configuration_path))
         return save_settings(join(self.result_folder, 'f.cfg'), d)
@@ -57,8 +59,9 @@ class ResultConfiguration(object):
         ) for k, v in result_arguments.items())}
         if environment:
             d['result_environment'] = environment
-        print(format_settings(d))
-        print('')
+        if not self.quiet:
+            print(format_settings(d))
+            print('')
         d = filter_nested_dictionary(d, lambda x: x.startswith(
             '_') or x in RESERVED_ARGUMENT_NAMES)
         d = make_relative_paths(d, self.result_folder)
@@ -66,8 +69,13 @@ class ResultConfiguration(object):
 
     def save_result_properties(self, result_properties):
         d = {'result_properties': result_properties}
-        print(format_settings(filter_nested_dictionary(d, lambda x: x in [
-            'standard_output', 'standard_error'])))
+        if not self.quiet:
+            x = d.copy()
+            for stream_name in 'standard_output', 'standard_error':
+                stream_content = x.pop(stream_name, '')
+                if stream_content:
+                    print(SECTION_TEMPLATE % (stream_name, stream_content))
+            print(format_settings(x))
         d = filter_nested_dictionary(d, lambda x: x.startswith('_'))
         d = make_relative_paths(d, self.result_folder)
         return save_settings(join(self.result_folder, 'y.cfg'), d)
@@ -80,7 +88,8 @@ class ResultConfiguration(object):
                 '\n', ' %s\n' % COMMAND_LINE_JOIN), result_arguments)]
         with codecs.open(target_path, 'w', encoding='utf-8') as target_file:
             target_file.write('\n'.join(command_parts) + '\n')
-        print('command_path = %s' % format_path(target_path))
+        if not self.quiet:
+            print('command_path = %s' % format_path(target_path))
         return target_path
 
     @cached_property
