@@ -4,13 +4,13 @@ from collections import OrderedDict
 from fnmatch import fnmatch
 from invisibleroads_macros.configuration import (
     RawCaseSensitiveConfigParser, format_settings, load_relative_settings,
-    make_absolute_paths, make_relative_paths, save_settings, unicode_safely)
+    make_absolute_paths, make_relative_paths, save_settings)
 from invisibleroads_macros.descriptor import cached_property
 from invisibleroads_macros.disk import are_same_path, link_path
 from invisibleroads_macros.log import (
     filter_nested_dictionary, format_path, get_log, log_traceback,
     parse_nested_dictionary, parse_nested_dictionary_from)
-from invisibleroads_macros.text import has_whitespace
+from invisibleroads_macros.text import has_whitespace, unicode_safely
 from os import getcwd, walk
 from os.path import basename, dirname, isabs, join
 from pyramid.settings import asbool, aslist

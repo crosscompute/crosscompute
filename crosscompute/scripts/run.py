@@ -1,6 +1,6 @@
 from argparse import ArgumentParser, SUPPRESS
-from invisibleroads_macros.configuration import unicode_safely
 from invisibleroads_macros.iterable import sort_dictionary
+from invisibleroads_macros.text import unicode_safely
 from os import getcwdu
 from sys import argv
 
