@@ -6,6 +6,10 @@ class Tool(FolderMixin, DummyBase):
 
     id = 1
 
+    @property
+    def name(self):
+        return self.title
+
     @classmethod
     def get_from(Class, request, record_id=None):
         return Class(id=record_id or Class.id)
@@ -14,6 +18,10 @@ class Tool(FolderMixin, DummyBase):
 class Result(FolderMixin, DummyBase):
 
     tool_id = Tool.id
+
+    @property
+    def name(self):
+        return self.id[:5]
 
     @classmethod
     def get_from(Class, request, record_id=None):

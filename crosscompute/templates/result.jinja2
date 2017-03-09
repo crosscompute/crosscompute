@@ -1,13 +1,12 @@
 {% extends item_template %}
 {% from 'type.jinja2' import render_key, render_properties %}
-{% set result_name = '%s (%s)' % (result.id[:5], result_title) %}
 
 {% block page_title %}
-{{ result_name }} &middot; Results &middot; {{ website_name -}}
+{{ result.name }} &middot; Results &middot; {{ website_name -}}
 {% endblock %}
 
-{% block body_subtitle %}
-{{ result.id[:5] }} (<a href="{{ request.route_path('tool', tool_id=result.tool_id) }}">{{ result_title }}</a>)
+{% block body_title %}
+<h1>{{ result.name }} (<a href="{{ request.route_path('tool', tool_id=result.tool_id) }}">{{ result.title }}</a>)</h1>
 {% endblock %}
 
 {% block body_content %}
@@ -24,7 +23,7 @@
 
 {% if result_properties -%}
 
-{% for x in result_template_parts %}
+{% for x in result.template_parts %}
 {%- if x is string -%}
 {{ x | markdown }}
 
@@ -38,7 +37,7 @@
 {%- endif -%}
 {% endfor -%}
 
-<div><a href="{{ request.route_path('result.zip', result_id=result.id, result_name=result_name) }}" class="btn btn-lg btn-success download" role="button" download>Download</a></div>
+<div><a href="{{ request.route_path('result.zip', result_id=result.id, result_name='%s (%s)' % (result.name, result.title)) }}" class="btn btn-lg btn-success download" role="button" download>Download</a></div>
 
 {{- render_properties(request, result_properties, stamp='-meta') -}}
 {% endif %}

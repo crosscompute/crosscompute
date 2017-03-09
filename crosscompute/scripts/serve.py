@@ -1,4 +1,3 @@
-import codecs
 import datetime
 import logging
 import re
@@ -6,7 +5,8 @@ import webbrowser
 from collections import OrderedDict
 from invisibleroads_macros.disk import (
     compress_zip, copy_file, copy_text, get_file_extension, link_path,
-    make_unique_folder, move_path, remove_safely, resolve_relative_path)
+    load_text, make_unique_folder, move_path, remove_safely,
+    resolve_relative_path)
 from invisibleroads_macros.iterable import merge_dictionaries
 from invisibleroads_posts import (
     InvisibleRoadsConfigurator, add_routes_for_fused_assets,
@@ -259,32 +259,27 @@ def add_routes_for_data_types(config):
         add_website_dependency(config, module_name)
 
 
-def get_template_variables(tool_definition, template_type, data_items):
-    template_path = get_template_path(tool_definition, template_type)
-    if not template_path or not exists(template_path) or not data_items:
+def parse_template_from(tool_definition, template_type, data_items):
+    template_text = get_template_text(tool_definition, template_type)
+    if not template_text or not data_items:
         title, parts = '', data_items
     else:
-        template_text = codecs.open(template_path, 'r', 'utf-8').read()
-        title, parts = parse_template(template_text, data_items)
-    return {
-        template_type + '_title': title or tool_definition['tool_name'],
-        template_type + '_template_parts': parts,
-    }
+        title = parse_template_title(template_text)
+        parts = parse_template_parts(template_text, data_items)
+    if not title:
+        title = tool_definition['tool_name']
+    return title, parts
 
 
-def get_template_path(tool_definition, template_type):
-    template_relative_path = tool_definition.get(
-        template_type + '_template_path', '')
-    return join(
-        tool_definition['configuration_folder'],
-        template_relative_path) if template_relative_path else ''
-
-
-def parse_template(template_text, data_items):
+def parse_template_title(template_text):
     try:
         title = MARKDOWN_TITLE_PATTERN.search(template_text).group(1)
     except AttributeError:
         title = ''
+    return title
+
+
+def parse_template_parts(template_text, data_items):
     content = MARKDOWN_TITLE_PATTERN.sub('', template_text).strip()
     parts = []
     data_item_by_key = {x.key: x for x in data_items}
@@ -304,7 +299,17 @@ def parse_template(template_text, data_items):
                 if name:
                     x.name = name
         parts.append(x)
-    return title, parts
+    return parts
+
+
+def get_template_text(tool_definition, template_type):
+    path = tool_definition.get(template_type + '_template_path')
+    if not path:
+        return ''
+    path = join(tool_definition['configuration_folder'], path)
+    if not exists(path):
+        return ''
+    return load_text(path)
 
 
 def add_routes(config):
@@ -398,9 +403,7 @@ def import_upload(request, DataType, render_property_kw):
         value = DataType.load(upload.path)
     except Exception as e:
         traceback_text = format_exc()
-        codecs.open(join(
-            upload.folder, 'error.log'), 'w', encoding='utf-8',
-        ).write(traceback_text)
+        copy_text(join(upload.folder, 'error.log'), traceback_text)
         if isinstance(e, DataTypeError):
             message = text_type(e)
         else:
@@ -418,11 +421,12 @@ def import_upload(request, DataType, render_property_kw):
 def get_tool_template_variables(tool, tool_definition):
     tool_arguments = get_tool_arguments(tool_definition)
     tool_items = get_data_items(tool_arguments, tool_definition)
-    return merge_dictionaries(
-        get_template_variables(tool_definition, 'tool', tool_items), {
-            'data_types': set(x.data_type for x in tool_items),
-            'tool': tool,
-        })
+    tool.title, tool.template_parts = parse_template_from(
+        tool_definition, 'tool', tool_items)
+    return {
+        'data_types': set(x.data_type for x in tool_items),
+        'tool': tool,
+    }
 
 
 def get_tool_arguments(tool_definition):
@@ -492,21 +496,25 @@ def get_result_template_variables(result, result_folder):
     result_properties = result_configuration.result_properties
 
     tool_items = get_data_items(result_arguments, tool_definition)
+    result_items = get_data_items(
+        result_properties.pop('standard_outputs', {}), tool_definition)
     result_errors = get_data_items(merge_dictionaries(
         result_properties.pop('standard_errors', {}),
         result_properties.pop('type_errors', {})), tool_definition)
-    result_items = get_data_items(
-        result_properties.pop('standard_outputs', {}), tool_definition)
     result_properties = get_data_items(result_properties, tool_definition)
-    return merge_dictionaries(
-        get_template_variables(tool_definition, 'tool', tool_items),
-        get_template_variables(tool_definition, 'result', result_items), {
-            'data_types': set(x.data_type for x in tool_items + result_items),
-            'tool': result.tool,
-            'result': result,
-            'result_errors': result_errors,
-            'result_properties': result_properties,
-        })
+
+    tool = result.tool
+    tool.title, tool.template_parts = parse_template_from(
+        tool_definition, 'tool', tool_items)
+    result.title, result.template_parts = parse_template_from(
+        tool_definition, 'result', result_items)
+    return {
+        'data_types': set(x.data_type for x in tool_items + result_items),
+        'tool': tool,
+        'result': result,
+        'result_errors': result_errors,
+        'result_properties': result_properties,
+    }
 
 
 def get_result_file_url(result_path):
