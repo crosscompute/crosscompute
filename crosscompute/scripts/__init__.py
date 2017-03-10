@@ -10,7 +10,8 @@ from collections import OrderedDict
 from invisibleroads.scripts import (
     Script, StoicArgumentParser, configure_subparsers, get_scripts_by_name,
     run_scripts)
-from invisibleroads_macros.configuration import split_arguments
+from invisibleroads_macros.configuration import (
+    split_arguments, SECTION_TEMPLATE)
 from invisibleroads_macros.disk import (
     cd, copy_text, link_path, make_folder, COMMAND_LINE_HOME, HOME_FOLDER)
 from invisibleroads_macros.iterable import merge_dictionaries
@@ -107,15 +108,15 @@ def run_script(
                 command_terms, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 env=merge_dictionaries(environment, SCRIPT_ENVIRONMENT))
     except OSError:
-        standard_output, standard_error = None, 'Command not found'
+        stdout, stderr = None, 'Command not found'
     else:
-        standard_output, standard_error = [x.rstrip().decode(
+        stdout, stderr = [x.rstrip().decode(
             'utf-8') for x in command_process.communicate()]
         if command_process.returncode:
             result_properties['return_code'] = command_process.returncode
     # Save
     result_properties.update(_process_streams(
-        standard_output, standard_error, result_folder, tool_definition))
+        stdout, stderr, result_folder, tool_definition, quietly))
     result_properties['execution_time_in_seconds'] = time.time() - timestamp
     result_configuration.save_result_properties(result_properties)
     result_configuration.save_result_script(tool_definition, result_arguments)
@@ -125,15 +126,17 @@ def run_script(
 
 
 def _process_streams(
-        standard_output, standard_error, result_folder, tool_definition):
+        stdout, stderr, result_folder, tool_definition, quietly=False):
     d, type_errors = OrderedDict(), OrderedDict()
     for file_name, stream_name, stream_content in [
-            ('stdout.log', 'standard_output', standard_output),
-            ('stderr.log', 'standard_error', standard_error)]:
+            ('stdout.log', 'standard_output', stdout),
+            ('stderr.log', 'standard_error', stderr)]:
         if not stream_content:
             continue
         stream_content = stream_content.replace(HOME_FOLDER, COMMAND_LINE_HOME)
         copy_text(join(result_folder, file_name), stream_content + '\n')
+        if not quietly:
+            print(SECTION_TEMPLATE % (stream_name, stream_content))
         try:
             value_by_key = parse_data_dictionary(
                 stream_content, join(result_folder, 'y'), tool_definition)

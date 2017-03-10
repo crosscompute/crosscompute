@@ -4,7 +4,7 @@ from collections import OrderedDict
 from fnmatch import fnmatch
 from invisibleroads_macros.configuration import (
     RawCaseSensitiveConfigParser, format_settings, load_relative_settings,
-    make_absolute_paths, make_relative_paths, save_settings, SECTION_TEMPLATE)
+    make_absolute_paths, make_relative_paths, save_settings)
 from invisibleroads_macros.descriptor import cached_property
 from invisibleroads_macros.disk import are_same_path, link_path
 from invisibleroads_macros.log import (
@@ -70,12 +70,7 @@ class ResultConfiguration(object):
     def save_result_properties(self, result_properties):
         d = {'result_properties': result_properties}
         if not self.quiet:
-            x = d.copy()
-            for stream_name in 'standard_output', 'standard_error':
-                stream_content = x.pop(stream_name, '')
-                if stream_content:
-                    print(SECTION_TEMPLATE % (stream_name, stream_content))
-            print(format_settings(x))
+            print(format_settings(d))
         d = filter_nested_dictionary(d, lambda x: x.startswith('_'))
         d = make_relative_paths(d, self.result_folder)
         return save_settings(join(self.result_folder, 'y.cfg'), d)
