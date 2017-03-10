@@ -16,7 +16,7 @@ from invisibleroads_uploads.views import get_upload, get_upload_from
 from markupsafe import Markup
 from mistune import markdown
 from os import environ
-from os.path import exists, join
+from os.path import exists, join, realpath
 from pyramid.httpexceptions import (
     HTTPBadRequest, HTTPForbidden, HTTPNotFound, HTTPSeeOther)
 from pyramid.renderers import get_renderer
@@ -173,7 +173,7 @@ class ResultRequest(Request):
             return link_path(join(draft_folder, target_name), source_path)
         # If client sent an upload id (x_table=x), find it
         upload = get_upload(self, upload_id=v)
-        source_path = join(upload.folder, data_type.get_file_name())
+        source_path = realpath(join(upload.folder, data_type.get_file_name()))
         target_name = argument_noun + get_file_extension(source_path)
         target_path = move_path(join(draft_folder, target_name), source_path)
         remove_safely(upload.folder)
