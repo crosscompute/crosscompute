@@ -19,8 +19,10 @@ CC.tool_json_url = "{{ request.route_path('tool.json', tool_id=tool.id) }}";
 {% endblock %}
 
 {% block body_header %}
-<header class="container">
+<header>
+<div class="container">
 {% block body_title %}{% endblock %}
+</div>
 </header>
 {% endblock %}
 
