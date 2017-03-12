@@ -42,7 +42,7 @@ CC.tool_json_url = "{{ request.route_path('tool.json', tool_id=tool.id) }}";
 {%- endif -%}
 {% endfor %}
 {% block run_tool_form_options %}{% endblock %}
-<button type="button" class="btn btn-lg btn-primary run" data-toggle="tooltip" title="SHIFT-ENTER">Run</button>
+{% block run_tool_form_buttons %}{% endblock %}
 </form>
 {% endblock %}
 
