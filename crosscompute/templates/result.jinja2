@@ -14,7 +14,7 @@
 
 {% block result_progress %}{% endblock %}
 
-<div id="properties" class="result">
+<div class="result">
 {% if result_errors -%}
 <div class="error">
 {{ render_properties(request, result_errors, stamp='-feedback') -}}

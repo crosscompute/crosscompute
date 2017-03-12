@@ -7,8 +7,3 @@
 {% block body_title %}
 <h1>{{ tool.name }}</h1>
 {% endblock %}
-
-{% block body_script_inline %}
-{{ super() -}}
-$('#arguments .form-group').first().find('input').focus();
-{% endblock %}
