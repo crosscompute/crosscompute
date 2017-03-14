@@ -27,7 +27,7 @@ CC.tool_json_url = "{{ request.route_path('tool.json', tool_id=tool.id) }}";
 {% endblock %}
 
 {% block body_content %}
-<form id="arguments" class="result">
+<form id="run-tool-form" class="result">
 {% for x in tool.template_parts %}
 {%- if x is string -%}
 {{ x | markdown }}
@@ -41,7 +41,8 @@ CC.tool_json_url = "{{ request.route_path('tool.json', tool_id=tool.id) }}";
 
 {%- endif -%}
 {% endfor %}
-<button type="button" class="btn btn-lg btn-primary run" data-toggle="tooltip" title="SHIFT-ENTER">Run</button>
+{% block run_tool_form_options %}{% endblock %}
+{% block run_tool_form_buttons %}{% endblock %}
 </form>
 {% endblock %}
 

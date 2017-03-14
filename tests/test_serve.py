@@ -10,7 +10,7 @@ from webob.multidict import MultiDict
 from crosscompute.models import Result
 from crosscompute.types import DataItem, StringType
 from crosscompute.scripts.serve import (
-    parse_result_relative_path, parse_template)
+    parse_result_relative_path, parse_template_parts)
 
 
 class TestParseTemplate(object):
@@ -18,15 +18,14 @@ class TestParseTemplate(object):
     def test_accept_whitespace(self):
         data_item = DataItem('x', '')
         data_items = [data_item]
-        y = '', data_items
-        assert y == parse_template('{x}', data_items)
-        assert y == parse_template('{x }', data_items)
-        assert y == parse_template('{ x}', data_items)
-        assert y == parse_template('{ x }', data_items)
+        assert data_items == parse_template_parts('{x}', data_items)
+        assert data_items == parse_template_parts('{x }', data_items)
+        assert data_items == parse_template_parts('{ x}', data_items)
+        assert data_items == parse_template_parts('{ x }', data_items)
 
     def test_recognize_names(self):
         data_item = DataItem('x', '')
-        parse_template('{ x : a }', [data_item])
+        parse_template_parts('{ x : a }', [data_item])
         assert data_item.name == 'a'
 
 

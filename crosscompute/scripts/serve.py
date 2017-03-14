@@ -373,8 +373,7 @@ def run_tool_json(request):
     compress_zip(target_folder)
     return {
         'result_id': result.id,
-        'result_url': request.route_path(
-            'result', result_id=result.id, _anchor='properties'),
+        'result_url': request.route_path('result', result_id=result.id),
     }
 
 
