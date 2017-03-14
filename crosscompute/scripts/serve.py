@@ -283,6 +283,7 @@ def parse_template_parts(template_text, data_items):
     content = MARKDOWN_TITLE_PATTERN.sub('', template_text).strip()
     parts = []
     data_item_by_key = {x.key: x for x in data_items}
+    print(ARGUMENT_NAME_PATTERN.split(content))
     for index, x in enumerate(ARGUMENT_NAME_PATTERN.split(content)):
         x = x.strip()
         if not x:
@@ -299,6 +300,9 @@ def parse_template_parts(template_text, data_items):
                 if name:
                     x.name = name
         parts.append(x)
+    for i in data_items:
+        if not i in parts:
+            parts.append(i)
     return parts
 
 
