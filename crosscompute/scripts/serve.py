@@ -291,6 +291,12 @@ def parse_template_parts(template_text, data_items):
         if x in variables:
             key, _, name = x.partition(':')
             key = key.strip()
+            x = data_item_by_key.get(key, '{ %s }' % x)
+            if isinstance(x, DataItem):
+                name = name.strip()
+                if name:
+                    x.name = name
+            '''
             try:
                 x = data_item_by_key[key]
             except KeyError:
@@ -299,6 +305,7 @@ def parse_template_parts(template_text, data_items):
                 name = name.strip()
                 if name:
                     x.name = name
+            '''
         parts.append(x)
     for data_item in data_items:
         if data_item not in parts:
