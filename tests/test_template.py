@@ -1,25 +1,31 @@
-from crosscompute.types import DataItem
 from crosscompute.scripts.serve import parse_template_parts
+from crosscompute.types import DataItem
 
 
-def test_unincluded_variable():
-    template = '\n{x:name}\n'
+def test_missing_variable():
+    template = '{x}'
     x, y = DataItem('x', 1), DataItem('y', 2)
     parts = parse_template_parts(template, [x, y])
     assert parts == [x, y]
 
 
-def test_no_title_markdown():
-    md = '+ my script'
-    template = '%s\n{x:name}\n' % md
+def test_missing_variable_with_markdown():
+    text = '+ my script'
+    template = '%s {x}' % text
     x, y = DataItem('x', 1), DataItem('y', 2)
     parts = parse_template_parts(template, [x, y])
-    assert parts == [md, x, y]
+    assert parts == [text, x, y]
 
 
-def test_other_variable():
-    md = '+ my script'
-    template = '%s\n{x:name}\n{z}\n' % md
+def test_extra_variable():
+    template = '{x} {z}'
     x, y = DataItem('x', 1), DataItem('y', 2)
     parts = parse_template_parts(template, [x, y])
-    assert parts == [md, x, '{ z }', y]
+    assert parts == [x, '{ z }', y]
+
+
+def test_name():
+    template = '{x: xyz}'
+    x = DataItem('x', 1)
+    parts = parse_template_parts(template, [x])
+    assert parts[0].name == 'xyz'

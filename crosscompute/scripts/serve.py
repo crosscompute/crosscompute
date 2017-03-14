@@ -299,9 +299,9 @@ def parse_template_parts(template_text, data_items):
                 if name:
                     x.name = name
         parts.append(x)
-    for i in data_items:
-        if i not in parts:
-            parts.append(i)
+    for data_item in data_items:
+        if data_item not in parts:
+            parts.append(data_item)
     return parts
 
 
