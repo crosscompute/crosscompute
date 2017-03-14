@@ -296,16 +296,6 @@ def parse_template_parts(template_text, data_items):
                 name = name.strip()
                 if name:
                     x.name = name
-            '''
-            try:
-                x = data_item_by_key[key]
-            except KeyError:
-                x = '{ %s }' % x
-            else:
-                name = name.strip()
-                if name:
-                    x.name = name
-            '''
         parts.append(x)
     for data_item in data_items:
         if data_item not in parts:
