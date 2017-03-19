@@ -289,13 +289,16 @@ def parse_template_parts(template_text, data_items):
         if not x:
             continue
         if x in variables:
-            key, _, name = x.partition(':')
+            key, _, attributes = x.partition(':')
             key = key.strip()
             x = data_item_by_key.get(key, '{ %s }' % x)
             if isinstance(x, DataItem):
-                name = name.strip()
+                name, _, popover_help = [attr.strip() for
+                                         attr in attributes.partition('?')]
                 if name:
                     x.name = name
+                if popover_help:
+                    x.help_text = popover_help
         parts.append(x)
     for data_item in data_items:
         if data_item not in parts:
