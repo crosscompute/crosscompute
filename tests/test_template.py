@@ -29,3 +29,10 @@ def test_name():
     x = DataItem('x', 1)
     parts = parse_template_parts(template, [x])
     assert parts[0].name == 'xyz'
+
+
+def test_help_text():
+    template = '{x: xyz ? what is x?}'
+    x = DataItem('x', 1)
+    parts = parse_template_parts(template, [x])
+    assert parts[0].help_text == 'what is x?'
