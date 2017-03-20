@@ -15,12 +15,12 @@ RESERVED_ARGUMENT_NAMES = ['target_folder']
 class DataItem(object):
 
     def __init__(
-            self, key, value, data_type=None, file_location='', help_text=''):
+            self, key, value, data_type=None, file_location='', help=''):
         self.key = key
         self.value = value
         self.data_type = data_type or get_data_type(key)
         self.file_location = file_location
-        self.help_text = help_text
+        self.help = help
         self.name = key.replace('_', ' ')
 
     def render_value(self, *args, **kw):

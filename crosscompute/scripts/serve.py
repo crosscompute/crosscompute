@@ -8,6 +8,7 @@ from invisibleroads_macros.disk import (
     load_text, make_unique_folder, move_path, remove_safely,
     resolve_relative_path)
 from invisibleroads_macros.iterable import merge_dictionaries
+from invisibleroads_macros.text import cut_and_strip
 from invisibleroads_posts import (
     InvisibleRoadsConfigurator, add_routes_for_fused_assets,
     add_website_dependency)
@@ -289,19 +290,14 @@ def parse_template_parts(template_text, data_items):
         if not x:
             continue
         if x in variables:
-            key, _, name_and_help = [attr.strip() for attr in x.partition(':')]
-            if name_and_help == '':
-                name = ''
-                key, _, help_text = [attr.strip() for attr in key.partition(' ? ')]
-            else:
-                name, _, help_text = [attr.strip() for
-                                         attr in name_and_help.partition(' ? ')]
+            text, help_ = cut_and_strip(x, ' ? ')
+            key, name = cut_and_strip(text, ':')
             x = data_item_by_key.get(key, '{ %s }' % x)
             if isinstance(x, DataItem):
                 if name:
                     x.name = name
-                if help_text:
-                    x.help_text = help_text
+                if help_:
+                    x.help = help_
         parts.append(x)
     for data_item in data_items:
         if data_item not in parts:
@@ -404,7 +400,7 @@ def import_upload(request, DataType, render_property_kw):
     params = request.params
     upload = get_upload_from(request)
     name = expect_param('argument_name', params)
-    help_text = params.get('help', '')
+    help_ = params.get('help', '')
     try:
         value = DataType.load(upload.path)
     except Exception as e:
@@ -418,7 +414,7 @@ def import_upload(request, DataType, render_property_kw):
         raise HTTPBadRequest({name: message})
     DataType.save(join(upload.folder, DataType.get_file_name()), value)
     template = get_renderer(DataType.template).template_loader()
-    data_item = DataItem(name, value, DataType, help_text)
+    data_item = DataItem(name, value, DataType, help_)
     html = template.make_module().render_property(
         request, data_item, **render_property_kw)
     return Response(html)
@@ -464,9 +460,9 @@ def get_data_items(value_by_key, tool_definition):
                 except DataTypeError:
                     data_type = StringType
             file_location = ''
-        help_text = tool_definition.get(key + '.help', HELP.get(key, ''))
+        help_ = tool_definition.get(key + '.help', HELP.get(key, ''))
         data_items.append(DataItem(
-            key, value, data_type, file_location, help_text))
+            key, value, data_type, file_location, help_))
     return data_items
 
 
