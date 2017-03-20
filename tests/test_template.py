@@ -29,3 +29,28 @@ def test_name():
     x = DataItem('x', 1)
     parts = parse_template_parts(template, [x])
     assert parts[0].name == 'xyz'
+
+
+def test_help_text():
+    template = '{x: xyz ? what is x?}'
+    x = DataItem('x', 1)
+    parts = parse_template_parts(template, [x])
+    assert parts[0].help_text == 'what is x?'
+
+
+def test_no_name_help():
+    # no name just help text
+    template = '{x ? what is x?}'
+    x = DataItem('x', 1)
+    parts = parse_template_parts(template, [x])
+    assert parts[0].help_text == 'what is x?'
+    assert parts[0].name == 'x'
+
+
+def test_name_is_question_mark():
+    # name has ? in it
+    template = '{x: x?}'
+    x = DataItem('x', 1)
+    parts = parse_template_parts(template, [x])
+    assert parts[0].name == 'x?'
+    assert parts[0].help_text == ''
