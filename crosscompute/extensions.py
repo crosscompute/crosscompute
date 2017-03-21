@@ -10,16 +10,22 @@ from .configurations import find_tool_definition
 class ToolExtension(object):
 
     @classmethod
-    def prepare_tool_definition(self, path):
-        pass
+    def prepare_tool_definition(self, path, debug=False):
+        return {}
 
 
 class DefaultTool(ToolExtension):
 
     @classmethod
-    def prepare_tool_definition(self, path):
+    def prepare_tool_definition(self, path, debug=False):
         if path:
             path = path.rstrip(folder_separator)
             path = path.replace('_', '-')
             path = splitext(path)[0]
-        return find_tool_definition(tool_name=path)
+        tool_definition = find_tool_definition(tool_name=path)
+        if debug:
+            tool_definition.update({
+                'show_standard_output': True,
+                'show_standard_error': True,
+            })
+        return tool_definition

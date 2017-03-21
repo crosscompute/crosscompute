@@ -2,8 +2,10 @@
 ---
 - Accept markdown templates that lack titles
 - Add work script
-- Rearrange result folder
 - Expand support for DataType.parse, DataType.render
+- Handle empty arguments properly
+- Rearrange result folder
+- Recognize variable name and variable help in markdown templates
 
 0.5
 ---
