@@ -37,10 +37,11 @@ class ToolScript(Script):
             '--data_folder', metavar='FOLDER', type=unicode_safely)
         argument_subparser.add_argument(
             '--suffix_by_data_type', metavar='JSON', type=json.loads)
+        argument_subparser.add_argument('--debug', action='store_true')
 
     def run(self, args):
         initialize_data_types(args.suffix_by_data_type)
-        tool_definition = prepare_tool_definition(args.tool_name)
+        tool_definition = prepare_tool_definition(args.tool_name, args.debug)
         tool_name = tool_definition['tool_name']
         data_folder = args.data_folder or join(
             HOME_FOLDER, '.crosscompute', tool_name)
@@ -57,7 +58,7 @@ def launch(argv=sys.argv):
     run_scripts(scripts_by_name, args)
 
 
-def prepare_tool_definition(tool_name):
+def prepare_tool_definition(tool_name, debug=False):
     if exists('f.cfg'):
         tool_definition = load_tool_definition('f.cfg')
         tool_definition.update(load_result_arguments('x.cfg', tool_definition))
@@ -71,7 +72,8 @@ def prepare_tool_definition(tool_name):
         ToolExtension = DefaultTool
 
     try:
-        tool_definition = ToolExtension.prepare_tool_definition(tool_name)
+        tool_definition = ToolExtension.prepare_tool_definition(
+            tool_name, debug)
     except CrossComputeError as e:
         exit(e)
     return tool_definition
