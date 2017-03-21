@@ -274,7 +274,7 @@ def render_command(command_template, result_arguments):
         v = get_data_type(k).render(v)
         if k.endswith('_path') or k.endswith('_folder'):
             v = prepare_path_argument(v)
-        if has_whitespace(v) and not quote_pattern.match(v):
+        if not v or (has_whitespace(v) and not quote_pattern.match(v)):
             v = '"%s"' % v
         d[k] = v
     return command_template.format(**d)
