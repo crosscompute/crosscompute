@@ -1,6 +1,9 @@
 .. image:: https://travis-ci.org/crosscompute/crosscompute.svg?branch=master
     :target: https://travis-ci.org/crosscompute/crosscompute
 
+.. image:: https://badges.gitter.im/crosscompute.svg
+    :target: https://gitter.im/crosscompute
+
 
 CrossCompute
 ============
