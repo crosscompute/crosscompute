@@ -44,7 +44,8 @@ setup(
     description='Publish your own tools by writing a configuration file',
     long_description=DESCRIPTION,
     classifiers=[
-        'Programming Language :: Python',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 3',
         'Framework :: Pyramid',
         'Topic :: Internet :: WWW/HTTP :: WSGI :: Application',
         'License :: OSI Approved :: MIT License',
