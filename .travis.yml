@@ -5,7 +5,7 @@ python:
   - 3.5
   - 3.6
 before_install:
-  - pip install --upgrade pip
+  - pip install -U pip
 install:
   - pip install -e .
   - pip install -U beautifulsoup4 pytest pytest-mock werkzeug
