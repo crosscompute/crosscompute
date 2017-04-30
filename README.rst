@@ -9,7 +9,7 @@ CrossCompute
 ============
 Publish your computational model.
 
-Please see http://crosscompute.com/docs for tutorials and examples.
+Please see http://crosscompute.com/developers for tutorials and examples.
 
 
 Install
