@@ -19,6 +19,7 @@ CC.tool_json_url = "{{ request.route_path('tool.json', tool_id=tool.id) }}";
 {% endblock %}
 
 {% block body_header %}
+{{ super() -}}
 <header>
 <div class="container">
 {% block body_title %}{% endblock %}
@@ -27,6 +28,7 @@ CC.tool_json_url = "{{ request.route_path('tool.json', tool_id=tool.id) }}";
 {% endblock %}
 
 {% block body_content %}
+{{ super() -}}
 <form id="run-tool-form" class="result">
 {% for x in tool.template_parts %}
 {%- if x is string -%}
