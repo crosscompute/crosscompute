@@ -1,5 +1,4 @@
 import datetime
-import logging
 import re
 import webbrowser
 from collections import OrderedDict
@@ -8,6 +7,7 @@ from invisibleroads_macros.disk import (
     load_text, make_unique_folder, move_path, remove_safely,
     resolve_relative_path)
 from invisibleroads_macros.iterable import merge_dictionaries
+from invisibleroads_macros.log import get_log
 from invisibleroads_macros.text import cut_and_strip
 from invisibleroads_posts import (
     InvisibleRoadsConfigurator, add_routes_for_fused_assets,
@@ -44,8 +44,7 @@ HELP = {
     'standard_error': 'The script wrote to the standard error stream.',
     'standard_output': 'The script wrote to the standard output stream.',
 }
-LOG = logging.getLogger(__name__)
-LOG.addHandler(logging.NullHandler())
+L = get_log(__name__)
 MARKDOWN_TITLE_PATTERN = re.compile(r'^#[^#]\s*(.+)')
 RESULT_PATH_PATTERN = re.compile(r'results/(\w+)/([xy])/(.+)')
 BRAND_URL = 'https://crosscompute.com'
@@ -409,7 +408,7 @@ def import_upload(request, DataType, render_property_kw):
         if isinstance(e, DataTypeError):
             message = text_type(e)
         else:
-            LOG.error(traceback_text)
+            L.error(traceback_text)
             message = 'Import failed'
         raise HTTPBadRequest({name: message})
     DataType.save(join(upload.folder, DataType.get_file_name()), value)

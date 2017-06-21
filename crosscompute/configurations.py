@@ -26,7 +26,7 @@ from .types import get_data_type, RESERVED_ARGUMENT_NAMES
 
 TOOL_NAME_PATTERN = re.compile(r'crosscompute\s*(.*)')
 ARGUMENT_NAME_PATTERN = re.compile(r'\{(.+?)\}')
-LOG = get_log(__name__)
+L = get_log(__name__)
 
 
 class ResultConfiguration(object):
@@ -230,7 +230,7 @@ def parse_data_dictionary_from(raw_dictionary, root_folder, tool_definition):
         except DataTypeError as e:
             errors[key] = text_type(e)
         except Exception as e:
-            log_traceback(LOG, {'key': key, 'value': value})
+            log_traceback(L, {'key': key, 'value': value})
             errors[key] = 'could_not_parse'
         try:
             old_value = get_default_value(key, tool_definition)
@@ -250,7 +250,7 @@ def parse_data_dictionary_from(raw_dictionary, root_folder, tool_definition):
         except DataTypeError as e:
             errors[noun] = text_type(e)
         except (IOError, Exception) as e:
-            log_traceback(LOG, {'key': key, 'value': value})
+            log_traceback(L, {'key': key, 'value': value})
             errors[noun] = 'could_not_load'
     if errors:
         raise DataParseError(errors, d)
