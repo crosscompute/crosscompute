@@ -398,7 +398,7 @@ def see_result(request):
 def import_upload(request, DataType, render_property_kw):
     params = request.params
     upload = get_upload_from(request)
-    name = expect_param('argument_name', params)
+    name = expect_param(request, 'argument_name')
     help_ = params.get('help', '')
     try:
         value = DataType.load(upload.path)
