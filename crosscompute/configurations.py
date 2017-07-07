@@ -147,7 +147,7 @@ def load_tool_definition_by_name(
         tool_configuration_path, default_tool_name=None):
     tool_definition_by_name = {}
     configuration = RawCaseSensitiveConfigParser()
-    configuration.read(tool_configuration_path)
+    configuration.read(tool_configuration_path, 'utf-8')
     configuration_folder = dirname(tool_configuration_path)
     d = {
         u'configuration_path': tool_configuration_path,
