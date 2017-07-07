@@ -17,7 +17,7 @@ cc-python = crosscompute.scaffolds:PythonToolTemplate
 
 
 REQUIREMENTS = [
-    'invisibleroads-macros>=0.8.3',
+    'invisibleroads-macros>=0.8.3.1',
     'invisibleroads>=0.2.0',
     'invisibleroads-posts>=0.5.5',
     'invisibleroads-uploads>=0.3.1',
@@ -40,7 +40,7 @@ DESCRIPTION = '\n\n'.join(open(join(FOLDER, x)).read().strip() for x in [
     'README.rst', 'CHANGES.rst'])
 setup(
     name='crosscompute',
-    version='0.6.9.1',
+    version='0.6.9.2',
     description='Publish your own tools by writing a configuration file',
     long_description=DESCRIPTION,
     classifiers=[
