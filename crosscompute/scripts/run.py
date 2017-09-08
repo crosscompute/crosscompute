@@ -1,7 +1,7 @@
 from argparse import ArgumentParser, SUPPRESS
 from invisibleroads_macros.iterable import sort_dictionary
 from invisibleroads_macros.text import unicode_safely
-from os import getcwdu
+from six.moves import getcwd
 from sys import argv
 
 from ..configurations import get_default_value, parse_data_dictionary_from
@@ -32,7 +32,7 @@ class RunScript(ToolScript):
             argv[2:])[0].__dict__, tool_definition['argument_names'])
         try:
             result_arguments = parse_data_dictionary_from(
-                raw_arguments, getcwdu(), tool_definition)
+                raw_arguments, getcwd(), tool_definition)
         except DataParseError as e:
             return [(k + '.error', v) for k, v in e.message_by_name.items()]
         result_folder = Result.spawn_folder(data_folder)
