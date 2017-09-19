@@ -91,7 +91,7 @@ class Namespace(SocketIONamespace):
     def on_reconnect(self):
         self.on_connect()
 
-    def on_work(self, message):
+    def on_work(self):
         self.worker.work()
 
 
