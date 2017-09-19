@@ -241,7 +241,7 @@ def parse_data_dictionary_from(raw_dictionary, root_folder, tool_definition):
             if old_value != value:
                 value = data_type.merge(old_value, value)
         d[key] = value
-        if not key.endswith('_path'):
+        if key.startswith('_') or not key.endswith('_path'):
             continue
         noun = key[:-5]
         data_type = get_data_type(noun)
