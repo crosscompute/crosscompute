@@ -21,23 +21,24 @@ from ..scripts import run_script
 class WorkScript(Script):
 
     def configure(self, argument_subparser):
-        argument_subparser.add_argument('queue_token')
         argument_subparser.add_argument(
             '--server_url', metavar='URL', default=SERVER_URL)
         argument_subparser.add_argument(
             '--relay_url', metavar='URL', default=RELAY_URL)
+        argument_subparser.add_argument('worker_token')
 
     def run(self, args):
         print('server_url = %s' % args.server_url)
         print('relay_url = %s' % args.relay_url)
         try:
-            worker = Worker(args.server_url, args.queue_token)
-            worker.work()
-            print('queue_id = %s' % worker.queue_id)
-            Namespace.channel = 'q/' + worker.queue_id
+            worker = Worker(args.server_url, args.worker_token)
+            Namespace.channels = [
+                'w/' + worker.id] + [
+                't/' + x for x in worker.tool_ids]
             Namespace.worker = worker
             socket = SocketIO(
                 args.relay_url, Namespace=Namespace, wait_for_connection=False)
+            worker.work()
             socket.wait()
         except ServerConnectionError:
             print_error('The server is down. Try again later.')
@@ -58,9 +59,14 @@ class WorkScript(Script):
 
 class Worker(object):
 
-    def __init__(self, server_url, queue_token):
+    def __init__(self, server_url, worker_token):
         self.server_url = server_url
-        self.queue_token = queue_token
+        self.worker_token = worker_token
+
+        d = requests.get(join(server_url, 'workers.json'), headers={
+            'Authorization': 'Bearer ' + worker_token}).json()
+        self.id = d['worker_id']
+        self.tool_ids = d['tool_ids']
 
         self.parent_folder = join(HOME_FOLDER, '.crosscompute', parse_url(
             server_url).hostname, 'results')
@@ -74,9 +80,8 @@ class Worker(object):
             while True:
                 try:
                     result_folder = receive_result_request(
-                        self.pull_url, self.queue_token, self.parent_folder)
+                        self.pull_url, self.worker_token, self.parent_folder)
                 except HTTPNoContent as e:
-                    self.queue_id = e.headers['CrossCompute-Queue-ID']
                     break
                 print('\nresult_folder = %s\n' % result_folder)
                 run_tool(result_folder)
@@ -86,7 +91,9 @@ class Worker(object):
 class Namespace(SocketIONamespace):
 
     def on_connect(self):
-        self.emit('watch', self.channel)
+        worker_id = self.worker.id
+        for channel in self.channels:
+            self.emit('watch', channel, worker_id)
 
     def on_reconnect(self):
         self.on_connect()
@@ -95,13 +102,13 @@ class Namespace(SocketIONamespace):
         self.worker.work()
 
 
-def receive_result_request(endpoint_url, queue_token, parent_folder):
+def receive_result_request(endpoint_url, worker_token, parent_folder):
     response = requests.get(endpoint_url, headers={
-        'Authorization': 'Bearer ' + queue_token})
+        'Authorization': 'Bearer ' + worker_token})
     if response.status_code == 200:
         pass
     elif response.status_code == 204:
-        raise HTTPNoContent(headers=response.headers)
+        raise HTTPNoContent
     elif response.status_code == 401:
         raise HTTPUnauthorized
     else:
