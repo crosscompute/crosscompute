@@ -25,16 +25,22 @@ class WorkScript(Script):
             '--server_url', metavar='URL', default=SERVER_URL)
         argument_subparser.add_argument(
             '--relay_url', metavar='URL', default=RELAY_URL)
+        argument_subparser.add_argument(
+            '--processor_level', metavar='LEVEL', default=0)
+        argument_subparser.add_argument(
+            '--memory_level', metavar='LEVEL', default=0)
         argument_subparser.add_argument('worker_token')
 
     def run(self, args):
         print('server_url = %s' % args.server_url)
         print('relay_url = %s' % args.relay_url)
         try:
-            worker = Worker(args.server_url, args.worker_token)
-            Namespace.channels = [
-                'w/' + worker.id] + [
-                't/' + x for x in worker.tool_ids]
+            worker = Worker(
+                args.server_url, args.worker_token, args.processor_level,
+                args.memory_level)
+            Namespace.channels = ['t/%s/%s/%s' % (
+                x, args.processor_level, args.memory_level,
+            ) for x in worker.tool_ids]
             Namespace.worker = worker
             socket = SocketIO(
                 args.relay_url, Namespace=Namespace, wait_for_connection=False)
@@ -59,9 +65,12 @@ class WorkScript(Script):
 
 class Worker(object):
 
-    def __init__(self, server_url, worker_token):
+    def __init__(
+            self, server_url, worker_token, processor_level, memory_level):
         self.server_url = server_url
         self.worker_token = worker_token
+        self.processor_level = processor_level
+        self.memory_level = memory_level
 
         d = requests.get(join(server_url, 'workers.json'), headers={
             'Authorization': 'Bearer ' + worker_token}).json()
@@ -80,7 +89,8 @@ class Worker(object):
             while True:
                 try:
                     result_folder = receive_result_request(
-                        self.pull_url, self.worker_token, self.parent_folder)
+                        self.pull_url, self.worker_token, self.parent_folder,
+                        self.processor_level, self.memory_level)
                 except HTTPNoContent as e:
                     break
                 print('\nresult_folder = %s\n' % result_folder)
@@ -102,9 +112,13 @@ class Namespace(SocketIONamespace):
         self.worker.work()
 
 
-def receive_result_request(endpoint_url, worker_token, parent_folder):
-    response = requests.get(endpoint_url, headers={
-        'Authorization': 'Bearer ' + worker_token})
+def receive_result_request(
+        endpoint_url, worker_token, parent_folder, processor_level=0,
+        memory_level=0):
+    response = requests.get(endpoint_url, {
+        'processor_level': processor_level,
+        'memory_level': memory_level,
+    }, headers={'Authorization': 'Bearer ' + worker_token})
     if response.status_code == 200:
         pass
     elif response.status_code == 204:

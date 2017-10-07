@@ -18,26 +18,26 @@ TARGET_FOLDER = join(RESULT_FOLDER, 'y')
 class TestReceiveResultRequest(object):
 
     endpoint_url = 'https://crosscompute.com/results/pull'
-    queue_token = 'x'
+    worker_token = 'x'
 
     def test_handle_bad_request(self, server_response, parent_folder):
         server_response.status_code = 400
         with raises(HTTPBadRequest):
             receive_result_request(
-                self.endpoint_url, self.queue_token, parent_folder)
+                self.endpoint_url, self.worker_token, parent_folder)
 
     def test_handle_no_content(self, server_response, parent_folder):
         server_response.status_code = 204
         with raises(HTTPNoContent):
             receive_result_request(
-                self.endpoint_url, self.queue_token, parent_folder)
+                self.endpoint_url, self.worker_token, parent_folder)
 
     def test_uncompress_result_folder(self, server_response, parent_folder):
         file_name = make_random_string(8) + '.txt'
         server_response.status_code = 200
         server_response._content = prepare_archive_content(file_name)
         result_folder = receive_result_request(
-            self.endpoint_url, self.queue_token, parent_folder)
+            self.endpoint_url, self.worker_token, parent_folder)
         assert exists(join(result_folder, file_name))
 
 
