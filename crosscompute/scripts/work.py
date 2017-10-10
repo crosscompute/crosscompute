@@ -44,6 +44,7 @@ class WorkScript(Script):
             Namespace.worker = worker
             socket = SocketIO(
                 args.relay_url, Namespace=Namespace, wait_for_connection=False)
+            socket.wait(0.1)
             worker.work()
             socket.wait()
         except ServerConnectionError:
