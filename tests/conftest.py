@@ -3,15 +3,10 @@ from os.path import join
 from pytest import fixture
 
 from crosscompute.scripts.serve import ResultRequest
-from crosscompute.types import DataType, DataTypeError, DATA_TYPE_BY_SUFFIX
+from crosscompute.types import DataTypeError, StringType, DATA_TYPE_BY_SUFFIX
 
 
-pytest_plugins = [
-    'invisibleroads_posts.tests',
-]
-
-
-class WheeType(DataType):
+class WheeType(StringType):
 
     @classmethod
     def parse(Class, text):
@@ -36,3 +31,9 @@ def result_request(posts_request):
 DATA_TYPE_BY_SUFFIX['whee'] = WheeType
 PACKAGE_FOLDER = get_package_folder(__file__)
 TOOL_FOLDER = join(PACKAGE_FOLDER, 'tools')
+
+
+pytest_plugins = [
+    'invisibleroads_posts.tests',
+    'invisibleroads_uploads.tests',
+]

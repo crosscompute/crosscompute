@@ -13,7 +13,7 @@ from invisibleroads_posts import (
     InvisibleRoadsConfigurator, add_routes_for_fused_assets,
     add_website_dependency)
 from invisibleroads_posts.views import expect_param
-from invisibleroads_uploads.views import get_upload, get_upload_from
+from invisibleroads_uploads.models import Upload
 from markupsafe import Markup
 from mistune import markdown
 from os import environ
@@ -122,7 +122,8 @@ class ResultRequest(Request):
                     v = self.prepare_argument_path(
                         argument_noun, raw_arguments, draft_folder,
                         default_path)
-                except (IOError, ValueError):
+                except (IOError, ValueError) as e:
+                    L.debug(e)
                     errors[argument_noun] = 'invalid'
                     continue
                 except KeyError:
@@ -172,7 +173,10 @@ class ResultRequest(Request):
             target_name = argument_noun + get_file_extension(source_path)
             return link_path(join(draft_folder, target_name), source_path)
         # If client sent an upload id (x_table=x), find it
-        upload = get_upload(self, upload_id=v)
+        try:
+            upload = Upload.get_from(self, record_id=v)
+        except HTTPNotFound as e:
+            raise ValueError(e)
         source_path = realpath(join(upload.folder, data_type.get_file_name()))
         target_name = argument_noun + get_file_extension(source_path)
         target_path = move_path(join(draft_folder, target_name), source_path)
@@ -254,7 +258,7 @@ def add_routes_for_data_types(config):
             # Add view
             config.add_route(route_name, route_url)
             config.add_view(
-                view, permission='run-tool', require_csrf=False,
+                view, permission='tool-run', require_csrf=False,
                 route_name=route_name)
         add_website_dependency(config, module_name)
 
@@ -395,28 +399,36 @@ def see_result(request):
     return get_result_template_variables(result, result_folder)
 
 
-def import_upload(request, DataType, render_property_kw):
+def import_upload_from(request, DataType, render_property_kw):
     params = request.params
-    upload = get_upload_from(request)
+    upload = Upload.get_from(request)
     name = expect_param(request, 'argument_name')
     help_ = params.get('help', '')
     try:
-        value = DataType.load(upload.path)
+        value = import_upload(upload, DataType)
     except Exception as e:
-        traceback_text = format_exc()
-        copy_text(join(upload.folder, 'error.log'), traceback_text)
         if isinstance(e, DataTypeError):
             message = text_type(e)
         else:
-            L.error(traceback_text)
             message = 'Import failed'
         raise HTTPBadRequest({name: message})
-    DataType.save(join(upload.folder, DataType.get_file_name()), value)
     template = get_renderer(DataType.template).template_loader()
     data_item = DataItem(name, value, DataType, help_)
     html = template.make_module().render_property(
         request, data_item, **render_property_kw)
     return Response(html)
+
+
+def import_upload(upload, DataType):
+    try:
+        value = DataType.load(upload.path)
+    except Exception as e:
+        traceback_text = format_exc()
+        L.error(traceback_text)
+        copy_text(join(upload.folder, 'error.log'), traceback_text)
+        raise
+    DataType.save(join(upload.folder, DataType.get_file_name()), value)
+    return value
 
 
 def get_tool_template_variables(tool, tool_definition):

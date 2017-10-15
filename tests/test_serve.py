@@ -1,16 +1,16 @@
-from cgi import FieldStorage
-from invisibleroads_macros.disk import make_folder
+from crosscompute.models import Result
+from crosscompute.types import DataItem
+from crosscompute.scripts.serve import (
+    parse_result_relative_path, parse_template_parts)
+from invisibleroads_macros.disk import copy_path, make_folder
 from invisibleroads_uploads.models import Upload
+from invisibleroads_uploads.tests import prepare_field_storage
 from os.path import join
 from pyramid.httpexceptions import HTTPBadRequest
 from pytest import raises
-from six import BytesIO
 from webob.multidict import MultiDict
 
-from crosscompute.models import Result
-from crosscompute.types import DataItem, StringType
-from crosscompute.scripts.serve import (
-    parse_result_relative_path, parse_template_parts)
+from conftest import WheeType
 
 
 class TestParseTemplate(object):
@@ -83,14 +83,11 @@ class TestResultRequest(object):
             default_path).read()
 
     def test_accept_multipart_content(self, result_request, tool_definition):
-        field_storage = FieldStorage()
-        field_storage.filename = 'x.txt'
-        field_storage.file = BytesIO(b'whee')
         tool_definition['argument_names'] = ('x_path',)
-        raw_arguments = MultiDict({'x': field_storage})
+        raw_arguments = MultiDict({'x': prepare_field_storage('x.txt', 'xyz')})
         result = result_request.prepare_arguments(
             tool_definition, raw_arguments)
-        assert open(result.arguments['x_path']).read() == 'whee'
+        assert open(result.arguments['x_path']).read() == 'xyz'
 
     def test_accept_relative_path(
             self, result_request, tool_definition, data_folder):
@@ -131,24 +128,21 @@ class TestResultRequest(object):
     def test_accept_upload_id(
             self, result_request, tool_definition, data_folder):
         tool_definition['argument_names'] = ('x_path',)
-        # Prepare upload_folder
-        upload = Upload(id='xyz', owner_id=0)
-        upload_folder = make_folder(upload.get_folder(data_folder))
-        open(join(upload_folder, 'raw.txt'), 'wt')
-        open(join(upload_folder, 'name.txt'), 'wt')
         # Use bad upload_id
         raw_arguments = MultiDict({'x': 'a'})
         with raises(HTTPBadRequest) as e:
             result_request.prepare_arguments(tool_definition, raw_arguments)
         assert e.value.detail['x'] == 'invalid'
         # Use upload_id that does not have expected data_type
-        raw_arguments = MultiDict({'x': 'xyz'})
+        upload = Upload.save(data_folder, 'anonymous', 32, 'x.txt', 'x')
+        raw_arguments = MultiDict({'x': upload.id})
         with raises(HTTPBadRequest) as e:
             result_request.prepare_arguments(tool_definition, raw_arguments)
         assert e.value.detail['x'] == 'invalid'
         # Use upload_id that has expected data_type
-        file_name = StringType.get_file_name()
-        open(join(upload_folder, file_name), 'wt').write('whee')
+        upload = Upload.save(data_folder, 'anonymous', 32, 'x.txt', 'whee')
+        copy_path(join(upload.folder, WheeType.get_file_name()), upload.path)
+        raw_arguments = MultiDict({'x': upload.id})
         result = result_request.prepare_arguments(
             tool_definition, raw_arguments)
         assert open(result.arguments['x_path']).read() == 'whee'
