@@ -77,7 +77,8 @@ class ServeScript(ToolScript):
         tool_definition, data_folder = super(ServeScript, self).run(args)
         app = get_app(
             tool_definition, data_folder, args.website_name,
-            args.website_owner, args.brand_url, args.base_url, args.quietly)
+            args.website_owner, args.brand_url, args.base_url,
+            not args.quietly, args.debug)
         app_url = 'http://%s:%s/t/1' % (args.host, args.port)
         if not args.without_browser:
             webbrowser.open_new_tab(app_url)
@@ -193,7 +194,7 @@ class ResultRequest(Request):
 def get_app(
         tool_definition, data_folder, website_name=WEBSITE_NAME,
         website_owner=WEBSITE_OWNER, brand_url=BRAND_URL, base_url='/',
-        quietly=False):
+        with_logging=True, with_debugging=False):
     settings = {
         'data.folder': data_folder,
         'website.name': website_name,
@@ -213,8 +214,10 @@ def get_app(
         'jinja2.directories': 'crosscompute:templates',
         'jinja2.lstrip_blocks': True,
         'jinja2.trim_blocks': True,
-        'quietly': quietly,
+        'quietly': not with_logging,
     }
+    if with_debugging:
+        settings['pyramid.includes'] = 'pyramid_debugtoolbar'
     settings['tool_definition'] = tool_definition
     config = InvisibleRoadsConfigurator(settings=settings)
     config.include('invisibleroads_posts')
