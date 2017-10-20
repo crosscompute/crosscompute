@@ -51,7 +51,8 @@ class DataType(object):
 
     @classmethod
     def load(Class, path):
-        return codecs.open(path, encoding='utf-8').read()
+        text = codecs.open(path, encoding='utf-8').read()
+        return Class.parse(text)
 
     @classmethod
     def parse(Class, text):

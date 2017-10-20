@@ -34,7 +34,7 @@ from ..exceptions import DataParseError, DataTypeError
 from ..models import Result, Tool
 from ..symmetries import suppress
 from ..types import (
-    DataItem, StringType, get_data_type, DATA_TYPE_BY_NAME,
+    DataItem, DataType, StringType, get_data_type, DATA_TYPE_BY_NAME,
     RESERVED_ARGUMENT_NAMES)
 from . import ToolScript, corral_arguments, run_script
 
@@ -456,6 +456,8 @@ def get_tool_arguments(tool_definition):
 def get_data_items(value_by_key, tool_definition):
     data_items = []
     for key, value in value_by_key.items():
+        if isinstance(value, DataType):
+            continue
         if key.startswith('_') or key in RESERVED_ARGUMENT_NAMES:
             continue
         if key.endswith('_path'):

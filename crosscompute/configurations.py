@@ -237,7 +237,6 @@ def parse_data_dictionary_from(raw_dictionary, root_folder, tool_definition):
         except KeyError:
             pass
         else:
-            old_value = data_type.parse(old_value)
             if old_value != value:
                 value = data_type.merge(old_value, value)
         d[key] = value
