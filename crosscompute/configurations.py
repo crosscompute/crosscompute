@@ -225,20 +225,23 @@ def parse_data_dictionary_from(raw_dictionary, root_folder, tool_definition):
     errors = OrderedDict()
     for key, value in d.items():
         data_type = get_data_type(key)
-        try:
-            value = data_type.parse(value)
-        except DataTypeError as e:
-            errors[key] = text_type(e)
-        except Exception as e:
-            log_traceback(L, {'key': key, 'value': value})
-            errors[key] = 'could_not_parse'
-        try:
-            old_value = get_default_value(key, tool_definition)
-        except KeyError:
-            pass
+        if value is None:
+            value = get_default_value(key, tool_definition)
         else:
-            if old_value != value:
-                value = data_type.merge(old_value, value)
+            try:
+                value = data_type.parse(value)
+            except DataTypeError as e:
+                errors[key] = text_type(e)
+            except Exception as e:
+                log_traceback(L, {'key': key, 'value': value})
+                errors[key] = 'could_not_parse'
+            try:
+                old_value = get_default_value(key, tool_definition)
+            except KeyError:
+                pass
+            else:
+                if old_value != value:
+                    value = data_type.merge(old_value, value)
         d[key] = value
         if key.startswith('_') or not key.endswith('_path'):
             continue

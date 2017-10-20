@@ -4,7 +4,7 @@ from invisibleroads_macros.text import unicode_safely
 from six.moves import getcwd
 from sys import argv
 
-from ..configurations import get_default_value, parse_data_dictionary_from
+from ..configurations import parse_data_dictionary_from
 from ..exceptions import DataParseError
 from ..models import Result
 from ..types import StringType, get_data_type, RESERVED_ARGUMENT_NAMES
@@ -48,9 +48,7 @@ def configure_argument_parser(argument_parser, tool_definition):
             continue
         d = {}
         d['metavar'] = get_metavar(k)
-        try:
-            d['default'] = get_default_value(k, tool_definition)
-        except KeyError:
+        if k not in tool_definition and k + '_path' not in tool_definition:
             d['required'] = True
         argument_parser.add_argument('--' + k, type=unicode_safely, **d)
     return argument_parser
