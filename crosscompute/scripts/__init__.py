@@ -141,7 +141,7 @@ def _process_streams(
             print(SECTION_TEMPLATE % (stream_name, stream_content))
         try:
             value_by_key = parse_data_dictionary(
-                stream_content, join(result_folder, 'y'), tool_definition)
+                stream_content, join(result_folder, 'y'))
         except DataParseError as e:
             for k, v in e.message_by_name.items():
                 type_errors['%s.error' % k] = v

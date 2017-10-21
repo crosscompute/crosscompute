@@ -8,8 +8,8 @@ from invisibleroads_macros.configuration import (
 from invisibleroads_macros.descriptor import cached_property
 from invisibleroads_macros.disk import are_same_path, link_path
 from invisibleroads_macros.log import (
-    filter_nested_dictionary, format_path, get_log, log_traceback,
-    parse_nested_dictionary, parse_nested_dictionary_from)
+    filter_nested_dictionary, format_path, get_log, parse_nested_dictionary,
+    parse_nested_dictionary_from)
 from invisibleroads_macros.text import has_whitespace, unicode_safely
 from os import getcwd, walk
 from os.path import basename, dirname, isabs, join
@@ -214,58 +214,42 @@ def parse_tool_argument_names(command_template):
     return tuple(ARGUMENT_NAME_PATTERN.findall(command_template))
 
 
-def parse_data_dictionary(text, root_folder, tool_definition):
+def parse_data_dictionary(text, root_folder, tool_definition=None):
     d = parse_nested_dictionary(
         text, is_key=lambda x: ':' not in x and ' ' not in x)
     return parse_data_dictionary_from(d, root_folder, tool_definition)
 
 
-def parse_data_dictionary_from(raw_dictionary, root_folder, tool_definition):
+def parse_data_dictionary_from(
+        raw_dictionary, root_folder, tool_definition=None):
     d = make_absolute_paths(raw_dictionary, root_folder)
     errors = OrderedDict()
     for key, value in d.items():
-        data_type = get_data_type(key)
-        if value is None:
-            value = get_default_value(key, tool_definition)
-        else:
-            try:
-                value = data_type.parse(value)
-            except DataTypeError as e:
-                errors[key] = text_type(e)
-            except Exception as e:
-                log_traceback(L, {'key': key, 'value': value})
-                errors[key] = 'could_not_parse'
-            try:
-                old_value = get_default_value(key, tool_definition)
-            except KeyError:
-                pass
-            else:
-                if old_value != value:
-                    value = data_type.merge(old_value, value)
-        d[key] = value
-        if key.startswith('_') or not key.endswith('_path'):
+        if key in RESERVED_ARGUMENT_NAMES:
             continue
-        noun = key[:-5]
-        data_type = get_data_type(noun)
+        data_type = get_data_type(key)
         try:
-            data_type.load(value)
+            if tool_definition:
+                default_value = get_default_value(key, tool_definition)
+            else:
+                default_value = None
+            value = data_type.parse_safely(value, default_value)
         except DataTypeError as e:
-            errors[noun] = text_type(e)
-        except (IOError, Exception) as e:
-            log_traceback(L, {'key': key, 'value': value})
-            errors[noun] = 'could_not_load'
+            errors[key] = text_type(e)
+        d[key] = value
     if errors:
         raise DataParseError(errors, d)
     return d
 
 
 def get_default_value(key, tool_definition):
+    data_type = get_data_type(key)
     if key in tool_definition:
-        value = tool_definition[key]
+        value = data_type.parse_safely(tool_definition[key])
     elif key + '_path' in tool_definition:
-        value = get_data_type(key).load(tool_definition[key + '_path'])
+        value = data_type.load(tool_definition[key + '_path'])
     else:
-        raise KeyError(key)
+        value = None
     return value
 
 

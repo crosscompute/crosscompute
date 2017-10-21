@@ -1,6 +1,7 @@
 import codecs
 from abc import ABCMeta
 from invisibleroads_macros.configuration import resolve_attribute
+from invisibleroads_macros.log import get_log, log_traceback
 from six import add_metaclass, text_type
 from stevedore.extension import ExtensionManager
 
@@ -9,6 +10,7 @@ from ..exceptions import DataTypeError
 
 DATA_TYPE_BY_NAME = {}
 DATA_TYPE_BY_SUFFIX = {}
+L = get_log(__name__)
 RESERVED_ARGUMENT_NAMES = ['target_folder']
 
 
@@ -45,7 +47,8 @@ class DataType(object):
     def load_safely(Class, path):
         try:
             value = Class.load(path)
-        except (IOError, DataTypeError):
+        except Exception as e:
+            log_traceback(L)
             value = None
         return value
 
@@ -55,12 +58,20 @@ class DataType(object):
         return Class.parse(text)
 
     @classmethod
-    def parse(Class, text):
-        return text
+    def parse_safely(Class, x, default_value=None):
+        if x is None:
+            return default_value
+        try:
+            x = Class.parse(x, default_value)
+        except DataTypeError as e:
+            raise
+        except Exception as e:
+            log_traceback(L)
+        return x
 
     @classmethod
-    def merge(Class, default_value, value):
-        return value
+    def parse(Class, x, default_value=None):
+        return x
 
     @classmethod
     def render(Class, value):
@@ -77,10 +88,10 @@ class StringType(DataType):
     template = 'crosscompute:types/string.jinja2'
 
     @classmethod
-    def parse(Class, text):
-        if not isinstance(text, str) or isinstance(text, text_type):
-            return text
-        return text.decode('utf-8')
+    def parse(Class, x, default_value=None):
+        if not isinstance(x, str) or isinstance(x, text_type):
+            return x
+        return x.decode('utf-8')
 
 
 def initialize_data_types(suffix_by_data_type=None):

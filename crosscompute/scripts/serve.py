@@ -23,7 +23,7 @@ from pyramid.httpexceptions import (
 from pyramid.renderers import get_renderer
 from pyramid.request import Request
 from pyramid.response import FileResponse, Response
-from six import string_types, text_type
+from six import text_type
 from traceback import format_exc
 from wsgiref.simple_server import make_server
 
@@ -34,7 +34,7 @@ from ..exceptions import DataParseError, DataTypeError
 from ..models import Result, Tool
 from ..symmetries import suppress
 from ..types import (
-    DataItem, DataType, StringType, get_data_type, DATA_TYPE_BY_NAME,
+    DataItem, DataType, get_data_type, DATA_TYPE_BY_NAME,
     RESERVED_ARGUMENT_NAMES)
 from . import ToolScript, corral_arguments, run_script
 
@@ -77,8 +77,7 @@ class ServeScript(ToolScript):
         tool_definition, data_folder = super(ServeScript, self).run(args)
         app = get_app(
             tool_definition, data_folder, args.website_name,
-            args.website_owner, args.brand_url, args.base_url,
-            not args.quietly, args.debug)
+            args.website_owner, args.brand_url, args.base_url, args.quietly)
         app_url = 'http://%s:%s/t/1' % (args.host, args.port)
         if not args.without_browser:
             webbrowser.open_new_tab(app_url)
@@ -134,8 +133,15 @@ class ResultRequest(Request):
                 v = '\n'.join(x.strip() for x in raw_arguments.getall(
                     argument_name))
             else:
-                errors[argument_name] = 'required'
-                continue
+                data_type = get_data_type(argument_name)
+                for file_format in data_type.formats:
+                    raw_argument_name = '%s_%s' % (argument_name, file_format)
+                    if raw_argument_name in raw_arguments:
+                        v = raw_arguments[raw_argument_name]
+                        break
+                else:
+                    errors[argument_name] = 'required'
+                    continue
             arguments[argument_name] = v
         if errors:
             raise DataParseError(errors, arguments)
@@ -194,7 +200,7 @@ class ResultRequest(Request):
 def get_app(
         tool_definition, data_folder, website_name=WEBSITE_NAME,
         website_owner=WEBSITE_OWNER, brand_url=BRAND_URL, base_url='/',
-        with_logging=True, with_debugging=False):
+        quietly=False):
     settings = {
         'data.folder': data_folder,
         'website.name': website_name,
@@ -214,10 +220,8 @@ def get_app(
         'jinja2.directories': 'crosscompute:templates',
         'jinja2.lstrip_blocks': True,
         'jinja2.trim_blocks': True,
-        'quietly': not with_logging,
+        'quietly': quietly,
     }
-    if with_debugging:
-        settings['pyramid.includes'] = 'pyramid_debugtoolbar'
     settings['tool_definition'] = tool_definition
     config = InvisibleRoadsConfigurator(settings=settings)
     config.include('invisibleroads_posts')
@@ -450,8 +454,9 @@ def get_tool_arguments(tool_definition):
     for key in tool_definition['argument_names']:
         try:
             value = get_default_value(key, tool_definition)
-        except KeyError:
-            value = ''
+        except DataTypeError:
+            L.warn('could not parse value for %s' % key)
+            value = None
         value_by_key[key] = value
     return value_by_key
 
@@ -463,6 +468,8 @@ def get_data_items(value_by_key, tool_definition):
             continue
         if key.startswith('_') or key in RESERVED_ARGUMENT_NAMES:
             continue
+        if value is None:
+            value = ''
         if key.endswith('_path'):
             key = key[:-5]
             data_type = get_data_type(key)
@@ -470,11 +477,6 @@ def get_data_items(value_by_key, tool_definition):
             value = data_type.load_safely(value)
         else:
             data_type = get_data_type(key)
-            if isinstance(value, string_types):
-                try:
-                    value = data_type.parse(value)
-                except DataTypeError:
-                    data_type = StringType
             file_location = ''
         help_ = tool_definition.get(key + '.help', HELP.get(key, ''))
         data_items.append(DataItem(

@@ -2,17 +2,18 @@ from invisibleroads_macros.disk import get_package_folder
 from os.path import join
 from pytest import fixture
 
+from crosscompute.exceptions import DataTypeError
 from crosscompute.scripts.serve import ResultRequest
-from crosscompute.types import DataTypeError, StringType, DATA_TYPE_BY_SUFFIX
+from crosscompute.types import StringType, DATA_TYPE_BY_SUFFIX
 
 
 class WheeType(StringType):
 
     @classmethod
-    def parse(Class, text):
-        if text != 'whee':
+    def parse(Class, x, default_value=None):
+        if x != 'whee':
             raise DataTypeError('expected whee')
-        return text
+        return x
 
 
 @fixture
