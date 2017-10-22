@@ -38,7 +38,11 @@ CC.tool_json_url = "{{ request.route_path('tool.json', tool_id=tool.id) }}";
 {% from x.data_type.template import render_argument %}
 <div class="form-group">
 {{- render_key(request, x) -}}
+{% if x.value is None %}
+<div class="error">Unable to render argument</div>
+{% else %}
 {{- render_argument(request, x) -}}
+{% endif %}
 </div>
 
 {%- endif -%}

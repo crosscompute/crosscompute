@@ -35,7 +35,11 @@
 {% from x.data_type.template import render_property %}
 <div class="form-group">
 {{- render_key(request, x, stamp='-result') }}
+{% if x.value is None %}
+<div class="error">Unable to render property</div>
+{% else %}
 {{- render_property(request, x, stamp='-result') -}}
+{% endif %}
 </div>
 
 {%- endif -%}
