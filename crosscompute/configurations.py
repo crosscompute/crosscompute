@@ -229,10 +229,7 @@ def parse_data_dictionary_from(
             continue
         data_type = get_data_type(key)
         try:
-            if tool_definition:
-                default_value = get_default_value(key, tool_definition)
-            else:
-                default_value = None
+            default_value = get_default_value(key, tool_definition)
             value = data_type.parse_safely(value, default_value)
         except DataTypeError as e:
             errors[key] = text_type(e)
@@ -243,14 +240,19 @@ def parse_data_dictionary_from(
 
 
 def get_default_value(key, tool_definition):
+    if not tool_definition:
+        return
     data_type = get_data_type(key)
-    if key in tool_definition:
-        value = data_type.parse_safely(tool_definition[key])
-    elif key + '_path' in tool_definition:
-        value = data_type.load(tool_definition[key + '_path'])
-    else:
-        value = None
-    return value
+    for prefix in 'x.', '':
+        x_key = prefix + key
+        try:
+            return data_type.parse_safely(tool_definition[x_key])
+        except KeyError:
+            pass
+        try:
+            return data_type.load(tool_definition[x_key + '_path'])
+        except KeyError:
+            pass
 
 
 def render_command(command_template, result_arguments):

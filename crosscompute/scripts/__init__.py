@@ -37,11 +37,13 @@ class ToolScript(Script):
             '--data_folder', metavar='FOLDER', type=unicode_safely)
         argument_subparser.add_argument(
             '--suffix_by_data_type', metavar='JSON', type=json.loads)
-        argument_subparser.add_argument('--debug', action='store_true')
+        argument_subparser.add_argument(
+            '--with_debugging', action='store_true')
 
     def run(self, args):
         initialize_data_types(args.suffix_by_data_type)
-        tool_definition = prepare_tool_definition(args.tool_name, args.debug)
+        tool_definition = prepare_tool_definition(
+            args.tool_name, args.with_debugging)
         tool_name = tool_definition['tool_name']
         data_folder = args.data_folder or join(
             HOME_FOLDER, '.crosscompute', tool_name)
@@ -58,7 +60,7 @@ def launch(argv=sys.argv):
     run_scripts(scripts_by_name, args)
 
 
-def prepare_tool_definition(tool_name, debug=False):
+def prepare_tool_definition(tool_name, with_debugging=False):
     if exists('f.cfg'):
         tool_definition = load_tool_definition('f.cfg')
         tool_definition.update(load_result_arguments('x.cfg', tool_definition))
@@ -73,7 +75,7 @@ def prepare_tool_definition(tool_name, debug=False):
 
     try:
         tool_definition = ToolExtension.prepare_tool_definition(
-            tool_name, debug)
+            tool_name, with_debugging)
     except CrossComputeError as e:
         exit(e)
     return tool_definition
@@ -91,13 +93,13 @@ def corral_arguments(argument_folder, result_arguments, use=link_path):
 
 def run_script(
         tool_definition, result_arguments, result_folder, target_folder=None,
-        environment=None, quietly=False):
+        environment=None, without_logging=False):
     timestamp, environment = time.time(), environment or {}
     if 'target_folder' in tool_definition['argument_names']:
         y = make_folder(abspath(target_folder or join(result_folder, 'y')))
         result_arguments = OrderedDict(result_arguments, target_folder=y)
     # Record
-    result_configuration = ResultConfiguration(result_folder, quietly)
+    result_configuration = ResultConfiguration(result_folder, without_logging)
     result_configuration.save_tool_location(tool_definition)
     result_configuration.save_result_arguments(result_arguments, environment)
     # Run
@@ -118,7 +120,7 @@ def run_script(
             result_properties['return_code'] = command_process.returncode
     # Save
     result_properties.update(_process_streams(
-        stdout, stderr, result_folder, tool_definition, quietly))
+        stdout, stderr, result_folder, tool_definition, without_logging))
     result_properties['execution_time_in_seconds'] = time.time() - timestamp
     result_configuration.save_result_properties(result_properties)
     result_configuration.save_result_script(tool_definition, result_arguments)
@@ -128,7 +130,7 @@ def run_script(
 
 
 def _process_streams(
-        stdout, stderr, result_folder, tool_definition, quietly=False):
+        stdout, stderr, result_folder, tool_definition, without_logging=False):
     d, type_errors = OrderedDict(), OrderedDict()
     for file_name, stream_name, stream_content in [
             ('stdout.log', 'standard_output', stdout),
@@ -137,7 +139,7 @@ def _process_streams(
             continue
         stream_content = stream_content.replace(HOME_FOLDER, COMMAND_LINE_HOME)
         copy_text(join(result_folder, file_name), stream_content + '\n')
-        if not quietly:
+        if not without_logging:
             print(SECTION_TEMPLATE % (stream_name, stream_content))
         try:
             value_by_key = parse_data_dictionary(

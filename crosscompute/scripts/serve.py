@@ -24,6 +24,7 @@ from pyramid.renderers import get_renderer
 from pyramid.request import Request
 from pyramid.response import FileResponse, Response
 from six import text_type
+from six.moves import urllib_parse
 from traceback import format_exc
 from wsgiref.simple_server import make_server
 
@@ -71,13 +72,14 @@ class ServeScript(ToolScript):
         argument_subparser.add_argument(
             '--without_browser', action='store_true')
         argument_subparser.add_argument(
-            '--quietly', action='store_true')
+            '--without_logging', action='store_true')
 
     def run(self, args):
         tool_definition, data_folder = super(ServeScript, self).run(args)
         app = get_app(
             tool_definition, data_folder, args.website_name,
-            args.website_owner, args.brand_url, args.base_url, args.quietly)
+            args.website_owner, args.brand_url, args.base_url,
+            args.without_logging)
         app_url = 'http://%s:%s/t/1' % (args.host, args.port)
         if not args.without_browser:
             webbrowser.open_new_tab(app_url)
@@ -130,8 +132,7 @@ class ResultRequest(Request):
                     errors[argument_noun] = 'required'
                     continue
             elif argument_name in raw_arguments:
-                v = '\n'.join(x.strip() for x in raw_arguments.getall(
-                    argument_name))
+                v = raw_arguments[argument_name]
             else:
                 data_type = get_data_type(argument_name)
                 for file_format in data_type.formats:
@@ -200,7 +201,7 @@ class ResultRequest(Request):
 def get_app(
         tool_definition, data_folder, website_name=WEBSITE_NAME,
         website_owner=WEBSITE_OWNER, brand_url=BRAND_URL, base_url='/',
-        quietly=False):
+        without_logging=False):
     settings = {
         'data.folder': data_folder,
         'website.name': website_name,
@@ -220,7 +221,7 @@ def get_app(
         'jinja2.directories': 'crosscompute:templates',
         'jinja2.lstrip_blocks': True,
         'jinja2.trim_blocks': True,
-        'quietly': quietly,
+        'without_logging': without_logging,
     }
     settings['tool_definition'] = tool_definition
     config = InvisibleRoadsConfigurator(settings=settings)
@@ -374,11 +375,12 @@ def run_tool_json(request):
     data_folder = request.data_folder
     tool_definition = settings['tool_definition']
     result_request = ResultRequest(request)
-    result = result_request.prepare_arguments(tool_definition, request.params)
+    result = result_request.prepare_arguments(
+        tool_definition, get_result_arguments_from(request))
     target_folder = result.get_target_folder(data_folder)
     run_script(
         tool_definition, result.arguments, result.folder, target_folder,
-        quietly=settings['quietly'])
+        without_logging=settings['without_logging'])
     compress_zip(target_folder)
     return {
         'result_id': result.id,
@@ -404,6 +406,12 @@ def see_result(request):
     result = Result.get_from(request)
     result_folder = result.get_folder(data_folder)
     return get_result_template_variables(result, result_folder)
+
+
+def get_result_arguments_from(request):
+    params = request.params
+    items = urllib_parse.parse_qsl(params.get('x', ''), keep_blank_values=True)
+    return dict(items)
 
 
 def import_upload_from(request, DataType, render_property_kw):
