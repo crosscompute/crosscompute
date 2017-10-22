@@ -38,8 +38,8 @@ CC.tool_json_url = "{{ request.route_path('tool.json', tool_id=tool.id) }}";
 {% from x.data_type.template import render_argument %}
 <div class="form-group">
 {{- render_key(request, x) -}}
-{% if x.value is None %}
-<div class="error">Unable to render argument</div>
+{% if x.data_type.requires_default_value and x.value is none %}
+<div class="error">The value for <b>{{ x.key }}</b> is invalid or missing. Please specify its default value in the tool configuration file.</div>
 {% else %}
 {{- render_argument(request, x) -}}
 {% endif %}
