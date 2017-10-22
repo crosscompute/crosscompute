@@ -38,7 +38,7 @@ class DataType(object):
     script = None
     template = None
     views = ()
-    requires_default_value = True
+    requires_value_for_path = True
 
     @classmethod
     def save(Class, path, value):
