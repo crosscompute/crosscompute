@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from invisibleroads_macros.disk import get_package_folder
 from os.path import join
 from pytest import fixture
@@ -18,10 +19,14 @@ class WheeType(StringType):
 
 @fixture
 def tool_definition():
-    return {
-        'argument_names': (),
-        'configuration_folder': TOOL_FOLDER,
-    }
+    return OrderedDict([
+        ('argument_names', ()),
+        ('configuration_folder', TOOL_FOLDER),
+        ('a_path', 1),
+        ('a', 2),
+        ('x.a_path', 3),
+        ('x.a', 4)
+    ])
 
 
 @fixture

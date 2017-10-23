@@ -64,6 +64,7 @@ setup(
     install_requires=REQUIREMENTS,
     tests_require=[
         'beautifulsoup4',
+        'mock',
         'pytest',
         'pytest-mock',
         'werkzeug',

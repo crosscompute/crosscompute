@@ -119,7 +119,8 @@ class ResultRequest(Request):
                 continue
             if argument_name.endswith('_path'):
                 argument_noun = argument_name[:-5]
-                default_path = tool_definition.get(argument_name)
+                default_path = get_default_value(
+                    argument_name, tool_definition)
                 try:
                     v = self.prepare_argument_path(
                         argument_noun, raw_arguments, draft_folder,

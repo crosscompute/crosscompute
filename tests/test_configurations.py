@@ -1,11 +1,12 @@
+from crosscompute.configurations import (
+    find_tool_definition, find_tool_definition_by_name, get_default_value,
+    has_default_value, ToolConfigurationNotFound, ToolNotSpecified,
+    ToolNotFound)
+from mock import MagicMock
 from os.path import join
 from pytest import raises
 
 from conftest import PACKAGE_FOLDER
-from crosscompute.configurations import (
-    find_tool_definition, find_tool_definition_by_name,
-    ToolConfigurationNotFound, ToolNotSpecified,
-    ToolNotFound)
 
 
 DEFAULT_TOOL_NAME = 'split-cashews'
@@ -47,3 +48,31 @@ class TestFindToolDefinitionByName(object):
         assert 'python' in tool_definition_by_name
         assert 'scala' in tool_definition_by_name
         assert len(tool_definition_by_name) == 4
+
+
+def test_has_default_value():
+    assert not has_default_value('a', {})
+    assert has_default_value('a', {'a': 1})
+    assert has_default_value('a', {'a_path': 1})
+    assert has_default_value('a', {'x.a': 1})
+    assert has_default_value('a', {'x.a_path': 1})
+
+    assert not has_default_value('a_path', {'a': 1})
+    assert has_default_value('a_path', {'a_path': 1})
+
+
+def test_get_default_value(tool_definition, mocker):
+    data_type = MagicMock()
+    data_type.parse_safely.return_value = 'parsed'
+    data_type.load.return_value = 'loaded'
+    f = mocker.patch('crosscompute.configurations.get_data_type')
+    f.return_value = data_type
+
+    assert get_default_value('a', {}) is None
+    assert get_default_value('a', {'a': 1}) == 'parsed'
+    assert get_default_value('a', {'a_path': 1}) == 'loaded'
+    assert get_default_value('a', {'x.a': 1}) == 'parsed'
+    assert get_default_value('a', {'x.a_path': 1}) == 'loaded'
+
+    assert get_default_value('a_path', {'a': 1}) is None
+    assert get_default_value('a_path', {'a_path': 1}) == 'parsed'

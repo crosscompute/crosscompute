@@ -222,6 +222,12 @@ def parse_data_dictionary(text, root_folder, tool_definition=None):
 
 def parse_data_dictionary_from(
         raw_dictionary, root_folder, tool_definition=None):
+    if tool_definition:
+        def get_default_value_for(key):
+            return get_default_value(key, tool_definition)
+    else:
+        def get_default_value_for(key):
+            return
     d = make_absolute_paths(raw_dictionary, root_folder)
     errors = OrderedDict()
     for key, value in d.items():
@@ -229,7 +235,7 @@ def parse_data_dictionary_from(
             continue
         data_type = get_data_type(key)
         try:
-            default_value = get_default_value(key, tool_definition)
+            default_value = get_default_value_for(key)
             value = data_type.parse_safely(value, default_value)
         except DataTypeError as e:
             errors[key] = text_type(e)
@@ -239,20 +245,26 @@ def parse_data_dictionary_from(
     return d
 
 
+def has_default_value(key, tool_definition):
+    for prefix in 'x.', '':
+        default_key = prefix + key
+        if default_key in tool_definition:
+            return True
+        default_key = prefix + key + '_path'
+        if default_key in tool_definition:
+            return True
+    return False
+
+
 def get_default_value(key, tool_definition):
-    if not tool_definition:
-        return
     data_type = get_data_type(key)
     for prefix in 'x.', '':
-        x_key = prefix + key
-        try:
-            return data_type.parse_safely(tool_definition[x_key])
-        except KeyError:
-            pass
-        try:
-            return data_type.load(tool_definition[x_key + '_path'])
-        except KeyError:
-            pass
+        default_key = prefix + key
+        if default_key in tool_definition:
+            return data_type.parse_safely(tool_definition[default_key])
+        default_key = prefix + key + '_path'
+        if default_key in tool_definition:
+            return data_type.load(tool_definition[default_key])
 
 
 def render_command(command_template, result_arguments):
