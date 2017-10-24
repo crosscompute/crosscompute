@@ -24,8 +24,5 @@ class DefaultTool(ToolExtension):
             path = splitext(path)[0]
         tool_definition = find_tool_definition(tool_name=path)
         if with_debugging:
-            tool_definition.update({
-                'show_standard_output': True,
-                'show_standard_error': True,
-            })
+            tool_definition['show_raw_output'] = True
         return tool_definition

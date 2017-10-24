@@ -1,9 +1,5 @@
 import logging
 import simplejson as json
-try:
-    import subprocess32 as subprocess
-except ImportError:
-    import subprocess
 import sys
 import time
 from collections import OrderedDict
@@ -13,7 +9,7 @@ from invisibleroads.scripts import (
 from invisibleroads_macros.configuration import (
     split_arguments, SECTION_TEMPLATE)
 from invisibleroads_macros.disk import (
-    cd, copy_text, link_path, make_folder, COMMAND_LINE_HOME, HOME_FOLDER)
+    cd, link_path, make_folder, COMMAND_LINE_HOME, HOME_FOLDER)
 from invisibleroads_macros.iterable import merge_dictionaries
 from invisibleroads_macros.text import unicode_safely
 from os.path import abspath, basename, exists, isabs, join
@@ -24,7 +20,7 @@ from ..configurations import (
     parse_data_dictionary, render_command)
 from ..exceptions import CrossComputeError, DataParseError
 from ..extensions import DefaultTool
-from ..symmetries import SCRIPT_ENVIRONMENT
+from ..symmetries import subprocess, SCRIPT_ENVIRONMENT
 from ..types import initialize_data_types
 
 
@@ -106,21 +102,22 @@ def run_script(
     command_terms = split_arguments(render_command(tool_definition[
         'command_template'].replace('\n', ' '), result_arguments))
     result_properties = OrderedDict()
+    output_file = open(join(result_folder, 'f.log'), 'w+t')
     try:
         with cd(tool_definition['configuration_folder']):
-            command_process = subprocess.Popen(
-                command_terms, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            return_code = subprocess.call(
+                command_terms,
+                stdout=output_file,
+                stderr=subprocess.STDOUT,
                 env=merge_dictionaries(environment, SCRIPT_ENVIRONMENT))
     except OSError:
-        stdout, stderr = None, 'Command not found'
+        output_file.write('Command not found')
     else:
-        stdout, stderr = [x.rstrip().decode(
-            'utf-8') for x in command_process.communicate()]
-        if command_process.returncode:
-            result_properties['return_code'] = command_process.returncode
+        if return_code:
+            result_properties['return_code'] = return_code
     # Save
-    result_properties.update(_process_streams(
-        stdout, stderr, result_folder, tool_definition, without_logging))
+    result_properties.update(_process_output(
+        output_file, result_folder, tool_definition, without_logging))
     result_properties['execution_time_in_seconds'] = time.time() - timestamp
     result_configuration.save_result_properties(result_properties)
     result_configuration.save_result_script(tool_definition, result_arguments)
@@ -129,29 +126,26 @@ def run_script(
     return result_properties
 
 
-def _process_streams(
-        stdout, stderr, result_folder, tool_definition, without_logging=False):
+def _process_output(
+        output_file, result_folder, tool_definition, without_logging=False):
     d, type_errors = OrderedDict(), OrderedDict()
-    for file_name, stream_name, stream_content in [
-            ('stdout.log', 'standard_output', stdout),
-            ('stderr.log', 'standard_error', stderr)]:
-        if not stream_content:
-            continue
-        stream_content = stream_content.replace(HOME_FOLDER, COMMAND_LINE_HOME)
-        copy_text(join(result_folder, file_name), stream_content + '\n')
+    output_file.seek(0)
+    output_content = output_file.read().strip()
+    if output_content:
+        output_content = output_content.replace(HOME_FOLDER, COMMAND_LINE_HOME)
         if not without_logging:
-            print(SECTION_TEMPLATE % (stream_name, stream_content))
+            print(SECTION_TEMPLATE % ('raw_output', output_content))
         try:
             value_by_key = parse_data_dictionary(
-                stream_content, join(result_folder, 'y'))
+                output_content, join(result_folder, 'y'))
         except DataParseError as e:
             for k, v in e.message_by_name.items():
                 type_errors['%s.error' % k] = v
             value_by_key = e.value_by_key
-        if tool_definition.get('show_' + stream_name):
-            d[stream_name] = stream_content
+        if tool_definition.get('show_raw_output'):
+            d['raw_output'] = output_content
         if value_by_key:
-            d[stream_name + 's'] = value_by_key
+            d['raw_outputs'] = value_by_key
     if type_errors:
         d['type_errors'] = type_errors
     return d

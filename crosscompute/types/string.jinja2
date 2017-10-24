@@ -12,7 +12,7 @@
 {% macro render_property(request, data_item, stamp='') %}
 {% set key = data_item.key + stamp %}
 {% set value = data_item.value %}
-<div id="{{ key }}" class="scrollable">
+<div id="{{ key }}" class="scrollable{% if data_item.key.endswith('.error') %} error{% endif %}">
 {% set lines = (value | string).strip().splitlines() %}
 {% if lines | length == 1 %}
 {{ value -}}

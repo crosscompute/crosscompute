@@ -7,7 +7,6 @@ ENTRY_POINTS = """
 [console_scripts]
 crosscompute = crosscompute.scripts:launch
 [crosscompute]
-setup = crosscompute.scripts.setup:SetupScript
 run = crosscompute.scripts.run:RunScript
 serve = crosscompute.scripts.serve:ServeScript
 work = crosscompute.scripts.work:WorkScript

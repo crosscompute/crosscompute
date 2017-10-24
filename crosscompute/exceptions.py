@@ -18,10 +18,6 @@ class ToolConfigurationNotFound(CrossComputeError):
     pass
 
 
-class ToolDependencyError(CrossComputeError):
-    pass
-
-
 class ToolNotFound(CrossComputeError):
     pass
 

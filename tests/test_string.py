@@ -14,30 +14,26 @@ TEXT = (
     'in a way that other people can use.')
 
 
-def test_stream_logging(tmpdir, text=TEXT):
+def test_output_logging(tmpdir, text=TEXT):
     args = str(tmpdir), 'echo', {'x': text}
     r = run(*args)
-    assert r['standard_output'] == text
-    assert r['standard_error'] == text
+    assert r['raw_output'] == text
     s = serve(*args)[0]
-    assert extract_text(s, 'standard_output-meta') == text
-    assert extract_text(s, 'standard_error-meta') == text
+    assert extract_text(s, 'raw_output-meta') == text
 
 
-def test_stream_parsing(tmpdir, text=TEXT):
+def test_output_parsing(tmpdir, text=TEXT):
     args = str(tmpdir), 'assign', {'x': text}
     r = run(*args)
-    assert r['standard_outputs']['a'] == text
-    assert r['standard_errors']['a'] == text
+    assert r['raw_outputs']['a'] == text
     s = serve(*args)[0]
     assert extract_text(s, 'a-result') == text
-    assert extract_text(s, 'a-feedback') == text
 
 
 def test_file_name_with_spaces(tmpdir):
     args = str(tmpdir), 'file-name-with-spaces',
     r = run(*args)
-    assert r['standard_output'] == 'actions not words'
+    assert r['raw_output'] == 'actions not words'
 
 
 def test_file_content(tmpdir, file_path='assets/string.txt'):
@@ -54,7 +50,7 @@ def test_file_content(tmpdir, file_path='assets/string.txt'):
 def test_target_folder(tmpdir):
     args = str(tmpdir), 'target-folder'
     r = run(*args)
-    assert r['standard_output'].startswith(str(tmpdir))
+    assert r['raw_output'].startswith(str(tmpdir))
 
 
 def extract_text(soup, element_id):

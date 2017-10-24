@@ -13,7 +13,7 @@ from invisibleroads_macros.log import (
 from invisibleroads_macros.text import has_whitespace, unicode_safely
 from os import getcwd, walk
 from os.path import basename, dirname, isabs, join
-from pyramid.settings import asbool, aslist
+from pyramid.settings import asbool
 from six import text_type
 
 from .exceptions import (
@@ -35,21 +35,22 @@ class ResultConfiguration(object):
         self.result_folder = result_folder
         self.quiet = quiet
 
-    def save_tool_location(self, tool_definition):
+    def save_tool_location(self, tool_definition, tool_id=None):
         with suppress(ValueError):
             link_path(join(self.result_folder, 'f'), tool_definition[
                 'configuration_folder'])
         configuration_path = tool_definition['configuration_path']
-        d = {
-            'tool_location': OrderedDict([
-                ('tool_name', tool_definition['tool_name']),
-                ('configuration_path', configuration_path),
-            ]),
+        tool_location = {
+            'configuration_path': configuration_path,
+            'tool_name': tool_definition['tool_name'],
         }
+        if tool_id:
+            tool_location['tool_id'] = tool_id
+        d = {'tool_location': tool_location}
         if not self.quiet:
             print(format_settings(d))
             print('')
-        d['tool_location']['configuration_path'] = join('f', basename(
+        tool_location['configuration_path'] = join('f', basename(
             configuration_path))
         return save_settings(join(self.result_folder, 'f.cfg'), d)
 
@@ -163,11 +164,8 @@ def load_tool_definition_by_name(
         tool_definition = {
             unicode_safely(k): unicode_safely(v)
             for k, v in configuration.items(section_name)}
-        for key in tool_definition:
-            if key in ('show_standard_output', 'show_standard_error'):
-                tool_definition[key] = asbool(tool_definition[key])
-            elif key.endswith('.dependencies'):
-                tool_definition[key] = aslist(tool_definition[key])
+        tool_definition[u'show_raw_output'] = asbool(tool_definition.get(
+            'show_raw_output'))
         tool_definition[u'tool_name'] = tool_name
         tool_definition[u'argument_names'] = parse_tool_argument_names(
             tool_definition.get('command_template', u''))

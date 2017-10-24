@@ -3,9 +3,9 @@ import simplejson as json
 from invisibleroads.scripts import Script
 from invisibleroads_macros.configuration import load_settings
 from invisibleroads_macros.disk import (
-    compress_zip, make_unique_path, uncompress, HOME_FOLDER)
+    cd, compress_zip, make_unique_path, uncompress, HOME_FOLDER)
 from invisibleroads_macros.log import print_error
-from os.path import join
+from os.path import exists, join
 from pyramid.httpexceptions import (
     HTTPBadRequest, HTTPNoContent, HTTPUnauthorized)
 from requests.exceptions import ConnectionError as ServerConnectionError
@@ -16,6 +16,7 @@ from threading import Lock
 
 from ..configurations import load_result_arguments, load_tool_definition
 from ..scripts import run_script
+from ..symmetries import subprocess
 
 
 class WorkScript(Script):
@@ -139,12 +140,30 @@ def run_tool(result_folder):
     x_configuration_path = join(result_folder, 'x.cfg')
     target_folder = join(result_folder, 'y')
     tool_definition = load_tool_definition(f_configuration_path)
+    tool_folder = tool_definition['configuration_folder']
+    tool_id = load_settings(f_configuration_path, 'tool_location')['tool_id']
     result_arguments = load_result_arguments(
         x_configuration_path, tool_definition)
     environment = load_settings(x_configuration_path, 'result_environment')
+
+    setup_path = join(tool_folder, 'setup.sh')
+    if exists(setup_path) and tool_id not in TOOL_IDS:
+        process_arguments = ['bash', setup_path]
+        with cd(tool_folder):
+            subprocess.call(
+                process_arguments,
+                stdout=open(join(result_folder, 'setup.log'), 'wt'),
+                stderr=subprocess.STDOUT,
+                env=environment)
+        TOOL_IDS.append(tool_id)
+
     return run_script(
         tool_definition, result_arguments, result_folder, target_folder,
         environment)
+
+
+def run_setup(tool_folder, result_folder):
+    pass
 
 
 def send_result_response(endpoint_url, result_folder):
@@ -165,4 +184,5 @@ def send_result_response(endpoint_url, result_folder):
 
 RELAY_URL = 'https://crosscompute.com'
 SERVER_URL = 'https://crosscompute.com'
+TOOL_IDS = []
 WORKING_LOCK = Lock()

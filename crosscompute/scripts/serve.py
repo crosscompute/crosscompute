@@ -6,7 +6,6 @@ from invisibleroads_macros.disk import (
     compress_zip, copy_file, copy_text, get_file_extension, link_path,
     load_text, make_unique_folder, move_path, remove_safely,
     resolve_relative_path)
-from invisibleroads_macros.iterable import merge_dictionaries
 from invisibleroads_macros.log import get_log
 from invisibleroads_macros.text import cut_and_strip
 from invisibleroads_posts import (
@@ -42,8 +41,7 @@ from . import ToolScript, corral_arguments, run_script
 
 HELP = {
     'return_code': 'There was an error while running the script.',
-    'standard_error': 'The script wrote to the standard error stream.',
-    'standard_output': 'The script wrote to the standard output stream.',
+    'raw_output': 'The script generated raw output.',
 }
 L = get_log(__name__)
 MARKDOWN_TITLE_PATTERN = re.compile(r'^#[^#]\s*(.+)')
@@ -526,10 +524,9 @@ def get_result_template_variables(result, result_folder):
 
     tool_items = get_data_items(result_arguments, tool_definition)
     result_items = get_data_items(
-        result_properties.pop('standard_outputs', {}), tool_definition)
-    result_errors = get_data_items(merge_dictionaries(
-        result_properties.pop('standard_errors', {}),
-        result_properties.pop('type_errors', {})), tool_definition)
+        result_properties.pop('raw_outputs', {}), tool_definition)
+    result_errors = get_data_items(
+        result_properties.pop('type_errors', {}), tool_definition)
     result_properties = get_data_items(result_properties, tool_definition)
 
     tool = result.tool
