@@ -5,7 +5,7 @@ from invisibleroads_macros.configuration import load_settings
 from invisibleroads_macros.disk import (
     cd, compress_zip, make_unique_path, uncompress, HOME_FOLDER)
 from invisibleroads_macros.log import print_error
-from os.path import exists, join
+from os.path import exists, expanduser, join
 from pyramid.httpexceptions import (
     HTTPBadRequest, HTTPNoContent, HTTPUnauthorized)
 from requests.exceptions import ConnectionError as ServerConnectionError
@@ -117,10 +117,14 @@ class Namespace(SocketIONamespace):
 def receive_result_request(
         endpoint_url, worker_token, parent_folder, processor_level=0,
         memory_level=0):
-    response = requests.get(endpoint_url, {
+    d = {
         'processor_level': processor_level,
         'memory_level': memory_level,
-    }, headers={'Authorization': 'Bearer ' + worker_token})
+    }
+    if 'environment_id' in S:
+        d['environment_id'] = S['environment_id']
+    response = requests.get(endpoint_url, d, headers={
+        'Authorization': 'Bearer ' + worker_token})
     if response.status_code == 200:
         pass
     elif response.status_code == 204:
@@ -186,3 +190,4 @@ RELAY_URL = 'https://crosscompute.com'
 SERVER_URL = 'https://crosscompute.com'
 TOOL_IDS = []
 WORKING_LOCK = Lock()
+S = load_settings(expanduser('~/.crosscompute/.settings.ini'))
