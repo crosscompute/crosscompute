@@ -190,4 +190,5 @@ RELAY_URL = 'https://crosscompute.com'
 SERVER_URL = 'https://crosscompute.com'
 TOOL_IDS = []
 WORKING_LOCK = Lock()
-S = load_settings(expanduser('~/.crosscompute/.settings.ini'))
+SETTINGS_PATH = expanduser('~/.crosscompute/.settings.ini')
+S = load_settings(SETTINGS_PATH, 'crosscompute-website')
