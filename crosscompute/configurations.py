@@ -59,7 +59,7 @@ class ResultConfiguration(object):
             k, get_data_type(k).render(v)
         ) for k, v in result_arguments.items())}
         if environment:
-            d['result_environment'] = environment
+            d['environment_variables'] = environment
         if not self.quiet:
             print(format_settings(d))
             print('')

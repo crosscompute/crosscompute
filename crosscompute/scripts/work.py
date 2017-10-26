@@ -144,7 +144,7 @@ def run_tool(result_folder):
     tool_id = load_settings(f_configuration_path, 'tool_location')['tool_id']
     result_arguments = load_result_arguments(
         x_configuration_path, tool_definition)
-    environment = load_settings(x_configuration_path, 'result_environment')
+    environment = load_settings(x_configuration_path, 'environment_variables')
 
     setup_path = join(tool_folder, 'setup.sh')
     if exists(setup_path) and tool_id not in TOOL_IDS:

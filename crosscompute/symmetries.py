@@ -2,14 +2,14 @@ import os
 from contextlib import contextmanager
 
 
-SCRIPT_ENVIRONMENT = os.environ.copy()
+ENVIRONMENT_VARIABLES = os.environ.copy()
 
 
 if os.name == 'nt':
 
     COMMAND_LINE_JOIN = '^'
     SCRIPT_EXTENSION = '.bat'
-    SCRIPT_ENVIRONMENT['PYTHONIOENCODING'] = 'utf-8'
+    ENVIRONMENT_VARIABLES['PYTHONIOENCODING'] = 'utf-8'
 
     def prepare_path_argument(path):
         return path.replace('\\', '\\\\')

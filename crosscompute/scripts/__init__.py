@@ -20,7 +20,7 @@ from ..configurations import (
     parse_data_dictionary, render_command)
 from ..exceptions import CrossComputeError, DataParseError
 from ..extensions import DefaultTool
-from ..symmetries import subprocess, SCRIPT_ENVIRONMENT
+from ..symmetries import subprocess, ENVIRONMENT_VARIABLES
 from ..types import initialize_data_types
 
 
@@ -109,7 +109,7 @@ def run_script(
                 command_terms,
                 stdout=output_file,
                 stderr=subprocess.STDOUT,
-                env=merge_dictionaries(environment, SCRIPT_ENVIRONMENT))
+                env=merge_dictionaries(environment, ENVIRONMENT_VARIABLES))
     except OSError:
         output_file.write('Command not found')
     else:
