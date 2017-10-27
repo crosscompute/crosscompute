@@ -1,3 +1,11 @@
+0.7
+---
+- Add memory_level, processor_level to work script
+- Remove redundant calls to data_type.load
+- Render run_tool_json errors in form
+- Replace setup script with support for setup.sh in work script
+- Replace show_standard_output, show_standard_error with show_raw_output
+
 0.6
 ---
 - Accept markdown templates that lack titles
