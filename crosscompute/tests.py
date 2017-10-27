@@ -41,6 +41,6 @@ def _prepare_response(data_folder, tool_name, result_arguments):
     tool_definition = prepare_tool_definition(tool_name)
     app = get_app(tool_definition, data_folder)
     client = Client(app, BaseResponse)
-    data = {'x': encode_url(result_arguments or {}, encoding='utf-8')}
+    data = {'x': encode_url(result_arguments or {})}
     with client.post('/t/1.json', data=data) as response:
         return response, client
