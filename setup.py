@@ -16,7 +16,7 @@ cc-python = crosscompute.scaffolds:PythonToolTemplate
 
 
 REQUIREMENTS = [
-    'invisibleroads-macros>=0.8.4.5',
+    'invisibleroads-macros>=0.9.0',
     'invisibleroads>=0.2.0',
     'invisibleroads-posts>=0.5.6',
     'invisibleroads-uploads>=0.4.0',
@@ -67,5 +67,6 @@ setup(
         'pytest',
         'pytest-mock',
         'werkzeug',
+        'webob',
     ],
     entry_points=ENTRY_POINTS)
