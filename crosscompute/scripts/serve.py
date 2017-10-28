@@ -1,5 +1,6 @@
 import datetime
 import re
+import simplejson as json
 import webbrowser
 from collections import OrderedDict
 from invisibleroads_macros.disk import (
@@ -23,7 +24,6 @@ from pyramid.renderers import get_renderer
 from pyramid.request import Request
 from pyramid.response import FileResponse, Response
 from six import text_type
-from six.moves import urllib_parse
 from traceback import format_exc
 from wsgiref.simple_server import make_server
 
@@ -409,8 +409,10 @@ def see_result(request):
 
 def get_result_arguments_from(request):
     params = request.params
-    items = urllib_parse.parse_qsl(params.get('x', ''), keep_blank_values=True)
-    return dict(items)
+    x = params.get('x')
+    if x is None:
+        return {}
+    return json.loads(x)
 
 
 def import_upload_from(request, DataType, render_property_kw):

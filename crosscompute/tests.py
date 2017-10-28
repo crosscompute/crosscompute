@@ -1,7 +1,6 @@
 import simplejson as json
 from bs4 import BeautifulSoup
-from six.moves.urllib_parse import (
-    urlencode as encode_url, urlparse as parse_url)
+from six.moves.urllib_parse import urlparse as parse_url
 from werkzeug.test import Client
 from werkzeug.wrappers import BaseResponse
 
@@ -41,6 +40,6 @@ def _prepare_response(data_folder, tool_name, result_arguments):
     tool_definition = prepare_tool_definition(tool_name)
     app = get_app(tool_definition, data_folder)
     client = Client(app, BaseResponse)
-    data = {'x': encode_url(result_arguments or {})}
+    data = {'x': json.dumps(result_arguments or {})}
     with client.post('/t/1.json', data=data) as response:
         return response, client
