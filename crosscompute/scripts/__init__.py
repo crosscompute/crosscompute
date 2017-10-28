@@ -130,7 +130,7 @@ def _process_output(
         output_file, result_folder, tool_definition, without_logging=False):
     d, type_errors = OrderedDict(), OrderedDict()
     output_file.seek(0)
-    output_content = output_file.read().strip()
+    output_content = output_file.read().strip().decode('utf-8')
     if output_content:
         output_content = output_content.replace(HOME_FOLDER, COMMAND_LINE_HOME)
         if not without_logging:
