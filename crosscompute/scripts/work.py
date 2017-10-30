@@ -74,10 +74,19 @@ class Worker(object):
         self.processor_level = processor_level
         self.memory_level = memory_level
 
-        d = requests.get(join(server_url, 'workers.json'), headers={
-            'Authorization': 'Bearer ' + worker_token}).json()
+        response = requests.get(join(server_url, 'workers.json'), headers={
+            'Authorization': 'Bearer ' + worker_token})
+        status_code = response.status_code
+        if status_code == 200:
+            pass
+        elif status_code == 401:
+            raise HTTPUnauthorized
+        else:
+            raise HTTPBadRequest
+        d = response.json()
         self.id = d['worker_id']
         self.tool_ids = d['tool_ids']
+        print('worker_id = %s' % self.id)
 
         self.parent_folder = join(HOME_FOLDER, '.crosscompute', parse_url(
             server_url).hostname, 'results')
