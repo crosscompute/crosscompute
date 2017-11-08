@@ -3,7 +3,7 @@ import simplejson as json
 from invisibleroads.scripts import Script
 from invisibleroads_macros.configuration import load_settings
 from invisibleroads_macros.disk import (
-    cd, compress_zip, make_unique_path, uncompress, HOME_FOLDER)
+    cd, compress_zip, load_text, make_unique_path, uncompress, HOME_FOLDER)
 from invisibleroads_macros.log import print_error
 from os.path import exists, expanduser, join
 from pyramid.httpexceptions import (
@@ -158,25 +158,33 @@ def run_tool(result_folder):
     result_arguments = load_result_arguments(
         x_configuration_path, tool_definition)
     environment = load_settings(x_configuration_path, 'environment_variables')
-
-    setup_path = join(tool_folder, 'setup.sh')
-    if exists(setup_path) and tool_id not in TOOL_IDS:
-        process_arguments = ['bash', setup_path]
-        with cd(tool_folder):
-            subprocess.call(
-                process_arguments,
-                stdout=open(join(result_folder, 'setup.log'), 'wt'),
-                stderr=subprocess.STDOUT,
-                env=environment)
-        TOOL_IDS.append(tool_id)
-
+    run_setup(tool_folder, tool_id, result_folder, environment)
     return run_script(
         tool_definition, result_arguments, result_folder, target_folder,
         environment)
 
 
-def run_setup(tool_folder, result_folder):
-    pass
+def run_setup(tool_folder, tool_id, result_folder, environment):
+    tool_setup_path = join(tool_folder, 'setup.sh')
+    if not exists(tool_setup_path):
+        return
+    if tool_id in TOOL_IDS:
+        return
+    if 'setup_header' in S:
+        setup_path = make_unique_path(tool_folder, '.sh', 'setup-')
+        setup_content = S['setup_header'] + '\n' + load_text(tool_setup_path)
+        open(setup_path, 'wt').write(setup_content)
+    else:
+        setup_path = tool_setup_path
+    process_arguments = ['bash', setup_path]
+    log_path = join(result_folder, 'setup.log')
+    with cd(tool_folder):
+        subprocess.call(
+            process_arguments,
+            stdout=open(log_path, 'wt'),
+            stderr=subprocess.STDOUT,
+            env=environment)
+    TOOL_IDS.append(tool_id)
 
 
 def send_result_response(endpoint_url, result_folder):
