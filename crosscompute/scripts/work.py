@@ -171,8 +171,10 @@ def run_setup(tool_folder, tool_id, result_folder, environment):
     if tool_id in TOOL_IDS:
         return
     if 'setup_header' in S:
+        setup_header = S['setup_header'].strip()
+        setup_main = load_text(tool_setup_path)
+        setup_content = setup_header + '\n' + setup_main
         setup_path = make_unique_path(tool_folder, '.sh', 'setup-')
-        setup_content = S['setup_header'] + '\n' + load_text(tool_setup_path)
         open(setup_path, 'wt').write(setup_content)
     else:
         setup_path = tool_setup_path
@@ -203,9 +205,9 @@ def send_result_response(endpoint_url, result_folder):
         raise HTTPBadRequest
 
 
-RELAY_URL = 'https://crosscompute.com'
-SERVER_URL = 'https://crosscompute.com'
 TOOL_IDS = []
 WORKING_LOCK = Lock()
 SETTINGS_PATH = expanduser('~/.crosscompute/.settings.ini')
 S = load_settings(SETTINGS_PATH, 'crosscompute-website')
+SERVER_URL = S.get('server_url', 'https://crosscompute.com')
+RELAY_URL = S.get('relay_url', 'https://crosscompute.com')
