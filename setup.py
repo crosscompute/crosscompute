@@ -18,8 +18,8 @@ cc-python = crosscompute.scaffolds:PythonToolTemplate
 REQUIREMENTS = [
     'invisibleroads-macros>=0.9.1',
     'invisibleroads>=0.2.0',
-    'invisibleroads-posts>=0.5.6.2',
-    'invisibleroads-uploads>=0.4.0',
+    'invisibleroads-posts>=0.5.7',
+    'invisibleroads-uploads>=0.4.1',
     'markupsafe',
     'mistune',
     'pyramid',
