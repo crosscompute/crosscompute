@@ -81,9 +81,13 @@ def corral_arguments(argument_folder, result_arguments, use=link_path):
     d = result_arguments.copy()
     make_folder(argument_folder)
     for k, v in result_arguments.items():
-        if k.endswith('_path'):
-            assert isabs(v)
+        if not k.endswith('_path'):
+            continue
+        assert isabs(v)
+        try:
             d[k] = use(join(argument_folder, basename(v)), v)
+        except IOError as e:
+            raise IOError(k, v)
     return d
 
 
