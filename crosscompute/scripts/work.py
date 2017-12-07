@@ -27,9 +27,9 @@ class WorkScript(Script):
         argument_subparser.add_argument(
             '--relay_url', metavar='URL', default=RELAY_URL)
         argument_subparser.add_argument(
-            '--processor_level', metavar='LEVEL', default=0)
+            '--processor_level', metavar='LEVEL', default=PROCESSOR_LEVEL)
         argument_subparser.add_argument(
-            '--memory_level', metavar='LEVEL', default=0)
+            '--memory_level', metavar='LEVEL', default=MEMORY_LEVEL)
         argument_subparser.add_argument('worker_token')
 
     def run(self, args):
@@ -41,7 +41,7 @@ class WorkScript(Script):
                 args.memory_level)
             Namespace.channels = ['t/%s/%s/%s' % (
                 x, args.processor_level, args.memory_level,
-            ) for x in worker.tool_ids]
+            ) for x in worker.tool_ids] + ['w/%s' % worker.id]
             Namespace.worker = worker
             socket = SocketIO(
                 args.relay_url, Namespace=Namespace, wait_for_connection=False)
@@ -211,3 +211,5 @@ SETTINGS_PATH = expanduser('~/.crosscompute/.settings.ini')
 S = load_settings(SETTINGS_PATH, 'crosscompute-website')
 SERVER_URL = S.get('server_url', 'https://crosscompute.com')
 RELAY_URL = S.get('relay_url', 'https://crosscompute.com')
+PROCESSOR_LEVEL = S.get('processor_level', 0)
+MEMORY_LEVEL = S.get('memory_level', 0)

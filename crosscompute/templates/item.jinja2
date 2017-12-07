@@ -47,8 +47,11 @@ CC.tool_json_url = "{{ request.route_path('tool.json', tool_id=tool.id) }}";
 
 {%- endif -%}
 {% endfor %}
-{% block run_tool_form_options %}{% endblock %}
-{% block run_tool_form_buttons %}{% endblock %}
+</form>
+
+<form id="run-tool-options">
+{% block run_tool_options %}{% endblock %}
+{% block run_tool_buttons %}{% endblock %}
 </form>
 {% endblock %}
 
