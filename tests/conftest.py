@@ -13,7 +13,7 @@ class WheeType(StringType):
     @classmethod
     def parse(Class, x, default_value=None):
         if x != 'whee':
-            raise DataTypeError('expected whee')
+            raise DataTypeError('whee expected')
         return x
 
 

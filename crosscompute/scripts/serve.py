@@ -104,8 +104,11 @@ class ResultRequest(Request):
         except DataParseError as e:
             raise HTTPBadRequest(e.message_by_name)
         result = self.spawn_result()
-        result.arguments = corral_arguments(result.get_source_folder(
-            self.data_folder), result_arguments, move_path)
+        try:
+            result.arguments = corral_arguments(result.get_source_folder(
+                self.data_folder), result_arguments, move_path)
+        except IOError as e:
+            raise HTTPBadRequest({e.args[0]: 'path not found (%s)' % e.args[1]})
         remove_safely(draft_folder)
         return result
 

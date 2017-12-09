@@ -53,7 +53,7 @@ class TestResultRequest(object):
         raw_arguments = MultiDict({'x_whee': 'x'})
         with raises(HTTPBadRequest) as e:
             result_request.prepare_arguments(tool_definition, raw_arguments)
-        assert e.value.detail['x_whee'] == 'expected whee'
+        assert e.value.detail['x_whee'] == 'whee expected'
         # Run with compatible value
         raw_arguments = MultiDict({'x_whee': 'whee'})
         result = result_request.prepare_arguments(

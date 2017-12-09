@@ -9,8 +9,8 @@
 <h1>{{ result.name }} (<a href="{{ request.route_path('tool', tool_id=result.tool_id) }}">{{ result.title }}</a>)</h1>
 {% endblock %}
 
-{% block run_tool_form_buttons %}
-<button type="button" class="btn btn-lg btn-primary btn-run" data-toggle="tooltip" title="SHIFT-ENTER">Run Another</button>
+{% block run_tool_buttons %}
+<button type="button" class="btn btn-lg btn-primary btn-run">Run Another</button>
 {% endblock %}
 
 {% block body_content %}

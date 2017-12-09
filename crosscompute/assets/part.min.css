@@ -10,9 +10,6 @@ h1, .h1 {
 .result .control-label {
   font-size: 175%;
   font-weight: normal; }
-.result .form-group {
-  margin-top: 30px !important;
-  margin-bottom: 30px !important; }
 
 #run-tool-form {
   margin-bottom: 30px !important; }
