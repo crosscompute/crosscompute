@@ -1,6 +1,6 @@
 from crosscompute.configurations import (
-    find_tool_definition, find_tool_definition_by_name, get_default_value,
-    has_default_value, ToolConfigurationNotFound, ToolNotSpecified,
+    find_tool_definition, find_tool_definition_by_name, get_default_key,
+    get_default_value, ToolConfigurationNotFound, ToolNotSpecified,
     ToolNotFound)
 from mock import MagicMock
 from os.path import join
@@ -50,15 +50,15 @@ class TestFindToolDefinitionByName(object):
         assert len(tool_definition_by_name) == 4
 
 
-def test_has_default_value():
-    assert not has_default_value('a', {})
-    assert has_default_value('a', {'a': 1})
-    assert has_default_value('a', {'a_path': 1})
-    assert has_default_value('a', {'x.a': 1})
-    assert has_default_value('a', {'x.a_path': 1})
+def test_get_default_key():
+    assert not get_default_key('a', {})
+    assert get_default_key('a', {'a': 1})
+    assert get_default_key('a', {'a_path': 1})
+    assert get_default_key('a', {'x.a': 1})
+    assert get_default_key('a', {'x.a_path': 1})
 
-    assert not has_default_value('a_path', {'a': 1})
-    assert has_default_value('a_path', {'a_path': 1})
+    assert not get_default_key('a_path', {'a': 1})
+    assert get_default_key('a_path', {'a_path': 1})
 
 
 def test_get_default_value(tool_definition, mocker):

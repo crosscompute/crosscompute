@@ -2,16 +2,16 @@ import requests
 import shutil
 from invisibleroads_macros.security import make_random_string
 from io import BytesIO
-from os.path import dirname, exists, join
+from os.path import exists, join
 from pyramid.httpexceptions import HTTPBadRequest, HTTPNoContent
 from pytest import fixture, raises
 from zipfile import ZipFile
 
+from conftest import RESULT_FOLDER
 from crosscompute.scripts.work import (
     receive_result_request, run_tool, send_result_response)
 
 
-RESULT_FOLDER = join(dirname(__file__), 'results', 'make-story')
 TARGET_FOLDER = join(RESULT_FOLDER, 'y')
 
 

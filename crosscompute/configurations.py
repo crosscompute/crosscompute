@@ -243,15 +243,14 @@ def parse_data_dictionary_from(
     return d
 
 
-def has_default_value(key, tool_definition):
+def get_default_key(key, tool_definition):
     for prefix in 'x.', '':
         default_key = prefix + key
         if default_key in tool_definition:
-            return True
+            return default_key
         default_key = prefix + key + '_path'
         if default_key in tool_definition:
-            return True
-    return False
+            return default_key
 
 
 def get_default_value(key, tool_definition):

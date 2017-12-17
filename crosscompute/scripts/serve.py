@@ -17,7 +17,7 @@ from invisibleroads_uploads.models import Upload
 from markupsafe import Markup
 from mistune import markdown
 from os import environ
-from os.path import exists, join, realpath
+from os.path import exists, join, realpath, relpath
 from pyramid.httpexceptions import (
     HTTPBadRequest, HTTPForbidden, HTTPNotFound, HTTPSeeOther)
 from pyramid.renderers import get_renderer
@@ -27,16 +27,17 @@ from six import text_type
 from traceback import format_exc
 from wsgiref.simple_server import make_server
 
+from . import ToolScript, corral_arguments, run_script
 from ..configurations import (
-    ResultConfiguration, get_default_value, parse_data_dictionary_from,
-    ARGUMENT_NAME_PATTERN)
+    ResultConfiguration, get_default_key, get_default_value,
+    parse_data_dictionary_from, ARGUMENT_NAME_PATTERN)
 from ..exceptions import DataParseError, DataTypeError
 from ..models import Result, Tool
+from ..settings import S
 from ..symmetries import suppress
 from ..types import (
     DataItem, DataType, get_data_type, DATA_TYPE_BY_NAME,
     RESERVED_ARGUMENT_NAMES)
-from . import ToolScript, corral_arguments, run_script
 
 
 HELP = {
@@ -45,8 +46,10 @@ HELP = {
 }
 L = get_log(__name__)
 MARKDOWN_TITLE_PATTERN = re.compile(r'^#[^#]\s*(.+)')
-RESULT_PATH_PATTERN = re.compile(r'results/(\w+)/([xy])/(.+)')
+TOOL_PATH_PATTERN = re.compile(r'tools/(\w+)/(.+)$')
+RESULT_PATH_PATTERN = re.compile(r'results/(\w+)/([xy])/(.+)$')
 BRAND_URL = 'https://crosscompute.com'
+WEBSITE_VERSION = '0.7.3.1'
 WEBSITE_NAME = 'CrossCompute'
 WEBSITE_OWNER = 'CrossCompute Inc'
 
@@ -64,6 +67,8 @@ class ServeScript(ToolScript):
         argument_subparser.add_argument(
             '--brand_url', default=BRAND_URL)
         argument_subparser.add_argument(
+            '--website_version', default=WEBSITE_VERSION)
+        argument_subparser.add_argument(
             '--website_name', default=WEBSITE_NAME)
         argument_subparser.add_argument(
             '--website_owner', default=WEBSITE_OWNER)
@@ -75,9 +80,9 @@ class ServeScript(ToolScript):
     def run(self, args):
         tool_definition, data_folder = super(ServeScript, self).run(args)
         app = get_app(
-            tool_definition, data_folder, args.website_name,
-            args.website_owner, args.brand_url, args.base_url,
-            args.without_logging)
+            tool_definition, data_folder, args.website_version,
+            args.website_name, args.website_owner, args.brand_url,
+            args.base_url, args.without_logging)
         app_url = 'http://%s:%s/t/1' % (args.host, args.port)
         if not args.without_browser:
             webbrowser.open_new_tab(app_url)
@@ -108,7 +113,8 @@ class ResultRequest(Request):
             result.arguments = corral_arguments(result.get_source_folder(
                 self.data_folder), result_arguments, move_path)
         except IOError as e:
-            raise HTTPBadRequest({e.args[0]: 'path not found (%s)' % e.args[1]})
+            raise HTTPBadRequest({
+                e.args[0]: 'path not found (%s)' % e.args[1]})
         remove_safely(draft_folder)
         return result
 
@@ -201,11 +207,12 @@ class ResultRequest(Request):
 
 
 def get_app(
-        tool_definition, data_folder, website_name=WEBSITE_NAME,
-        website_owner=WEBSITE_OWNER, brand_url=BRAND_URL, base_url='/',
-        without_logging=False):
-    settings = {
+        tool_definition, data_folder, website_version=WEBSITE_VERSION,
+        website_name=WEBSITE_NAME, website_owner=WEBSITE_OWNER,
+        brand_url=BRAND_URL, base_url='/', without_logging=False):
+    S.update({
         'data.folder': data_folder,
+        'website.version': website_version,
         'website.name': website_name,
         'website.owner': website_owner,
         'website.year': datetime.datetime.now().year,
@@ -224,9 +231,9 @@ def get_app(
         'jinja2.lstrip_blocks': True,
         'jinja2.trim_blocks': True,
         'without_logging': without_logging,
-    }
-    settings['tool_definition'] = tool_definition
-    config = InvisibleRoadsConfigurator(settings=settings)
+    })
+    S['tool_definition'] = tool_definition
+    config = InvisibleRoadsConfigurator(settings=S)
     config.include('invisibleroads_posts')
     includeme(config)
     add_routes(config)
@@ -330,6 +337,7 @@ def get_template_text(tool_definition, template_type):
 
 def add_routes(config):
     config.add_route('tool.json', '/t/{tool_id}.json')
+    config.add_route('tool_file', '/t/{tool_id}/-/{path:.+}')
     config.add_route('tool', '/t/{tool_id}')
     config.add_route('result.json', '/r/{result_id}.json')
     config.add_route('result.zip', '/r/{result_id}/{result_name}.zip')
@@ -340,11 +348,14 @@ def add_routes(config):
         index,
         route_name='index')
     config.add_view(
-        see_tool, renderer='tool.jinja2', request_method='GET',
-        route_name='tool')
-    config.add_view(
         run_tool_json, renderer='json', request_method='POST',
         route_name='tool.json')
+    config.add_view(
+        see_tool_file, request_method='GET',
+        route_name='tool_file')
+    config.add_view(
+        see_tool, renderer='tool.jinja2', request_method='GET',
+        route_name='tool')
     """
     config.add_view(
         see_result_json, renderer='json', request_method='GET',
@@ -365,13 +376,6 @@ def index(request):
     return HTTPSeeOther(request.route_path('tool', tool_id=Tool.id))
 
 
-def see_tool(request):
-    settings = request.registry.settings
-    tool = Tool.get_from(request)
-    tool_definition = settings['tool_definition']
-    return get_tool_template_variables(tool, tool_definition)
-
-
 def run_tool_json(request):
     settings = request.registry.settings
     data_folder = request.data_folder
@@ -390,17 +394,32 @@ def run_tool_json(request):
     }
 
 
+def see_tool_file(request):
+    settings = request.registry.settings
+    tool_definition = settings['tool_definition']
+    return get_tool_file_response(request, tool_definition)
+
+
+def see_tool(request):
+    tool = Tool.get_from(request)
+    settings = request.registry.settings
+    tool_definition = settings['tool_definition']
+    return get_tool_template_variables(tool, tool_definition)
+
+
 # def see_result_json(request): pass
 
 
 def see_result_zip(request):
     result = Result.get_from(request)
-    return get_result_zip_response(result, request)
+    return get_result_zip_response(request, result)
 
 
 def see_result_file(request):
     result = Result.get_from(request)
-    return get_result_file_response(result, request)
+    data_folder = request.data_folder
+    result_folder = result.get_folder(data_folder)
+    return get_result_file_response(request, result_folder)
 
 
 def see_result(request):
@@ -473,6 +492,26 @@ def get_tool_arguments(tool_definition):
     return value_by_key
 
 
+def get_tool_file_response(request, tool_definition):
+    matchdict = request.matchdict
+    relative_path = matchdict['path']
+    configuration_folder = tool_definition['configuration_folder']
+    try:
+        file_path = resolve_relative_path(relative_path, configuration_folder)
+    except IOError:
+        raise HTTPNotFound
+    if not exists(file_path):
+        raise HTTPNotFound
+    for key in tool_definition['argument_names']:
+        default_key = get_default_key(key, tool_definition)
+        if default_key and default_key.endswith('_path'):
+            if tool_definition[default_key] == file_path:
+                break
+    else:
+        raise HTTPNotFound
+    return FileResponse(file_path, request=request)
+
+
 def get_data_items(value_by_key, tool_definition):
     data_items = []
     for key, value in value_by_key.items():
@@ -496,7 +535,7 @@ def get_data_items(value_by_key, tool_definition):
     return data_items
 
 
-def get_result_zip_response(result, request):
+def get_result_zip_response(request, result):
     data_folder = request.data_folder
     file_path = result.get_target_folder(data_folder) + '.zip'
     if not exists(file_path):
@@ -504,13 +543,11 @@ def get_result_zip_response(result, request):
     return FileResponse(file_path, request=request)
 
 
-def get_result_file_response(result, request):
+def get_result_file_response(request, result_folder):
     matchdict = request.matchdict
     folder_name = matchdict['folder_name']
     if folder_name not in ('x', 'y'):
         raise HTTPForbidden
-    data_folder = request.data_folder
-    result_folder = result.get_folder(data_folder)
     file_folder = join(result_folder, folder_name)
     try:
         file_path = resolve_relative_path(matchdict['path'], file_folder)
@@ -548,10 +585,29 @@ def get_result_template_variables(result, result_folder):
     }
 
 
-def get_result_file_url(result_path):
+def get_file_url(file_path):
+    return get_tool_file_url(file_path) or get_result_file_url(file_path)
+
+
+def get_tool_file_url(tool_file_path):
+    if 'tool_definition' in S:
+        tool_definition = S['tool_definition']
+        tool_id = Tool.id
+        path = relpath(tool_file_path, tool_definition['configuration_folder'])
+        if path.startswith('.'):
+            return
+    else:
+        try:
+            tool_id, path = TOOL_PATH_PATTERN.search(tool_file_path).groups()
+        except AttributeError:
+            return
+    return '/t/%s/-/%s' % (tool_id, path)
+
+
+def get_result_file_url(result_file_path):
     try:
         result_id, folder_name, path = RESULT_PATH_PATTERN.search(
-            result_path).groups()
+            result_file_path).groups()
     except AttributeError:
         return ''
     return '/r/%s/%s/%s' % (result_id, folder_name, path)
