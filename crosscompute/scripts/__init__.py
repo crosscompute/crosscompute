@@ -124,7 +124,7 @@ def run_script(
         output_file, result_folder, tool_definition, without_logging))
     result_properties['execution_time_in_seconds'] = time.time() - timestamp
     result_configuration.save_result_properties(result_properties)
-    result_configuration.save_result_script(tool_definition, result_arguments)
+    result_configuration.save_result_scripts(tool_definition, result_arguments)
     if 'target_folder' in tool_definition['argument_names']:
         link_path(join(result_folder, 'y'), result_arguments['target_folder'])
     return result_properties

@@ -494,14 +494,16 @@ def get_tool_arguments(tool_definition):
 
 def get_tool_file_response(request, tool_definition):
     matchdict = request.matchdict
-    relative_path = matchdict['path']
-    configuration_folder = tool_definition['configuration_folder']
+    # Check that the file is in an accessible folder
+    file_folder = tool_definition['configuration_folder']
     try:
-        file_path = resolve_relative_path(relative_path, configuration_folder)
+        file_path = resolve_relative_path(matchdict['path'], file_folder)
     except IOError:
         raise HTTPNotFound
+    # Check that the file exists
     if not exists(file_path):
         raise HTTPNotFound
+    # Check that the file is specified as an argument in the tool definition
     for key in tool_definition['argument_names']:
         default_key = get_default_key(key, tool_definition)
         if default_key and default_key.endswith('_path'):
@@ -509,6 +511,7 @@ def get_tool_file_response(request, tool_definition):
                 break
     else:
         raise HTTPNotFound
+    # Return file response
     return FileResponse(file_path, request=request)
 
 
@@ -545,6 +548,7 @@ def get_result_zip_response(request, result):
 
 def get_result_file_response(request, result_folder):
     matchdict = request.matchdict
+    # Check that the file is in an accessible folder
     folder_name = matchdict['folder_name']
     if folder_name not in ('x', 'y'):
         raise HTTPForbidden
@@ -553,8 +557,10 @@ def get_result_file_response(request, result_folder):
         file_path = resolve_relative_path(matchdict['path'], file_folder)
     except IOError:
         raise HTTPNotFound
+    # Check that the file exists
     if not exists(file_path):
         raise HTTPNotFound
+    # Return file response
     return FileResponse(file_path, request=request)
 
 

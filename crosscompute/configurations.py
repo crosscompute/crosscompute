@@ -1,5 +1,6 @@
 import codecs
 import re
+import sys
 from collections import OrderedDict
 from fnmatch import fnmatch
 from invisibleroads_macros.configuration import (
@@ -10,6 +11,7 @@ from invisibleroads_macros.disk import are_same_path, link_path
 from invisibleroads_macros.log import (
     filter_nested_dictionary, format_path, get_log, parse_nested_dictionary,
     parse_nested_dictionary_from)
+from invisibleroads_macros.shell import make_executable
 from invisibleroads_macros.text import has_whitespace, unicode_safely
 from os import getcwd, walk
 from os.path import basename, dirname, isabs, join
@@ -76,17 +78,32 @@ class ResultConfiguration(object):
         d = make_relative_paths(d, self.result_folder)
         return save_settings(join(self.result_folder, 'y.cfg'), d)
 
-    def save_result_script(self, tool_definition, result_arguments):
-        target_path = join(self.result_folder, 'x' + SCRIPT_EXTENSION)
+    def save_result_scripts(self, tool_definition, result_arguments):
+        command_template = tool_definition['command_template']
+        self.save_script(
+            'x', 'command', command_template, tool_definition,
+            result_arguments)
+        if command_template.startswith('python'):
+            debugger_command = 'pudb' if sys.version_info[0] < 3 else 'pudb3'
+            debugger_template = ' '.join([
+                debugger_command] + command_template.split(maxsplit=1)[1:])
+            self.save_script(
+                'x-debugger', 'debugger', debugger_template, tool_definition,
+                result_arguments)
+
+    def save_script(
+            self, script_name, command_name, command_template, tool_definition,
+            result_arguments):
+        target_path = join(self.result_folder, script_name + SCRIPT_EXTENSION)
         command_parts = [
             'cd "%s"' % tool_definition['configuration_folder'],
-            render_command(tool_definition['command_template'].replace(
+            render_command(command_template.replace(
                 '\n', ' %s\n' % COMMAND_LINE_JOIN), result_arguments)]
         with codecs.open(target_path, 'w', encoding='utf-8') as target_file:
             target_file.write('\n'.join(command_parts) + '\n')
         if not self.quiet:
-            print('command_path = %s' % format_path(target_path))
-        return target_path
+            print(command_name + '_path = %s' % format_path(target_path))
+        return make_executable(target_path)
 
     @cached_property
     def tool_definition(self):
