@@ -1,16 +1,17 @@
 from crosscompute.models import Result
 from crosscompute.types import DataItem
 from crosscompute.scripts.serve import (
+    get_result_file_response, get_tool_file_response,
     parse_result_relative_path, parse_template_parts)
 from invisibleroads_macros.disk import copy_path, make_folder
 from invisibleroads_uploads.models import Upload
 from invisibleroads_uploads.tests import prepare_field_storage
 from os.path import join
-from pyramid.httpexceptions import HTTPBadRequest
+from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPNotFound
 from pytest import raises
 from webob.multidict import MultiDict
 
-from conftest import WheeType
+from conftest import RESULT_FOLDER, TOOL_FOLDER, WheeType
 
 
 class TestParseTemplate(object):
@@ -154,3 +155,48 @@ def test_parse_result_relative_path():
         with raises(ValueError):
             f(x)
     f('1/x/a')
+
+
+def test_get_tool_file_response(posts_request, mocker):
+    x = 'crosscompute.scripts.serve.'
+    resolve_relative_path = mocker.patch(x + 'resolve_relative_path')
+    exists = mocker.patch(x + 'exists')
+    posts_request.matchdict = {'path': 'x'}
+    tool_definition = {
+        'configuration_folder': TOOL_FOLDER,
+        'argument_names': ['a'],
+        'x.a_path': 'x'}
+
+    resolve_relative_path.side_effect = IOError()
+    with raises(HTTPNotFound):
+        get_tool_file_response(posts_request, tool_definition)
+
+    resolve_relative_path.side_effect = None
+    exists.return_value = False
+    with raises(HTTPNotFound):
+        get_tool_file_response(posts_request, tool_definition)
+
+    exists.return_value = True
+    del tool_definition['x.a_path']
+    with raises(HTTPNotFound):
+        get_tool_file_response(posts_request, tool_definition)
+
+
+def test_get_result_file_response(posts_request, mocker):
+    x = 'crosscompute.scripts.serve.'
+    resolve_relative_path = mocker.patch(x + 'resolve_relative_path')
+    exists = mocker.patch(x + 'exists')
+
+    posts_request.matchdict = {'folder_name': 'a', 'path': 'x'}
+    with raises(HTTPForbidden):
+        get_result_file_response(posts_request, RESULT_FOLDER)
+
+    posts_request.matchdict = {'folder_name': 'x', 'path': 'x'}
+    resolve_relative_path.side_effect = IOError()
+    with raises(HTTPNotFound):
+        get_result_file_response(posts_request, RESULT_FOLDER)
+
+    resolve_relative_path.side_effect = None
+    exists.return_value = False
+    with raises(HTTPNotFound):
+        get_result_file_response(posts_request, RESULT_FOLDER)

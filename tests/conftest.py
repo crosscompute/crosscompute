@@ -37,6 +37,7 @@ def result_request(posts_request):
 DATA_TYPE_BY_SUFFIX['whee'] = WheeType
 PACKAGE_FOLDER = get_package_folder(__file__)
 TOOL_FOLDER = join(PACKAGE_FOLDER, 'tools')
+RESULT_FOLDER = join(PACKAGE_FOLDER, 'results', 'make-story')
 
 
 pytest_plugins = [

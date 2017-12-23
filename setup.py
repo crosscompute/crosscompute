@@ -22,6 +22,7 @@ REQUIREMENTS = [
     'invisibleroads-uploads>=0.4.1',
     'markupsafe',
     'mistune',
+    'pudb',
     'pyramid',
     'pyramid_jinja2',
     'requests',
