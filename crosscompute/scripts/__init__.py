@@ -141,7 +141,7 @@ def _process_output(
             print(SECTION_TEMPLATE % ('raw_output', output_content))
         try:
             value_by_key = parse_data_dictionary(
-                output_content, join(result_folder, 'y'))
+                output_content, join(result_folder, 'y'), [])
         except DataParseError as e:
             for k, v in e.message_by_name.items():
                 type_errors['%s.error' % k] = v

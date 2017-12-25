@@ -5,9 +5,11 @@ from collections import OrderedDict
 from fnmatch import fnmatch
 from invisibleroads_macros.configuration import (
     RawCaseSensitiveConfigParser, format_settings, load_relative_settings,
-    make_absolute_paths, make_relative_paths, save_settings)
+    load_settings, make_absolute_paths, make_relative_paths, save_settings)
 from invisibleroads_macros.descriptor import cached_property
-from invisibleroads_macros.disk import are_same_path, link_path
+from invisibleroads_macros.disk import (
+    are_same_path, get_absolute_path, link_path)
+from invisibleroads_macros.exceptions import BadPath
 from invisibleroads_macros.log import (
     filter_nested_dictionary, format_path, get_log, parse_nested_dictionary,
     parse_nested_dictionary_from)
@@ -38,12 +40,11 @@ class ResultConfiguration(object):
         self.quiet = quiet
 
     def save_tool_location(self, tool_definition, tool_id=None):
+        configuration_folder = tool_definition['configuration_folder']
         with suppress(ValueError):
-            link_path(join(self.result_folder, 'f'), tool_definition[
-                'configuration_folder'])
-        configuration_path = tool_definition['configuration_path']
+            link_path(join(self.result_folder, 'f'), configuration_folder)
         tool_location = {
-            'configuration_path': configuration_path,
+            'configuration_folder': configuration_folder,
             'tool_name': tool_definition['tool_name'],
         }
         if tool_id:
@@ -52,8 +53,7 @@ class ResultConfiguration(object):
         if not self.quiet:
             print(format_settings(d))
             print('')
-        tool_location['configuration_path'] = join('f', basename(
-            configuration_path))
+        tool_location['configuration_folder'] = 'f'
         return save_settings(join(self.result_folder, 'f.cfg'), d)
 
     def save_result_arguments(self, result_arguments, environment):
@@ -131,7 +131,12 @@ def find_tool_definition_by_name(folder, default_tool_name=None):
         for file_name in file_names:
             if not fnmatch(file_name, '*.ini'):
                 continue
-            tool_configuration_path = join(root_folder, file_name)
+            try:
+                tool_configuration_path = get_absolute_path(
+                    file_name, root_folder)
+            except BadPath:
+                L.warn('skipping link (%s)' % join(root_folder, file_name))
+                continue
             for tool_name, tool_definition in load_tool_definition_by_name(
                     tool_configuration_path, tool_name).items():
                 tool_name = _get_unique_tool_name(
@@ -192,16 +197,17 @@ def load_tool_definition_by_name(
 
 
 def load_tool_definition(result_configuration_path):
-    s = load_relative_settings(result_configuration_path, 'tool_location')
-    tool_configuration_path = s['configuration_path']
-    tool_name = s['tool_name']
-    if not isabs(tool_configuration_path):
+    s = load_settings(result_configuration_path, 'tool_location')
+    try:
+        tool_configuration_folder = s['configuration_folder']
+        tool_name = s['tool_name']
+    except KeyError:
+        raise ToolConfigurationNotFound
+    if not isabs(tool_configuration_folder):
         result_configuration_folder = dirname(result_configuration_path)
-        tool_configuration_path = join(
-            result_configuration_folder, tool_configuration_path)
-    tool_definition_by_name = load_tool_definition_by_name(
-        tool_configuration_path, tool_name)
-    return tool_definition_by_name[tool_name]
+        tool_configuration_folder = join(
+            result_configuration_folder, tool_configuration_folder)
+    return find_tool_definition(tool_configuration_folder, tool_name)
 
 
 def load_result_arguments(result_configuration_path, tool_definition):
@@ -210,7 +216,7 @@ def load_result_arguments(result_configuration_path, tool_definition):
     arguments.pop('target_folder', None)
     result_configuration_folder = dirname(result_configuration_path)
     return parse_data_dictionary_from(
-        arguments, result_configuration_folder, tool_definition)
+        arguments, result_configuration_folder, [], tool_definition)
 
 
 def load_result_properties(result_configuration_path):
@@ -229,21 +235,24 @@ def parse_tool_argument_names(command_template):
     return tuple(ARGUMENT_NAME_PATTERN.findall(command_template))
 
 
-def parse_data_dictionary(text, root_folder, tool_definition=None):
+def parse_data_dictionary(
+        text, root_folder, external_folders=None, tool_definition=None):
     d = parse_nested_dictionary(
         text, is_key=lambda x: ':' not in x and ' ' not in x)
-    return parse_data_dictionary_from(d, root_folder, tool_definition)
+    return parse_data_dictionary_from(
+        d, root_folder, external_folders, tool_definition)
 
 
 def parse_data_dictionary_from(
-        raw_dictionary, root_folder, tool_definition=None):
+        raw_dictionary, root_folder, external_folders=None,
+        tool_definition=None):
     if tool_definition:
         def get_default_value_for(key):
             return get_default_value(key, tool_definition)
     else:
         def get_default_value_for(key):
             return
-    d = make_absolute_paths(raw_dictionary, root_folder)
+    d = make_absolute_paths(raw_dictionary, root_folder, external_folders)
     errors = OrderedDict()
     for key, value in d.items():
         if key in RESERVED_ARGUMENT_NAMES:

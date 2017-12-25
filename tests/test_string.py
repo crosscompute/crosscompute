@@ -6,7 +6,7 @@ from os.path import join
 from six import BytesIO
 from zipfile import ZipFile
 
-from conftest import TOOL_FOLDER
+from conftest import FOLDER
 
 
 TEXT = (
@@ -38,7 +38,7 @@ def test_file_name_with_spaces(tmpdir):
 
 def test_file_content(tmpdir, file_path='assets/string.txt'):
     file_content = codecs.open(join(
-        TOOL_FOLDER, file_path), encoding='utf-8').read()
+        FOLDER, file_path), encoding='utf-8').read()
     args = str(tmpdir), 'file-content', {'x_txt': file_content}
     s, c = serve(*args)
     assert extract_text(s, 'a-result') == file_content.strip()

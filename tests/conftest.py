@@ -1,9 +1,10 @@
 from collections import OrderedDict
-from invisibleroads_macros.disk import get_package_folder
-from os.path import join
+from invisibleroads_macros.disk import copy_folder
+from os.path import dirname, join
 from pytest import fixture
 
 from crosscompute.exceptions import DataTypeError
+from crosscompute.models import Result
 from crosscompute.scripts.serve import ResultRequest
 from crosscompute.types import StringType, DATA_TYPE_BY_SUFFIX
 
@@ -30,14 +31,24 @@ def tool_definition():
 
 
 @fixture
+def result(data_folder):
+    result = Result(id=1)
+    result_folder = result.get_folder(data_folder)
+    copy_folder(result_folder, RESULT_FOLDER)
+    return result
+
+
+@fixture
 def result_request(posts_request):
     return ResultRequest(posts_request)
 
 
 DATA_TYPE_BY_SUFFIX['whee'] = WheeType
-PACKAGE_FOLDER = get_package_folder(__file__)
-TOOL_FOLDER = join(PACKAGE_FOLDER, 'tools')
-RESULT_FOLDER = join(PACKAGE_FOLDER, 'results', 'make-story')
+FOLDER = dirname(__file__)
+TOOLS_FOLDER = join(FOLDER, 'tools')
+TOOL_FOLDER = join(TOOLS_FOLDER, 'multiple-tools')
+RESULTS_FOLDER = join(FOLDER, 'results')
+RESULT_FOLDER = join(RESULTS_FOLDER, 'no-links')
 
 
 pytest_plugins = [

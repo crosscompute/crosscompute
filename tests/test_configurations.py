@@ -1,53 +1,59 @@
 from crosscompute.configurations import (
     find_tool_definition, find_tool_definition_by_name, get_default_key,
-    get_default_value, ToolConfigurationNotFound, ToolNotSpecified,
-    ToolNotFound)
+    get_default_value, load_tool_definition, ToolConfigurationNotFound,
+    ToolNotSpecified, ToolNotFound)
 from mock import MagicMock
 from os.path import join
 from pytest import raises
 
-from conftest import PACKAGE_FOLDER
+from conftest import FOLDER, RESULTS_FOLDER
 
 
-DEFAULT_TOOL_NAME = 'split-cashews'
-TOOL_NAME = 'add-integers'
-TOOL_FOLDER = join(PACKAGE_FOLDER, 'configurations')
+CONFIGURATIONS_FOLDER = join(FOLDER, 'configurations')
+FAKE_TOOL_NAME = 'split-peas'
+REAL_TOOL_NAME = 'add-integers'
 
 
 class TestFindToolDefinition(object):
 
     def test_fail_without_tool_configuration(self):
         with raises(ToolConfigurationNotFound):
-            find_tool_definition(join(PACKAGE_FOLDER, 'tools', 'assets'))
+            find_tool_definition(join(FOLDER, 'assets'))
 
     def test_fail_without_tool_specificiation(self):
         with raises(ToolNotSpecified):
-            find_tool_definition(TOOL_FOLDER)
+            find_tool_definition(CONFIGURATIONS_FOLDER)
 
     def test_fail_without_tool_identification(self):
         with raises(ToolNotFound):
-            find_tool_definition(TOOL_FOLDER, DEFAULT_TOOL_NAME)
+            find_tool_definition(CONFIGURATIONS_FOLDER, FAKE_TOOL_NAME)
 
-    def test_use_default_tool_name(self):
-        find_tool_definition(TOOL_FOLDER, TOOL_NAME)
+    def test_use_real_tool_name(self):
+        find_tool_definition(CONFIGURATIONS_FOLDER, REAL_TOOL_NAME)
 
 
 class TestFindToolDefinitionByName(object):
 
     def test_use_default_tool_name(self):
         tool_definition_by_name = find_tool_definition_by_name(
-            join(TOOL_FOLDER, 'python'), DEFAULT_TOOL_NAME)
-        assert TOOL_NAME in tool_definition_by_name
-        assert DEFAULT_TOOL_NAME in tool_definition_by_name
+            join(CONFIGURATIONS_FOLDER, 'aaa'), FAKE_TOOL_NAME)
+        assert FAKE_TOOL_NAME in tool_definition_by_name
+        assert REAL_TOOL_NAME in tool_definition_by_name
         assert len(tool_definition_by_name) == 2
 
     def test_differentiate_tool_names(self):
-        tool_definition_by_name = find_tool_definition_by_name(TOOL_FOLDER)
-        assert TOOL_NAME in tool_definition_by_name
-        assert TOOL_NAME + '-2' in tool_definition_by_name
-        assert 'python' in tool_definition_by_name
-        assert 'scala' in tool_definition_by_name
+        tool_definition_by_name = find_tool_definition_by_name(
+            CONFIGURATIONS_FOLDER)
+        assert REAL_TOOL_NAME in tool_definition_by_name
+        assert REAL_TOOL_NAME + '-2' in tool_definition_by_name
+        assert 'aaa' in tool_definition_by_name
+        assert 'bbb' in tool_definition_by_name
         assert len(tool_definition_by_name) == 4
+
+    def test_skip_links(self):
+        tool_definition_by_name = find_tool_definition_by_name(
+            join(RESULTS_FOLDER, 'bad-link'))
+        assert len(tool_definition_by_name) == 0
 
 
 def test_get_default_key():
@@ -76,3 +82,9 @@ def test_get_default_value(tool_definition, mocker):
 
     assert get_default_value('a_path', {'a': 1}) is None
     assert get_default_value('a_path', {'a_path': 1}) == 'parsed'
+
+
+def test_load_tool_definition():
+    with raises(ToolConfigurationNotFound):
+        load_tool_definition(join(RESULTS_FOLDER, 'bad-link', 'f.cfg'))
+    load_tool_definition(join(RESULTS_FOLDER, 'good-link', 'f.cfg'))

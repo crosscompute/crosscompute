@@ -4,9 +4,10 @@ import simplejson as json
 import webbrowser
 from collections import OrderedDict
 from invisibleroads_macros.disk import (
-    compress_zip, copy_file, copy_text, get_file_extension, link_path,
-    load_text, make_unique_folder, move_path, remove_safely,
-    resolve_relative_path)
+    compress_zip, copy_file, copy_text, get_file_extension, get_absolute_path,
+    get_relative_path, link_path, load_text, make_unique_folder, move_path,
+    remove_safely)
+from invisibleroads_macros.exceptions import BadPath
 from invisibleroads_macros.log import get_log
 from invisibleroads_macros.text import cut_and_strip
 from invisibleroads_posts import (
@@ -17,7 +18,7 @@ from invisibleroads_uploads.models import Upload
 from markupsafe import Markup
 from mistune import markdown
 from os import environ
-from os.path import exists, join, realpath, relpath
+from os.path import exists, join, realpath
 from pyramid.httpexceptions import (
     HTTPBadRequest, HTTPForbidden, HTTPNotFound, HTTPSeeOther)
 from pyramid.renderers import get_renderer
@@ -154,8 +155,9 @@ class ResultRequest(Request):
             arguments[argument_name] = v
         if errors:
             raise DataParseError(errors, arguments)
-        return parse_data_dictionary_from(
-            arguments, configuration_folder, tool_definition)
+        return parse_data_dictionary_from(arguments, configuration_folder, [
+            Result.get_parent_folder(self.data_folder), draft_folder,
+        ], tool_definition)
 
     def spawn_result(self):
         return Result.spawn(self.data_folder)
@@ -203,7 +205,10 @@ class ResultRequest(Request):
         result = Result(id=result_id)
         result_folder = result.get_folder(self.data_folder)
         parent_folder = join(result_folder, folder_name)
-        return resolve_relative_path(path, parent_folder)
+        tool = result.tool
+        return get_absolute_path(path, parent_folder, external_folders=[
+            tool.get_folder(self.data_folder),
+        ])
 
 
 def get_app(
@@ -417,9 +422,7 @@ def see_result_zip(request):
 
 def see_result_file(request):
     result = Result.get_from(request)
-    data_folder = request.data_folder
-    result_folder = result.get_folder(data_folder)
-    return get_result_file_response(request, result_folder)
+    return get_result_file_response(request, result)
 
 
 def see_result(request):
@@ -497,8 +500,8 @@ def get_tool_file_response(request, tool_definition):
     # Check that the file is in an accessible folder
     file_folder = tool_definition['configuration_folder']
     try:
-        file_path = resolve_relative_path(matchdict['path'], file_folder)
-    except IOError:
+        file_path = get_absolute_path(matchdict['path'], file_folder)
+    except BadPath:
         raise HTTPNotFound
     # Check that the file exists
     if not exists(file_path):
@@ -546,16 +549,22 @@ def get_result_zip_response(request, result):
     return FileResponse(file_path, request=request)
 
 
-def get_result_file_response(request, result_folder):
+def get_result_file_response(request, result):
     matchdict = request.matchdict
     # Check that the file is in an accessible folder
     folder_name = matchdict['folder_name']
     if folder_name not in ('x', 'y'):
         raise HTTPForbidden
+    data_folder = request.data_folder
+    result_folder = result.get_folder(data_folder)
     file_folder = join(result_folder, folder_name)
+    tool = result.tool
     try:
-        file_path = resolve_relative_path(matchdict['path'], file_folder)
-    except IOError:
+        file_path = get_absolute_path(
+            matchdict['path'], file_folder, external_folders=[
+                tool.get_folder(data_folder),
+            ])
+    except BadPath:
         raise HTTPNotFound
     # Check that the file exists
     if not exists(file_path):
@@ -599,8 +608,10 @@ def get_tool_file_url(tool_file_path):
     if 'tool_definition' in S:
         tool_definition = S['tool_definition']
         tool_id = Tool.id
-        path = relpath(tool_file_path, tool_definition['configuration_folder'])
-        if path.startswith('.'):
+        try:
+            path = get_relative_path(tool_file_path, tool_definition[
+                'configuration_folder'])
+        except BadPath:
             return
     else:
         try:

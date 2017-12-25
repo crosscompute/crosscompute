@@ -4,6 +4,7 @@ from crosscompute.scripts.serve import (
     get_result_file_response, get_tool_file_response,
     parse_result_relative_path, parse_template_parts)
 from invisibleroads_macros.disk import copy_path, make_folder
+from invisibleroads_macros.exceptions import BadPath
 from invisibleroads_uploads.models import Upload
 from invisibleroads_uploads.tests import prepare_field_storage
 from os.path import join
@@ -11,7 +12,7 @@ from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPNotFound
 from pytest import raises
 from webob.multidict import MultiDict
 
-from conftest import RESULT_FOLDER, TOOL_FOLDER, WheeType
+from conftest import TOOL_FOLDER, WheeType
 
 
 class TestParseTemplate(object):
@@ -159,7 +160,7 @@ def test_parse_result_relative_path():
 
 def test_get_tool_file_response(posts_request, mocker):
     x = 'crosscompute.scripts.serve.'
-    resolve_relative_path = mocker.patch(x + 'resolve_relative_path')
+    get_absolute_path = mocker.patch(x + 'get_absolute_path')
     exists = mocker.patch(x + 'exists')
     posts_request.matchdict = {'path': 'x'}
     tool_definition = {
@@ -167,11 +168,11 @@ def test_get_tool_file_response(posts_request, mocker):
         'argument_names': ['a'],
         'x.a_path': 'x'}
 
-    resolve_relative_path.side_effect = IOError()
+    get_absolute_path.side_effect = BadPath()
     with raises(HTTPNotFound):
         get_tool_file_response(posts_request, tool_definition)
 
-    resolve_relative_path.side_effect = None
+    get_absolute_path.side_effect = None
     exists.return_value = False
     with raises(HTTPNotFound):
         get_tool_file_response(posts_request, tool_definition)
@@ -182,21 +183,21 @@ def test_get_tool_file_response(posts_request, mocker):
         get_tool_file_response(posts_request, tool_definition)
 
 
-def test_get_result_file_response(posts_request, mocker):
+def test_get_result_file_response(posts_request, result, mocker):
     x = 'crosscompute.scripts.serve.'
-    resolve_relative_path = mocker.patch(x + 'resolve_relative_path')
+    get_absolute_path = mocker.patch(x + 'get_absolute_path')
     exists = mocker.patch(x + 'exists')
 
     posts_request.matchdict = {'folder_name': 'a', 'path': 'x'}
     with raises(HTTPForbidden):
-        get_result_file_response(posts_request, RESULT_FOLDER)
+        get_result_file_response(posts_request, result)
 
     posts_request.matchdict = {'folder_name': 'x', 'path': 'x'}
-    resolve_relative_path.side_effect = IOError()
+    get_absolute_path.side_effect = BadPath()
     with raises(HTTPNotFound):
-        get_result_file_response(posts_request, RESULT_FOLDER)
+        get_result_file_response(posts_request, result)
 
-    resolve_relative_path.side_effect = None
+    get_absolute_path.side_effect = None
     exists.return_value = False
     with raises(HTTPNotFound):
-        get_result_file_response(posts_request, RESULT_FOLDER)
+        get_result_file_response(posts_request, result)
