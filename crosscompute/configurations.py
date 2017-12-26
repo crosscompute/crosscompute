@@ -135,7 +135,7 @@ def find_tool_definition_by_name(folder, default_tool_name=None):
                 tool_configuration_path = get_absolute_path(
                     file_name, root_folder)
             except BadPath:
-                L.warn('skipping link (%s)' % join(root_folder, file_name))
+                L.warning('skipping link (%s)' % join(root_folder, file_name))
                 continue
             for tool_name, tool_definition in load_tool_definition_by_name(
                     tool_configuration_path, tool_name).items():

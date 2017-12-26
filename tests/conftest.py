@@ -45,10 +45,8 @@ def result_request(posts_request):
 
 DATA_TYPE_BY_SUFFIX['whee'] = WheeType
 FOLDER = dirname(__file__)
-TOOLS_FOLDER = join(FOLDER, 'tools')
-TOOL_FOLDER = join(TOOLS_FOLDER, 'multiple-tools')
-RESULTS_FOLDER = join(FOLDER, 'results')
-RESULT_FOLDER = join(RESULTS_FOLDER, 'no-links')
+TOOL_FOLDER = join(FOLDER, 'tools', 'multiple-tools')
+RESULT_FOLDER = join(FOLDER, 'results', 'no-links')
 
 
 pytest_plugins = [

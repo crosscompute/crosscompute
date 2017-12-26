@@ -207,8 +207,7 @@ class ResultRequest(Request):
         parent_folder = join(result_folder, folder_name)
         tool = result.tool
         return get_absolute_path(path, parent_folder, external_folders=[
-            tool.get_folder(self.data_folder),
-        ])
+            tool.get_folder(self.data_folder)])
 
 
 def get_app(
@@ -489,7 +488,7 @@ def get_tool_arguments(tool_definition):
         try:
             value = get_default_value(key, tool_definition)
         except DataTypeError:
-            L.warn('could not parse value for %s' % key)
+            L.warning('could not parse value for %s' % key)
             value = None
         value_by_key[key] = value
     return value_by_key
