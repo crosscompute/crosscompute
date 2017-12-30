@@ -210,12 +210,14 @@ def load_tool_definition(result_configuration_path):
 
 
 def load_result_arguments(result_configuration_path, tool_definition):
+    external_folders = [tool_definition['configuration_folder']]
     arguments = load_relative_settings(
-        result_configuration_path, 'result_arguments')
+        result_configuration_path, 'result_arguments', external_folders)
     arguments.pop('target_folder', None)
     result_configuration_folder = dirname(result_configuration_path)
     return parse_data_dictionary_from(
-        arguments, result_configuration_folder, [], tool_definition)
+        arguments, result_configuration_folder, external_folders,
+        tool_definition)
 
 
 def load_result_properties(result_configuration_path):
