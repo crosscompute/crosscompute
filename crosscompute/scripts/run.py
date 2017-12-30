@@ -1,14 +1,15 @@
 from argparse import ArgumentParser, SUPPRESS
+from invisibleroads_macros.disk import link_path
 from invisibleroads_macros.iterable import sort_dictionary
 from invisibleroads_macros.text import unicode_safely
 from six.moves import getcwd
 from sys import argv
 
+from . import ToolScript, corral_arguments, run_script
 from ..configurations import get_default_key, parse_data_dictionary_from
 from ..exceptions import DataParseError
 from ..models import Result
 from ..types import StringType, get_data_type, RESERVED_ARGUMENT_NAMES
-from . import ToolScript, run_script
 
 
 class RunScript(ToolScript):
@@ -27,13 +28,17 @@ class RunScript(ToolScript):
             argv[2:])[0].__dict__, tool_definition['argument_names'])
         try:
             result_arguments = parse_data_dictionary_from(
-                raw_arguments, getcwd(), [], tool_definition)
+                raw_arguments, getcwd(), '*', tool_definition)
         except DataParseError as e:
             return [(k + '.error', v) for k, v in e.message_by_name.items()]
-        result_folder = Result.spawn_folder(data_folder)
+        result = Result.spawn(data_folder)
+        result_arguments = corral_arguments(result.get_source_folder(
+            data_folder), result_arguments, link_path)
+        result_folder = result.get_folder(data_folder)
         target_folder = raw_arguments.get('target_folder')
         run_script(
-            tool_definition, result_arguments, result_folder, target_folder)
+            tool_definition, result_arguments, result_folder,
+            target_folder, external_folders='*')
 
 
 def configure_argument_parser(argument_parser, tool_definition):

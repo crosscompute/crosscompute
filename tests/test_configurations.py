@@ -1,8 +1,12 @@
 from crosscompute.configurations import (
     find_tool_definition, find_tool_definition_by_name, get_default_key,
-    get_default_value, load_tool_definition, ToolConfigurationNotFound,
-    ToolNotSpecified, ToolNotFound)
+    get_default_value, load_tool_definition, _parse_tool_name,
+    _parse_tool_definition, _parse_tool_arguments)
+from crosscompute.exceptions import (
+    ToolConfigurationNotFound, ToolConfigurationNotValid, ToolNotFound,
+    ToolNotSpecified)
 from crosscompute.models import Result
+from functools import partial
 from mock import MagicMock
 from os.path import join
 from pytest import raises
@@ -21,7 +25,7 @@ class TestFindToolDefinition(object):
         with raises(ToolConfigurationNotFound):
             find_tool_definition(join(FOLDER, 'assets'))
 
-    def test_fail_without_tool_specificiation(self):
+    def test_fail_without_tool_specification(self):
         with raises(ToolNotSpecified):
             find_tool_definition(CONFIGURATIONS_FOLDER)
 
@@ -89,3 +93,59 @@ def test_load_tool_definition(data_folder):
     with raises(ToolConfigurationNotFound):
         load_tool_definition(join(FOLDER, 'results', 'bad-link', 'f.cfg'))
     load_tool_definition(join(FOLDER, 'results', 'good-link', 'f.cfg'))
+
+
+def test_parse_tool_name():
+    f = _parse_tool_name
+    with raises(ToolConfigurationNotValid):
+        f('x')
+    assert f('crosscompute') == ''
+    assert f('crosscompute', 'x') == 'x'
+    assert f('crosscompute x') == 'x'
+    assert f('crosscompute x y') == 'x-y'
+    assert f('crosscompute xY') == 'x-y'
+    assert f('crosscompute x2') == 'x-2'
+
+
+def test_parse_tool_definition():
+    f = partial(
+        _parse_tool_definition, configuration_folder='.', tool_name='x')
+    with raises(ToolConfigurationNotValid):
+        f({})
+    with raises(ToolConfigurationNotValid):
+        f({'command_template': ''})
+    with raises(ToolConfigurationNotValid):
+        f({'command_template': 'python run.py {x}', 'x': ''})
+    with raises(ToolConfigurationNotValid):
+        f({'command_template': 'python run.py {x}', 'x_path': ''})
+    assert f({
+        'command_template': 'python run.py {x}',
+        'x': '1',
+    })['show_raw_output'] is False
+
+
+def test_parse_tool_arguments():
+    f = _parse_tool_arguments
+
+    d = f({'command_template': 'python run.py { a }'})
+    assert d['command_template'] == 'python run.py {a}'
+    assert d['argument_names'] == ['a']
+
+    d = f({'command_template': 'python run.py\n    { a }'})
+    assert d['command_template'] == 'python run.py {a}'
+    assert d['argument_names'] == ['a']
+
+    d = f({'command_template': 'python run.py { a = 1 }'})
+    assert d['command_template'] == 'python run.py {a}'
+    assert d['argument_names'] == ['a']
+    assert d['x.a'] == '1'
+
+    d = f({'command_template': 'python run.py { --a=1 }'})
+    assert d['command_template'] == 'python run.py --a={a}'
+    assert d['argument_names'] == ['a']
+    assert d['x.a'] == '1'
+
+    d = f({'command_template': 'python run.py { --a=1 }', 'x.a': '2'})
+    assert d['command_template'] == 'python run.py --a={a}'
+    assert d['argument_names'] == ['a']
+    assert d['x.a'] == '2'

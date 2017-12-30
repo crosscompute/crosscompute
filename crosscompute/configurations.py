@@ -14,6 +14,7 @@ from invisibleroads_macros.log import (
     filter_nested_dictionary, format_path, get_log, parse_nested_dictionary,
     parse_nested_dictionary_from)
 from invisibleroads_macros.shell import make_executable
+from invisibleroads_macros.table import normalize_key
 from invisibleroads_macros.text import has_whitespace, unicode_safely
 from os import getcwd, walk
 from os.path import basename, dirname, isabs, join
@@ -21,15 +22,17 @@ from pyramid.settings import asbool
 from six import text_type
 
 from .exceptions import (
-    DataParseError, DataTypeError, ToolConfigurationNotFound, ToolNotFound,
-    ToolNotSpecified)
+    DataParseError, DataTypeError, ToolConfigurationNotFound,
+    ToolConfigurationNotValid, ToolNotFound, ToolNotSpecified)
 from .symmetries import (
     prepare_path_argument, suppress, COMMAND_LINE_JOIN, SCRIPT_EXTENSION)
 from .types import get_data_type, RESERVED_ARGUMENT_NAMES
 
 
 TOOL_NAME_PATTERN = re.compile(r'crosscompute\s*(.*)')
-ARGUMENT_NAME_PATTERN = re.compile(r'\{(.+?)\}')
+ARGUMENT_PATTERN = re.compile(r'(\{\s*.+?\s*\})')
+ARGUMENT_NAME_PATTERN = re.compile(r'\{\s*(.+?)\s*\}')
+ARGUMENT_SETTING_PATTERN = re.compile(r'(--)?(.+?)\s*=\s*(.+?)')
 L = get_log(__name__)
 
 
@@ -56,7 +59,9 @@ class ResultConfiguration(object):
         tool_location['configuration_folder'] = 'f'
         return save_settings(join(self.result_folder, 'f.cfg'), d)
 
-    def save_result_arguments(self, result_arguments, environment):
+    def save_result_arguments(
+            self, tool_definition, result_arguments, environment,
+            external_folders):
         d = {'result_arguments': OrderedDict((
             k, get_data_type(k).render(v)
         ) for k, v in result_arguments.items())}
@@ -67,7 +72,9 @@ class ResultConfiguration(object):
             print('')
         d = filter_nested_dictionary(d, lambda x: x.startswith(
             '_') or x in RESERVED_ARGUMENT_NAMES)
-        d = make_relative_paths(d, self.result_folder)
+        d = make_relative_paths(d, self.result_folder, external_folders or [
+            tool_definition['configuration_folder'],
+        ])
         return save_settings(join(self.result_folder, 'x.cfg'), d)
 
     def save_result_properties(self, result_properties):
@@ -135,7 +142,7 @@ def find_tool_definition_by_name(folder, default_tool_name=None):
                 tool_configuration_path = get_absolute_path(
                     file_name, root_folder)
             except BadPath:
-                L.warning('skipping link (%s)' % join(root_folder, file_name))
+                L.warning('link skipped (%s)' % join(root_folder, file_name))
                 continue
             for tool_name, tool_definition in load_tool_definition_by_name(
                     tool_configuration_path, tool_name).items():
@@ -172,27 +179,19 @@ def load_tool_definition_by_name(
     configuration = RawCaseSensitiveConfigParser()
     configuration.read(tool_configuration_path, 'utf-8')
     configuration_folder = dirname(tool_configuration_path)
-    d = {
-        u'configuration_path': tool_configuration_path,
-        u'configuration_folder': configuration_folder,
-    }
     for section_name in configuration.sections():
         try:
-            tool_name = TOOL_NAME_PATTERN.match(section_name).group(1).strip()
-        except AttributeError:
+            tool_name = _parse_tool_name(section_name, default_tool_name)
+        except ToolConfigurationNotValid as e:
             continue
-        if not tool_name:
-            tool_name = default_tool_name
-        tool_definition = {
-            unicode_safely(k): unicode_safely(v)
-            for k, v in configuration.items(section_name)}
-        tool_definition[u'show_raw_output'] = asbool(tool_definition.get(
-            'show_raw_output'))
-        tool_definition[u'tool_name'] = tool_name
-        tool_definition[u'argument_names'] = parse_tool_argument_names(
-            tool_definition.get('command_template', u''))
-        tool_definition_by_name[tool_name] = dict(make_absolute_paths(
-            tool_definition, configuration_folder), **d)
+        try:
+            tool_definition = _parse_tool_definition(dict(configuration.items(
+                section_name)), configuration_folder, tool_name)
+        except ToolConfigurationNotValid as e:
+            L.warning('tool skipped (configuration_path=%s, tool_name=%s) ' % (
+                tool_configuration_path, tool_name) + str(e))
+            continue
+        tool_definition_by_name[tool_name] = tool_definition
     return tool_definition_by_name
 
 
@@ -229,10 +228,6 @@ def format_available_tools(tool_definition_by_name):
     tool_count = len(tool_definition_by_name)
     return '{} available:\n{}'.format(
         tool_count, '\n'.join(tool_definition_by_name))
-
-
-def parse_tool_argument_names(command_template):
-    return tuple(ARGUMENT_NAME_PATTERN.findall(command_template))
 
 
 def parse_data_dictionary(
@@ -312,3 +307,59 @@ def _get_unique_tool_name(tool_name, existing_tool_names):
         suggested_tool_name = '%s-%s' % (tool_name, i)
         i += 1
     return suggested_tool_name
+
+
+def _parse_tool_name(configuration_section_name, default_tool_name=None):
+    match = TOOL_NAME_PATTERN.match(configuration_section_name)
+    if not match:
+        raise ToolConfigurationNotValid
+    tool_name = match.group(1).strip() or default_tool_name or ''
+    return normalize_key(
+        tool_name, word_separator='-', separate_camel_case=True,
+        separate_letter_digit=True)
+
+
+def _parse_tool_definition(value_by_key, configuration_folder, tool_name):
+    try:
+        d = _parse_tool_arguments(value_by_key)
+    except KeyError as e:
+        raise ToolConfigurationNotValid('%s required' % e)
+    d['configuration_folder'] = configuration_folder
+    d['tool_name'] = tool_name
+    d['show_raw_output'] = asbool(value_by_key.get('show_raw_output'))
+    for k, v in make_absolute_paths(d, configuration_folder).items():
+        if k in ('argument_names', 'show_raw_output'):
+            continue
+        v = v.strip()
+        if not v:
+            message = 'value required for %s' % k
+            if k.endswith('_path'):
+                message += ' which must be a file in ' + configuration_folder
+            raise ToolConfigurationNotValid(message)
+        d[unicode_safely(k)] = unicode_safely(v)
+    return d
+
+
+def _parse_tool_arguments(value_by_key):
+    d = value_by_key.copy()
+    terms, argument_names = [], []
+    for term in ARGUMENT_PATTERN.split(value_by_key['command_template']):
+        name_match = ARGUMENT_NAME_PATTERN.match(term)
+        if name_match:
+            argument_name = name_match.group(1)
+            setting_match = ARGUMENT_SETTING_PATTERN.match(argument_name)
+            if setting_match:
+                prefix, argument_name, argument_value = setting_match.groups()
+                term = '--%s={%s}' % (
+                    argument_name, argument_name,
+                ) if prefix else '{%s}' % argument_name
+                argument_key = get_default_key(argument_name, value_by_key)
+                if not argument_key:
+                    d['x.%s' % argument_name] = argument_value
+            else:
+                term = '{%s}' % argument_name
+            argument_names.append(argument_name)
+        terms.append(term.strip())
+    d['command_template'] = ' '.join(terms).strip()
+    d['argument_names'] = argument_names
+    return d

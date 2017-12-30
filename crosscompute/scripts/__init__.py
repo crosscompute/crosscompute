@@ -37,13 +37,13 @@ class ToolScript(Script):
             '--with_debugging', action='store_true')
 
     def run(self, args):
+        logging.basicConfig(level=logging.WARNING)
         initialize_data_types(args.suffix_by_data_type)
         tool_definition = prepare_tool_definition(
             args.tool_name, args.with_debugging)
         tool_name = tool_definition['tool_name']
         data_folder = args.data_folder or join(
             HOME_FOLDER, '.crosscompute', tool_name)
-        logging.basicConfig(level=logging.WARNING)
         return tool_definition, data_folder
 
 
@@ -93,7 +93,7 @@ def corral_arguments(argument_folder, result_arguments, use=link_path):
 
 def run_script(
         tool_definition, result_arguments, result_folder, target_folder=None,
-        environment=None, without_logging=False):
+        environment=None, without_logging=False, external_folders=None):
     timestamp, environment = time.time(), environment or {}
     if 'target_folder' in tool_definition['argument_names']:
         y = make_folder(abspath(target_folder or join(result_folder, 'y')))
@@ -101,7 +101,8 @@ def run_script(
     # Record
     result_configuration = ResultConfiguration(result_folder, without_logging)
     result_configuration.save_tool_location(tool_definition)
-    result_configuration.save_result_arguments(result_arguments, environment)
+    result_configuration.save_result_arguments(
+        tool_definition, result_arguments, environment, external_folders)
     # Run
     command_terms = split_arguments(render_command(tool_definition[
         'command_template'].replace('\n', ' '), result_arguments))
