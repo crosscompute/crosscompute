@@ -1,6 +1,3 @@
-# SQLite
-*.db
-*.db-journal
 # Python
 *.egg*
 *.py[co]
@@ -10,12 +7,16 @@
 __pycache__
 build
 dist
+# Sass
+.sass-cache
+# SQLite
+*.db
+*.db-journal
 # Transient
 *.log
 *.map
 *.out
 *.tmp
-.sass-cache
 data_*
 # Vim
 *.sw[op]
