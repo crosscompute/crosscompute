@@ -60,8 +60,8 @@ class ResultConfiguration(object):
         return save_settings(join(self.result_folder, 'f.cfg'), d)
 
     def save_result_arguments(
-            self, tool_definition, result_arguments, environment,
-            external_folders):
+            self, tool_definition, result_arguments, environment=None,
+            external_folders=None):
         d = {'result_arguments': OrderedDict((
             k, get_data_type(k).render(v)
         ) for k, v in result_arguments.items())}
@@ -314,9 +314,7 @@ def _parse_tool_name(configuration_section_name, default_tool_name=None):
     if not match:
         raise ToolConfigurationNotValid
     tool_name = match.group(1).strip() or default_tool_name or ''
-    return normalize_key(
-        tool_name, word_separator='-', separate_camel_case=True,
-        separate_letter_digit=True)
+    return normalize_key(tool_name, word_separator='-')
 
 
 def _parse_tool_definition(value_by_key, configuration_folder, tool_name):

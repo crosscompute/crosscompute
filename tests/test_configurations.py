@@ -103,8 +103,6 @@ def test_parse_tool_name():
     assert f('crosscompute', 'x') == 'x'
     assert f('crosscompute x') == 'x'
     assert f('crosscompute x y') == 'x-y'
-    assert f('crosscompute xY') == 'x-y'
-    assert f('crosscompute x2') == 'x-2'
 
 
 def test_parse_tool_definition():
