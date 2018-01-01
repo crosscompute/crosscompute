@@ -156,8 +156,8 @@ class ResultRequest(Request):
         if errors:
             raise DataParseError(errors, arguments)
         return parse_data_dictionary_from(arguments, configuration_folder, [
-            Result.get_parent_folder(self.data_folder), draft_folder,
-        ], tool_definition)
+            Result.get_parent_folder(self.data_folder),
+            draft_folder], tool_definition)
 
     def spawn_result(self):
         return Result.spawn(self.data_folder)
