@@ -96,6 +96,7 @@ class ServeScript(ToolScript):
 class ResultRequest(Request):
 
     reserved_argument_names = RESERVED_ARGUMENT_NAMES
+    ResultClass = Result
 
     def __init__(self, request):
         self.__dict__.update(request.__dict__)
@@ -202,7 +203,9 @@ class ResultRequest(Request):
         return target_path
 
     def get_file_path(self, result_id, folder_name, path):
-        result = Result(id=result_id)
+        result = self.ResultClass.get_from(self, record_id=result_id)
+        if not result:
+            raise IOError
         result_folder = result.get_folder(self.data_folder)
         parent_folder = join(result_folder, folder_name)
         tool = result.tool
