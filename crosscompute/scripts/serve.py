@@ -5,7 +5,7 @@ import webbrowser
 from collections import OrderedDict
 from invisibleroads_macros.disk import (
     compress_zip, copy_file, copy_text, get_file_extension, get_absolute_path,
-    get_relative_path, link_path, load_text, make_unique_folder, move_path,
+    link_path, load_text, make_unique_folder, move_path,
     remove_safely)
 from invisibleroads_macros.exceptions import BadPath
 from invisibleroads_macros.log import get_log
@@ -400,8 +400,10 @@ def run_tool_json(request):
 
 def see_tool_file(request):
     settings = request.registry.settings
+    data_folder = request.data_folder
+    tool_folder = Tool().get_folder(data_folder)
     tool_definition = settings['tool_definition']
-    return get_tool_file_response(request, tool_definition)
+    return get_tool_file_response(request, tool_folder, tool_definition)
 
 
 def see_tool(request):
@@ -494,12 +496,11 @@ def get_tool_arguments(tool_definition):
     return value_by_key
 
 
-def get_tool_file_response(request, tool_definition):
+def get_tool_file_response(request, tool_folder, tool_definition):
     matchdict = request.matchdict
     # Check that the file is in an accessible folder
-    file_folder = tool_definition['configuration_folder']
     try:
-        file_path = get_absolute_path(matchdict['path'], file_folder)
+        file_path = get_absolute_path(matchdict['path'], tool_folder)
     except BadPath:
         raise HTTPNotFound
     # Check that the file exists
@@ -604,19 +605,10 @@ def get_file_url(file_path):
 
 
 def get_tool_file_url(tool_file_path):
-    if 'tool_definition' in S:
-        tool_definition = S['tool_definition']
-        tool_id = Tool.id
-        try:
-            path = get_relative_path(tool_file_path, tool_definition[
-                'configuration_folder'])
-        except BadPath:
-            return
-    else:
-        try:
-            tool_id, path = TOOL_PATH_PATTERN.search(tool_file_path).groups()
-        except AttributeError:
-            return
+    try:
+        tool_id, path = TOOL_PATH_PATTERN.search(tool_file_path).groups()
+    except AttributeError:
+        return
     return '/t/%s/-/%s' % (tool_id, path)
 
 

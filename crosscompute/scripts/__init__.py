@@ -16,10 +16,11 @@ from os.path import abspath, basename, exists, isabs, join
 from stevedore.extension import ExtensionManager
 
 from ..configurations import (
-    ResultConfiguration, load_result_arguments, load_tool_definition,
-    parse_data_dictionary, render_command)
+    ResultConfiguration, find_tool_definition, load_result_arguments,
+    load_tool_definition, parse_data_dictionary, render_command)
 from ..exceptions import CrossComputeError, DataParseError
 from ..extensions import DefaultTool
+from ..models import Tool
 from ..symmetries import subprocess, ENVIRONMENT_VARIABLES
 from ..types import initialize_data_types
 
@@ -44,6 +45,9 @@ class ToolScript(Script):
         tool_name = tool_definition['tool_name']
         data_folder = args.data_folder or join(
             HOME_FOLDER, '.crosscompute', tool_name)
+        tool_folder = Tool().get_folder(data_folder)
+        link_path(tool_folder, tool_definition['configuration_folder'])
+        tool_definition = find_tool_definition(tool_folder, tool_name)
         return tool_definition, data_folder
 
 
