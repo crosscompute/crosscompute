@@ -5,6 +5,7 @@
 - Render run_tool_json errors in form
 - Replace setup script with support for setup.sh in work script
 - Replace show_standard_output, show_standard_error with show_raw_output
+- Support inline default values in tool configuration
 
 0.6
 ---
