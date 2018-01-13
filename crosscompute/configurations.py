@@ -93,7 +93,7 @@ class ResultConfiguration(object):
         if command_template.startswith('python'):
             debugger_command = 'pudb' if sys.version_info[0] < 3 else 'pudb3'
             debugger_template = ' '.join([
-                debugger_command] + command_template.split(maxsplit=1)[1:])
+                debugger_command] + command_template.split(' ', 1)[1:])
             self.save_script(
                 'x-debugger', 'debugger', debugger_template, tool_definition,
                 result_arguments)
