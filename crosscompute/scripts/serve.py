@@ -203,8 +203,9 @@ class ResultRequest(Request):
         return target_path
 
     def get_file_path(self, result_id, folder_name, path):
-        result = self.ResultClass.get_from(self, record_id=result_id)
-        if not result:
+        try:
+            result = self.ResultClass.get_from(self, record_id=result_id)
+        except HTTPNotFound:
             raise IOError
         result_folder = result.get_folder(self.data_folder)
         parent_folder = join(result_folder, folder_name)

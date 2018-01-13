@@ -159,6 +159,7 @@ def test_parse_result_relative_path():
 
 
 def test_get_tool_file_response(posts_request, mocker):
+    f = get_tool_file_response
     x = 'crosscompute.scripts.serve.'
     get_absolute_path = mocker.patch(x + 'get_absolute_path')
     exists = mocker.patch(x + 'exists')
@@ -170,17 +171,17 @@ def test_get_tool_file_response(posts_request, mocker):
 
     get_absolute_path.side_effect = BadPath()
     with raises(HTTPNotFound):
-        get_tool_file_response(posts_request, tool_definition)
+        f(posts_request, TOOL_FOLDER, tool_definition)
 
     get_absolute_path.side_effect = None
     exists.return_value = False
     with raises(HTTPNotFound):
-        get_tool_file_response(posts_request, tool_definition)
+        f(posts_request, TOOL_FOLDER, tool_definition)
 
     exists.return_value = True
     del tool_definition['x.a_path']
     with raises(HTTPNotFound):
-        get_tool_file_response(posts_request, tool_definition)
+        f(posts_request, TOOL_FOLDER, tool_definition)
 
 
 def test_get_result_file_response(posts_request, result, mocker):
