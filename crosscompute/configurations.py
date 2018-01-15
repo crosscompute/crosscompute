@@ -218,9 +218,20 @@ def load_result_arguments(result_configuration_path, tool_definition):
         result_configuration_path, 'result_arguments', external_folders)
     arguments.pop('target_folder', None)
     result_configuration_folder = dirname(result_configuration_path)
-    return parse_data_dictionary_from(
-        arguments, result_configuration_folder, external_folders,
-        tool_definition)
+    try:
+        d = parse_data_dictionary_from(
+            arguments, result_configuration_folder, external_folders,
+            tool_definition)
+    except DataParseError as e:
+        d = e.value_by_key
+        for k, v in e.message_by_name.items():
+            L.warning(
+                'argument skipped (' +
+                'configuration_path=%s ' % result_configuration_path +
+                'argument_name=%s ' % k +
+                'error_message=%s)' % v)
+            del d[k]
+    return d
 
 
 def load_result_properties(result_configuration_path):
