@@ -210,7 +210,10 @@ def load_tool_definition(result_configuration_path):
 
 
 def load_result_arguments(result_configuration_path, tool_definition):
-    external_folders = [tool_definition['configuration_folder']]
+    results_folder = dirname(dirname(result_configuration_path))
+    external_folders = [
+        tool_definition['configuration_folder'],
+        results_folder]
     arguments = load_relative_settings(
         result_configuration_path, 'result_arguments', external_folders)
     arguments.pop('target_folder', None)
