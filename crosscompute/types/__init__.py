@@ -49,7 +49,7 @@ class DataType(object):
         try:
             value = Class.load(path)
         except Exception as e:
-            log_traceback(L)
+            log_traceback(L, e)
             value = None
         return value
 
@@ -67,7 +67,7 @@ class DataType(object):
         except DataTypeError as e:
             raise
         except Exception as e:
-            log_traceback(L)
+            log_traceback(L, e)
         return x
 
     @classmethod
