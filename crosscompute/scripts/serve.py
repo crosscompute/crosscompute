@@ -535,7 +535,11 @@ def get_data_items(value_by_key, tool_definition):
             key = key[:-5]
             data_type = get_data_type(key)
             file_location = get_result_file_location(value)
-            default_value = get_default_value(key, tool_definition)
+            default_key = get_default_key(key, tool_definition)
+            if tool_definition[default_key] != value:
+                default_value = get_default_value(key, tool_definition)
+            else:
+                default_value = None
             value = data_type.load_safely(value, default_value)
         else:
             data_type = get_data_type(key)
