@@ -45,18 +45,22 @@ class DataType(object):
         codecs.open(path, 'w', encoding='utf-8').write(value)
 
     @classmethod
-    def load_safely(Class, path):
+    def load_safely(Class, path, default_value=None):
+        f = Class.load
         try:
-            value = Class.load(path)
+            if 'default_value' in f.__code__.co_varnames:
+                value = Class.load(path, default_value)
+            else:
+                value = Class.load(path)
         except Exception as e:
             log_traceback(L, e)
             value = None
         return value
 
     @classmethod
-    def load(Class, path):
+    def load(Class, path, default_value=None):
         text = codecs.open(path, encoding='utf-8').read()
-        return Class.parse(text)
+        return Class.parse(text, default_value)
 
     @classmethod
     def parse_safely(Class, x, default_value=None):
