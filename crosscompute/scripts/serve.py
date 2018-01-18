@@ -536,7 +536,7 @@ def get_data_items(value_by_key, tool_definition):
             data_type = get_data_type(key)
             file_location = get_result_file_location(value)
             default_key = get_default_key(key, tool_definition)
-            if tool_definition[default_key] != value:
+            if default_key and tool_definition[default_key] != value:
                 default_value = get_default_value(key, tool_definition)
             else:
                 default_value = None
