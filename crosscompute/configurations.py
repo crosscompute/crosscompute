@@ -1,5 +1,6 @@
 import codecs
 import re
+import shlex
 import sys
 from collections import OrderedDict
 from fnmatch import fnmatch
@@ -32,7 +33,7 @@ from .types import get_data_type, RESERVED_ARGUMENT_NAMES
 TOOL_NAME_PATTERN = re.compile(r'crosscompute\s*(.*)')
 ARGUMENT_PATTERN = re.compile(r'(\{\s*.+?\s*\})')
 ARGUMENT_NAME_PATTERN = re.compile(r'\{\s*(.+?)\s*\}')
-ARGUMENT_SETTING_PATTERN = re.compile(r'(--)?(.+?)\s*=\s*(.+?)')
+ARGUMENT_SETTING_PATTERN = re.compile(r'(--)?(.+?)\s*=\s*(.+)')
 L = get_log(__name__)
 
 
@@ -90,10 +91,10 @@ class ResultConfiguration(object):
         self.save_script(
             'x', 'command', command_template, tool_definition,
             result_arguments)
-        if command_template.startswith('python'):
+        if command_template.startswith('"python'):
             debugger_command = 'pudb' if sys.version_info[0] < 3 else 'pudb3'
-            debugger_template = ' '.join([
-                debugger_command] + command_template.split(' ', 1)[1:])
+            debugger_template = re.sub(
+                r'"python', '"' + debugger_command, command_template)
             self.save_script(
                 'x-debugger', 'debugger', debugger_template, tool_definition,
                 result_arguments)
@@ -358,22 +359,45 @@ def _parse_tool_arguments(value_by_key):
     d = value_by_key.copy()
     terms, argument_names = [], []
     for term in ARGUMENT_PATTERN.split(value_by_key['command_template']):
+        term = term.strip()
+        if not term:
+            continue
         name_match = ARGUMENT_NAME_PATTERN.match(term)
-        if name_match:
+        if not name_match:
+            terms.extend(_split_term(term))
+        else:
             argument_name = name_match.group(1)
             setting_match = ARGUMENT_SETTING_PATTERN.match(argument_name)
-            if setting_match:
+            if not setting_match:
+                term = '{%s}' % argument_name
+            else:
                 prefix, argument_name, argument_value = setting_match.groups()
-                term = '--%s={%s}' % (
+                term = '--%s {%s}' % (
                     argument_name, argument_name,
                 ) if prefix else '{%s}' % argument_name
                 argument_key = get_default_key(argument_name, value_by_key)
                 if not argument_key:
                     d['x.%s' % argument_name] = argument_value
-            else:
-                term = '{%s}' % argument_name
+            _append_term(term, terms)
             argument_names.append(argument_name)
-        terms.append(term.strip())
-    d['command_template'] = ' '.join(terms).strip()
+    d['command_template'] = '\n'.join(terms).strip()
     d['argument_names'] = argument_names
     return d
+
+
+def _split_term(term):
+    ys = []
+    for x in shlex.split(term):
+        if x.startswith('--'):
+            y = x
+        else:
+            y = '"%s"' % x
+        ys.append(y)
+    return ys
+
+
+def _append_term(term, terms):
+    if terms and not term.startswith('--') and terms[-1].startswith('--'):
+        terms[-1] += ' ' + term
+    else:
+        terms.append(term)
