@@ -346,11 +346,8 @@ def _parse_tool_definition(value_by_key, configuration_folder, tool_name):
         if k in ('argument_names', 'show_raw_output'):
             continue
         v = v.strip()
-        if not v:
-            message = 'value required for %s' % k
-            if k.endswith('_path'):
-                message += ' which must be a file in ' + configuration_folder
-            raise ToolConfigurationNotValid(message)
+        if k.endswith('_path') and not v:
+            raise ToolConfigurationNotValid('file not found (%s=%s)' % (k, v))
         d[unicode_safely(k)] = unicode_safely(v)
     return d
 

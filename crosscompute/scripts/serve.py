@@ -116,7 +116,7 @@ class ResultRequest(Request):
                 self.data_folder), result_arguments, move_path)
         except IOError as e:
             raise HTTPBadRequest({
-                e.args[0]: 'path not found (%s)' % e.args[1]})
+                e.args[0]: 'file not found (%s)' % e.args[1]})
         remove_safely(draft_folder)
         return result
 

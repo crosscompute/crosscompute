@@ -126,24 +126,24 @@ def test_parse_tool_arguments():
     f = _parse_tool_arguments
 
     d = f({'command_template': 'python run.py { a }'})
-    assert d['command_template'] == 'python run.py {a}'
+    assert d['command_template'] == '"python"\n"run.py"\n{a}'
     assert d['argument_names'] == ['a']
 
     d = f({'command_template': 'python run.py\n    { a }'})
-    assert d['command_template'] == 'python run.py {a}'
+    assert d['command_template'] == '"python"\n"run.py"\n{a}'
     assert d['argument_names'] == ['a']
 
     d = f({'command_template': 'python run.py { a = 1 }'})
-    assert d['command_template'] == 'python run.py {a}'
+    assert d['command_template'] == '"python"\n"run.py"\n{a}'
     assert d['argument_names'] == ['a']
     assert d['x.a'] == '1'
 
     d = f({'command_template': 'python run.py { --a=1 }'})
-    assert d['command_template'] == 'python run.py --a={a}'
+    assert d['command_template'] == '"python"\n"run.py"\n--a {a}'
     assert d['argument_names'] == ['a']
     assert d['x.a'] == '1'
 
     d = f({'command_template': 'python run.py { --a=1 }', 'x.a': '2'})
-    assert d['command_template'] == 'python run.py --a={a}'
+    assert d['command_template'] == '"python"\n"run.py"\n--a {a}'
     assert d['argument_names'] == ['a']
     assert d['x.a'] == '2'
