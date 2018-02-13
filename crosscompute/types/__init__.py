@@ -32,13 +32,13 @@ class DataItem(object):
 
 @add_metaclass(ABCMeta)
 class DataType(object):
-    suffixes = ()
-    formats = ()
-    style = None
-    script = None
-    template = None
-    views = ()
-    requires_value_for_path = True
+    suffixes = ()    # List name suffixes to reserve for this data type
+    formats = ()     # Set default storage format and direct content format
+    style = None     # Set style path relative to package
+    script = None    # Set script path relative to package
+    template = None  # Set template path relative to package
+    views = ()       # List function names to register as views
+    requires_value_for_path = True  # Show error if path is empty
 
     @classmethod
     def save(Class, path, value):
