@@ -31,7 +31,7 @@ from wsgiref.simple_server import make_server
 from . import ToolScript, corral_arguments, run_script
 from ..configurations import (
     ResultConfiguration, get_default_key, get_default_value,
-    parse_data_dictionary_from, ARGUMENT_NAME_PATTERN)
+    parse_data_dictionary_from, ARGUMENT_PATTERN)
 from ..exceptions import DataParseError, DataTypeError
 from ..models import Result, Tool
 from ..settings import S
@@ -312,12 +312,12 @@ def parse_template_parts(template_text, data_items):
     content = MARKDOWN_TITLE_PATTERN.sub('', template_text).strip()
     parts = []
     data_item_by_key = {x.key: x for x in data_items}
-    variables = [x.strip() for x in ARGUMENT_NAME_PATTERN.findall(content)]
-    for index, x in enumerate(ARGUMENT_NAME_PATTERN.split(content)):
+    for index, x in enumerate(ARGUMENT_PATTERN.split(content)):
         x = x.strip()
         if not x:
             continue
-        if x in variables:
+        if x.startswith('{') and x.endswith('}'):
+            x = x.strip('{ }')
             text, help_ = cut_and_strip(x, ' ? ')
             key, name = cut_and_strip(text, ':')
             x = data_item_by_key.get(key, '{ %s }' % x)

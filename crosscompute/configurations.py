@@ -32,8 +32,6 @@ from .types import get_data_type, RESERVED_ARGUMENT_NAMES
 
 TOOL_NAME_PATTERN = re.compile(r'crosscompute\s*(.*)')
 ARGUMENT_PATTERN = re.compile(r'(\{\s*.+?\s*\})')
-ARGUMENT_NAME_PATTERN = re.compile(r'\{\s*(.+?)\s*\}')
-ARGUMENT_SETTING_PATTERN = re.compile(r'(--)?(.+?)\s*=\s*(.+)')
 L = get_log(__name__)
 
 
@@ -91,10 +89,10 @@ class ResultConfiguration(object):
         self.save_script(
             'x', 'command', command_template, tool_definition,
             result_arguments)
-        if command_template.startswith('"python'):
+        if command_template.startswith('python'):
             debugger_command = 'pudb' if sys.version_info[0] < 3 else 'pudb3'
             debugger_template = re.sub(
-                r'"python', '"' + debugger_command, command_template)
+                r'^python', debugger_command, command_template)
             self.save_script(
                 'x-debugger', 'debugger', debugger_template, tool_definition,
                 result_arguments)
@@ -336,9 +334,12 @@ def _parse_tool_name(configuration_section_name, default_tool_name=None):
 
 def _parse_tool_definition(value_by_key, configuration_folder, tool_name):
     try:
-        d = _parse_tool_arguments(value_by_key)
+        command_template = value_by_key['command_template'].strip()
     except KeyError as e:
-        raise ToolConfigurationNotValid('%s required' % e)
+        raise ToolConfigurationNotValid('command_template required')
+    if not command_template:
+        raise ToolConfigurationNotValid('command_template expected')
+    d = _parse_tool_arguments(value_by_key)
     d['configuration_folder'] = configuration_folder
     d['tool_name'] = tool_name
     d['show_raw_output'] = asbool(value_by_key.get('show_raw_output'))
@@ -359,24 +360,25 @@ def _parse_tool_arguments(value_by_key):
         term = term.strip()
         if not term:
             continue
-        name_match = ARGUMENT_NAME_PATTERN.match(term)
-        if not name_match:
+        if not term.startswith('{') and not term.endswith('}'):
             terms.extend(_split_term(term))
+            continue
+        argument_string = term.strip('{ }')
+        if not argument_string:
+            continue
+        argument_parts = argument_string.split(' ', 1)
+        argument_head = argument_parts[0]
+        argument_name = argument_head.lstrip('-')
+        argument_key = get_default_key(argument_name, value_by_key)
+        if not argument_key and len(argument_parts) > 1:
+            argument_value = argument_parts[1]
+            d['x.%s' % argument_name] = argument_value
+        if argument_head.startswith('--'):
+            term = '--%s {%s}' % (argument_name, argument_name)
         else:
-            argument_name = name_match.group(1)
-            setting_match = ARGUMENT_SETTING_PATTERN.match(argument_name)
-            if not setting_match:
-                term = '{%s}' % argument_name
-            else:
-                prefix, argument_name, argument_value = setting_match.groups()
-                term = '--%s {%s}' % (
-                    argument_name, argument_name,
-                ) if prefix else '{%s}' % argument_name
-                argument_key = get_default_key(argument_name, value_by_key)
-                if not argument_key:
-                    d['x.%s' % argument_name] = argument_value
-            _append_term(term, terms)
-            argument_names.append(argument_name)
+            term = '{%s}' % argument_name
+        _append_term(term, terms)
+        argument_names.append(argument_name)
     d['command_template'] = '\n'.join(terms).strip()
     d['argument_names'] = argument_names
     return d
@@ -385,7 +387,7 @@ def _parse_tool_arguments(value_by_key):
 def _split_term(term):
     ys = []
     for x in shlex.split(term):
-        if x.startswith('--'):
+        if x.startswith('--') or ' ' not in x:
             y = x
         else:
             y = '"%s"' % x
@@ -394,7 +396,10 @@ def _split_term(term):
 
 
 def _append_term(term, terms):
-    if terms and not term.startswith('--') and terms[-1].startswith('--'):
+    conditions = (
+        terms and not term.startswith('--') and
+        terms[-1].startswith('--') and not terms[-1].endswith('}'))
+    if conditions:
         terms[-1] += ' ' + term
     else:
         terms.append(term)

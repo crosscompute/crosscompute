@@ -48,6 +48,7 @@ class ToolScript(Script):
         tool_folder = Tool().get_folder(data_folder)
         link_path(tool_folder, tool_definition['configuration_folder'])
         tool_definition = find_tool_definition(tool_folder, tool_name)
+        tool_definition['tool_name'] = tool_name
         return tool_definition, data_folder
 
 
