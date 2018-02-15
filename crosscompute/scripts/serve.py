@@ -5,7 +5,7 @@ import webbrowser
 from collections import OrderedDict
 from invisibleroads_macros.disk import (
     compress_zip, copy_file, copy_text, get_file_extension, get_absolute_path,
-    link_path, load_text, make_unique_folder, move_path,
+    load_text, make_hard_link, make_unique_folder, move_path,
     remove_safely)
 from invisibleroads_macros.exceptions import BadPath
 from invisibleroads_macros.log import get_log
@@ -185,12 +185,14 @@ class ResultRequest(Request):
             if not default_path:
                 raise KeyError
             target_name = argument_noun + get_file_extension(default_path)
-            return link_path(join(draft_folder, target_name), default_path)
+            return make_hard_link(join(
+                draft_folder, target_name), default_path)
         # If client sent a relative path (x_table=11/x/y.csv), find it
         if '/' in v:
             source_path = self.get_file_path(*parse_result_relative_path(v))
             target_name = argument_noun + get_file_extension(source_path)
-            return link_path(join(draft_folder, target_name), source_path)
+            return make_hard_link(join(
+                draft_folder, target_name), source_path)
         # If client sent an upload id (x_table=x), find it
         try:
             upload = Upload.get_from(self, record_id=v)

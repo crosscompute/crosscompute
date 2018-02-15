@@ -9,7 +9,7 @@ from invisibleroads_macros.configuration import (
     load_settings, make_absolute_paths, make_relative_paths, save_settings)
 from invisibleroads_macros.descriptor import cached_property
 from invisibleroads_macros.disk import (
-    are_same_path, get_absolute_path, link_path)
+    are_same_path, get_absolute_path, make_soft_link)
 from invisibleroads_macros.exceptions import BadPath
 from invisibleroads_macros.log import (
     filter_nested_dictionary, format_path, get_log, parse_nested_dictionary,
@@ -44,7 +44,7 @@ class ResultConfiguration(object):
     def save_tool_location(self, tool_definition, tool_id=None):
         configuration_folder = tool_definition['configuration_folder']
         with suppress(ValueError):
-            link_path(join(self.result_folder, 'f'), configuration_folder)
+            make_soft_link(join(self.result_folder, 'f'), configuration_folder)
         tool_location = {
             'configuration_folder': configuration_folder,
             'tool_name': tool_definition['tool_name'],

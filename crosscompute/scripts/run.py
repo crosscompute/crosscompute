@@ -1,5 +1,5 @@
 from argparse import ArgumentParser, SUPPRESS
-from invisibleroads_macros.disk import link_path
+from invisibleroads_macros.disk import make_hard_link
 from invisibleroads_macros.iterable import sort_dictionary
 from invisibleroads_macros.text import unicode_safely
 from six.moves import getcwd
@@ -33,7 +33,7 @@ class RunScript(ToolScript):
             return [(k + '.error', v) for k, v in e.message_by_name.items()]
         result = Result.spawn(data_folder)
         result_arguments = corral_arguments(result.get_source_folder(
-            data_folder), result_arguments, link_path)
+            data_folder), result_arguments, make_hard_link)
         result_folder = result.get_folder(data_folder)
         target_folder = raw_arguments.get('target_folder')
         run_script(
