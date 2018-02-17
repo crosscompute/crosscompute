@@ -1,6 +1,5 @@
 import codecs
 import re
-import shlex
 import sys
 from collections import OrderedDict
 from fnmatch import fnmatch
@@ -16,7 +15,8 @@ from invisibleroads_macros.log import (
     parse_nested_dictionary_from)
 from invisibleroads_macros.shell import make_executable
 from invisibleroads_macros.table import normalize_key
-from invisibleroads_macros.text import has_whitespace, unicode_safely
+from invisibleroads_macros.text import (
+    has_whitespace, split_shell_command, unicode_safely)
 from os import getcwd, walk
 from os.path import basename, dirname, isabs, join
 from pyramid.settings import asbool
@@ -386,7 +386,7 @@ def _parse_tool_arguments(value_by_key):
 
 def _split_term(term):
     ys = []
-    for x in shlex.split(term):
+    for x in split_shell_command(term):
         if x.startswith('--') or ' ' not in x:
             y = x
         else:
