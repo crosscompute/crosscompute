@@ -9,7 +9,7 @@ from invisibleroads.scripts import (
 from invisibleroads_macros.configuration import (
     split_arguments, SECTION_TEMPLATE)
 from invisibleroads_macros.disk import (
-    cd, make_folder, make_hard_link, make_soft_link, COMMAND_LINE_HOME,
+    cd, link_safely, make_folder, COMMAND_LINE_HOME,
     HOME_FOLDER)
 from invisibleroads_macros.iterable import merge_dictionaries
 from invisibleroads_macros.text import unicode_safely
@@ -47,7 +47,7 @@ class ToolScript(Script):
         data_folder = args.data_folder or join(
             HOME_FOLDER, '.crosscompute', tool_name)
         tool_folder = Tool().get_folder(data_folder)
-        make_soft_link(tool_folder, tool_definition['configuration_folder'])
+        link_safely(tool_folder, tool_definition['configuration_folder'])
         tool_definition = find_tool_definition(tool_folder, tool_name)
         tool_definition['tool_name'] = tool_name
         return tool_definition, data_folder
@@ -83,7 +83,7 @@ def prepare_tool_definition(tool_name, with_debugging=False):
     return tool_definition
 
 
-def corral_arguments(argument_folder, result_arguments, use=make_hard_link):
+def corral_arguments(argument_folder, result_arguments, use=link_safely):
     d = result_arguments.copy()
     make_folder(argument_folder)
     for k, v in result_arguments.items():
@@ -133,7 +133,7 @@ def run_script(
     result_configuration.save_result_properties(result_properties)
     result_configuration.save_result_scripts(tool_definition, result_arguments)
     if 'target_folder' in tool_definition['argument_names']:
-        make_soft_link(join(
+        link_safely(join(
             result_folder, 'y'), result_arguments['target_folder'])
     return result_properties
 
