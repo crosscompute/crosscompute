@@ -45,15 +45,19 @@ class DataType(object):
         codecs.open(path, 'w', encoding='utf-8').write(value)
 
     @classmethod
-    def load_safely(Class, path, default_value=None):
-        f = Class.load
+    def load_for_view_safely(Class, path, default_value=None):
         try:
-            if 'default_value' in f.__code__.co_varnames:
-                value = Class.load(path, default_value)
-            else:
-                value = Class.load(path)
-        except Exception as e:
-            log_traceback(L, e)
+            f = Class.load_for_view
+        except AttributeError:
+            f = Class.load
+        function_arguments = f.__code__.co_varnames
+        kw = {}
+        if 'default_value' in function_arguments:
+            kw['default_value'] = default_value
+        try:
+            value = f(path, **kw)
+        except Exception:
+            log_traceback(L, {'path': path, 'default_value': default_value})
             value = None
         return value
 
@@ -68,10 +72,10 @@ class DataType(object):
             return default_value
         try:
             x = Class.parse(x, default_value)
-        except DataTypeError as e:
+        except DataTypeError:
             raise
-        except Exception as e:
-            log_traceback(L, e)
+        except Exception:
+            log_traceback(L, {'x': x, 'default_value': default_value})
         return x
 
     @classmethod
