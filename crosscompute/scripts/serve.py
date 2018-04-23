@@ -473,7 +473,7 @@ def import_upload(upload, DataType):
         copy_text(join(upload.folder, 'error.log'), traceback_text)
         raise
     DataType.save(join(upload.folder, DataType.get_file_name()), value)
-    return value
+    return DataType.load_for_view_safely(upload.path)
 
 
 def get_tool_template_variables(tool, tool_definition):
