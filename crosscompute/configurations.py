@@ -86,6 +86,8 @@ class ResultConfiguration(object):
 
     def save_result_scripts(self, tool_definition, result_arguments):
         command_template = tool_definition['command_template']
+        if not self.quiet:
+            print('[result_scripts]')
         self.save_script(
             'x', 'command', command_template, tool_definition,
             result_arguments)
@@ -96,6 +98,8 @@ class ResultConfiguration(object):
             self.save_script(
                 'x-debugger', 'debugger', debugger_template, tool_definition,
                 result_arguments)
+        if not self.quiet:
+            print('')
 
     def save_script(
             self, script_name, command_name, command_template, tool_definition,
