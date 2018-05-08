@@ -11,8 +11,8 @@ from invisibleroads_macros.disk import (
     are_same_path, get_absolute_path, link_safely)
 from invisibleroads_macros.exceptions import BadPath
 from invisibleroads_macros.log import (
-    filter_nested_dictionary, format_path, get_log, parse_nested_dictionary,
-    parse_nested_dictionary_from)
+    filter_nested_dictionary, format_path, get_log,
+    parse_nested_dictionary_from, parse_raw_dictionary)
 from invisibleroads_macros.shell import make_executable
 from invisibleroads_macros.table import normalize_key
 from invisibleroads_macros.text import (
@@ -251,7 +251,7 @@ def format_available_tools(tool_definition_by_name):
 
 def parse_data_dictionary(
         text, root_folder, external_folders=None, tool_definition=None):
-    d = parse_nested_dictionary(
+    d = parse_raw_dictionary(
         text, is_key=lambda x: ':' not in x and ' ' not in x)
     return parse_data_dictionary_from(
         d, root_folder, external_folders, tool_definition)
