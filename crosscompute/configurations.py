@@ -19,7 +19,7 @@ from invisibleroads_macros.text import (
     has_whitespace, split_shell_command, unicode_safely)
 from os import getcwd, walk
 from os.path import basename, dirname, isabs, join
-from pyramid.settings import asbool
+from pyramid.settings import asbool, aslist
 from six import text_type
 
 from .exceptions import (
@@ -347,8 +347,9 @@ def _parse_tool_definition(value_by_key, configuration_folder, tool_name):
     d['configuration_folder'] = configuration_folder
     d['tool_name'] = tool_name
     d['show_raw_output'] = asbool(value_by_key.get('show_raw_output'))
+    d['ignored_outputs'] = aslist(value_by_key.get('ignored_outputs', []))
     for k, v in make_absolute_paths(d, configuration_folder).items():
-        if k in ('argument_names', 'show_raw_output'):
+        if k in ('argument_names', 'show_raw_output', 'ignored_outputs'):
             continue
         v = v.strip()
         if k.endswith('_path') and not v:

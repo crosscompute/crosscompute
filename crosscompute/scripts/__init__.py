@@ -3,6 +3,7 @@ import simplejson as json
 import sys
 import time
 from collections import OrderedDict
+from fnmatch import fnmatch
 from invisibleroads.scripts import (
     Script, StoicArgumentParser, configure_subparsers, get_scripts_by_name,
     run_scripts)
@@ -157,7 +158,17 @@ def _process_output(
         if tool_definition.get('show_raw_output'):
             d['raw_output'] = output_content
         if value_by_key:
-            d['raw_outputs'] = value_by_key
+            d['raw_outputs'] = _filter_outputs(
+                value_by_key, tool_definition.get('ignored_outputs', []))
     if type_errors:
         d['type_errors'] = type_errors
+    return d
+
+
+def _filter_outputs(value_by_key, target_expressions):
+    d = OrderedDict()
+    for k, v in value_by_key.items():
+        if any(fnmatch(k, x) for x in target_expressions):
+            continue
+        d[k] = v
     return d
