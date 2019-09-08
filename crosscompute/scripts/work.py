@@ -5,6 +5,7 @@ from invisibleroads_macros.configuration import load_settings
 from invisibleroads_macros.disk import (
     cd, compress_zip, load_text, make_unique_path, uncompress, HOME_FOLDER)
 from invisibleroads_macros.log import print_error
+from os import environ
 from os.path import exists, expanduser, join
 from pyramid.httpexceptions import (
     HTTPBadRequest, HTTPNoContent, HTTPUnauthorized)
@@ -185,7 +186,7 @@ def run_setup(tool_folder, tool_id, result_folder, environment):
             process_arguments,
             stdout=open(log_path, 'wt'),
             stderr=subprocess.STDOUT,
-            env=environment)
+            env=dict(environment, PATH=environ['PATH']))
     TOOL_IDS.append(tool_id)
 
 
