@@ -1,24 +1,12 @@
-# Python
+# vim
+*.sw[op]
+*~
+# python
 *.egg*
 *.py[co]
 .cache
 .coverage
-.ipynb_checkpoints
 .pytest_cache
 __pycache__
-build
-dist
-# Sass
-.sass-cache
-# SQLite
-*.db
-*.db-journal
-# Transient
-*.log
-*.map
-*.out
-*.tmp
-data_*
-# Vim
-*.sw[op]
-*~
+build/
+dist/

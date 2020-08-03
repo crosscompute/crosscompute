@@ -32,9 +32,3 @@ except ImportError:
             yield
         except exceptions:
             pass
-
-
-try:
-    import subprocess32 as subprocess
-except ImportError:
-    import subprocess  # noqa
