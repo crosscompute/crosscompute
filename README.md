@@ -16,6 +16,7 @@ pip install -U crosscompute
 - Polina Chernomaz
 - Marta Moreno
 - Ning Wei
+- Miguel Angel Gordián
 - Noé Domínguez Porras
 - Elaine Chan
 - Jennifer Ruda
