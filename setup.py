@@ -31,6 +31,7 @@ setup(
     url='https://github.com/crosscompute/crosscompute',
     keywords='crosscompute',
     packages=find_packages(),
+    include_package_data=True,
     zip_safe=True,
     extras_require={'test': TEST_REQUIREMENTS},
     install_requires=APPLICATION_REQUIREMENTS,
