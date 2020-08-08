@@ -19,4 +19,5 @@ print(d['id'])
 
 
 if __name__ == '__main__':
-    pass
+    argument_parser = ArgumentParser()
+    argument_parser.add_argument()
