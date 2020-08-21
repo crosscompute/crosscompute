@@ -5,12 +5,16 @@ from setuptools import find_packages, setup
 ENTRY_POINTS = '''
 [console_scripts]
 crosscompute = crosscompute.scripts:launch
+[crosscompute]
+tools.add = crosscompute.scripts.tools.add:AddToolScript
+workers.run = crosscompute.scripts.workers.run:RunWorkerScript
 '''
 APPLICATION_CLASSIFIERS = [
     'Programming Language :: Python :: 3',
     'License :: OSI Approved :: MIT License',
 ]
 APPLICATION_REQUIREMENTS = [
+    'invisibleroads >= 0.2.4',
 ]
 TEST_REQUIREMENTS = [
 ]
