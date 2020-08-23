@@ -15,6 +15,7 @@ APPLICATION_CLASSIFIERS = [
 ]
 APPLICATION_REQUIREMENTS = [
     'invisibleroads >= 0.2.4',
+    'requests',
 ]
 TEST_REQUIREMENTS = [
 ]
