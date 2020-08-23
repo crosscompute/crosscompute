@@ -1,5 +1,7 @@
 from invisibleroads.scripts import Script
 
+from ...routines import get_token
+
 
 class AddToolScript(Script):
 
@@ -7,4 +9,5 @@ class AddToolScript(Script):
         argument_subparser.add_argument('path-or-folder-or-uri')
 
     def run(self, args, argv):
-        print('add tool', args)
+        token = get_token()
+        print(token)
