@@ -11,14 +11,17 @@ pip install -U crosscompute
 ## Add Tool
 
 ```
+export CROSSCOMPUTE_TOKEN=YOUR-TOKEN
+
 cd ~/Documents
 git clone git@github.com:crosscompute/crosscompute-examples
+cd crosscompute-examples/add-numbers
 
 # Mock
-crosscompute tools add add-numbers/.crosscompute.yml --mock
+crosscompute tools add .crosscompute.yml --mock
 
 # Real
-crosscompute tools add add-numbers/.crosscompute.yml
+crosscompute tools add .crosscompute.yml
 ```
 
 ## Acknowledgments
