@@ -16,6 +16,7 @@ APPLICATION_CLASSIFIERS = [
 APPLICATION_REQUIREMENTS = [
     'invisibleroads >= 0.2.4',
     'requests',
+    'strictyaml',
 ]
 TEST_REQUIREMENTS = [
 ]
