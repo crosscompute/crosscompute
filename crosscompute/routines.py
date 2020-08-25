@@ -2,7 +2,7 @@ import strictyaml
 from os import environ
 from os.path import dirname, join
 
-from .constants import L, VARIABLE_ID_PATTERN, VARIABLE_TEXT_PATTERN
+from .constants import L, VARIABLE_ID_PATTERN, VARIABLE_TEXT_PATTERN, VIEWS
 from .exceptions import CrossComputeConfigurationError
 
 
@@ -51,18 +51,19 @@ def normalize_tool_configuration_from_protocol_0_8_3(dictionary, folder):
     return d
 
 
-def normalize_put_configuration(key, dictionary, folder):
+def normalize_put_configuration(key, dictionary, folder=None):
     d = {}
+
     try:
         put_dictionary = dictionary[key]
     except KeyError:
-        L.warn(f'missing {key} configuration')
+        L.warning(f'missing {key} configuration')
         return d
 
     try:
         variables = put_dictionary['variables']
     except KeyError:
-        L.warn(f'missing {key} variables configuration')
+        L.warning(f'missing {key} variables configuration')
         variables = []
     variables = normalize_variables(variables)
     if variables:
@@ -71,7 +72,7 @@ def normalize_put_configuration(key, dictionary, folder):
     try:
         templates = put_dictionary['templates']
     except KeyError:
-        L.warn(f'missing {key} variables configuration')
+        L.warning(f'missing {key} variables configuration')
         templates = []
     templates = normalize_templates(templates, variables, folder)
     if templates:
@@ -81,12 +82,11 @@ def normalize_put_configuration(key, dictionary, folder):
 
 
 def normalize_tests_configuration(key, dictionary):
-    # TODO: Validate
     try:
-        d = dictionary[key]
+        raw_tests = dictionary[key]
     except KeyError:
-        L.warn(f'missing {key} configuration')
-    return [dict(_) for _ in d]
+        L.warning(f'missing {key} configuration')
+    return normalize_tests(raw_tests)
 
 
 def normalize_variables(raw_variables):
@@ -101,30 +101,27 @@ def normalize_variables(raw_variables):
             })
         except KeyError as e:
             raise CrossComputeConfigurationError({
-                e.args[0]: 'is required for each variable',
-            })
+                e.args[0]: 'is required for each variable'})
     return variables
 
 
-def normalize_templates(raw_templates, variables, folder):
+def normalize_templates(raw_templates, variables, folder=None):
     templates = []
     for raw_template in raw_templates:
         try:
+            template_id = raw_template['id']
             template_name = raw_template['name']
-            template_path = join(folder, raw_template['path'])
         except KeyError as e:
             raise CrossComputeConfigurationError({
-                e.args[0]: 'is required for each template',
-            })
-        try:
-            template_text = open(template_path, 'rt').read()
-        except IOError:
-            raise CrossComputeConfigurationError({
-                'path': f'is invalid for template: {template_path}',
-            })
+                e.args[0]: 'is required for each template'})
+        template_blocks = normalize_blocks_configuration(
+            'blocks', raw_template, variables, folder)
+        if not template_blocks:
+            continue
         templates.append({
+            'id': template_id,
             'name': template_name,
-            'blocks': parse_blocks(template_text),
+            'blocks': template_blocks,
         })
     if not templates:
         templates.append({
@@ -133,6 +130,25 @@ def normalize_templates(raw_templates, variables, folder):
             'blocks': [{'id': _['id'] for _ in variables}],
         })
     return templates
+
+
+def normalize_blocks_configuration(key, dictionary, variables, folder=None):
+    blocks = []
+    if 'blocks' in dictionary:
+        blocks = dictionary['blocks']
+    elif 'path' in dictionary and folder is not None:
+        template_path = join(folder, dictionary['path'])
+        blocks = load_blocks(template_path)
+    return normalize_blocks(blocks, variables)
+
+
+def load_blocks(template_path):
+    try:
+        template_text = open(template_path, 'rt').read()
+    except IOError:
+        raise CrossComputeConfigurationError({
+            'path': f'is invalid for template: {template_path}'})
+    return parse_blocks(template_text)
 
 
 def parse_blocks(template_text):
@@ -148,3 +164,66 @@ def parse_blocks(template_text):
             continue
         blocks.append({'view': 'markdown', 'data': {'value': text}})
     return blocks
+
+
+def normalize_blocks(blocks, variables):
+    ds = []
+    for block in blocks:
+        if 'id' in block:
+            ds.append({'id': block['id']})
+            continue
+        d = {}
+        try:
+            raw_view = block['view']
+            raw_data = block['data']
+        except KeyError as e:
+            raise CrossComputeConfigurationError({
+                e.args[0]: 'is required for each block that lacks an id'})
+        view = normalize_view(raw_view)
+        data = normalize_data(raw_data, view)
+        d['view'] = view
+        d['data'] = data
+        ds.append(d)
+    return ds
+
+
+def normalize_tests(raw_tests):
+    # TODO: Normalize tests
+    return [dict(_) for _ in raw_tests]
+
+
+def normalize_view(raw_view):
+    if not isinstance(raw_view, str):
+        raise CrossComputeConfigurationError({'view': 'must be a string'})
+
+    view = raw_view.lower()
+    if view not in VIEWS:
+        raise CrossComputeConfigurationError({
+            'view': 'must be one of the following values: ' + ' '.join(VIEWS)})
+    return view
+
+
+def normalize_data(raw_data, view):
+    if not isinstance(raw_data, dict):
+        raise CrossComputeConfigurationError({
+            'data': 'must be a dictionary'})
+    if 'value' not in raw_data and 'file' not in raw_data:
+        raise CrossComputeConfigurationError({
+            'data': 'must contain either a file or value'})
+
+    data = {}
+    if 'value' in raw_data:
+        data['value'] = normalize_value(raw_data['value'], view)
+    elif 'file' in raw_data:
+        data['file'] = normalize_file(raw_data['file'])
+    return data
+
+
+def normalize_value(raw_value, view=None):
+    # TODO: Normalize value based on view
+    return raw_value
+
+
+def normalize_file(raw_file):
+    # TODO: Normalize file
+    return raw_file

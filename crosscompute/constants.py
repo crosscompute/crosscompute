@@ -10,3 +10,13 @@ L = get_log(__name__.split('.')[0])
 
 VARIABLE_TEXT_PATTERN = re.compile(r'({[^}]+})')
 VARIABLE_ID_PATTERN = re.compile(r'{\s*([^}]+?)\s*}')
+
+
+# TODO: Load supported views from server
+VIEWS = [
+    'markdown',
+    'text',
+    'number',
+    'table',
+    'map',
+]
