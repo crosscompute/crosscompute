@@ -147,7 +147,7 @@ def load_blocks(template_path):
         template_text = open(template_path, 'rt').read()
     except IOError:
         raise CrossComputeConfigurationError({
-            'path': f'is invalid for template: {template_path}'})
+            'path': f'is invalid for template {template_path}'})
     return parse_blocks(template_text)
 
 
@@ -199,7 +199,7 @@ def normalize_view(raw_view):
     view = raw_view.lower()
     if view not in VIEWS:
         raise CrossComputeConfigurationError({
-            'view': 'must be one of the following values: ' + ' '.join(VIEWS)})
+            'view': 'must be one of ' + ' '.join(VIEWS)})
     return view
 
 
