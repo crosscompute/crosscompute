@@ -11,13 +11,13 @@ class SeeToolScript(LoggingScript):
     def configure(self, argument_subparser):
         super().configure(argument_subparser)
         argument_subparser.add_argument(
-            'tool-id', metavar='TOOL-ID', nargs='?')
+            'toolId', metavar='TOOL-ID', nargs='?')
 
     def run(self, args, argv):
         super().run(args, argv)
         host = get_crosscompute_host()
         token = get_crosscompute_token()
-        tool_id = getattr(args, 'tool-id')
+        tool_id = getattr(args, 'toolId')
         d = run(host, token, tool_id)
         return d
 

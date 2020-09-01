@@ -11,6 +11,7 @@ projects.see = crosscompute.scripts.projects.see:SeeProjectScript
 projects.change = crosscompute.scripts.projects.change:ChangeProjectScript
 tools.add = crosscompute.scripts.tools.add:AddToolScript
 tools.see = crosscompute.scripts.tools.see:SeeToolScript
+results.add = crosscompute.scripts.results.add:AddResultScript
 workers.run = crosscompute.scripts.workers.run:RunWorkerScript
 '''
 APPLICATION_CLASSIFIERS = [

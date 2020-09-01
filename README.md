@@ -28,11 +28,11 @@ crosscompute projects add --name "Project X"
 
 ```
 crosscompute projects change PROJECT-ID \
-    --dataset-id abc \
-    --tool-id def \
-    --tool-id ghi \
-    --result-id jkl \
-    --result-id mno
+    --datasetId abc \
+    --toolId def \
+    --toolId ghi \
+    --resultId jkl \
+    --resultId mno
 ```
 
 ## See Tool

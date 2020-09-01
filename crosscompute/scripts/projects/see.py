@@ -11,13 +11,13 @@ class SeeProjectScript(LoggingScript):
     def configure(self, argument_subparser):
         super().configure(argument_subparser)
         argument_subparser.add_argument(
-            'project-id', metavar='PROJECT-ID', nargs='?')
+            'projectId', metavar='PROJECT-ID', nargs='?')
 
     def run(self, args, argv):
         super().run(args, argv)
         host = get_crosscompute_host()
         token = get_crosscompute_token()
-        project_id = getattr(args, 'project-id')
+        project_id = getattr(args, 'projectId')
         d = run(host, token, project_id)
         return d
 
