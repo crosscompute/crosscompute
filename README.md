@@ -15,12 +15,31 @@ export CROSSCOMPUTE_TOKEN=YOUR-TOKEN
 
 ```
 crosscompute projects see
+crosscompute projects see PROJECT-ID
 ```
 
 ## Add Project
 
 ```
 crosscompute projects add --name "Project X"
+```
+
+## Change Project
+
+```
+crosscompute projects change PROJECT-ID \
+    --dataset-id abc \
+    --tool-id def \
+    --tool-id ghi \
+    --result-id jkl \
+    --result-id mno
+```
+
+## See Tool
+
+```
+crosscompute tools see
+crosscompute tools see TOOL-ID
 ```
 
 ## Add Tool
