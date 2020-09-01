@@ -6,6 +6,7 @@ ENTRY_POINTS = '''
 [console_scripts]
 crosscompute = crosscompute.scripts:launch
 [crosscompute]
+projects.see = crosscompute.scripts.projects.see:SeeProjectScript
 tools.add = crosscompute.scripts.tools.add:AddToolScript
 workers.run = crosscompute.scripts.workers.run:RunWorkerScript
 '''
