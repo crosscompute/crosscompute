@@ -1,5 +1,7 @@
 # 0.8
 - Start from scratch
+- See project
+- Add tool
 
 # 0.7
 - Add memory_level, processor_level to work script

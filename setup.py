@@ -6,6 +6,7 @@ ENTRY_POINTS = '''
 [console_scripts]
 crosscompute = crosscompute.scripts:launch
 [crosscompute]
+projects.add = crosscompute.scripts.projects.add:AddProjectScript
 projects.see = crosscompute.scripts.projects.see:SeeProjectScript
 tools.add = crosscompute.scripts.tools.add:AddToolScript
 workers.run = crosscompute.scripts.workers.run:RunWorkerScript
@@ -15,7 +16,7 @@ APPLICATION_CLASSIFIERS = [
     'License :: OSI Approved :: MIT License',
 ]
 APPLICATION_REQUIREMENTS = [
-    'invisibleroads >= 0.2.4',
+    'invisibleroads >= 0.3.2',
     'requests',
     'strictyaml',
 ]
