@@ -6,13 +6,20 @@ Please see https://crosscompute.com for examples and tutorials.
 
 ```bash
 pip install -U crosscompute
+
+export CROSSCOMPUTE_HOST=https://services.projects.crosscompute.com
+export CROSSCOMPUTE_TOKEN=YOUR-TOKEN
+```
+
+## See Project
+
+```
+crosscompute projects see
 ```
 
 ## Add Tool
 
 ```
-export CROSSCOMPUTE_TOKEN=YOUR-TOKEN
-
 cd ~/Documents
 git clone git@github.com:crosscompute/crosscompute-examples
 cd crosscompute-examples/add-numbers

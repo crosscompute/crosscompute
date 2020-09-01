@@ -2,17 +2,31 @@ import strictyaml
 from os import environ
 from os.path import dirname, join
 
-from .constants import L, VARIABLE_ID_PATTERN, VARIABLE_TEXT_PATTERN, VIEWS
+from .constants import (
+    HOST,
+    L,
+    VARIABLE_ID_PATTERN,
+    VARIABLE_TEXT_PATTERN,
+    VIEWS)
 from .exceptions import CrossComputeConfigurationError
 
 
+def get_crosscompute_host():
+    return get_environment_variable('CROSSCOMPUTE_HOST', HOST)
+
+
 def get_crosscompute_token():
-    name = 'CROSSCOMPUTE_TOKEN'
+    return get_environment_variable('CROSSCOMPUTE_TOKEN', required=True)
+
+
+def get_environment_variable(name, default=None, required=False):
     try:
-        token = environ[name]
+        value = environ[name]
     except KeyError:
-        exit(f'{name} is required in the environment')
-    return token
+        if required:
+            exit(f'{name} is required in the environment')
+        value = default
+    return value
 
 
 def load_tool_configuration(path):

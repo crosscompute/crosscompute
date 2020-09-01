@@ -1,4 +1,4 @@
-from .. import LoggingScript
+from invisibleroads.scripts import LoggingScript
 
 
 class RunWorkerScript(LoggingScript):

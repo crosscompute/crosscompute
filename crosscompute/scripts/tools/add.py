@@ -1,9 +1,11 @@
 import requests
+from invisibleroads.scripts import LoggingScript
 
-from .. import LoggingScript
-from ...constants import HOST
 from ...exceptions import CrossComputeError
-from ...routines import get_crosscompute_token, load_tool_configuration
+from ...routines import (
+    get_crosscompute_host,
+    get_crosscompute_token,
+    load_tool_configuration)
 
 
 class AddToolScript(LoggingScript):
@@ -12,12 +14,11 @@ class AddToolScript(LoggingScript):
         super().configure(argument_subparser)
         argument_subparser.add_argument(
             '--mock', action='store_true', dest='is_mock')
-        argument_subparser.add_argument('--host', default=HOST)
         argument_subparser.add_argument('path')
 
     def run(self, args, argv):
         super().run(args, argv)
-        host = args.host
+        host = get_crosscompute_host()
         token = get_crosscompute_token()
         path = args.path
         is_mock = args.is_mock
