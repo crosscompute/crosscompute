@@ -56,6 +56,17 @@ crosscompute tools add .crosscompute.yml --mock
 crosscompute tools add .crosscompute.yml
 ```
 
+## Add Result
+
+```
+crosscompute results add \
+    result.json \
+    --name RESULT-NAME \
+    --toolId TOOL-ID \
+    --toolVersionId TOOL-VERSION-ID \
+    --projectId PROJECT-ID
+```
+
 ## Acknowledgments
 
 - Olga Creutzburg
