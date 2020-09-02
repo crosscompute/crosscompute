@@ -20,6 +20,7 @@ APPLICATION_CLASSIFIERS = [
 ]
 APPLICATION_REQUIREMENTS = [
     'invisibleroads >= 0.3.2',
+    'invisibleroads-macros-log >= 1.0.3',
     'requests',
     'strictyaml',
 ]
