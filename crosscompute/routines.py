@@ -86,7 +86,7 @@ def normalize_put_configuration(key, dictionary, folder=None):
     try:
         templates = put_dictionary['templates']
     except KeyError:
-        L.warning(f'missing {key} variables configuration')
+        L.warning(f'missing {key} templates configuration')
         templates = []
     templates = normalize_templates(templates, variables, folder)
     if templates:
