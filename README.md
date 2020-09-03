@@ -5,7 +5,8 @@ Publish your tool by writing a configuration file.
 Please see https://crosscompute.com for examples and tutorials.
 
 ```bash
-pip install -U crosscompute
+# pip install -U crosscompute
+pip install https://github.com/crosscompute/crosscompute
 
 export CROSSCOMPUTE_HOST=https://services.projects.crosscompute.com
 export CROSSCOMPUTE_TOKEN=YOUR-TOKEN
@@ -15,6 +16,7 @@ export CROSSCOMPUTE_TOKEN=YOUR-TOKEN
 
 ```
 crosscompute projects see
+crosscompute projects see | jq
 crosscompute projects see PROJECT-ID
 ```
 
@@ -39,6 +41,8 @@ crosscompute projects change PROJECT-ID \
 
 ```
 crosscompute tools see
+crosscompute tools see | jq
+crosscompute tools see | jq .[].id
 crosscompute tools see TOOL-ID
 ```
 
@@ -65,6 +69,12 @@ crosscompute results add \
     --toolId TOOL-ID \
     --toolVersionId TOOL-VERSION-ID \
     --projectId PROJECT-ID
+```
+
+## Run Worker
+
+```
+crosscompute workers run
 ```
 
 ## Acknowledgments

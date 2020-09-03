@@ -17,8 +17,7 @@ class AddProjectScript(LoggingScript):
         host = get_crosscompute_host()
         token = get_crosscompute_token()
         project_name = args.name
-        d = run(host, token, project_name)
-        return d
+        return run(host, token, project_name)
 
 
 def run(host, token, project_name):

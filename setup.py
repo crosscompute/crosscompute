@@ -21,13 +21,15 @@ APPLICATION_CLASSIFIERS = [
 APPLICATION_REQUIREMENTS = [
     'invisibleroads >= 0.3.2',
     'requests',
+    'sseclient',
     'strictyaml',
 ]
 TEST_REQUIREMENTS = [
 ]
 FOLDER = dirname(abspath(__file__))
 DESCRIPTION = '\n\n'.join(open(join(FOLDER, x)).read().strip() for x in [
-    'README.md', 'CHANGES.md'])
+    'README.md',
+    'CHANGES.md'])
 
 
 setup(
