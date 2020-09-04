@@ -17,6 +17,7 @@ export CROSSCOMPUTE_TOKEN=YOUR-TOKEN
 ```
 crosscompute projects see
 crosscompute projects see | jq
+crosscompute projects see | jq '.[] | {id:.id, name:.name}'
 crosscompute projects see PROJECT-ID
 ```
 

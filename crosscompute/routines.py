@@ -241,3 +241,10 @@ def normalize_value(raw_value, view=None):
 def normalize_file(raw_file):
     # TODO: Normalize file
     return raw_file
+
+
+def get_resource_url(host, resource_name, resource_id=None):
+    url = host + '/' + resource_name
+    if resource_id:
+        url += '/' + resource_id
+    return url + '.json'

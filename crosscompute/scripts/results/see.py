@@ -3,7 +3,8 @@ from invisibleroads.scripts import LoggingScript
 
 from ...routines import (
     get_crosscompute_host,
-    get_crosscompute_token)
+    get_crosscompute_token,
+    get_resource_url)
 
 
 class SeeResultScript(LoggingScript):
@@ -18,16 +19,11 @@ class SeeResultScript(LoggingScript):
         host = get_crosscompute_host()
         token = get_crosscompute_token()
         result_id = getattr(args, 'resultId')
-        d = run(host, token, result_id)
-        return d
+        return run(host, token, result_id)
 
 
 def run(host, token, result_id=None):
-    url = host + '/results'
-    if not result_id:
-        url += '.json'
-    else:
-        url += f'/{result_id}.json'
+    url = get_resource_url(host, 'results', result_id)
     headers = {'Authorization': 'Bearer ' + token}
     response = requests.get(url, headers=headers)
     return response.json()
