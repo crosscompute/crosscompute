@@ -64,16 +64,21 @@ def run(host, token, script_arguments):
             results_folder = join(root_folder, 'results')
 
             response = requests.get(chores_url, headers=headers)
+            print(response.__dict__)
             chore_dictionary = response.json()
             print(chore_dictionary)
             # TODO: Assert result in chore_dictionary
-            tool_dictionary = chore_dictionary['tool']
+            try:
+                tool_dictionary = chore_dictionary['tool']
+                result_dictionary = chore_dictionary['result']
+            except KeyError as e:
+                print('missing', e)
+                continue
             tool_version_dictionary = tool_dictionary['versions'][0]
             tool_input_dictionary = tool_version_dictionary['input']
             tool_input_variable_by_id = tool_input_dictionary['variableById']
             tool_output_dictionary = tool_version_dictionary['output']
             tool_output_variable_by_id = tool_output_dictionary['variableById']
-            result_dictionary = chore_dictionary['result']
             result_id = result_dictionary['id']
             result_token = result_dictionary['token']
             result_input_variable_data_by_id = result_dictionary[
