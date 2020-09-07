@@ -60,13 +60,19 @@ def run(host, token, script_arguments):
     for echo_message in SSEClient(echoes_url, headers=headers):
         print(echo_message.__dict__)
         if echo_message.event == 'r':
+            # TODO: Handle invalid json
+            d = json.loads(echo_message.data)
+            if d.get('%') == 100:
+                print(d.get('#'), 'done')
+                continue
+
             root_folder = expanduser('~/.crosscompute')
             results_folder = join(root_folder, 'results')
 
             response = requests.get(chores_url, headers=headers)
-            print(response.__dict__)
+            # print(response.__dict__)
             chore_dictionary = response.json()
-            print(chore_dictionary)
+            # print(chore_dictionary)
             # TODO: Assert result in chore_dictionary
             try:
                 tool_dictionary = chore_dictionary['tool']
@@ -126,7 +132,7 @@ def run(host, token, script_arguments):
                 p = join(input_folder, variable_path)
                 # print(p)
                 open(p, 'wt').write(variable_value)
-                print(variable_path, variable_value)
+                # print(variable_path, variable_value)
             value_by_id_by_path = dict(value_by_id_by_path)
 
             for (
@@ -178,7 +184,7 @@ def run(host, token, script_arguments):
                     columns = table.columns.to_list()
                     rows = list(table.to_dict('split')['data'])
                     table_value = {'rows': rows, 'columns': columns}
-                    print(table_value)
+                    # print(table_value)
                     output_variable_data_by_id[variable_id] = {
                         'value': table_value}
 
@@ -189,6 +195,6 @@ def run(host, token, script_arguments):
                 'progress': 100,
                 'outputVariableDataById': output_variable_data_by_id,
             })
-            print(response.__dict__)
+            # print(response.__dict__)
 
             # TODO: Put result in cloud
