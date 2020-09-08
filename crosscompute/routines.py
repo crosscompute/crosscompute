@@ -141,7 +141,7 @@ def normalize_templates(raw_templates, variables, folder=None):
         templates.append({
             'id': 'generated',
             'name': 'Generated',
-            'blocks': [{'id': _['id'] for _ in variables}],
+            'blocks': [{'id': _['id']} for _ in variables],
         })
     return templates
 
