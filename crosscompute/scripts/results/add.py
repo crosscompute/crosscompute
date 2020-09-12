@@ -35,10 +35,13 @@ class AddResultScript(LoggingScript):
         if tool_id:
             tool = result_dictionary.get('tool', {})
             tool['id'] = tool_id
+            result_dictionary['tool'] = tool
         if tool_version_id:
             tool = result_dictionary.get('tool', {})
             tool_version = tool.get('version', {})
             tool_version['id'] = tool_version_id
+            tool['version'] = tool_version
+            result_dictionary['tool'] = tool
         if project_id:
             project = result_dictionary.get('project', {})
             project['id'] = project_id
