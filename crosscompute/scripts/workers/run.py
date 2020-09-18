@@ -8,6 +8,7 @@ import subprocess
 from collections import defaultdict
 from invisibleroads_macros_disk import make_folder
 from invisibleroads.scripts import LoggingScript
+from os import environ
 from os.path import expanduser, join, splitext
 from sseclient import SSEClient
 
@@ -144,10 +145,11 @@ def run(host, token, script_arguments):
                 save(file_path, value_by_id)
 
             script_folder = '.'
-            subprocess.run(script_arguments, env={
+            # TODO: Select environment variables to expose
+            subprocess.run(script_arguments, env=dict(environ, **{
                 'CROSSCOMPUTE_INPUT_FOLDER': input_folder,
                 'CROSSCOMPUTE_OUTPUT_FOLDER': output_folder,
-            }, cwd=script_folder)
+            }), cwd=script_folder)
 
             output_variable_data_by_id = {}
             for (
