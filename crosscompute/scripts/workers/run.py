@@ -59,7 +59,7 @@ def run(host, token, script_arguments):
     chores_url = host + '/chores.json'
     for echo_message in SSEClient(echoes_url, headers=headers):
         print(echo_message.__dict__)
-        if echo_message.event == 'r':
+        if echo_message.event == 'i':
             # TODO: Handle invalid json
             d = json.loads(echo_message.data)
             if d.get('%') == 100:
