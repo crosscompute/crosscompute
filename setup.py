@@ -20,8 +20,11 @@ APPLICATION_CLASSIFIERS = [
     'License :: OSI Approved :: MIT License',
 ]
 APPLICATION_REQUIREMENTS = [
-    'invisibleroads >= 0.3.2',
+    'invisibleroads >= 0.3.3',
+    'invisibleroads-macros-disk',
     'invisibleroads-macros-log >= 1.0.3',
+    'invisibleroads-macros-security',
+    'pandas',
     'requests',
     'sseclient',
     'strictyaml',
