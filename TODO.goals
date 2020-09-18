@@ -1,2 +1,3 @@
+Let user choose/pick/select current project
 Query host for supported views
 Replace hardcoded view check with supported views from server query

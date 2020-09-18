@@ -38,7 +38,7 @@ DESCRIPTION = '\n\n'.join(open(join(FOLDER, x)).read().strip() for x in [
 
 setup(
     name='crosscompute',
-    version='0.8.0',
+    version='0.8.1',
     description='Publish your tool by writing a configuration file',
     long_description=DESCRIPTION,
     long_description_content_type='text/markdown',

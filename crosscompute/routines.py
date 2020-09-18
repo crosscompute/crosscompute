@@ -1,3 +1,4 @@
+# TODO: Use dictionary in name
 import strictyaml
 from os import environ
 from os.path import dirname, join
@@ -20,6 +21,7 @@ def get_crosscompute_token():
 
 
 def get_environment_variable(name, default=None, required=False):
+    # TODO: Consider renaming to get_environment_value
     try:
         value = environ[name]
     except KeyError:
@@ -61,7 +63,10 @@ def normalize_tool_configuration_from_protocol_0_8_3(dictionary, folder):
         raise CrossComputeConfigurationError({e.args[0]: 'is required'})
     d['input'] = normalize_put_configuration('input', dictionary, folder)
     d['output'] = normalize_put_configuration('output', dictionary, folder)
-    # d['tests'] = normalize_tests_configuration('tests', dictionary)
+    d['tests'] = normalize_tests_configuration('tests', dictionary)
+    d['script'] = normalize_script_configuration('script', dictionary)
+    d['environment'] = normalize_environment_configuration(
+        'environment', dictionary)
     return d
 
 
@@ -75,75 +80,94 @@ def normalize_put_configuration(key, dictionary, folder=None):
         return d
 
     try:
-        variables = put_dictionary['variables']
+        variable_dictionaries = put_dictionary['variables']
     except KeyError:
         L.warning(f'missing {key} variables configuration')
-        variables = []
-    variables = normalize_variables(variables)
-    if variables:
-        d['variables'] = variables
+        variable_dictionaries = []
+    variable_dictionaries = normalize_variable_dictionaries(
+        variable_dictionaries)
+    if variable_dictionaries:
+        d['variables'] = variable_dictionaries
 
     try:
-        templates = put_dictionary['templates']
+        template_dictionaries = put_dictionary['templates']
     except KeyError:
         L.warning(f'missing {key} templates configuration')
-        templates = []
-    templates = normalize_templates(templates, variables, folder)
-    if templates:
-        d['templates'] = templates
+        template_dictionaries = []
+    template_dictionaries = normalize_template_dictionaries(
+        template_dictionaries, variable_dictionaries, folder)
+    if template_dictionaries:
+        d['templates'] = template_dictionaries
 
     return d
 
 
 def normalize_tests_configuration(key, dictionary):
     try:
-        raw_tests = dictionary[key]
+        raw_test_dictionaries = dictionary[key]
     except KeyError:
         L.warning(f'missing {key} configuration')
-    return normalize_tests(raw_tests)
+    return normalize_test_dictionaries(raw_test_dictionaries)
 
 
-def normalize_variables(raw_variables):
-    variables = []
-    for raw_variable in raw_variables:
+def normalize_script_configuration(key, dictionary):
+    try:
+        raw_script_dictionary = dictionary[key]
+    except KeyError:
+        L.warning(f'missing {key} configuration')
+    return normalize_script_dictionary(raw_script_dictionary)
+
+
+def normalize_environment_configuration(key, dictionary):
+    try:
+        raw_environment_dictionary = dictionary[key]
+    except KeyError:
+        L.warning(f'missing {key} configuration')
+    return normalize_environment_dictionary(raw_environment_dictionary)
+
+
+def normalize_variable_dictionaries(raw_variable_dictionaries):
+    variable_dictionaries = []
+    for raw_variable_dictionary in raw_variable_dictionaries:
         try:
-            variables.append({
-                'id': raw_variable['id'],
-                'name': raw_variable['name'],
-                'view': raw_variable['view'],
-                'path': raw_variable['path'],
+            variable_dictionaries.append({
+                'id': raw_variable_dictionary['id'],
+                'name': raw_variable_dictionary['name'],
+                'view': raw_variable_dictionary['view'],
+                'path': raw_variable_dictionary['path'],
             })
         except KeyError as e:
             raise CrossComputeConfigurationError({
                 e.args[0]: 'is required for each variable'})
-    return variables
+    return variable_dictionaries
 
 
-def normalize_templates(raw_templates, variables, folder=None):
-    templates = []
-    for raw_template in raw_templates:
+def normalize_template_dictionaries(
+        raw_template_dictionaries, variable_dictionaries, folder=None):
+    template_dictionaries = []
+    for raw_template_dictionary in raw_template_dictionaries:
         try:
-            template_id = raw_template['id']
-            template_name = raw_template['name']
+            template_id = raw_template_dictionary['id']
+            template_name = raw_template_dictionary['name']
         except KeyError as e:
             raise CrossComputeConfigurationError({
                 e.args[0]: 'is required for each template'})
         template_blocks = normalize_blocks_configuration(
-            'blocks', raw_template, variables, folder)
+            'blocks', raw_template_dictionary, variable_dictionaries, folder)
         if not template_blocks:
             continue
-        templates.append({
+        template_dictionaries.append({
             'id': template_id,
             'name': template_name,
             'blocks': template_blocks,
         })
-    if not templates:
-        templates.append({
+    if not template_dictionaries:
+        template_dictionaries.append({
             'id': 'generated',
             'name': 'Generated',
-            'blocks': [{'id': _['id']} for _ in variables],
+            'blocks': [{'id': _['id']} for _ in variable_dictionaries],
         })
-    return templates
+    return template_dictionaries
 
 
 def normalize_blocks_configuration(key, dictionary, variables, folder=None):
@@ -201,9 +225,34 @@ def normalize_blocks(blocks, variables):
     return ds
 
 
-def normalize_tests(raw_tests):
-    # TODO: Normalize tests
-    return [dict(_) for _ in raw_tests]
+def normalize_test_dictionaries(raw_test_dictionaries):
+    return [{
+        'id': _['id'],
+        'name': _['name'],
+        'path': _['path'],
+    } for _ in raw_test_dictionaries]
+
+
+def normalize_script_dictionary(raw_script_dictionary):
+    uri = raw_script_dictionary['uri']
+    folder = raw_script_dictionary['folder']
+    command = raw_script_dictionary['command']
+    return {
+        'uri': uri,
+        'folder': folder,
+        'command': command,
+    }
+
+
+def normalize_environment_dictionary(raw_environment_dictionary):
+    image = raw_environment_dictionary['image']
+    processor = raw_environment_dictionary['processor']
+    memory = raw_environment_dictionary['memory']
+    return {
+        'image': image,
+        'processor': processor,
+        'memory': memory,
+    }
 
 
 def normalize_view(raw_view):
@@ -218,6 +267,7 @@ def normalize_view(raw_view):
 
 
 def normalize_data(raw_data, view):
+    # TODO: Consider renaming raw_data to raw_data_dictionary
     if not isinstance(raw_data, dict):
         raise CrossComputeConfigurationError({
             'data': 'must be a dictionary'})
