@@ -46,7 +46,8 @@ class AddResultScript(LoggingScript):
             project = result_dictionary.get('project', {})
             project['id'] = project_id
 
-        return run(host, token, result_dictionary)
+        d = run(host, token, result_dictionary)
+        print(json.dumps(d))
 
 
 def run(host, token, result_dictionary):
