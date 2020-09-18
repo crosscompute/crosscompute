@@ -1,6 +1,7 @@
 # TODO: Periodically check chores even without echo
 
 
+import base64
 import json
 import pandas
 import requests
@@ -149,10 +150,15 @@ def run(host, token, script_arguments):
 
                 script_folder = '.'
                 # TODO: Select environment variables to expose
-                subprocess.run(script_arguments, env=dict(environ, **{
-                    'CROSSCOMPUTE_INPUT_FOLDER': input_folder,
-                    'CROSSCOMPUTE_OUTPUT_FOLDER': output_folder,
-                }), cwd=script_folder)
+                try:
+                    subprocess.run(script_arguments, env=dict(environ, **{
+                        'CROSSCOMPUTE_INPUT_FOLDER': input_folder,
+                        'CROSSCOMPUTE_OUTPUT_FOLDER': output_folder,
+                    }), cwd=script_folder, check=True)
+                except subprocess.CalledProcessError:
+                    progress = -1
+                else:
+                    progress = 100
 
                 output_variable_data_by_id = {}
                 for (
@@ -172,32 +178,123 @@ def run(host, token, script_arguments):
                         '.csv',
                         '.json',
                     ):
-                        load = LOAD_BY_EXTENSION[file_extension]
-                        value_by_id = load(file_path)
-                        variable_value = value_by_id[variable_id]
-                        output_variable_data_by_id[variable_id] = {
-                            'value': variable_value}
-                        continue
+                        try:
+                            load = LOAD_BY_EXTENSION[file_extension]
+                            value_by_id = load(file_path)
+                            variable_value = value_by_id[variable_id]
+                            output_variable_data_by_id[variable_id] = {
+                                'value': variable_value}
+                            continue
+                        except Exception as e:
+                            print(e)
+                            continue
 
                     if variable_view in (
                         'table',
                     ) and file_extension in (
                         '.csv',
                     ):
-                        load = LOAD_BY_EXTENSION[file_extension]
-                        table = load(file_path)
-                        columns = table.columns.to_list()
-                        rows = list(table.to_dict('split')['data'])
-                        table_value = {'rows': rows, 'columns': columns}
-                        # print(table_value)
-                        output_variable_data_by_id[variable_id] = {
-                            'value': table_value}
+                        try:
+                            load = LOAD_BY_EXTENSION[file_extension]
+                            table = load(file_path)
+                            columns = table.columns.to_list()
+                            rows = list(table.to_dict('split')['data'])
+                            table_value = {'rows': rows, 'columns': columns}
+                            # print(table_value)
+                            output_variable_data_by_id[variable_id] = {
+                                'value': table_value}
+                            continue
+                        except Exception as e:
+                            print(e)
+                            continue
+
+                    if variable_view in (
+                        'image',
+                    ) and file_extension in (
+                        '.png',
+                    ):
+                        try:
+                            with open(file_path, 'rb') as image_file:
+                                s = base64.b64encode(image_file.read())
+                            output_variable_data_by_id[variable_id] = {
+                                'value': s}
+                            continue
+                        except Exception as e:
+                            print(e)
+                            continue
+
+                    # Number
+                    # Text
+                    # Table
+                    # Image
+                    # Markdown
+
+                    if variable_view in (
+                        'markdown',
+                    ) and file_extension in (
+                        '.md',
+                    ):
+                        try:
+                            with open(file_path, 'rt') as markdown_file:
+                                markdown_text = markdown_file.read()
+                            output_variable_data_by_id[variable_id] = {
+                                'value': markdown_text}
+                            continue
+                        except Exception as e:
+                            print(e)
+                            continue
+
+                    if variable_view in (
+                        'map',
+                    ) and file_extension in (
+                        '.geojson',
+                    ):
+                        try:
+                            x = load_json(file_path)
+                            output_variable_data_by_id[variable_id] = {
+                                'value': x}
+                            continue
+                        except Exception as e:
+                            print(e)
+                            continue
+
+                    if variable_view in (
+                        'heatmap',
+                    ) and file_extension in (
+                        '.json',
+                    ):
+                        try:
+                            x = load_json(file_path)
+                            output_variable_data_by_id[variable_id] = {
+                                'value': x}
+                            continue
+                        except Exception as e:
+                            print(e)
+                            continue
+
+                    # Map
+                    # Heatmap
+                    # Barchart
+
+                    if variable_view in (
+                        'barchart',
+                    ) and file_extension in (
+                        '.json',
+                    ):
+                        try:
+                            x = load_json(file_path)
+                            output_variable_data_by_id[variable_id] = {
+                                'value': x}
+                            continue
+                        except Exception as e:
+                            print(e)
+                            continue
 
                 result_url = host + '/results/' + result_id + '.json'
                 response = requests.patch(result_url, headers={
                     'Authorization': 'Bearer ' + result_token,
                 }, json={
-                    'progress': 100,
+                    'progress': progress,
                     'outputVariableDataById': output_variable_data_by_id,
                 })
                 # print(response.__dict__)
