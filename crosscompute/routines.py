@@ -107,6 +107,7 @@ def normalize_tests_configuration(key, dictionary):
         raw_test_dictionaries = dictionary[key]
     except KeyError:
         L.warning(f'missing {key} configuration')
+        raw_test_dictionaries = []
     return normalize_test_dictionaries(raw_test_dictionaries)
 
 
@@ -115,6 +116,7 @@ def normalize_script_configuration(key, dictionary):
         raw_script_dictionary = dictionary[key]
     except KeyError:
         L.warning(f'missing {key} configuration')
+        raw_script_dictionary = {}
     return normalize_script_dictionary(raw_script_dictionary)
 
 
@@ -123,6 +125,7 @@ def normalize_environment_configuration(key, dictionary):
         raw_environment_dictionary = dictionary[key]
     except KeyError:
         L.warning(f'missing {key} configuration')
+        raw_environment_dictionary = {}
     return normalize_environment_dictionary(raw_environment_dictionary)
 
 
