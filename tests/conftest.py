@@ -48,6 +48,21 @@ def config_file_with_templates():
             name: Add Numbers
             version:
                 name: 0.2.0
+            tests:
+                - id: integers
+                  name: Add Integers
+                  path: tests/integers
+                - id: floats
+                  name: Add Floats
+                  path: tests/floats
+            script:
+                uri: git@github.com:crosscompute/crosscompute-examples
+                folder: add-numbers
+                command: bash run.sh
+            environment:
+                image: docker.io/library/python:slim-buster
+                processor: cpu
+                memory: tiny
             input:
                 variables:
                     - id: a
@@ -75,23 +90,7 @@ def config_file_with_templates():
                       blocks:
                         - view: markdown
                           data:
-                            value: 5
-            tests:
-                - id: integers
-                  name: Add Integers
-                  path: tests/integers
-                - id: floats
-                  name: Add Floats
-                  path: tests/floats
-            script:
-                uri: git@github.com:crosscompute/crosscompute-examples
-                folder: add-numbers
-                command: bash run.sh
-            environment:
-                image: docker.io/library/python:slim-buster
-                processor: cpu
-                memory: tiny
-            """
+                            value: 5"""
             )
         )
         temp.flush()
