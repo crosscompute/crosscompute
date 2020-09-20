@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import crosscompute.routines as cc
 
 
@@ -59,5 +60,5 @@ def test_load_tool_configuration_templates(config_file_with_templates):
                 {"id": "c", "name": "C", "path": "sum.json", "view": "number"}
             ],
         },
-        "version": {"name": "0.2.0"},
+        "version": OrderedDict([("name", "0.2.0")]),
     } == normalized_tool_configuration
