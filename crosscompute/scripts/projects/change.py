@@ -1,3 +1,4 @@
+import json
 import requests
 from invisibleroads.scripts import LoggingScript
 
@@ -33,7 +34,7 @@ class ChangeProjectScript(LoggingScript):
             tool_ids,
             dataset_ids,
             result_ids)
-        return d
+        print(json.dumps(d))
 
 
 def run(

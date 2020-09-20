@@ -20,8 +20,11 @@ APPLICATION_CLASSIFIERS = [
     'License :: OSI Approved :: MIT License',
 ]
 APPLICATION_REQUIREMENTS = [
-    'invisibleroads >= 0.3.2',
+    'invisibleroads >= 0.3.3',
+    'invisibleroads-macros-disk',
     'invisibleroads-macros-log >= 1.0.3',
+    'invisibleroads-macros-security',
+    'pandas',
     'requests',
     'sseclient',
     'strictyaml',
@@ -38,7 +41,7 @@ DESCRIPTION = '\n\n'.join(open(join(FOLDER, x)).read().strip() for x in [
 
 setup(
     name='crosscompute',
-    version='0.8.0',
+    version='0.8.1',
     description='Publish your tool by writing a configuration file',
     long_description=DESCRIPTION,
     long_description_content_type='text/markdown',

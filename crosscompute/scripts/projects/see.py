@@ -1,3 +1,4 @@
+import json
 import requests
 from invisibleroads.scripts import LoggingScript
 
@@ -19,7 +20,8 @@ class SeeProjectScript(LoggingScript):
         host = get_crosscompute_host()
         token = get_crosscompute_token()
         project_id = getattr(args, 'projectId')
-        return run(host, token, project_id)
+        d = run(host, token, project_id)
+        print(json.dumps(d))
 
 
 def run(host, token, project_id=None):
