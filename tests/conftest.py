@@ -63,7 +63,6 @@ def config_file_with_templates():
                       name: Basic
                       blocks:
                         - id: template-a
-
             output:
                 variables:
                     - id: c
