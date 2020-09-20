@@ -60,5 +60,19 @@ def test_load_tool_configuration_templates(config_file_with_templates):
                 {"id": "c", "name": "C", "path": "sum.json", "view": "number"}
             ],
         },
+        "script": {
+            "command": "bash run.sh",
+            "folder": "add-numbers",
+            "uri": "git@github.com:crosscompute/crosscompute-examples",
+        },
+        "tests": [
+            {"id": "integers", "name": "Add Integers", "path": "tests/integers"},
+            {"id": "floats", "name": "Add Floats", "path": "tests/floats"},
+        ],
+        "environment": {
+            "image": "docker.io/library/python:slim-buster",
+            "memory": "tiny",
+            "processor": "cpu",
+        },
         "version": OrderedDict([("name", "0.2.0")]),
     } == normalized_tool_configuration
