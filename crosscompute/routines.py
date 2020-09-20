@@ -58,30 +58,19 @@ def normalize_tool_configuration_from_protocol_0_8_3(dictionary, folder):
         d['slug'] = dictionary['slug']
     try:
         d['name'] = dictionary['name']
-        print("d = %s" % d)
-        print("dictionary = %s" % dictionary)
-
         d['version'] = dictionary['version']
-        print("d = %s" % d)
-        print("dictionary = %s" % dictionary)
     except KeyError as e:
         raise CrossComputeConfigurationError({e.args[0]: 'is required'})
     d['input'] = normalize_put_configuration('input', dictionary, folder)
-    print("d = %s" % d)
-    print("dictionary = %s" % dictionary)
-
     d['output'] = normalize_put_configuration('output', dictionary, folder)
-    print("d = %s" % d)
-    print("dictionary = %s" % dictionary)
 
-    # d['tests'] = normalize_tests_configuration('tests', dictionary)
-    #if 'tests' in dictionary:
-    #    d['tests'] = normalize_tests_configuration('tests', dictionary)
-    #if 'script' in dictionary:
-    #    d['script'] = normalize_script_configuration('script', dictionary)
-    #if 'environment' in dictionary:
-    #    d['environment'] = normalize_environment_configuration(
-    #        'environment', dictionary)
+    if 'tests' in dictionary:
+        d['tests'] = normalize_tests_configuration('tests', dictionary)
+    if 'script' in dictionary:
+        d['script'] = normalize_script_configuration('script', dictionary)
+    if 'environment' in dictionary:
+        d['environment'] = normalize_environment_configuration(
+            'environment', dictionary)
     return d
 
 
