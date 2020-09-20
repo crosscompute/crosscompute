@@ -1,8 +1,8 @@
-from crosscompute.routines import load_tool_configuration
+import crosscompute.routines as cc
 
 
 def test_load_tool_configuration(config_file):
-    normalized_tool_configuration = load_tool_configuration(config_file)
+    normalized_tool_configuration = cc.load_tool_configuration(config_file)
     assert {
         "id": "add-numbers",
         "input": {
