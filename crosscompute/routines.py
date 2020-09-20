@@ -63,6 +63,7 @@ def normalize_tool_configuration_from_protocol_0_8_3(dictionary, folder):
         raise CrossComputeConfigurationError({e.args[0]: 'is required'})
     d['input'] = normalize_put_configuration('input', dictionary, folder)
     d['output'] = normalize_put_configuration('output', dictionary, folder)
+
     if 'tests' in dictionary:
         d['tests'] = normalize_tests_configuration('tests', dictionary)
     if 'script' in dictionary:
