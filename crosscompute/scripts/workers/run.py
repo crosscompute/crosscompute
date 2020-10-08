@@ -57,9 +57,9 @@ class RunWorkerScript(LoggingScript):
 
 def run(host, token, script_arguments):
     headers = {'Authorization': 'Bearer ' + token}
-    echoes_url = host + '/echoes.json'
-    chores_url = host + '/chores.json'
-    for echo_message in SSEClient(echoes_url, headers=headers):
+    echoes_url = f'{host}/echoes/{token}.json'
+    chores_url = f'{host}/chores.json'
+    for echo_message in SSEClient(echoes_url):
         print(echo_message.__dict__)
         if echo_message.event == 'i':
             # TODO: Handle invalid json

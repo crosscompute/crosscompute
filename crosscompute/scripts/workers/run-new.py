@@ -16,8 +16,6 @@ class RunWorkerScript(LoggingScript):
 
 
 def run(host, token, command_terms):
-    echoes_url = host + '/echoes.json'
-    # chores_url = host + '/chores.json'
-    headers = {'Authorization': 'Bearer ' + token}
-    for echo_message in SSEClient(echoes_url, headers=headers):
+    echoes_url = f'{host}/echoes/{token}.json'
+    for echo_message in SSEClient(echoes_url):
         print(echo_message.__dict__)
