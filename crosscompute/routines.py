@@ -37,20 +37,24 @@ def load_tool_configuration(path):
     if not isinstance(dictionary, dict):
         raise CrossComputeConfigurationError({'configuration': 'is invalid'})
     try:
-        protocol = dictionary.pop('protocol')
+        protocol = dictionary.pop('crosscompute')
     except KeyError:
-        raise CrossComputeConfigurationError({'protocol': 'is required'})
+        raise CrossComputeConfigurationError({'crosscompute': 'is required'})
     try:
         normalize_tool_configuration = {
             '0.8.3': normalize_tool_configuration_from_protocol_0_8_3,
         }[protocol]
     except KeyError:
-        raise CrossComputeConfigurationError({'protocol': 'is invalid'})
+        raise CrossComputeConfigurationError({'crosscompute': 'is invalid'})
     folder = dirname(path)
     return normalize_tool_configuration(dictionary, folder)
 
 
 def normalize_tool_configuration_from_protocol_0_8_3(dictionary, folder):
+    try:
+        assert dictionary['kind'].lower() == 'tool'
+    except (KeyError, AssertionError):
+        raise CrossComputeConfigurationError({'kind': 'is not tool'})
     d = {}
     if 'id' in dictionary:
         d['id'] = dictionary['id']
@@ -63,7 +67,6 @@ def normalize_tool_configuration_from_protocol_0_8_3(dictionary, folder):
         raise CrossComputeConfigurationError({e.args[0]: 'is required'})
     d['input'] = normalize_put_configuration('input', dictionary, folder)
     d['output'] = normalize_put_configuration('output', dictionary, folder)
-
     if 'tests' in dictionary:
         d['tests'] = normalize_tests_configuration('tests', dictionary)
     if 'script' in dictionary:

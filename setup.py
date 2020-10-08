@@ -21,7 +21,7 @@ APPLICATION_CLASSIFIERS = [
 ]
 APPLICATION_REQUIREMENTS = [
     'invisibleroads >= 0.3.3',
-    'invisibleroads-macros-disk',
+    'invisibleroads-macros-disk >= 1.0.3',
     'invisibleroads-macros-log >= 1.0.3',
     'invisibleroads-macros-security',
     'pandas',
@@ -30,8 +30,7 @@ APPLICATION_REQUIREMENTS = [
     'strictyaml',
 ]
 TEST_REQUIREMENTS = [
-    "pytest-cov",
-    "coverage",
+    'pytest-cov',
 ]
 FOLDER = dirname(abspath(__file__))
 DESCRIPTION = '\n\n'.join(open(join(FOLDER, x)).read().strip() for x in [
