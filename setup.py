@@ -21,9 +21,9 @@ APPLICATION_CLASSIFIERS = [
 ]
 APPLICATION_REQUIREMENTS = [
     'invisibleroads >= 0.3.3',
-    'invisibleroads-macros-disk >= 1.0.3',
+    'invisibleroads-macros-disk >= 1.0.2',
     'invisibleroads-macros-log >= 1.0.3',
-    'invisibleroads-macros-security',
+    'invisibleroads-macros-security >= 1.0.1',
     'pandas',
     'requests',
     'sseclient',
