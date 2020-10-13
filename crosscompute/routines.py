@@ -59,7 +59,7 @@ def normalize_tool_definition_from_protocol_0_8_4(dictionary, folder):
         d['slug'] = dictionary['slug']
     try:
         d['name'] = dictionary['name']
-        d['version'] = dictionary['version']
+        d['version'] = normalize_version_dictionary(dictionary['version'])
     except KeyError as e:
         raise ToolDefinitionError({e.args[0]: 'required'})
     d['input'] = normalize_put_definition('input', dictionary, folder)
@@ -221,6 +221,25 @@ def normalize_block_dictionaries(raw_block_dictionaries, variables):
         block_dictionary['data'] = data_dictionary
         block_dictionaries.append(block_dictionary)
     return block_dictionaries
+
+
+def normalize_version_dictionary(raw_version_dictionary):
+    if not isinstance(raw_version_dictionary, dict):
+        raise ToolDefinitionError({
+            'version': 'must be a dictionary'})
+
+    has_id = 'id' in raw_version_dictionary
+    has_name = 'name' in raw_version_dictionary
+    if not has_id and not has_name:
+        raise ToolDefinitionError({
+            'version': 'expected id or name'})
+
+    version_dictionary = {}
+    if has_id:
+        version_dictionary['id'] = raw_version_dictionary['id']
+    elif has_name:
+        version_dictionary['name'] = raw_version_dictionary['name']
+    return version_dictionary
 
 
 def normalize_data_dictionary(raw_data_dictionary, view_name):
