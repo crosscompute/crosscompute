@@ -1,0 +1,16 @@
+---
+crosscompute: 0.8.4
+kind: tool
+name: Concatenate Two Strings
+version:
+  name: 0.0.1
+input:
+  variables:
+    - id: a
+      path: strings.json
+    - id: b
+      path: strings.json
+output:
+  variables:
+    - id: c
+      path: properties.json

@@ -1,78 +1,8 @@
-from collections import OrderedDict
-import crosscompute.routines as cc
+from crosscompute.routines import load_tool_definition
+
+from conftest import TOOL_MINIMAL_DEFINITION_PATH
 
 
-def test_load_tool_configuration_basic(config_file):
-    normalized_tool_configuration = cc.load_tool_configuration(config_file)
-    assert {
-        "id": "add-numbers",
-        "input": {
-            "templates": [
-                {
-                    "blocks": [{"id": "a"}, {"id": "b"}],
-                    "id": "generated",
-                    "name": "Generated",
-                }
-            ],
-            "variables": [
-                {"id": "a", "name": "a", "path": "/tmp/a.txt", "view": "number"},
-                {"id": "b", "name": "b", "path": "/tmp/b.txt", "view": "number"},
-            ],
-        },
-        "name": "Add Two Numbers",
-        "output": {
-            "templates": [
-                {"blocks": [{"id": "s"}], "id": "generated", "name": "Generated"}
-            ],
-            "variables": [
-                {"id": "s", "name": "s", "path": "/tmp/s.txt", "view": "number"}
-            ],
-        },
-        "slug": "add",
-        "version": "0.1.0",
-    } == normalized_tool_configuration
-
-
-def test_load_tool_configuration_templates(config_file_with_templates):
-    normalized_tool_configuration = cc.load_tool_configuration(
-        config_file_with_templates
-    )
-    assert {
-        "input": {
-            "templates": [
-                {"blocks": [{"id": "template-a"}], "id": "basic", "name": "Basic"}
-            ],
-            "variables": [
-                {"id": "a", "name": "A", "path": "numbers.json", "view": "number"},
-                {"id": "b", "name": "B", "path": "numbers.json", "view": "number"},
-            ],
-        },
-        "name": "Add Numbers",
-        "output": {
-            "templates": [
-                {
-                    "blocks": [{"data": {"value": "5"}, "view": "markdown"}],
-                    "id": "summary",
-                    "name": "Summary",
-                }
-            ],
-            "variables": [
-                {"id": "c", "name": "C", "path": "sum.json", "view": "number"}
-            ],
-        },
-        "script": {
-            "command": "bash run.sh",
-            "folder": "add-numbers",
-            "uri": "git@github.com:crosscompute/crosscompute-examples",
-        },
-        "tests": [
-            {"id": "integers", "name": "Add Integers", "path": "tests/integers"},
-            {"id": "floats", "name": "Add Floats", "path": "tests/floats"},
-        ],
-        "environment": {
-            "image": "docker.io/library/python:slim-buster",
-            "memory": "tiny",
-            "processor": "cpu",
-        },
-        "version": OrderedDict([("name", "0.2.0")]),
-    } == normalized_tool_configuration
+def test_load_tool_definition():
+    tool_definition = load_tool_definition(TOOL_MINIMAL_DEFINITION_PATH)
+    assert len(tool_definition['input']['variables']) == 2

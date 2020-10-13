@@ -9,7 +9,7 @@
 - Render run_tool_json errors in form
 - Replace setup script with support for setup.sh in work script
 - Replace show_standard_output, show_standard_error with show_raw_output
-- Support inline default values in tool configuration e.g. {--x} and {--x 1}
+- Support inline default values in tool definition e.g. {--x} and {--x 1}
 - Use hard links when available
 
 # 0.6
