@@ -1,8 +1,8 @@
 import re
 import strictyaml
-from distutils.version import StrictVersion
 from os.path import dirname, join
 
+from . import __version__
 from .constants import (
     DEFAULT_HOST,
     DEFAULT_VIEW_NAME,
@@ -32,26 +32,29 @@ def get_resource_url(host, resource_name, resource_id=None):
 
 
 def load_tool_definition(path):
-    text = open(path, 'rt').read()
-    dictionary = strictyaml.load(text).data
-    if not isinstance(dictionary, dict):
-        raise ToolDefinitionError({'definition': 'expected dictionary'})
+    raw_tool_definition = load_raw_definition(path)
+    if not isinstance(raw_tool_definition, dict):
+        raise ToolDefinitionError({'definition': 'must be a dictionary'})
     try:
-        protocol_name = dictionary.pop('crosscompute')
-        normalize = NORMALIZE_TOOL_DEFINITION_BY_PROTOCOL_NAME[protocol_name]
+        protocol_name = raw_tool_definition.pop('crosscompute')
     except KeyError:
-        raise ToolDefinitionError({
-            'crosscompute': 'expected ' + ' or '.join(PROTOCOL_NAMES),
-        })
+        raise ToolDefinitionError({'crosscompute': 'is required'})
+    if protocol_name != __version__:
+        raise ToolDefinitionError({'crosscompute': 'should be ' + __version__})
     folder = dirname(path)
-    return normalize(dictionary, folder)
+    return normalize_tool_definition(raw_tool_definition, folder)
 
 
-def normalize_tool_definition_from_protocol_0_8_4(dictionary, folder):
+def load_raw_definition(path):
+    text = open(path, 'rt').read()
+    return strictyaml.load(text).data
+
+
+def normalize_tool_definition(dictionary, folder):
     try:
         assert dictionary['kind'].lower() == 'tool'
     except (KeyError, AssertionError):
-        raise ToolDefinitionError({'kind': 'expected tool'})
+        raise ToolDefinitionError({'kind': 'must be tool'})
     d = {}
     if 'id' in dictionary:
         d['id'] = dictionary['id']
@@ -61,7 +64,7 @@ def normalize_tool_definition_from_protocol_0_8_4(dictionary, folder):
         d['name'] = dictionary['name']
         d['version'] = normalize_version_dictionary(dictionary['version'])
     except KeyError as e:
-        raise ToolDefinitionError({e.args[0]: 'required'})
+        raise ToolDefinitionError({e.args[0]: 'is required'})
     d['input'] = normalize_put_definition('input', dictionary, folder)
     d['output'] = normalize_put_definition('output', dictionary, folder)
     if 'tests' in dictionary:
@@ -152,7 +155,7 @@ def normalize_variable_dictionaries(raw_variable_dictionaries):
             variable_path = raw_variable_dictionary['path']
         except KeyError as e:
             raise ToolDefinitionError({
-                e.args[0]: 'required for each variable'})
+                e.args[0]: 'is required for each variable'})
         variable_dictionary = {
             'id': variable_id,
             'name': raw_variable_dictionary.get(
@@ -174,7 +177,7 @@ def normalize_template_dictionaries(
             template_name = raw_template_dictionary['name']
         except KeyError as e:
             raise ToolDefinitionError({
-                e.args[0]: 'required for each template'})
+                e.args[0]: 'is required for each template'})
         template_blocks = normalize_blocks_definition(
             'blocks', raw_template_dictionary, variable_dictionaries, folder)
         if not template_blocks:
@@ -213,7 +216,7 @@ def normalize_block_dictionaries(raw_block_dictionaries, variables):
             raw_data_dictionary = raw_block_dictionary['data']
         except KeyError as e:
             raise ToolDefinitionError({
-                e.args[0]: 'required for each block that lacks an id'})
+                e.args[0]: 'is required for each block that lacks an id'})
         view_name = normalize_view_name(raw_view_name)
         data_dictionary = normalize_data_dictionary(
             raw_data_dictionary, view_name)
@@ -232,7 +235,7 @@ def normalize_version_dictionary(raw_version_dictionary):
     has_name = 'name' in raw_version_dictionary
     if not has_id and not has_name:
         raise ToolDefinitionError({
-            'version': 'expected id or name'})
+            'version': 'must be id or name'})
 
     version_dictionary = {}
     if has_id:
@@ -251,7 +254,7 @@ def normalize_data_dictionary(raw_data_dictionary, view_name):
     has_file = 'file' in raw_data_dictionary
     if not has_value and not has_file:
         raise ToolDefinitionError({
-            'data': 'expected value or file'})
+            'data': 'must be value or file'})
 
     data_dictionary = {}
     if has_value:
@@ -301,7 +304,7 @@ def normalize_view_name(raw_view_name):
 
     view_name = raw_view_name.lower()
     if view_name not in VIEW_NAMES:
-        raise ToolDefinitionError({'view': 'expected ' + ' or '.join(VIEW_NAMES)})
+        raise ToolDefinitionError({'view': 'must be ' + ' or '.join(VIEW_NAMES)})
     return view_name
 
 
@@ -310,7 +313,7 @@ def load_block_dictionaries(template_path):
         template_text = open(template_path, 'rt').read()
     except IOError:
         raise ToolDefinitionError({
-            'path': f'bad {template_path}'})
+            'path': f'is bad for {template_path}'})
     return parse_block_dictionaries(template_text)
 
 
@@ -334,10 +337,3 @@ def parse_block_dictionaries(template_text):
                 },
             })
     return block_dictionaries
-
-
-NORMALIZE_TOOL_DEFINITION_BY_PROTOCOL_NAME = {
-    '0.8.4': normalize_tool_definition_from_protocol_0_8_4,
-}
-PROTOCOL_NAMES = sorted(
-    NORMALIZE_TOOL_DEFINITION_BY_PROTOCOL_NAME, key=StrictVersion, reverse=True)

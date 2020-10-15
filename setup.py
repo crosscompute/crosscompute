@@ -1,3 +1,4 @@
+from crosscompute import __version__
 from os.path import abspath, dirname, join
 from setuptools import find_packages, setup
 
@@ -40,7 +41,7 @@ DESCRIPTION = '\n\n'.join(open(join(FOLDER, x)).read().strip() for x in [
 
 setup(
     name='crosscompute',
-    version='0.8.2',
+    version=__version__,
     description='Publish your tool by writing a configuration file',
     long_description=DESCRIPTION,
     long_description_content_type='text/markdown',
