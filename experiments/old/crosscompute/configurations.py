@@ -243,12 +243,6 @@ def load_result_properties(result_configuration_path):
     return parse_nested_dictionary_from(properties, max_depth=1)
 
 
-def format_available_tools(tool_definition_by_name):
-    tool_count = len(tool_definition_by_name)
-    return '{} available:\n{}'.format(
-        tool_count, '\n'.join(tool_definition_by_name))
-
-
 def parse_data_dictionary(
         text, root_folder, external_folders=None, tool_definition=None):
     d = parse_raw_dictionary(

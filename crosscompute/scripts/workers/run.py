@@ -8,14 +8,11 @@ import requests
 import subprocess
 from collections import defaultdict
 from invisibleroads_macros_disk import make_folder
-from invisibleroads.scripts import LoggingScript
 from os import environ
 from os.path import expanduser, join, splitext
 from sseclient import SSEClient
 
-from ...routines import (
-    get_crosscompute_host,
-    get_crosscompute_token)
+from .. import AuthenticatingScript
 
 
 def save_json(target_path, value_by_id):
@@ -39,27 +36,18 @@ LOAD_BY_EXTENSION = {
 }
 
 
-class RunWorkerScript(LoggingScript):
-
-    '''
-    def configure(self, argument_subparser):
-        super().configure(argument_subparser)
-        # argument_subparser.add_argument(
-            # 'script-arguments', nargs=argparse.REMAINDER)
-    '''
+class RunWorkerScript(AuthenticatingScript):
 
     def run(self, args, argv):
         super().run(args, argv)
-        host = get_crosscompute_host()
-        token = get_crosscompute_token()
-        return run(host, token, argv)
+        return run(args.host, args.token, argv)
 
 
 def run(host, token, script_arguments):
     headers = {'Authorization': 'Bearer ' + token}
-    echoes_url = host + '/echoes.json'
-    chores_url = host + '/chores.json'
-    for echo_message in SSEClient(echoes_url, headers=headers):
+    echoes_url = f'{host}/echoes/{token}.json'
+    chores_url = f'{host}/chores.json'
+    for echo_message in SSEClient(echoes_url):
         print(echo_message.__dict__)
         if echo_message.event == 'i':
             # TODO: Handle invalid json

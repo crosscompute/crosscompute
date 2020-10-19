@@ -21,17 +21,16 @@ APPLICATION_CLASSIFIERS = [
 ]
 APPLICATION_REQUIREMENTS = [
     'invisibleroads >= 0.3.3',
-    'invisibleroads-macros-disk',
+    'invisibleroads-macros-disk >= 1.0.2',
     'invisibleroads-macros-log >= 1.0.3',
-    'invisibleroads-macros-security',
+    'invisibleroads-macros-security >= 1.0.1',
     'pandas',
     'requests',
     'sseclient',
     'strictyaml',
 ]
 TEST_REQUIREMENTS = [
-    "pytest-cov",
-    "coverage",
+    'pytest-cov',
 ]
 FOLDER = dirname(abspath(__file__))
 DESCRIPTION = '\n\n'.join(open(join(FOLDER, x)).read().strip() for x in [
@@ -41,7 +40,7 @@ DESCRIPTION = '\n\n'.join(open(join(FOLDER, x)).read().strip() for x in [
 
 setup(
     name='crosscompute',
-    version='0.8.1',
+    version='0.8.2',
     description='Publish your tool by writing a configuration file',
     long_description=DESCRIPTION,
     long_description_content_type='text/markdown',

@@ -1,22 +1,16 @@
-import re
 from invisibleroads_macros_log import get_log
-
-
-HOST = 'https://services.projects.crosscompute.com'
 
 
 L = get_log(__name__.split('.')[0])
 
 
-VARIABLE_TEXT_PATTERN = re.compile(r'({[^}]+})')
-VARIABLE_ID_PATTERN = re.compile(r'{\s*([^}]+?)\s*}')
-
-
 # TODO: Load supported views from server
-VIEWS = [
-    'markdown',
+VIEW_NAMES = [
     'text',
     'number',
+    'markdown',
     'table',
     'map',
 ]
+DEFAULT_VIEW_NAME = 'text'
+DEFAULT_HOST = 'https://services.crosscompute.com'

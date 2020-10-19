@@ -1,14 +1,11 @@
 import json
 import requests
-from invisibleroads.scripts import LoggingScript
 
-from ...routines import (
-    get_crosscompute_host,
-    get_crosscompute_token,
-    get_resource_url)
+from .. import AuthenticatingScript
+from ...routines import get_resource_url
 
 
-class SeeToolScript(LoggingScript):
+class SeeToolScript(AuthenticatingScript):
 
     def configure(self, argument_subparser):
         super().configure(argument_subparser)
@@ -17,10 +14,7 @@ class SeeToolScript(LoggingScript):
 
     def run(self, args, argv):
         super().run(args, argv)
-        host = get_crosscompute_host()
-        token = get_crosscompute_token()
-        tool_id = getattr(args, 'toolId')
-        d = run(host, token, tool_id)
+        d = run(args.host, args.token, args.toolId)
         print(json.dumps(d))
 
 

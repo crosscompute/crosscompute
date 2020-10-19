@@ -1,13 +1,10 @@
 import json
 import requests
-from invisibleroads.scripts import LoggingScript
 
-from ...routines import (
-    get_crosscompute_host,
-    get_crosscompute_token)
+from .. import AuthenticatingScript
 
 
-class ChangeProjectScript(LoggingScript):
+class ChangeProjectScript(AuthenticatingScript):
 
     def configure(self, argument_subparser):
         super().configure(argument_subparser)
@@ -19,18 +16,14 @@ class ChangeProjectScript(LoggingScript):
 
     def run(self, args, argv):
         super().run(args, argv)
-        host = get_crosscompute_host()
-        token = get_crosscompute_token()
-        project_id = getattr(args, 'projectId')
-        project_name = args.name
         tool_ids = args.toolId or []
         dataset_ids = args.datasetId or []
         result_ids = args.resultId or []
         d = run(
-            host,
-            token,
-            project_id,
-            project_name,
+            args.host,
+            args.token,
+            args.projectId,
+            args.name,
             tool_ids,
             dataset_ids,
             result_ids)
