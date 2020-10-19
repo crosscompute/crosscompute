@@ -216,6 +216,9 @@ def run(host, token, script_arguments):
                         try:
                             with open(file_path, 'rb') as image_file:
                                 s = base64.b64encode(image_file.read())
+                            # !!! Check whether different python versions
+                            # handle b64encode differently
+                            s = s.decode('utf-8')
                             output_variable_data_by_id[variable_id] = {
                                 'value': s}
                             continue
