@@ -2,5 +2,9 @@ class CrossComputeError(Exception):
     pass
 
 
-class ToolDefinitionError(CrossComputeError):
+class CrossComputeDefinitionError(CrossComputeError):
+    pass
+
+
+class CrossComputeExecutionError(CrossComputeError):
     pass
