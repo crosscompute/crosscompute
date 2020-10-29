@@ -29,6 +29,7 @@ APPLICATION_REQUIREMENTS = [
     'requests',
     'sseclient',
     'strictyaml',
+    'tinycss2',
 ]
 TEST_REQUIREMENTS = [
     'pytest-cov',

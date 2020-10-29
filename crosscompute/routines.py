@@ -1,6 +1,7 @@
 import re
 import strictyaml
 from os.path import dirname, join
+from tinycss2 import parse_stylesheet
 
 from . import __version__
 from .constants import (
@@ -136,7 +137,7 @@ def normalize_environment_definition(key, dictionary):
     return normalize_environment_dictionary(raw_environment_dictionary)
 
 
-def normalize_blocks_definition(key, dictionary, variables, folder=None):
+def normalize_blocks_definition(key, dictionary, folder=None):
     if 'blocks' in dictionary:
         block_dictionaries = dictionary['blocks']
     elif 'path' in dictionary and folder is not None:
@@ -144,7 +145,7 @@ def normalize_blocks_definition(key, dictionary, variables, folder=None):
         block_dictionaries = load_block_dictionaries(template_path)
     else:
         block_dictionaries = []
-    return normalize_block_dictionaries(block_dictionaries, variables)
+    return normalize_block_dictionaries(block_dictionaries)
 
 
 def normalize_variable_dictionaries(raw_variable_dictionaries):
@@ -179,7 +180,7 @@ def normalize_template_dictionaries(
             raise CrossComputeDefinitionError({
                 e.args[0]: 'is required for each template'})
         template_blocks = normalize_blocks_definition(
-            'blocks', raw_template_dictionary, variable_dictionaries, folder)
+            'blocks', raw_template_dictionary, folder)
         if not template_blocks:
             continue
         template_dictionaries.append({
@@ -204,24 +205,36 @@ def normalize_test_dictionaries(raw_test_dictionaries):
     } for _ in raw_test_dictionaries]
 
 
-def normalize_block_dictionaries(raw_block_dictionaries, variables):
+def normalize_block_dictionaries(raw_block_dictionaries):
+    if not isinstance(raw_block_dictionaries, list):
+        raise CrossComputeDefinitionError({
+            'blocks': 'must be a list'})
     block_dictionaries = []
     for raw_block_dictionary in raw_block_dictionaries:
-        if 'id' in raw_block_dictionary:
-            block_dictionaries.append({'id': raw_block_dictionary['id']})
-            continue
+        has_id = 'id' in raw_block_dictionary
+        has_view = 'view' in raw_block_dictionary
+        has_data = 'data' in raw_block_dictionary
         block_dictionary = {}
-        try:
+        if has_id:
+            block_dictionary['id'] = raw_block_dictionary['id']
+        if has_view:
             raw_view_name = raw_block_dictionary['view']
-            raw_data_dictionary = raw_block_dictionary['data']
-        except KeyError as e:
+            view_name = normalize_view_name(raw_view_name)
+            block_dictionary['view'] = view_name
+        elif not has_id:
             raise CrossComputeDefinitionError({
-                e.args[0]: 'is required for each block that lacks an id'})
-        view_name = normalize_view_name(raw_view_name)
-        data_dictionary = normalize_data_dictionary(
-            raw_data_dictionary, view_name)
-        block_dictionary['view'] = view_name
-        block_dictionary['data'] = data_dictionary
+                'view': 'is required if block lacks id'})
+        if has_data:
+            raw_data_dictionary = raw_block_dictionary['data']
+            data_dictionary = normalize_data_dictionary(
+                raw_data_dictionary, view_name)
+            block_dictionary['data'] = data_dictionary
+        '''
+        elif not has_data:
+            raise CrossComputeDefinitionError({
+                'data': 'is required if block lacks id'})
+        '''
+        # TODO: Consider when to enforce data ==> maybe flag
         block_dictionaries.append(block_dictionary)
     return block_dictionaries
 
@@ -318,6 +331,20 @@ def normalize_view_name(raw_view_name):
     if view_name not in VIEW_NAMES:
         raise CrossComputeDefinitionError({'view': 'must be ' + ' or '.join(VIEW_NAMES)})
     return view_name
+
+
+def normalize_style_rule_strings(raw_style_rule_strings):
+    if not isinstance(raw_style_rule_strings, list):
+        raise CrossComputeDefinitionError({
+            'styles': 'must be a list'})
+    try:
+        style_text = '\n'.join(raw_style_rule_strings)
+        style_rules = parse_stylesheet(
+            style_text, skip_comments=True, skip_whitespace=True)
+        style_rule_strings = [_.serialize() for _ in style_rules]
+    except TypeError:
+        raise CrossComputeDefinitionError({'styles': 'bad'})
+    return style_rule_strings
 
 
 def load_block_dictionaries(template_path):
