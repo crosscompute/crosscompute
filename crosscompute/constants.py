@@ -10,6 +10,7 @@ VIEW_NAMES = [
     'number',
     'markdown',
     'table',
+    'image',
     'map',
 ]
 DEFAULT_VIEW_NAME = 'text'
