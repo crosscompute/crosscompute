@@ -19,4 +19,6 @@ def sanitize_json_value(value):
             for k, v in value.items()}
     if isinstance(value, list):
         return [sanitize_json_value(_) for _ in value]
+    if isinstance(value, str):
+        return value
     return None if isnan(value) else value
