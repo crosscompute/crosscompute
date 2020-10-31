@@ -1,3 +1,4 @@
+from math import isnan
 from os import environ
 
 
@@ -9,3 +10,13 @@ def get_environment_value(name, default=None, is_required=False):
             exit(f'{name} is required in the environment')
         value = default
     return value
+
+
+def sanitize_json_value(value):
+    if isinstance(value, dict):
+        return {
+            sanitize_json_value(k): sanitize_json_value(v)
+            for k, v in value.items()}
+    if isinstance(value, list):
+        return [sanitize_json_value(_) for _ in value]
+    return None if isnan(value) else value
