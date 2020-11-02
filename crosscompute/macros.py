@@ -21,4 +21,4 @@ def sanitize_json_value(value):
         return [sanitize_json_value(_) for _ in value]
     if isinstance(value, str):
         return value
-    return None if isnan(value) else value
+    return None if value is None or isnan(value) else value
