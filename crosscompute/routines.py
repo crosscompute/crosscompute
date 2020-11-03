@@ -1,13 +1,15 @@
 import re
 import strictyaml
 from os.path import dirname, join
+from sseclient import SSEClient
 from tinycss2 import parse_stylesheet
 
 from . import __version__
 from .constants import (
-    DEFAULT_HOST,
+    CLIENT_URL,
     DEFAULT_VIEW_NAME,
     L,
+    SERVER_URL,
     VIEW_NAMES)
 from .exceptions import CrossComputeDefinitionError
 from .macros import get_environment_value
@@ -17,19 +19,28 @@ VARIABLE_TEXT_PATTERN = re.compile(r'({[^}]+})')
 VARIABLE_ID_PATTERN = re.compile(r'{\s*([^}]+?)\s*}')
 
 
-def get_crosscompute_host():
-    return get_environment_value('CROSSCOMPUTE_HOST', DEFAULT_HOST)
+def get_client_url():
+    return get_environment_value('CROSSCOMPUTE_CLIENT', CLIENT_URL)
 
 
-def get_crosscompute_token():
+def get_server_url():
+    return get_environment_value('CROSSCOMPUTE_SERVER', SERVER_URL)
+
+
+def get_token():
     return get_environment_value('CROSSCOMPUTE_TOKEN', is_required=True)
 
 
-def get_resource_url(host, resource_name, resource_id=None):
-    url = host + '/' + resource_name
+def get_resource_url(server_url, resource_name, resource_id=None):
+    url = server_url + '/' + resource_name
     if resource_id:
         url += '/' + resource_id
     return url + '.json'
+
+
+def get_echoes_client(server_url, token):
+    url = f'{server_url}/echoes/{token}.json'
+    return SSEClient(url)
 
 
 def load_tool_definition(path):

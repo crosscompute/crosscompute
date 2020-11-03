@@ -10,9 +10,9 @@ from collections import defaultdict
 from invisibleroads_macros_disk import make_folder
 from os import environ
 from os.path import expanduser, join, splitext
-from sseclient import SSEClient
 
 from .. import AuthenticatingScript
+from ...routines import get_echoes_client
 
 
 def save_json(target_path, value_by_id):
@@ -40,14 +40,14 @@ class RunWorkerScript(AuthenticatingScript):
 
     def run(self, args, argv):
         super().run(args, argv)
-        return run(args.host, args.token, argv)
+        return run(args.server_url, args.token, argv)
 
 
-def run(host, token, script_arguments):
+def run(server_url, token, script_arguments):
     headers = {'Authorization': 'Bearer ' + token}
-    echoes_url = f'{host}/echoes/{token}.json'
-    chores_url = f'{host}/chores.json'
-    for echo_message in SSEClient(echoes_url):
+    echoes_client = get_echoes_client(server_url, token)
+    chores_url = f'{server_url}/chores.json'
+    for echo_message in echoes_client:
         print(echo_message.__dict__)
         if echo_message.event == 'i':
             # TODO: Handle invalid json
@@ -278,7 +278,7 @@ def run(host, token, script_arguments):
                             print(e)
                             continue
 
-                result_url = host + '/results/' + result_id + '.json'
+                result_url = server_url + '/results/' + result_id + '.json'
                 response = requests.patch(result_url, headers={
                     'Authorization': 'Bearer ' + result_token,
                 }, json={

@@ -5,8 +5,8 @@ from invisibleroads.scripts import LoggingScript
 
 from ...exceptions import CrossComputeError
 from ...routines import (
-    get_crosscompute_host,
-    get_crosscompute_token,
+    get_server_url,
+    get_token,
     load_tool_definition)
 
 
@@ -39,10 +39,10 @@ class AddToolScript(LoggingScript):
         response_format = args.response_format
         is_response_format_json = response_format == 'json'
         is_mock = args.is_mock
-        host = get_crosscompute_host()
-        token = get_crosscompute_token() if not is_mock else ''
+        server_url = get_server_url()
+        token = get_token() if not is_mock else ''
         try:
-            d = run(host, token, args.path, is_mock)
+            d = run(server_url, token, args.path, is_mock)
         except CrossComputeError as e:
             dictionary = e.args[0]
             if is_response_format_json:
@@ -58,8 +58,8 @@ class AddToolScript(LoggingScript):
             print(format_real_text(d))
 
 
-def run(host, token, path, is_mock=False):
-    url = host + '/tools.json'
+def run(server_url, token, path, is_mock=False):
+    url = server_url + '/tools.json'
     headers = {'Authorization': 'Bearer ' + token}
     dictionary = load_tool_definition(path)
     if is_mock:

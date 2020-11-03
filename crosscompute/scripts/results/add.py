@@ -43,12 +43,12 @@ class AddResultScript(AuthenticatingScript):
             project = result_dictionary.get('project', {})
             project['id'] = project_id
 
-        d = run(args.host, args.token, result_dictionary)
+        d = run(args.server_url, args.token, result_dictionary)
         print(json.dumps(d))
 
 
-def run(host, token, result_dictionary):
-    url = host + '/results.json'
+def run(server_url, token, result_dictionary):
+    url = server_url + '/results.json'
     headers = {'Authorization': 'Bearer ' + token}
     d = result_dictionary
     response = requests.post(url, headers=headers, json=d)

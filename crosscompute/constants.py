@@ -14,4 +14,5 @@ VIEW_NAMES = [
     'map',
 ]
 DEFAULT_VIEW_NAME = 'text'
-DEFAULT_HOST = 'https://services.crosscompute.com'
+CLIENT_URL = 'https://services.crosscompute.com'
+SERVER_URL = 'https://services.crosscompute.com'

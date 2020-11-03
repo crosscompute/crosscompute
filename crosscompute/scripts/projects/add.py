@@ -12,12 +12,12 @@ class AddProjectScript(AuthenticatingScript):
 
     def run(self, args, argv):
         super().run(args, argv)
-        d = run(args.host, args.token, args.name)
+        d = run(args.server_url, args.token, args.name)
         print(json.dumps(d))
 
 
-def run(host, token, project_name):
-    url = host + '/projects.json'
+def run(server_url, token, project_name):
+    url = server_url + '/projects.json'
     headers = {'Authorization': 'Bearer ' + token}
     d = {'name': project_name}
     response = requests.post(url, headers=headers, json=d)

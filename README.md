@@ -8,7 +8,8 @@ Please see https://crosscompute.com for examples and tutorials.
 # pip install -U crosscompute
 pip install https://github.com/crosscompute/crosscompute
 
-export CROSSCOMPUTE_HOST=https://services.projects.crosscompute.com
+# export CROSSCOMPUTE_CLIENT=https://crosscompute.com
+# export CROSSCOMPUTE_SERVER=https://services.crosscompute.com
 export CROSSCOMPUTE_TOKEN=YOUR-TOKEN
 ```
 
