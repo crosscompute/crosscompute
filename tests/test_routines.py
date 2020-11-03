@@ -3,7 +3,10 @@ from os.path import basename, join, splitext
 from pytest import raises
 
 from conftest import (
-    flatten_values, EXAMPLES_FOLDER, TOOL_MINIMAL_DEFINITION_PATH)
+    flatten_values,
+    EXAMPLES_FOLDER,
+    RESULT_DEFINITION_PATH,
+    TOOL_MINIMAL_DEFINITION_PATH)
 
 
 def test_load_tool_definition():
@@ -14,10 +17,10 @@ def test_load_tool_definition():
 
 
 def test_find_relevant_path():
-    path = TOOL_MINIMAL_DEFINITION_PATH
+    path = RESULT_DEFINITION_PATH
     name = basename(path)
     stem_path, good_extension = splitext(path)
-    bad_extension = '.csv'
+    bad_extension = '.css'
 
     with raises(OSError):
         find_relevant_path(
@@ -35,14 +38,14 @@ def test_find_relevant_path():
     ) == path
 
     assert find_relevant_path(
-        join(EXAMPLES_FOLDER, 'x' + bad_extension),
+        EXAMPLES_FOLDER,
         name,
     ) == path
 
     assert find_relevant_path(
-        join(EXAMPLES_FOLDER, 'x', 'x' + bad_extension),
+        join(EXAMPLES_FOLDER, 'templates', 'output', 'standard.md'),
         name,
     ) == path
 
     with raises(OSError):
-        find_relevant_path('/', 'x' + good_extension)
+        find_relevant_path('/', name)
