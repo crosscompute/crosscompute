@@ -20,7 +20,7 @@ class ChangeProjectScript(AuthenticatingScript):
         dataset_ids = args.datasetId or []
         result_ids = args.resultId or []
         d = run(
-            args.host,
+            args.server_url,
             args.token,
             args.projectId,
             args.name,
@@ -31,7 +31,7 @@ class ChangeProjectScript(AuthenticatingScript):
 
 
 def run(
-    host,
+    server_url,
     token,
     project_id,
     project_name=None,
@@ -39,7 +39,7 @@ def run(
     dataset_ids=[],
     result_ids=[],
 ):
-    url = f'{host}/projects/{project_id}.json'
+    url = f'{server_url}/projects/{project_id}.json'
     headers = {'Authorization': 'Bearer ' + token}
     d = {
         'toolIds': tool_ids,

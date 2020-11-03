@@ -14,12 +14,12 @@ class SeeToolScript(AuthenticatingScript):
 
     def run(self, args, argv):
         super().run(args, argv)
-        d = run(args.host, args.token, args.toolId)
+        d = run(args.server_url, args.token, args.toolId)
         print(json.dumps(d))
 
 
-def run(host, token, tool_id=None):
-    url = get_resource_url(host, 'tools', tool_id)
+def run(server_url, token, tool_id=None):
+    url = get_resource_url(server_url, 'tools', tool_id)
     headers = {'Authorization': 'Bearer ' + token}
     response = requests.get(url, headers=headers)
     return response.json()
