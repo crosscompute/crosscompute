@@ -1,6 +1,6 @@
 import re
 import strictyaml
-from os.path import dirname, join
+from os.path import abspath, dirname, exists, join, splitext
 from tinycss2 import parse_stylesheet
 
 from . import __version__
@@ -376,3 +376,25 @@ def parse_block_dictionaries(template_text):
                 },
             })
     return block_dictionaries
+
+
+def find_relevant_path(path, name=''):
+    base, extension = splitext(path)
+    expected_extension = splitext(name)[1]
+    if extension == expected_extension:
+        if not exists(path):
+            raise OSError({'path': 'is bad'})
+        return path
+    modified_path = base + expected_extension
+    if exists(modified_path):
+        return modified_path
+    this_folder = dirname(path)
+    while True:
+        this_path = join(this_folder, name)
+        if exists(this_path):
+            break
+        parent_folder = dirname(abspath(this_folder))
+        if parent_folder == this_folder:
+            raise OSError({'path': 'is missing'})
+        this_folder = parent_folder
+    return this_path

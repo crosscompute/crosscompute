@@ -15,6 +15,7 @@ tools.see = crosscompute.scripts.tools.see:SeeToolScript
 results.add = crosscompute.scripts.results.add:AddResultScript
 results.see = crosscompute.scripts.results.see:SeeResultScript
 workers.run = crosscompute.scripts.workers.run:RunWorkerScript
+automations.run = crosscompute.scripts.automations.run:RunAutomationScript
 '''
 APPLICATION_CLASSIFIERS = [
     'Programming Language :: Python :: 3',
@@ -22,7 +23,7 @@ APPLICATION_CLASSIFIERS = [
 ]
 APPLICATION_REQUIREMENTS = [
     'invisibleroads >= 0.3.3',
-    'invisibleroads-macros-disk >= 1.0.2',
+    'invisibleroads-macros-disk >= 1.1.0',
     'invisibleroads-macros-log >= 1.0.3',
     'invisibleroads-macros-security >= 1.0.1',
     'pandas',

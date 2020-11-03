@@ -15,3 +15,8 @@ VIEW_NAMES = [
 ]
 DEFAULT_VIEW_NAME = 'text'
 DEFAULT_HOST = 'https://services.crosscompute.com'
+
+
+AUTOMATION_FILE_NAME = 'automation.yml'
+TOOL_FILE_NAME = 'tool.yml'
+RESULT_FILE_NAME = 'result.yml'
