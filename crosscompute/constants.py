@@ -1,7 +1,14 @@
 from invisibleroads_macros_log import get_log
+from os.path import expanduser
 
 
 VERSION = '0.8.4'
+
+
+S = {
+    'folder': expanduser('~/.crosscompute'),
+    'draft.id.length': 16,
+}
 
 
 CLIENT_URL = 'https://crosscompute.com'

@@ -7,7 +7,7 @@ from ...exceptions import CrossComputeError
 from ...routines import (
     get_server_url,
     get_token,
-    load_tool_definition)
+    load_definition)
 
 
 MOCK_TEXT = '''
@@ -61,7 +61,7 @@ class AddToolScript(LoggingScript):
 def run(server_url, token, path, is_mock=False):
     url = server_url + '/tools.json'
     headers = {'Authorization': 'Bearer ' + token}
-    dictionary = load_tool_definition(path)
+    dictionary = load_definition(path, kinds=['tool'])
     if is_mock:
         return dictionary
     response = requests.post(url, headers=headers, json={

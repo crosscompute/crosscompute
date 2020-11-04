@@ -26,7 +26,6 @@ APPLICATION_REQUIREMENTS = [
     'invisibleroads-macros-disk >= 1.1.0',
     'invisibleroads-macros-log >= 1.0.3',
     'invisibleroads-macros-security >= 1.0.1',
-    'pandas',
     'requests',
     'sseclient',
     'strictyaml',

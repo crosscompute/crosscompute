@@ -1,8 +1,6 @@
 from invisibleroads.scripts import LoggingScript
 
-from ...constants import AUTOMATION_FILE_NAME
-from ...exceptions import CrossComputeExecutionError
-from ...routines import find_relevant_path
+from ...routines import run_automation
 
 
 class RunAutomationScript(LoggingScript):
@@ -13,13 +11,4 @@ class RunAutomationScript(LoggingScript):
 
     def run(self, args, argv):
         super().run(args, argv)
-        return run(args.path or '.')
-
-
-def run(path):
-    try:
-        automation_path = find_relevant_path(
-            path, AUTOMATION_FILE_NAME)
-    except OSError:
-        raise CrossComputeExecutionError({'automation': 'is missing'})
-    print(automation_path)
+        return run_automation(args.path or '.')
