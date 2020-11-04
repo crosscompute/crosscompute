@@ -1,6 +1,5 @@
-from math import nan
-
 from crosscompute.macros import sanitize_json_value
+from math import nan
 
 
 def test_sanitize_json_value():
