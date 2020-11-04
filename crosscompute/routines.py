@@ -1,7 +1,8 @@
 # TODO: Check that file extension is supported for each variable type
 import base64
+import csv
+import geojson
 import json
-import pandas
 import re
 import requests
 import shlex
@@ -16,7 +17,9 @@ from os.path import abspath, dirname, exists, isdir, join, splitext
 from pyramid.httpexceptions import HTTPInternalServerError
 from sseclient import SSEClient
 from subprocess import CalledProcessError
+from sys import exc_info
 from tinycss2 import parse_stylesheet
+from traceback import print_exception
 
 from . import __version__
 from .constants import (
@@ -27,7 +30,10 @@ from .constants import (
     S,
     SERVER_URL,
     VIEW_NAMES)
-from .exceptions import CrossComputeDefinitionError, CrossComputeExecutionError
+from .exceptions import (
+    CrossComputeDefinitionError,
+    CrossComputeError,
+    CrossComputeExecutionError)
 from .macros import get_environment_value, parse_number
 
 
@@ -671,31 +677,36 @@ def get_template_dictionary(tool_definition, result_dictionary):
 
 def process_output_folder(output_folder, variable_definitions):
     variable_data_by_id = {}
-
     for variable_definition in variable_definitions:
         variable_id = variable_definition['id']
         variable_path = variable_definition['path']
         variable_view = variable_definition['view']
         file_extension = splitext(variable_path)[1]
         file_path = join(output_folder, variable_path)
-
-        if variable_view == 'number':
-            # TODO: Handle case when extension is unsupported
-            load = LOAD_BY_EXTENSION[file_extension]
-            value_by_id = load(file_path)
-            # TODO: Handle case when variable id is not found
-            variable_value = value_by_id[variable_id]
-        if variable_view == 'table':
-            # TODO: Handle case when extension is unsupported
-            load = LOAD_BY_EXTENSION[file_extension]
-            table = load(file_path)
-            columns = table.columns.to_list()
-            rows = list(table.to_dict('split')['data'])
-            variable_value = {'rows': rows, 'columns': columns}
-        elif variable_view == 'image':
-            with open(file_path, 'rb') as image_file:
-                variable_value = base64.b64encode(image_file.read())
-            variable_value = variable_value.decode('utf-8')
+        try:
+            load_by_extension = LOAD_BY_EXTENSION_BY_VIEW[variable_view]
+        except KeyError:
+            raise HTTPInternalServerError({
+                'view': 'is not yet implemented for ' + variable_view})
+        try:
+            load = load_by_extension[file_extension]
+        except KeyError:
+            raise CrossComputeDefinitionError({
+                'path': 'has unsupported extension ' + file_extension})
+        try:
+            variable_value = load(file_path, variable_id)
+        except OSError:
+            raise CrossComputeDefinitionError({
+                'path': 'is bad ' + file_path})
+        except UnicodeDecodeError:
+            raise CrossComputeExecutionError({
+                'path': f'is not {variable_view} ' + file_path})
+        except CrossComputeError:
+            raise
+        except Exception:
+            print_exception(*exc_info())
+            raise HTTPInternalServerError({
+                'path': 'triggered an unexpected exception'})
         variable_data_by_id[variable_id] = {'value': variable_value}
     return variable_data_by_id
 
@@ -761,20 +772,112 @@ def save_json(target_path, value_by_id):
     json.dump(value_by_id, open(target_path, 'wt'))
 
 
-def load_json(source_path):
-    return json.load(open(source_path, 'rt'))
+def load_value_json(source_path, variable_id):
+    d = json.load(open(source_path, 'rt'))
+    try:
+        variable_value = d[variable_id]
+    except KeyError:
+        raise CrossComputeExecutionError({
+            'variable': f'could not find {variable_id} in {source_path}'})
+    return variable_value
 
 
-def load_csv(source_path):
-    return pandas.read_csv(source_path)
+def load_text_json(source_path, variable_id):
+    variable_value = load_value_json(source_path, variable_id)
+    return {'value': variable_value}
 
 
-SAVE_BY_EXTENSION = {
-    '.json': save_json,
+def load_text_txt(source_path, variable_id):
+    variable_value = open(source_path, 'rt').read()
+    return {'value': variable_value}
+
+
+def load_number_json(source_path, variable_id):
+    variable_value = load_value_json(source_path, variable_id)
+    try:
+        variable_value = parse_number(variable_value)
+    except ValueError:
+        raise CrossComputeExecutionError({
+            'variable': f'could not parse {variable_id} as a number'})
+    return {'value': variable_value}
+
+
+def load_markdown_md(source_path, variable_id):
+    return load_text_txt(source_path, variable_id)
+
+
+def load_table_csv(source_path, variable_id):
+    csv_reader = csv.reader(open(source_path, 'rt'))
+    columns = next(csv_reader)
+    rows = list(csv_reader)
+    variable_value = {'columns': columns, 'rows': rows}
+    return {'value': variable_value}
+
+
+def load_image_png(source_path, variable_id):
+    with open(source_path, 'rb') as source_file:
+        variable_value = base64.b64encode(source_file.read())
+    variable_value = variable_value.decode('utf-8')
+    return {'value': variable_value}
+
+
+def load_map_geojson(source_path, variable_id):
+    variable_value = geojson.load(open(source_path, 'rt'))
+    return {'value': variable_value}
+
+
+LOAD_BY_EXTENSION_BY_VIEW = {
+    'text': {
+        '.json': load_text_json,
+        '.txt': load_text_txt,
+    },
+    'number': {
+        '.json': load_number_json,
+    },
+    'markdown': {
+        '.md': load_markdown_md,
+    },
+    'table': {
+        '.csv': load_table_csv,
+    },
+    'image': {
+        '.png': load_image_png,
+    },
+    'map': {
+        '.geojson': load_map_geojson,
+    },
 }
 
 
-LOAD_BY_EXTENSION = {
-    '.json': load_json,
-    '.csv': load_csv,
+def load_text_data(source_path, variable_id):
+    pass
+
+
+def load_number_data(source_path, variable_id):
+    pass
+
+
+def load_markdown_data(source_path, variable_id):
+    pass
+
+
+def load_table_data(source_path, variable_id):
+    pass
+
+
+def load_image_data(source_path, variable_id):
+    pass
+
+
+def load_map_data(source_path, variable_id):
+    pass
+
+
+LOAD_DATA_BY_VIEW_NAME = {
+    'text': load_text_data,
+    'number': load_number_data,
+    'markdown': load_markdown_data,
+    'table': load_table_data,
+    'image': load_image_data,
+    'map': load_map_data,
 }

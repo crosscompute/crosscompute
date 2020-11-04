@@ -22,6 +22,7 @@ APPLICATION_CLASSIFIERS = [
     'License :: OSI Approved :: MIT License',
 ]
 APPLICATION_REQUIREMENTS = [
+    'geojson',
     'invisibleroads >= 0.3.3',
     'invisibleroads-macros-disk >= 1.1.0',
     'invisibleroads-macros-log >= 1.0.3',
