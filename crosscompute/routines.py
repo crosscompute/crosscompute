@@ -27,7 +27,7 @@ def get_server_url():
     return get_environment_value('CROSSCOMPUTE_SERVER', SERVER_URL)
 
 
-def get_token():
+def get_server_token():
     return get_environment_value('CROSSCOMPUTE_TOKEN', is_required=True)
 
 
@@ -38,8 +38,8 @@ def get_resource_url(server_url, resource_name, resource_id=None):
     return url + '.json'
 
 
-def get_echoes_client(server_url, token):
-    url = f'{server_url}/echoes/{token}.json'
+def get_echoes_client(server_url, server_token):
+    url = f'{server_url}/echoes/{server_token}.json'
     return SSEClient(url)
 
 
