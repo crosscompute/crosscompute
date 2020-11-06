@@ -26,6 +26,7 @@ from .constants import (
     CLIENT_URL,
     DEFAULT_VIEW_NAME,
     L,
+    PRINT_FORMAT_NAMES,
     S,
     SERVER_URL,
     VIEW_NAMES)
@@ -33,7 +34,7 @@ from .exceptions import (
     CrossComputeDefinitionError,
     CrossComputeError,
     CrossComputeExecutionError)
-from .macros import get_environment_value, parse_number
+from .macros import get_environment_value, parse_number, split_path
 from .symmetries import cache
 
 
@@ -130,46 +131,51 @@ def normalize_result_definition(raw_result_definition, folder):
         result_definition = load_definition(result_definition_path, kinds=['result'])
     else:
         result_definition = {}
+
     tool_definition = dict(raw_result_definition.get(
         'tool', result_definition.get('tool', {})))
     if 'path' in tool_definition:
         tool_definition_path = join(folder, tool_definition['path'])
         tool_definition = load_definition(tool_definition_path)
-    input_variable_data_by_id = {k: dict(v) for k, v in {
-        **result_definition.get('inputVariableDataById', {}),
-        **raw_result_definition.get('inputVariableDataById', {})}.items()}
-
-    try:
-        input_variable_definitions = tool_definition['input']['variables']
-    except KeyError:
-        pass
-    else:
-        for variable_definition in input_variable_definitions:
-            variable_id = variable_definition['id']
-            variable_view = variable_definition['view']
-            try:
-                variable_data = input_variable_data_by_id[variable_id]
-            except KeyError:
-                continue
-            if variable_view == 'number':
-                if 'values' in variable_data:
-                    variable_data['values'] = [parse_number(_) for _ in variable_data['values']]
-                elif 'value' in variable_data:
-                    variable_data['value'] = parse_number(variable_data['value'])
-
-    style_definition = dict(raw_result_definition.get(
-        'style', result_definition.get('style')))
-    if 'path' in style_definition:
-        style_path = join(folder, style_definition['path'])
-        style_definition = {'rules': load_style_rule_strings(style_path)}
-
     result_definition['tool'] = tool_definition
-    result_definition['inputVariableDataById'] = input_variable_data_by_id
-    result_definition['style'] = style_definition
-    result_definition['format'] = raw_result_definition.get(
-        'format', result_definition.get('format'))
+
+    raw_variable_dictionaries = sum([
+        result_definition.get('input', {}).get('variables', []),
+        raw_result_definition.get('input', {}).get('variables', []),
+    ], [])
+    variable_definitions = tool_definition.get(
+        'input', {}).get('variables', [])
+    result_definition['input'] = {
+        'variables': normalize_result_variable_dictionaries(
+            raw_variable_dictionaries, variable_definitions),
+    }
+
+    if 'print' in raw_result_definition:
+        result_definition['print'] = get_print_dictionary(
+            raw_result_definition['print'], folder)
     result_definition['kind'] = 'result'
     return result_definition
+
+
+def get_print_dictionary(dictionary, folder):
+    print_dictionary = {}
+
+    if 'style' in dictionary:
+        raw_style_definition = dictionary['style']
+        if 'path' in raw_style_definition:
+            style_path = join(folder, raw_style_definition['path'])
+            style_rules = load_style_rule_strings(style_path)
+        style_rules += normalize_style_rule_strings(raw_style_definition.get('rules', []))
+        style_definition = {'rules': style_rules}
+        print_dictionary['style'] = style_definition
+
+    if 'format' in dictionary:
+        raw_format = dictionary['format']
+        if raw_format not in PRINT_FORMAT_NAMES:
+            raise CrossComputeDefinitionError({'format': 'must be ' + ' or '.join(PRINT_FORMAT_NAMES)})
+        print_dictionary['format'] = raw_format
+
+    return print_dictionary
 
 
 def normalize_tool_definition(dictionary, folder):
@@ -187,19 +193,15 @@ def normalize_tool_definition(dictionary, folder):
         d['version'] = normalize_version_dictionary(dictionary['version'])
     except KeyError as e:
         raise CrossComputeDefinitionError({e.args[0]: 'is required'})
-    d['input'] = normalize_put_definition('input', dictionary, folder)
-    d['output'] = normalize_put_definition('output', dictionary, folder)
-    if 'tests' in dictionary:
-        d['tests'] = normalize_tests_definition('tests', dictionary)
-    if 'script' in dictionary:
-        d['script'] = normalize_script_definition('script', dictionary)
-    if 'environment' in dictionary:
-        d['environment'] = normalize_environment_definition(
-            'environment', dictionary)
+    d['input'] = get_put_dictionary('input', dictionary, folder)
+    d['output'] = get_put_dictionary('output', dictionary, folder)
+    d['tests'] = get_test_dictionaries(dictionary)
+    d['script'] = get_script_dictionary(dictionary)
+    d['environment'] = get_environment_dictionary(dictionary)
     return d
 
 
-def normalize_put_definition(key, dictionary, folder=None):
+def get_put_dictionary(key, dictionary, folder=None):
     d = {}
 
     try:
@@ -214,7 +216,7 @@ def normalize_put_definition(key, dictionary, folder=None):
         L.warning(f'missing {key} variables definition')
         variable_dictionaries = []
     else:
-        variable_dictionaries = normalize_variable_dictionaries(
+        variable_dictionaries = normalize_tool_variable_dictionaries(
             variable_dictionaries)
         d['variables'] = variable_dictionaries
 
@@ -231,56 +233,60 @@ def normalize_put_definition(key, dictionary, folder=None):
     return d
 
 
-def normalize_tests_definition(key, dictionary):
+def get_test_dictionaries(dictionary):
     try:
-        raw_test_dictionaries = dictionary[key]
+        raw_test_dictionaries = dictionary['tests']
     except KeyError:
-        L.warning(f'missing {key} definition')
+        L.warning('missing tests definition')
         raw_test_dictionaries = []
     return normalize_test_dictionaries(raw_test_dictionaries)
 
 
-def normalize_script_definition(key, dictionary):
+def get_script_dictionary(dictionary):
     try:
-        raw_script_dictionary = dictionary[key]
+        raw_script_dictionary = dictionary['script']
     except KeyError:
-        L.warning(f'missing {key} definition')
+        L.warning('missing script definition')
         raw_script_dictionary = {}
     return normalize_script_dictionary(raw_script_dictionary)
 
 
-def normalize_environment_definition(key, dictionary):
+def get_environment_dictionary(dictionary):
     try:
-        raw_environment_dictionary = dictionary[key]
+        raw_environment_dictionary = dictionary['environment']
     except KeyError:
-        L.warning(f'missing {key} definition')
+        L.warning('missing environment definition')
         raw_environment_dictionary = {}
     return normalize_environment_dictionary(raw_environment_dictionary)
 
 
-def normalize_blocks_definition(
-        key, dictionary, folder=None, without_data=False):
+def get_template_block_dictionaries(dictionary, folder):
     if 'blocks' in dictionary:
-        block_dictionaries = dictionary['blocks']
+        raw_block_dictionaries = dictionary['blocks']
     elif 'path' in dictionary and folder is not None:
         template_path = join(folder, dictionary['path'])
-        block_dictionaries = load_block_dictionaries(template_path)
+        raw_block_dictionaries = load_block_dictionaries(template_path)
     else:
-        block_dictionaries = []
-    return normalize_block_dictionaries(block_dictionaries, without_data)
+        raw_block_dictionaries = []
+    return normalize_block_dictionaries(
+        raw_block_dictionaries, with_data=False)
 
 
-def normalize_variable_dictionaries(raw_variable_dictionaries):
+def get_document_block_dictionaries(dictionary):
+    pass
+
+
+def normalize_tool_variable_dictionaries(
+        raw_variable_dictionaries):
     variable_dictionaries = []
     for raw_variable_dictionary in raw_variable_dictionaries:
         try:
             variable_id = raw_variable_dictionary['id']
-            variable_path = raw_variable_dictionary['path']
+            variable_path = normalize_variable_path(
+                raw_variable_dictionary['path'])
         except KeyError as e:
             raise CrossComputeDefinitionError({
                 e.args[0]: 'is required for each variable'})
-        if '..' in variable_path:
-            raise CrossComputeDefinitionError({'path': 'is bad ' + variable_path})
         variable_dictionary = {
             'id': variable_id,
             'name': raw_variable_dictionary.get(
@@ -290,6 +296,42 @@ def normalize_variable_dictionaries(raw_variable_dictionaries):
             'path': variable_path,
         }
         variable_dictionaries.append(variable_dictionary)
+    return variable_dictionaries
+
+
+def normalize_result_variable_dictionaries(
+        raw_variable_dictionaries, variable_definitions):
+    try:
+        raw_variable_dictionary_by_id = {
+            _['id']: _ for _ in raw_variable_dictionaries}
+    except KeyError:
+        raise CrossComputeDefinitionError({
+            'id': 'is required for each variable'})
+    variable_definition_by_id = {_['id']: _ for _ in variable_definitions}
+
+    variable_dictionaries = []
+    for (
+        variable_id,
+        raw_variable_dictionary,
+    ) in raw_variable_dictionary_by_id.items():
+        try:
+            variable_view = variable_definition_by_id[variable_id]
+        except KeyError:
+            raise CrossComputeDefinitionError({
+                'id': f'could not find {variable_id} in tool definition'})
+
+        try:
+            variable_data = raw_variable_dictionary['data']
+        except KeyError:
+            raise CrossComputeDefinitionError({
+                'data': 'is required for each variable'})
+        variable_data = normalize_data_dictionary(
+            variable_data, variable_view)
+
+        variable_dictionaries.append({
+            'id': variable_id,
+            'data': variable_data,
+        })
     return variable_dictionaries
 
 
@@ -303,14 +345,14 @@ def normalize_template_dictionaries(
         except KeyError as e:
             raise CrossComputeDefinitionError({
                 e.args[0]: 'is required for each template'})
-        template_blocks = normalize_blocks_definition(
-            'blocks', raw_template_dictionary, folder, without_data=True)
-        if not template_blocks:
+        block_dictionaries = get_template_block_dictionaries(
+            raw_template_dictionary, folder)
+        if not block_dictionaries:
             continue
         template_dictionaries.append({
             'id': template_id,
             'name': template_name,
-            'blocks': template_blocks,
+            'blocks': block_dictionaries,
         })
     if not template_dictionaries:
         template_dictionaries.append({
@@ -329,7 +371,7 @@ def normalize_test_dictionaries(raw_test_dictionaries):
     } for _ in raw_test_dictionaries]
 
 
-def normalize_block_dictionaries(raw_block_dictionaries, without_data=False):
+def normalize_block_dictionaries(raw_block_dictionaries, with_data=True):
     if not isinstance(raw_block_dictionaries, list):
         raise CrossComputeDefinitionError({
             'blocks': 'must be a list'})
@@ -353,7 +395,7 @@ def normalize_block_dictionaries(raw_block_dictionaries, without_data=False):
             data_dictionary = normalize_data_dictionary(
                 raw_data_dictionary, view_name)
             block_dictionary['data'] = data_dictionary
-        elif not without_data:
+        elif with_data:
             raise CrossComputeDefinitionError({'data': 'is required'})
         block_dictionaries.append(block_dictionary)
     return block_dictionaries
@@ -393,9 +435,9 @@ def normalize_data_dictionary(raw_data_dictionary, view_name):
     data_dictionary = {}
     if has_values:
         data_dictionary['values'] = normalize_values(
-            raw_data_dictionary['values'])
+            raw_data_dictionary['values'], view_name)
     elif has_value:
-        data_dictionary['value'] = normalize_value_dictionary(
+        data_dictionary['value'] = normalize_value(
             raw_data_dictionary['value'], view_name)
     elif has_file:
         data_dictionary['file'] = normalize_file_dictionary(
@@ -425,17 +467,30 @@ def normalize_environment_dictionary(raw_environment_dictionary):
     }
 
 
-def normalize_values(raw_values):
+def normalize_values(raw_values, view_name):
     try:
         values = list(raw_values)
     except TypeError:
         raise CrossComputeDefinitionError({'values': 'must be a list'})
+    if view_name == 'number':
+        try:
+            values = [parse_number(_) for _ in values]
+        except ValueError:
+            raise CrossComputeDefinitionError({
+                'values': f'could not parse numbers {values}'})
     return values
 
 
-def normalize_value_dictionary(raw_value_dictionary, view_name=None):
-    # TODO
-    return raw_value_dictionary
+def normalize_value(raw_value, view_name):
+    if view_name == 'number':
+        try:
+            value = parse_number(raw_value)
+        except ValueError:
+            raise CrossComputeDefinitionError({
+                'value': f'could not parse number {value}'})
+    else:
+        value = raw_value
+    return value
 
 
 def normalize_file_dictionary(raw_file_dictionary):
@@ -465,6 +520,13 @@ def normalize_style_rule_strings(raw_style_rule_strings):
     except TypeError:
         raise CrossComputeDefinitionError({'styles': 'is bad'})
     return style_rule_strings
+
+
+def normalize_variable_path(variable_path):
+    if '..' in split_path(variable_path):
+        raise CrossComputeDefinitionError({
+            'path': 'is bad ' + variable_path})
+    return variable_path
 
 
 def load_block_dictionaries(template_path):
@@ -908,6 +970,7 @@ def load_image_png(source_path, variable_id):
 
 def load_map_geojson(source_path, variable_id):
     variable_value = geojson.load(open(source_path, 'rt'))
+    # TODO: Consider whether to assert FeatureCollection
     return variable_value
 
 

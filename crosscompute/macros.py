@@ -1,5 +1,6 @@
 from math import isnan
 from os import environ
+from os.path import split
 
 
 def get_environment_value(name, default=None, is_required=False):
@@ -30,3 +31,14 @@ def parse_number(raw_value):
     except ValueError:
         value = float(raw_value)
     return value
+
+
+def split_path(path):
+    pieces = []
+    chunk = path
+    while True:
+        chunk, piece = split(chunk)
+        if not piece:
+            break
+        pieces.append(piece)
+    return pieces[::-1]

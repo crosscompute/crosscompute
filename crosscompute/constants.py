@@ -5,12 +5,6 @@ from os.path import expanduser
 VERSION = '0.8.4'
 
 
-S = {
-    'folder': expanduser('~/.crosscompute'),
-    'draft.id.length': 16,
-}
-
-
 CLIENT_URL = 'https://crosscompute.com'
 SERVER_URL = 'https://services.crosscompute.com'
 
@@ -32,4 +26,13 @@ VIEW_NAMES = [
 DEFAULT_VIEW_NAME = 'text'
 
 
+PRINT_FORMAT_NAMES = [
+    'pdf'
+]
+
+
+S = {
+    'folder': expanduser('~/.crosscompute'),
+    'draft.id.length': 16,
+}
 L = get_log('crosscompute')
