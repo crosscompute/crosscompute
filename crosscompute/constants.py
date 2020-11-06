@@ -2,9 +2,6 @@ from invisibleroads_macros_log import get_log
 from os.path import expanduser
 
 
-VERSION = '0.8.4'
-
-
 CLIENT_URL = 'https://crosscompute.com'
 SERVER_URL = 'https://services.crosscompute.com'
 

@@ -3,8 +3,9 @@ import strictyaml
 from os.path import dirname, join
 from tinycss2 import parse_stylesheet
 
+from .. import __version__
 from ..constants import (
-    DEFAULT_VIEW_NAME, L, PRINT_FORMAT_NAMES, VERSION, VIEW_NAMES)
+    DEFAULT_VIEW_NAME, L, PRINT_FORMAT_NAMES, VIEW_NAMES)
 from ..exceptions import CrossComputeDefinitionError
 from ..macros import parse_number, split_path
 
@@ -32,8 +33,9 @@ def load_raw_definition(path):
         protocol_name = raw_definition.pop('crosscompute')
     except KeyError:
         raise CrossComputeDefinitionError({'crosscompute': 'is required'})
-    if protocol_name != VERSION:
-        raise CrossComputeDefinitionError({'crosscompute': 'should be ' + VERSION})
+    if protocol_name != __version__:
+        raise CrossComputeDefinitionError({
+            'crosscompute': 'should be ' + __version__})
     return dict(raw_definition)
 
 

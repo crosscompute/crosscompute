@@ -67,15 +67,18 @@ def run_tool(tool_definition, result_dictionary):
     result_folder = get_result_folder(result_dictionary)
     folder_by_name = {k: make_folder(join(result_folder, k)) for k in [
         'input', 'output', 'log', 'debug']}
+    input_folder = folder_by_name['input']
+    output_folder = folder_by_name['output']
     prepare_input_folder(
         folder_by_name['input'],
         tool_definition['input']['variables'],
         result_dictionary['inputVariableDataById'])
     run_script(
-        script_command,
+        script_command.format(
+            input_folder=input_folder, output_folder=output_folder),
         script_folder,
-        folder_by_name['input'],
-        folder_by_name['output'],
+        input_folder,
+        output_folder,
         folder_by_name['log'],
         folder_by_name['debug'])
     for folder_name in 'output', 'log', 'debug':

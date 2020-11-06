@@ -1,1 +1,1 @@
-from .constants import VERSION as __version__
+__version__ = '0.8.4'

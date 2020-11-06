@@ -38,7 +38,8 @@ tests:
 script:
   uri: git@github.com:crosscompute/crosscompute-examples
   folder: add-numbers
-  command: jupyter nbconvert run.ipynb --to notebook --execute --stdout
+  command: python run.py {input_folder} {output_folder}
+  # command: jupyter nbconvert run.ipynb --to notebook --execute --stdout
 environment: 
   image: docker.io/library/python:slim-buster
   processor: cpu
