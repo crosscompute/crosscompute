@@ -1,5 +1,3 @@
-# TODO: Check that file extension is supported for each variable type
-import base64
 import csv
 import geojson
 import json
@@ -8,6 +6,7 @@ import requests
 import shlex
 import strictyaml
 import subprocess
+from base64 import b64decode, b64encode
 from collections import defaultdict
 from copy import deepcopy
 from invisibleroads_macros_disk import make_folder, make_random_folder
@@ -35,6 +34,7 @@ from .exceptions import (
     CrossComputeError,
     CrossComputeExecutionError)
 from .macros import get_environment_value, parse_number
+from .symmetries import cache
 
 
 VARIABLE_TEXT_PATTERN = re.compile(r'({[^}]+})')
@@ -258,7 +258,8 @@ def normalize_environment_definition(key, dictionary):
     return normalize_environment_dictionary(raw_environment_dictionary)
 
 
-def normalize_blocks_definition(key, dictionary, folder=None):
+def normalize_blocks_definition(
+        key, dictionary, folder=None, without_data=False):
     if 'blocks' in dictionary:
         block_dictionaries = dictionary['blocks']
     elif 'path' in dictionary and folder is not None:
@@ -266,7 +267,7 @@ def normalize_blocks_definition(key, dictionary, folder=None):
         block_dictionaries = load_block_dictionaries(template_path)
     else:
         block_dictionaries = []
-    return normalize_block_dictionaries(block_dictionaries)
+    return normalize_block_dictionaries(block_dictionaries, without_data)
 
 
 def normalize_variable_dictionaries(raw_variable_dictionaries):
@@ -278,6 +279,8 @@ def normalize_variable_dictionaries(raw_variable_dictionaries):
         except KeyError as e:
             raise CrossComputeDefinitionError({
                 e.args[0]: 'is required for each variable'})
+        if '..' in variable_path:
+            raise CrossComputeDefinitionError({'path': 'is bad ' + variable_path})
         variable_dictionary = {
             'id': variable_id,
             'name': raw_variable_dictionary.get(
@@ -301,7 +304,7 @@ def normalize_template_dictionaries(
             raise CrossComputeDefinitionError({
                 e.args[0]: 'is required for each template'})
         template_blocks = normalize_blocks_definition(
-            'blocks', raw_template_dictionary, folder)
+            'blocks', raw_template_dictionary, folder, without_data=True)
         if not template_blocks:
             continue
         template_dictionaries.append({
@@ -326,7 +329,7 @@ def normalize_test_dictionaries(raw_test_dictionaries):
     } for _ in raw_test_dictionaries]
 
 
-def normalize_block_dictionaries(raw_block_dictionaries):
+def normalize_block_dictionaries(raw_block_dictionaries, without_data=False):
     if not isinstance(raw_block_dictionaries, list):
         raise CrossComputeDefinitionError({
             'blocks': 'must be a list'})
@@ -350,12 +353,8 @@ def normalize_block_dictionaries(raw_block_dictionaries):
             data_dictionary = normalize_data_dictionary(
                 raw_data_dictionary, view_name)
             block_dictionary['data'] = data_dictionary
-        '''
-        elif not has_data:
-            raise CrossComputeDefinitionError({
-                'data': 'is required if block lacks id'})
-        '''
-        # TODO: Consider when to enforce data ==> maybe flag
+        elif not without_data:
+            raise CrossComputeDefinitionError({'data': 'is required'})
         block_dictionaries.append(block_dictionary)
     return block_dictionaries
 
@@ -676,6 +675,7 @@ def get_template_dictionary(tool_definition, result_dictionary):
 
 
 def process_output_folder(output_folder, variable_definitions):
+    load_value_json.cache_clear()
     variable_data_by_id = {}
     for variable_definition in variable_definitions:
         variable_id = variable_definition['id']
@@ -687,26 +687,27 @@ def process_output_folder(output_folder, variable_definitions):
             load_by_extension = LOAD_BY_EXTENSION_BY_VIEW[variable_view]
         except KeyError:
             raise HTTPInternalServerError({
-                'view': 'is not yet implemented for ' + variable_view})
+                'view': 'is not yet implemented for load ' + variable_view})
         try:
             load = load_by_extension[file_extension]
         except KeyError:
-            raise CrossComputeDefinitionError({
-                'path': 'has unsupported extension ' + file_extension})
+            if '.*' not in load_by_extension:
+                raise CrossComputeDefinitionError({
+                    'path': 'has unsupported extension ' + file_extension})
+            load = load_by_extension['.*']
         try:
             variable_value = load(file_path, variable_id)
         except OSError:
-            raise CrossComputeDefinitionError({
-                'path': 'is bad ' + file_path})
-        except UnicodeDecodeError:
+            raise CrossComputeDefinitionError({'path': 'is bad ' + file_path})
+        except (ValueError, UnicodeDecodeError):
             raise CrossComputeExecutionError({
-                'path': f'is not {variable_view} ' + file_path})
+                'path': 'is unloadable by view ' + variable_view + file_path})
         except CrossComputeError:
             raise
         except Exception:
             print_exception(*exc_info())
-            raise HTTPInternalServerError({
-                'path': 'triggered an unexpected exception'})
+            raise HTTPInternalServerError({'path': 'triggered an exception'})
+        # TODO: Upload to google cloud if large
         variable_data_by_id[variable_id] = {'value': variable_value}
     return variable_data_by_id
 
@@ -719,25 +720,54 @@ def make_template_dictionary(variable_definitions):
     }
 
 
-def prepare_input_folder(input_folder, variable_definitions, variable_data_by_id):
+def prepare_input_folder(
+        input_folder, variable_definitions, variable_data_by_id):
     value_by_id_by_path = defaultdict(dict)
-
     for variable_definition in variable_definitions:
         variable_id = variable_definition['id']
-        variable_path = variable_definition['path']
+        try:
+            variable_data = variable_data_by_id[variable_id]
+        except KeyError:
+            raise CrossComputeDefinitionError({
+                'variable': f'could not find data for {variable_id}'})
+        file_path = join(input_folder, variable_definition['path'])
+        make_folder(dirname(file_path))
+        if 'file' in variable_data:
+            if not exists(file_path):
+                # TODO: Download file to path
+                pass
+            continue
+        if 'value' not in variable_data:
+            continue
+        variable_value = variable_data['value']
         variable_view = variable_definition['view']
-        raw_value = variable_data_by_id[variable_id]['value']
-        if variable_view == 'number':
-            variable_value = parse_number(raw_value)
-        elif variable_view == 'text':
-            variable_value = raw_value
-        value_by_id_by_path[variable_path][variable_id] = variable_value
-
-    for variable_path, value_by_id in value_by_id_by_path.items():
-        file_extension = splitext(variable_path)[1]
-        file_path = join(input_folder, variable_path)
-        save = SAVE_BY_EXTENSION[file_extension]
-        save(file_path, value_by_id)
+        try:
+            save_by_extension = SAVE_BY_EXTENSION_BY_VIEW[variable_view]
+        except KeyError:
+            raise HTTPInternalServerError({
+                'view': 'is not yet implemented for save ' + variable_view})
+        file_extension = splitext(file_path)[1]
+        try:
+            save = save_by_extension[file_extension]
+        except KeyError:
+            if '.*' not in save_by_extension:
+                raise CrossComputeDefinitionError({
+                    'path': 'has unsupported extension ' + file_extension})
+            save = save_by_extension['.*']
+        try:
+            save(file_path, variable_value, variable_id, value_by_id_by_path)
+        except ValueError:
+            raise CrossComputeExecutionError({
+                'path': 'is unsaveable by view ' + variable_view + file_path})
+        except CrossComputeError:
+            raise
+        except Exception:
+            print_exception(*exc_info())
+            raise HTTPInternalServerError({'path': 'triggered an exception'})
+    for file_path, value_by_id in value_by_id_by_path.items():
+        file_extension = splitext(file_path)[1]
+        if file_extension == '.json':
+            save_json(file_path, value_by_id)
 
 
 def run_script(script_command, script_folder, input_folder, output_folder, log_folder, debug_folder):
@@ -772,6 +802,65 @@ def save_json(target_path, value_by_id):
     json.dump(value_by_id, open(target_path, 'wt'))
 
 
+def save_text(target_path, value):
+    open(target_path, 'wt').write(value)
+
+
+def save_binary(target_path, value):
+    open(target_path, 'wb').write(value)
+
+
+def save_text_json(target_path, value, variable_id, value_by_id_by_path):
+    value_by_id_by_path[target_path][variable_id] = value
+
+
+def save_text_txt(target_path, value, variable_id, value_by_id_by_path):
+    open(target_path, 'wt').write(value)
+
+
+def save_number_json(target_path, value, variable_id, value_by_id_by_path):
+    try:
+        value = parse_number(value)
+    except ValueError:
+        raise CrossComputeExecutionError({
+            'variable': f'could not parse {variable_id} as a number'})
+    value_by_id_by_path[target_path][variable_id] = value
+
+
+def save_markdown_md(target_path, value, variable_id, value_by_id_by_path):
+    open(target_path, 'wt').write(value)
+
+
+def save_table_csv(target_path, value, variable_id, value_by_id_by_path):
+    try:
+        columns = value['columns']
+        rows = value['rows']
+        with open(target_path, 'wt') as target_file:
+            csv_writer = csv.writer(target_file)
+            csv_writer.writerow(columns)
+            csv_writer.writerows(rows)
+    except (KeyError, csv.Error):
+        raise CrossComputeExecutionError({
+            'variable': f'could not parse {variable_id} as a table'})
+
+
+def save_image_png(target_path, value, variable_id, value_by_id_by_path):
+    save_binary(target_path, b64decode(value))
+
+
+def save_map_geojson(target_path, value, variable_id, value_by_id_by_path):
+    geojson.dump(value, target_path)
+
+
+def load_text(source_path):
+    return open(source_path, 'rt').read()
+
+
+def load_binary(source_path):
+    return open(source_path, 'rb').read()
+
+
+@cache
 def load_value_json(source_path, variable_id):
     d = json.load(open(source_path, 'rt'))
     try:
@@ -783,59 +872,77 @@ def load_value_json(source_path, variable_id):
 
 
 def load_text_json(source_path, variable_id):
-    variable_value = load_value_json(source_path, variable_id)
-    return {'value': variable_value}
+    return load_value_json(source_path, variable_id)
 
 
 def load_text_txt(source_path, variable_id):
-    variable_value = open(source_path, 'rt').read()
-    return {'value': variable_value}
+    return load_text(source_path)
 
 
 def load_number_json(source_path, variable_id):
-    variable_value = load_value_json(source_path, variable_id)
+    value = load_value_json(source_path, variable_id)
     try:
-        variable_value = parse_number(variable_value)
+        value = parse_number(value)
     except ValueError:
         raise CrossComputeExecutionError({
             'variable': f'could not parse {variable_id} as a number'})
-    return {'value': variable_value}
+    return value
 
 
 def load_markdown_md(source_path, variable_id):
-    return load_text_txt(source_path, variable_id)
+    return load_text(source_path)
 
 
 def load_table_csv(source_path, variable_id):
     csv_reader = csv.reader(open(source_path, 'rt'))
     columns = next(csv_reader)
     rows = list(csv_reader)
-    variable_value = {'columns': columns, 'rows': rows}
-    return {'value': variable_value}
+    return {'columns': columns, 'rows': rows}
 
 
 def load_image_png(source_path, variable_id):
-    with open(source_path, 'rb') as source_file:
-        variable_value = base64.b64encode(source_file.read())
-    variable_value = variable_value.decode('utf-8')
-    return {'value': variable_value}
+    variable_value = load_binary(source_path)
+    variable_value = b64encode(variable_value)
+    return variable_value.decode('utf-8')
 
 
 def load_map_geojson(source_path, variable_id):
     variable_value = geojson.load(open(source_path, 'rt'))
-    return {'value': variable_value}
+    return variable_value
 
 
+SAVE_BY_EXTENSION_BY_VIEW = {
+    'text': {
+        '.json': save_text_json,
+        '.*': save_text_txt,
+    },
+    'number': {
+        '.json': save_number_json,
+    },
+    'markdown': {
+        '.*': save_markdown_md,
+    },
+    'table': {
+        '.csv': save_table_csv,
+    },
+    'image': {
+        '.png': save_image_png,
+    },
+    'map': {
+        '.json': save_map_geojson,
+        '.geojson': save_map_geojson,
+    },
+}
 LOAD_BY_EXTENSION_BY_VIEW = {
     'text': {
         '.json': load_text_json,
-        '.txt': load_text_txt,
+        '.*': load_text_txt,
     },
     'number': {
         '.json': load_number_json,
     },
     'markdown': {
-        '.md': load_markdown_md,
+        '.*': load_markdown_md,
     },
     'table': {
         '.csv': load_table_csv,
@@ -844,40 +951,7 @@ LOAD_BY_EXTENSION_BY_VIEW = {
         '.png': load_image_png,
     },
     'map': {
+        '.json': load_map_geojson,
         '.geojson': load_map_geojson,
     },
-}
-
-
-def load_text_data(source_path, variable_id):
-    pass
-
-
-def load_number_data(source_path, variable_id):
-    pass
-
-
-def load_markdown_data(source_path, variable_id):
-    pass
-
-
-def load_table_data(source_path, variable_id):
-    pass
-
-
-def load_image_data(source_path, variable_id):
-    pass
-
-
-def load_map_data(source_path, variable_id):
-    pass
-
-
-LOAD_DATA_BY_VIEW_NAME = {
-    'text': load_text_data,
-    'number': load_number_data,
-    'markdown': load_markdown_data,
-    'table': load_table_data,
-    'image': load_image_data,
-    'map': load_map_data,
 }

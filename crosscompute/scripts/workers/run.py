@@ -88,16 +88,6 @@ def run(server_url, token, script_arguments):
 
                 # TODO: Get tool from cloud
 
-                '''
-                for (
-                    variable_id,
-                    variable_data,
-                ) in result_input_variable_data_by_id.items():
-                    variable = tool_input_variable_by_id[variable_id]
-                    variable_view = variable['view']
-                    variable_path = variable['path']
-                '''
-
                 value_by_id_by_path = defaultdict(dict)
                 for (
                     variable_id,
