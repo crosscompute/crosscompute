@@ -1,0 +1,45 @@
+---
+crosscompute: 0.8.4
+kind: tool
+name: Add Two Numbers
+version:
+  name: 0.0.1
+input:
+  variables:
+    - id: a
+      name: A
+      view: number
+      path: numbers.json
+    - id: b
+      name: B
+      view: number
+      path: numbers.json
+  templates:
+    - id: standard
+      name: Standard
+      path: templates/input/standard.md
+output:
+  variables:
+    - id: c
+      name: C
+      view: number
+      path: properties.json
+  templates:
+    - id: standard
+      name: Standard
+      path: templates/output/standard.md
+tests:
+  - id: integers
+    name: Integers
+    path: tests/integers
+  - id: floats
+    name: Floats
+    path: tests/floats
+script:
+  uri: git@github.com:crosscompute/crosscompute-examples
+  folder: add-numbers
+  command: jupyter nbconvert run.ipynb --to notebook --execute --stdout
+environment: 
+  image: docker.io/library/python:slim-buster
+  processor: cpu
+  memory: tiny

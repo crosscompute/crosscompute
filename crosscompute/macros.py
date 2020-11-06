@@ -1,13 +1,14 @@
 from math import isnan
 from os import environ
 from os.path import split
+from sys import exit
 
 
-def get_environment_value(name, default=None, is_required=False):
+def get_environment_value(name, default=None):
     try:
         value = environ[name]
     except KeyError:
-        if is_required:
+        if default is None:
             exit(f'{name} is required in the environment')
         value = default
     return value

@@ -1,0 +1,28 @@
+---
+crosscompute: 0.8.4
+kind: report
+variables:
+  - id: a
+    data:
+      result:
+        path: result.yml
+  - id: b
+    data:
+      result:
+        path: result.yml
+  - id: c
+#   view: number
+    data:
+      result:
+#       id: RESULT-ID
+        path: result.yml
+#       variable:
+#         id: VARIABLE-ID
+templates:
+  - id: page1
+    name: Page 1
+    path: templates/output/standard.md
+print:
+  style:
+    path: report.css
+  format: pdf
