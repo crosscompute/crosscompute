@@ -4,7 +4,7 @@ import subprocess
 from collections import defaultdict
 from copy import deepcopy
 from invisibleroads_macros_disk import make_folder, make_random_folder
-from itertools import product
+from itertools import chain, product
 from os import environ
 from os.path import abspath, dirname, exists, isdir, join, splitext
 from pyramid.httpexceptions import HTTPInternalServerError
@@ -157,22 +157,29 @@ def find_relevant_path(path, name=''):
 
 
 def yield_result_dictionary(result_definition):
-    special_variable_ids = []
-    special_values_list = []
-    input_variable_data_by_id = result_definition['inputVariableDataById']
-    for variable_id, variable_data in input_variable_data_by_id.items():
-        if 'values' not in variable_data:
+    variable_ids = []
+    data_lists = []
+    for variable_dictionary in result_definition['input']['variables']:
+        variable_data = variable_dictionary['data']
+        if not isinstance(variable_data, list):
             continue
-        special_variable_ids.append(variable_id)
-        special_values_list.append(variable_data['values'])
-    for values in product(*special_values_list):
-        special_variable_data_by_id = {
-            k: {'value': v} for k, v in zip(special_variable_ids, values)}
-        d = dict(result_definition)
-        d['inputVariableDataById'] = {
-            **input_variable_data_by_id,
-            **special_variable_data_by_id}
-        yield d
+        variable_ids.append(variable_dictionary['id'])
+        data_lists.append(variable_data)
+    for variable_data_selection in product(*data_lists):
+        result_dictionary = dict(result_definition)
+        input_variables = result_dictionary['input']['variables']
+        old_variable_id_data_generator = ((
+            _['id'], _['data']) for _ in input_variables)
+        new_variable_id_data_generator = zip(
+            variable_ids, variable_data_selection)
+        variable_data_by_id = dict(chain(
+            old_variable_id_data_generator,
+            new_variable_id_data_generator))
+        result_dictionary['input']['variables'] = [{
+            'id': variable_id,
+            'data': variable_data,
+        } for variable_id, variable_data in variable_data_by_id.items()]
+        yield result_dictionary
 
 
 def get_result_folder(result_dictionary):

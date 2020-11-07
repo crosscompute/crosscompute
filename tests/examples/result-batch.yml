@@ -6,7 +6,6 @@ input:
   variables:
     - id: b
       data:
-        values:
-          - 1
-          - 2
-          - 3
+        - value: 1
+        - value: 2
+        - value: 3

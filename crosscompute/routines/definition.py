@@ -150,9 +150,7 @@ def normalize_result_variable_dictionaries(
         except KeyError:
             raise CrossComputeDefinitionError({
                 'data': 'is required for each variable'})
-        variable_data = normalize_data_dictionary(
-            variable_data, variable_view)
-
+        variable_data = normalize_data(variable_data, variable_view)
         variable_dictionaries.append({
             'id': variable_id,
             'data': variable_data,
@@ -176,20 +174,26 @@ def normalize_version_dictionary(raw_version_dictionary):
     return version_dictionary
 
 
+def normalize_data(raw_data, view_name):
+    if isinstance(raw_data, dict):
+        data = normalize_data_dictionary(raw_data, view_name)
+    elif isinstance(raw_data, list):
+        data = [normalize_data_dictionary(_, view_name) for _ in raw_data]
+    else:
+        raise CrossComputeDefinitionError({
+            'data': 'must be a dictionary or list'})
+    return data
+
+
 def normalize_data_dictionary(raw_data_dictionary, view_name):
     check_dictionary(raw_data_dictionary, 'data')
-    has_values = 'values' in raw_data_dictionary
     has_value = 'value' in raw_data_dictionary
     has_file = 'file' in raw_data_dictionary
-    if not has_values and not has_value and not has_file:
+    if not has_value and not has_file:
         raise CrossComputeDefinitionError({
-            'data': 'must be values or value or file'})
-
+            'data': 'must have value or file'})
     data_dictionary = {}
-    if has_values:
-        data_dictionary['values'] = normalize_values(
-            raw_data_dictionary['values'], view_name)
-    elif has_value:
+    if has_value:
         data_dictionary['value'] = normalize_value(
             raw_data_dictionary['value'], view_name)
     elif has_file:
@@ -208,20 +212,6 @@ def normalize_file_dictionary(raw_file_dictionary):
             'id': 'is required for each file'})
     file_dictionary['id'] = file_id
     return file_dictionary
-
-
-def normalize_values(raw_values, view_name):
-    try:
-        values = list(raw_values)
-    except TypeError:
-        raise CrossComputeDefinitionError({'values': 'must be a list'})
-    if view_name == 'number':
-        try:
-            values = [parse_number(_) for _ in values]
-        except ValueError:
-            raise CrossComputeDefinitionError({
-                'values': f'could not parse numbers {values}'})
-    return values
 
 
 def normalize_value(raw_value, view_name):
