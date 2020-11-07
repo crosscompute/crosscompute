@@ -22,7 +22,7 @@ from ..exceptions import (
     CrossComputeDefinitionError, CrossComputeError, CrossComputeExecutionError)
 
 
-def run_automation(path):
+def run_automation(path, is_mock=True):
     try:
         automation_path = find_relevant_path(
             path, AUTOMATION_FILE_NAME)
@@ -32,33 +32,35 @@ def run_automation(path):
     automation_definition = load_definition(automation_path, kinds=['automation'])
     automation_kind = automation_definition['kind']
     if automation_kind == 'result':
-        d = run_result_automation(automation_definition)
+        d = run_result_automation(automation_definition, is_mock)
     elif automation_kind == 'report':
         d = {}
     return d
 
 
-def run_result_automation(result_definition):
+def run_result_automation(result_definition, is_mock=True):
     document_dictionaries = []
     for result_dictionary in yield_result_dictionary(result_definition):
         tool_definition = result_dictionary.pop('tool')
         result_dictionary = run_tool(tool_definition, result_dictionary)
         document_dictionary = render_result(tool_definition, result_dictionary)
         document_dictionaries.append(document_dictionary)
-    # TODO: Enable offline mode
-    server_url = get_server_url()
-    token = get_token()
-    url = server_url + '/prints.json'
-    headers = {'Authorization': 'Bearer ' + token}
-    response = requests.post(url, headers=headers, json={
-        'documents': document_dictionaries})
-    if response.status_code != 200:
-        print(response.content)
-        raise HTTPInternalServerError({})
-    response_json = response.json()
-    return {
-        'url': response_json['url']
+    d = {
+        'documents': document_dictionaries,
     }
+    if not is_mock:
+        server_url = get_server_url()
+        token = get_token()
+        url = server_url + '/prints.json'
+        headers = {'Authorization': 'Bearer ' + token}
+        response = requests.post(url, headers=headers, json={
+            'documents': document_dictionaries})
+        if response.status_code != 200:
+            print(response.content)
+            raise HTTPInternalServerError({})
+        response_json = response.json()
+        d['url'] = response_json['url']
+    return d
 
 
 def run_tool(tool_definition, result_dictionary):
@@ -72,7 +74,7 @@ def run_tool(tool_definition, result_dictionary):
     prepare_input_folder(
         folder_by_name['input'],
         tool_definition['input']['variables'],
-        result_dictionary['inputVariableDataById'])
+        result_dictionary['input']['variables'])
     run_script(
         script_command.format(
             input_folder=input_folder, output_folder=output_folder),
@@ -84,8 +86,10 @@ def run_tool(tool_definition, result_dictionary):
     for folder_name in 'output', 'log', 'debug':
         if folder_name not in tool_definition:
             continue
-        result_dictionary[folder_name + 'VariableDataById'] = process_output_folder(
-            folder_by_name[folder_name], tool_definition[folder_name]['variables'])
+        result_dictionary[folder_name] = {
+            'variables': process_output_folder(
+                folder_by_name[folder_name],
+                tool_definition[folder_name]['variables'])}
     return result_dictionary
 
 
@@ -100,12 +104,14 @@ def render_result(tool_definition, result_dictionary):
 
 
 def render_blocks(tool_definition, result_dictionary):
-    input_variable_definition_by_id = {_['id']: _ for _ in tool_definition[
-        'input']['variables']}
-    output_variable_definition_by_id = {_['id']: _ for _ in tool_definition[
-        'output']['variables']}
-    input_variable_data_by_id = result_dictionary['inputVariableDataById']
-    output_variable_data_by_id = result_dictionary['outputVariableDataById']
+    input_variable_definition_by_id = get_by_id(tool_definition[
+        'input']['variables'])
+    output_variable_definition_by_id = get_by_id(tool_definition[
+        'output']['variables'])
+    input_variable_data_by_id = get_data_by_id(result_dictionary[
+        'input']['variables'])
+    output_variable_data_by_id = get_data_by_id(result_dictionary[
+        'output']['variables'])
     template_dictionary = get_template_dictionary(
         tool_definition, result_dictionary)
     blocks = deepcopy(template_dictionary['blocks'])
@@ -167,9 +173,10 @@ def yield_result_dictionary(result_definition):
         data_lists.append(variable_data)
     for variable_data_selection in product(*data_lists):
         result_dictionary = dict(result_definition)
-        input_variables = result_dictionary['input']['variables']
         old_variable_id_data_generator = ((
-            _['id'], _['data']) for _ in input_variables)
+            _['id'],
+            _['data'],
+        ) for _ in result_dictionary['input']['variables'])
         new_variable_id_data_generator = zip(
             variable_ids, variable_data_selection)
         variable_data_by_id = dict(chain(
@@ -194,8 +201,9 @@ def get_result_folder(result_dictionary):
 
 
 def prepare_input_folder(
-        input_folder, variable_definitions, variable_data_by_id):
+        input_folder, variable_definitions, variable_dictionaries):
     value_by_id_by_path = defaultdict(dict)
+    variable_data_by_id = get_data_by_id(variable_dictionaries)
     for variable_definition in variable_definitions:
         variable_id = variable_definition['id']
         try:
@@ -245,7 +253,7 @@ def prepare_input_folder(
 
 def process_output_folder(output_folder, variable_definitions):
     load_value_json.cache_clear()
-    variable_data_by_id = {}
+    variable_dictionaries = []
     for variable_definition in variable_definitions:
         variable_id = variable_definition['id']
         variable_path = variable_definition['path']
@@ -277,8 +285,9 @@ def process_output_folder(output_folder, variable_definitions):
             print_exception(*exc_info())
             raise HTTPInternalServerError({'path': 'triggered an exception'})
         # TODO: Upload to google cloud if large
-        variable_data_by_id[variable_id] = {'value': variable_value}
-    return variable_data_by_id
+        variable_dictionaries.append({
+            'id': variable_id, 'data': {'value': variable_value}})
+    return variable_dictionaries
 
 
 def run_script(script_command, script_folder, input_folder, output_folder, log_folder, debug_folder):
@@ -307,3 +316,11 @@ def run_script(script_command, script_folder, input_folder, output_folder, log_f
         raise CrossComputeExecutionError(e)
     stdout_file.close()
     stderr_file.close()
+
+
+def get_by_id(variable_dictionaries):
+    return {_['id']: _ for _ in variable_dictionaries}
+
+
+def get_data_by_id(variable_dictionaries):
+    return {_['id']: _['data'] for _ in variable_dictionaries}
