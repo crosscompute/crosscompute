@@ -12,10 +12,12 @@ from .definition import (
     normalize_style_rule_strings)
 from .execution import (
     add_project,
+    add_result,
     change_project,
     run_automation,
     run_safely,
-    see_projects)
+    see_projects,
+    see_results)
 
 
 # flake8: noqa: E401

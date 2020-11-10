@@ -11,11 +11,12 @@ class RunAutomationScript(OutputtingScript):
         argument_subparser.add_argument(
             '--mock', action='store_true', dest='is_mock')
         argument_subparser.add_argument(
-            'path', metavar='AUTOMATION_DEFINITION_PATH', nargs='?')
+            'automation_definition_path',
+            metavar='AUTOMATION_DEFINITION_PATH', nargs='?')
 
     def run(self, args, argv):
         super().run(args, argv)
         run_safely(run_automation, [
-            args.path or '.',
+            args.automation_definition_path or '.',
             args.is_mock,
         ], args.as_json, args.is_quiet)

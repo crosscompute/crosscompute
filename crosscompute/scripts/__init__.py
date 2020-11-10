@@ -11,7 +11,9 @@ class OutputtingScript(LoggingScript):
     def configure(self, argument_subparser):
         super().configure(argument_subparser)
         argument_subparser.add_argument(
-            '--json', action='store_true', dest='as_json')
+            '--json', action='store_true',
+            dest='as_json',
+            help='render output as json')
 
 
 def launch(argv=sys.argv):

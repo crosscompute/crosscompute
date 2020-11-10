@@ -23,11 +23,12 @@ APPLICATION_CLASSIFIERS = [
 ]
 APPLICATION_REQUIREMENTS = [
     'geojson',
-    'invisibleroads >= 0.3.3',
+    'invisibleroads >= 0.3.4',
     'invisibleroads-macros-disk >= 1.1.0',
     'invisibleroads-macros-log >= 1.0.3',
     'invisibleroads-macros-security >= 1.0.1',
     'pyramid',
+    'pyyaml',
     'requests',
     'sseclient',
     'strictyaml',

@@ -1,7 +1,7 @@
 import json
 import shlex
-import strictyaml
 import subprocess
+import yaml
 from collections import defaultdict
 from copy import deepcopy
 from invisibleroads_macros_disk import make_folder, make_random_folder
@@ -149,14 +149,13 @@ def render_blocks(tool_definition, result_dictionary):
 
 
 def render_object(raw_object, text_format='yaml'):
-    try:
-        if text_format == 'yaml':
-            return strictyaml.as_document(raw_object).as_yaml().strip()
-        elif text_format == 'json':
-            return json.dumps(raw_object)
-    except Exception:
-        pass
-    return repr(raw_object)
+    if text_format == 'yaml':
+        text = yaml.dump(raw_object)
+    elif text_format == 'json':
+        text = json.dumps(raw_object)
+    else:
+        text = repr(raw_object)
+    return text.strip()
 
 
 def find_relevant_path(path, name=''):
@@ -374,10 +373,23 @@ def change_project(
 
 
 def see_projects(project_ids=None):
-    if not project_ids:
-        return fetch_resource('projects')
-    project_dictionaries = []
-    for project_id in project_ids:
-        response_json = fetch_resource('projects', project_id)
-        project_dictionaries.append(response_json)
-    return project_dictionaries
+    return see_resources('projects', project_ids)
+
+
+def add_result(result_dictionary):
+    d = result_dictionary
+    return fetch_resource('results', method='POST', data=d)
+
+
+def see_results(result_ids=None):
+    return see_resources('results', result_ids)
+
+
+def see_resources(resource_name, resource_ids=None):
+    if not resource_ids:
+        return fetch_resource(resource_name)
+    resource_dictionaries = []
+    for resource_id in resource_ids:
+        response_json = fetch_resource(resource_name, resource_id)
+        resource_dictionaries.append(response_json)
+    return resource_dictionaries

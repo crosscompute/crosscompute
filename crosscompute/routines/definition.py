@@ -1,3 +1,4 @@
+import json
 import re
 import strictyaml
 from os.path import dirname, join
@@ -15,6 +16,7 @@ VARIABLE_ID_PATTERN = re.compile(r'{\s*([^}]+?)\s*}')
 
 
 def load_definition(path, kinds=None):
+    # TODO: Use strictyaml schemas
     raw_definition = load_raw_definition(path)
     folder = dirname(path)
     definition = normalize_definition(raw_definition, folder, kinds)
@@ -27,7 +29,13 @@ def load_raw_definition(path):
         text = open(path, 'rt').read()
     except OSError:
         raise CrossComputeDefinitionError({'path': 'is bad'})
-    raw_definition = strictyaml.load(text).data
+    if path.endswith('.yml'):
+        raw_definition = strictyaml.load(text).data
+    elif path.endswith('.json'):
+        raw_definition = json.loads(text)
+    else:
+        raise CrossComputeDefinitionError({
+            'path': 'must have extension .yml or .json'})
     check_dictionary(raw_definition, 'definition')
     try:
         protocol_name = raw_definition.pop('crosscompute')

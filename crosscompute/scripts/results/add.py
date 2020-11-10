@@ -1,55 +1,53 @@
-import json
-import requests
+from .. import OutputtingScript
+from ...routines import (
+    add_result,
+    load_definition,
+    run_safely)
 
-from .. import AuthenticatingScript
 
-
-class AddResultScript(AuthenticatingScript):
+class AddResultScript(OutputtingScript):
 
     def configure(self, argument_subparser):
         super().configure(argument_subparser)
-        argument_subparser.add_argument('--name')
-        argument_subparser.add_argument('--toolId')
-        argument_subparser.add_argument('--toolVersionId')
-        argument_subparser.add_argument('--projectId')
-        argument_subparser.add_argument('path')
+        argument_subparser.add_argument(
+            '--name', metavar='RESULT_NAME',
+            dest='result_name')
+        argument_subparser.add_argument(
+            '--toolId', metavar='TOOL_ID',
+            dest='tool_id')
+        argument_subparser.add_argument(
+            '--toolVersionId', metavar='TOOL_VERSION_ID',
+            dest='tool_version_id')
+        argument_subparser.add_argument(
+            '--projectId', metavar='PROJECT_ID',
+            dest='project_id')
+        argument_subparser.add_argument(
+            'result_definition_path',
+            metavar='RESULT_DEFINITION_PATH')
 
     def run(self, args, argv):
         super().run(args, argv)
-        result_name = args.name
-        tool_id = args.toolId
-        tool_version_id = args.toolVersionId
-        project_id = args.projectId
-        path = args.path
-
-        if path.endswith('.json'):
-            result_dictionary = json.load(open(path, 'rt'))
-        else:
-            exit()
-
+        result_name = args.result_name
+        tool_id = args.tool_id
+        tool_version_id = args.tool_version_id
+        project_id = args.project_id
+        result_dictionary = load_definition(
+            args.result_definition_path, kinds=['result'])
         if result_name:
             result_dictionary['name'] = result_name
         if tool_id:
-            tool = result_dictionary.get('tool', {})
-            tool['id'] = tool_id
-            result_dictionary['tool'] = tool
+            tool_dictionary = result_dictionary.get('tool', {})
+            tool_dictionary['id'] = tool_id
+            result_dictionary['tool'] = tool_dictionary
         if tool_version_id:
-            tool = result_dictionary.get('tool', {})
-            tool_version = tool.get('version', {})
+            tool_dictionary = result_dictionary.get('tool', {})
+            tool_version = tool_dictionary.get('version', {})
             tool_version['id'] = tool_version_id
-            tool['version'] = tool_version
-            result_dictionary['tool'] = tool
+            tool_dictionary['version'] = tool_version
+            result_dictionary['tool'] = tool_dictionary
         if project_id:
-            project = result_dictionary.get('project', {})
-            project['id'] = project_id
-
-        d = run(args.server_url, args.token, result_dictionary)
-        print(json.dumps(d))
-
-
-def run(server_url, token, result_dictionary):
-    url = server_url + '/results.json'
-    headers = {'Authorization': 'Bearer ' + token}
-    d = result_dictionary
-    response = requests.post(url, headers=headers, json=d)
-    return response.json()
+            project_dictionary = result_dictionary.get('project', {})
+            project_dictionary['id'] = project_id
+        run_safely(add_result, [
+            result_dictionary,
+        ], args.as_json, args.is_quiet)

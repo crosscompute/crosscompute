@@ -9,22 +9,23 @@ class ChangeProjectScript(OutputtingScript):
         argument_subparser.add_argument(
             'project_id', metavar='PROJECT_ID')
         argument_subparser.add_argument(
-            '--name')
+            '--name', metavar='PROJECT_NAME',
+            dest='project_name')
         argument_subparser.add_argument(
-            '--tool', metavar='TOOL_ID', action='append',
+            '--toolId', metavar='TOOL_ID', action='append',
             dest='tool_ids')
         argument_subparser.add_argument(
-            '--result', metavar='RESULT_ID', action='append',
+            '--resultId', metavar='RESULT_ID', action='append',
             dest='result_ids')
         argument_subparser.add_argument(
-            '--dataset', metavar='DATASET_ID', action='append',
+            '--datasetId', metavar='DATASET_ID', action='append',
             dest='dataset_ids')
 
     def run(self, args, argv):
         super().run(args, argv)
         run_safely(change_project, [
             args.project_id,
-            args.name,
+            args.project_name,
             args.tool_ids or [],
             args.result_ids or [],
             args.dataset_ids or [],
