@@ -19,11 +19,13 @@ def get_bash_configuration_text(token):
         token=get_token(token))
 
 
-def fetch_resource(resource_name, resource_id=None, method='GET', data=None):
+def fetch_resource(
+        resource_name, resource_id=None, method='GET', data=None,
+        server_url=None, token=None):
     f = getattr(requests, method.lower())
-    server_url = get_server_url()
+    server_url = server_url if server_url else get_server_url()
     url = get_resource_url(server_url, resource_name, resource_id)
-    token = get_token()
+    token = token if token else get_token()
     headers = {'Authorization': 'Bearer ' + token}
     kw = {}
     if data is not None:
@@ -72,4 +74,9 @@ def get_resource_url(server_url, resource_name, resource_id=None):
 
 def get_echoes_client(server_url, token):
     url = f'{server_url}/echoes/{token}.json'
-    return SSEClient(url)
+    try:
+        client = SSEClient(url)
+    except requests.ConnectionError:
+        raise CrossComputeConnectionError({
+            'url': 'could not connect to echoes ' + url})
+    return client

@@ -18,6 +18,7 @@ from .execution import (
     render_object,
     run_automation,
     run_safely,
+    run_worker,
     see_projects,
     see_results,
     see_tools)

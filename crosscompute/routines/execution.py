@@ -14,7 +14,8 @@ from sys import exc_info
 from traceback import print_exception
 
 from .connection import (
-    fetch_resource)
+    fetch_resource,
+    get_echoes_client)
 from .definition import (
     get_template_dictionary,
     load_definition)
@@ -31,18 +32,6 @@ from ..exceptions import (
     CrossComputeDefinitionError,
     CrossComputeError,
     CrossComputeExecutionError)
-
-
-def run_safely(function, arguments, as_json=True, is_quiet=False):
-    try:
-        d = function(*arguments)
-    except CrossComputeError as e:
-        if is_quiet:
-            exit(1)
-        exit(render_object(e.args[0], as_json))
-    if not is_quiet:
-        print(render_object(d, as_json))
-    return d
 
 
 def run_automation(path, is_mock=True):
@@ -105,6 +94,75 @@ def run_tool(tool_definition, result_dictionary):
                 folder_by_name[folder_name],
                 tool_definition[folder_name]['variables'])}
     return result_dictionary
+
+
+def run_worker(server_url, token, command_terms):
+    # TODO: Check chores periodically even without echo
+    for echo_message in get_echoes_client(server_url, token):
+        event_name = echo_message.event
+        if event_name == 'i':
+            while True:
+                chore_dictionary = fetch_resource(
+                    'chores', server_url=server_url, token=token)
+                if not chore_dictionary:
+                    break
+                print(chore_dictionary)
+                # TODO: Get tool script from cloud
+                result_dictionary = chore_dictionary['result']
+                result_token = result_dictionary['token']
+                try:
+                    result_dictionary = run_tool(
+                        chore_dictionary['tool'], result_dictionary)
+                except CrossComputeError:
+                    result_progress = -1
+                else:
+                    result_progress = 100
+                result_dictionary['progress'] = result_progress
+                fetch_resource(
+                    'results', result_dictionary['id'],
+                    method='PATCH', data=result_dictionary,
+                    server_url=server_url, token=result_token)
+        print(echo_message.__dict__)
+
+
+def run_script(script_command, script_folder, input_folder, output_folder, log_folder, debug_folder):
+    script_arguments = shlex.split(script_command)
+    stdout_file = open(join(debug_folder, 'stdout.log'), 'wt')
+    stderr_file = open(join(debug_folder, 'stderr.log'), 'wt')
+    subprocess_options = {
+        'cwd': script_folder,
+        'stdout': stdout_file,
+        'stderr': stderr_file,
+        'encoding': 'utf-8',
+        'check': True,
+    }
+    try:
+        subprocess.run(script_arguments, env={
+            'PATH': environ.get('PATH', ''),
+            'VIRTUAL_ENV': environ.get('VIRTUAL_ENV', ''),
+            'CROSSCOMPUTE_INPUT_FOLDER': input_folder,
+            'CROSSCOMPUTE_OUTPUT_FOLDER': output_folder,
+            'CROSSCOMPUTE_LOG_FOLDER': log_folder,
+            'CROSSCOMPUTE_DEBUG_FOLDER': debug_folder,
+        }, **subprocess_options)
+    except FileNotFoundError as e:
+        raise CrossComputeDefinitionError(e)
+    except CalledProcessError as e:
+        raise CrossComputeExecutionError(e)
+    stdout_file.close()
+    stderr_file.close()
+
+
+def run_safely(function, arguments, as_json=True, is_quiet=False):
+    try:
+        d = function(*arguments)
+    except CrossComputeError as e:
+        if is_quiet:
+            exit(1)
+        exit(render_object(e.args[0], as_json))
+    if not is_quiet:
+        print(render_object(d, as_json))
+    return d
 
 
 def render_result(tool_definition, result_dictionary):
@@ -310,34 +368,6 @@ def process_output_folder(output_folder, variable_definitions):
         variable_dictionaries.append({
             'id': variable_id, 'data': {'value': variable_value}})
     return variable_dictionaries
-
-
-def run_script(script_command, script_folder, input_folder, output_folder, log_folder, debug_folder):
-    script_arguments = shlex.split(script_command)
-    stdout_file = open(join(debug_folder, 'stdout.log'), 'wt')
-    stderr_file = open(join(debug_folder, 'stderr.log'), 'wt')
-    subprocess_options = {
-        'cwd': script_folder,
-        'stdout': stdout_file,
-        'stderr': stderr_file,
-        'encoding': 'utf-8',
-        'check': True,
-    }
-    try:
-        subprocess.run(script_arguments, env={
-            'PATH': environ.get('PATH', ''),
-            'VIRTUAL_ENV': environ.get('VIRTUAL_ENV', ''),
-            'CROSSCOMPUTE_INPUT_FOLDER': input_folder,
-            'CROSSCOMPUTE_OUTPUT_FOLDER': output_folder,
-            'CROSSCOMPUTE_LOG_FOLDER': log_folder,
-            'CROSSCOMPUTE_DEBUG_FOLDER': debug_folder,
-        }, **subprocess_options)
-    except FileNotFoundError as e:
-        raise CrossComputeDefinitionError(e)
-    except CalledProcessError as e:
-        raise CrossComputeExecutionError(e)
-    stdout_file.close()
-    stderr_file.close()
 
 
 def get_by_id(variable_dictionaries):
