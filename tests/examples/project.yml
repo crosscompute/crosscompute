@@ -1,0 +1,14 @@
+---
+crosscompute: 0.8.4
+kind: project
+id: p1
+name: Project 1
+tools:
+  - id: t1
+  - id: t2
+results:
+  - id: r1
+  - id: r2
+datasets:
+  - id: d1
+  - id: d2

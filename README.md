@@ -94,7 +94,7 @@ crosscompute results add \
 git clone https://github.com/crosscompute/crosscompute
 cd crosscompute
 pip install -e .[test]
-pytest --cov=crosscompute --cov-report term-missing tests
+pytest --cov=crosscompute --cov-report term-missing:skip-covered tests
 ```
 
 ## Acknowledgments

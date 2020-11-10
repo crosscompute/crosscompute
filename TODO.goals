@@ -1,2 +1,4 @@
 Let user choose/pick/select current project
 Query host for supported views
+Run tests before adding tool
+Run tests after worker connects

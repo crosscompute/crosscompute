@@ -96,7 +96,7 @@ def run_tool(tool_definition, result_dictionary):
     return result_dictionary
 
 
-def run_worker(server_url, token, command_terms):
+def run_worker(server_url, token, as_json, is_quiet):
     # TODO: Check chores periodically even without echo
     for echo_message in get_echoes_client(server_url, token):
         event_name = echo_message.event
@@ -106,7 +106,8 @@ def run_worker(server_url, token, command_terms):
                     'chores', server_url=server_url, token=token)
                 if not chore_dictionary:
                     break
-                print(chore_dictionary)
+                if not is_quiet:
+                    render_object(chore_dictionary, as_json)
                 # TODO: Get tool script from cloud
                 result_dictionary = chore_dictionary['result']
                 result_token = result_dictionary['token']
@@ -122,7 +123,8 @@ def run_worker(server_url, token, command_terms):
                     'results', result_dictionary['id'],
                     method='PATCH', data=result_dictionary,
                     server_url=server_url, token=result_token)
-        print(echo_message.__dict__)
+        if not is_quiet:
+            render_object(echo_message.__dict__, as_json)
 
 
 def run_script(script_command, script_folder, input_folder, output_folder, log_folder, debug_folder):
@@ -378,9 +380,8 @@ def get_data_by_id(variable_dictionaries):
     return {_['id']: _['data'] for _ in variable_dictionaries}
 
 
-def add_project(project_name):
-    # TODO: Use project_dictionary
-    d = {'name': project_name}
+def add_project(project_dictionary):
+    d = project_dictionary
     return fetch_resource('projects', method='POST', data=d)
 
 

@@ -20,17 +20,21 @@ class AddToolScript(OutputtingScript):
     def run(self, args, argv):
         super().run(args, argv)
         as_json = args.as_json
+        is_quiet = args.is_quiet
 
         tool_dictionary = load_definition(
             args.tool_definition_path, kinds=['tool'])
 
         if args.is_mock:
-            print(render_object(tool_dictionary, as_json))
+            if not is_quiet:
+                print(render_object(tool_dictionary, as_json))
             return
         d = run_safely(add_tool, [
             tool_dictionary,
-        ], as_json, args.is_quiet)
+        ], as_json, is_quiet)
 
+        if is_quiet:
+            return
         print(render_object(d, as_json))
         if not as_json:
             tool_version_dictionary = d['versions'][0]

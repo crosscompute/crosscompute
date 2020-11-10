@@ -10,9 +10,11 @@ class RunWorkerScript(OutputtingScript):
 
     def run(self, args, argv):
         super().run(args, argv)
-        command_terms = argv
+        as_json = args.as_json
+        is_quiet = args.is_quiet
         run_safely(run_worker, [
             get_server_url(),
             get_token(),
-            command_terms,
-        ], args.as_json, args.is_quiet)
+            as_json,
+            is_quiet,
+        ], as_json, is_quiet)

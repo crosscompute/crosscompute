@@ -8,8 +8,7 @@ ENTRY_POINTS = '''
 crosscompute = crosscompute.scripts:launch
 [crosscompute]
 projects.see = crosscompute.scripts.projects.see:SeeProjectsScript
-projects.add = crosscompute.scripts.projects.add:AddProjectScript
-projects.change = crosscompute.scripts.projects.change:ChangeProjectScript
+projects.set = crosscompute.scripts.projects.set:SetProjectScript
 tools.see = crosscompute.scripts.tools.see:SeeToolScript
 tools.add = crosscompute.scripts.tools.add:AddToolScript
 results.see = crosscompute.scripts.results.see:SeeResultScript

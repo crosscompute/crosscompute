@@ -1,5 +1,6 @@
 from .. import OutputtingScript
 from ...routines import (
+    render_object,
     run_automation,
     run_safely)
 
@@ -16,7 +17,14 @@ class RunAutomationScript(OutputtingScript):
 
     def run(self, args, argv):
         super().run(args, argv)
-        run_safely(run_automation, [
+        as_json = args.as_json
+        is_quiet = args.is_quiet
+
+        d = run_safely(run_automation, [
             args.automation_definition_path or '.',
             args.is_mock,
-        ], args.as_json, args.is_quiet)
+        ], as_json, is_quiet)
+
+        if is_quiet:
+            return
+        print(render_object(d, as_json))
