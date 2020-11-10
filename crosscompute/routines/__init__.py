@@ -6,22 +6,22 @@ from .connection import (
     get_server_url,
     get_token)
 from .definition import (
+    get_project_summary,
     get_put_dictionary,
     load_definition,
     normalize_block_dictionaries,
     normalize_style_rule_strings)
 from .execution import (
-    add_project,
     add_result,
     add_tool,
-    change_project,
     render_object,
     run_automation,
     run_safely,
     run_worker,
     see_projects,
     see_results,
-    see_tools)
+    see_tools,
+    set_project)
 
 
 # flake8: noqa: E401

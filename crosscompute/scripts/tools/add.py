@@ -1,4 +1,5 @@
 from .. import OutputtingScript
+from ...exceptions import CrossComputeError
 from ...routines import (
     add_tool,
     get_bash_configuration_text,
@@ -19,11 +20,17 @@ class AddToolScript(OutputtingScript):
 
     def run(self, args, argv):
         super().run(args, argv)
+        tool_definition_path = args.tool_definition_path
         as_json = args.as_json
         is_quiet = args.is_quiet
 
-        tool_dictionary = load_definition(
-            args.tool_definition_path, kinds=['tool'])
+        try:
+            tool_dictionary = load_definition(
+                tool_definition_path, kinds=['tool'])
+        except CrossComputeError as e:
+            if is_quiet:
+                exit(1)
+            exit(render_object(e.args[0], as_json))
 
         if args.is_mock:
             if not is_quiet:

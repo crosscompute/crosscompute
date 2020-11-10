@@ -1,6 +1,7 @@
 import json
 import re
 import strictyaml
+from collections import OrderedDict
 from os.path import dirname, join
 from tinycss2 import parse_stylesheet
 
@@ -54,7 +55,9 @@ def normalize_definition(raw_definition, folder, kinds=None):
         raise CrossComputeDefinitionError({'kind': 'is required'})
     if kinds and kind not in kinds:
         raise CrossComputeDefinitionError({'kind': 'expected ' + ' or '.join(kinds)})
-    if kind == 'automation':
+    if kind == 'project':
+        definition = normalize_project_definition(raw_definition, folder)
+    elif kind == 'automation':
         definition = normalize_automation_definition(raw_definition, folder)
     elif kind == 'result':
         definition = normalize_result_definition(raw_definition, folder)
@@ -63,6 +66,25 @@ def normalize_definition(raw_definition, folder, kinds=None):
     else:
         definition = raw_definition
     return definition
+
+
+def normalize_project_definition(raw_project_definition, folder):
+    project_definition = {}
+    for key in ['id', 'name']:
+        if key not in raw_project_definition:
+            continue
+        project_definition[key] = raw_project_definition[key]
+    for key in ['tools', 'results', 'datasets']:
+        if key not in raw_project_definition:
+            continue
+        resource_dictionaries = check_list(raw_project_definition[key], key)
+        for resource_index, resource_dictionary in enumerate(
+                resource_dictionaries):
+            check_dictionary(
+                resource_dictionary, key + f'[{resource_index}]')
+        project_definition[key] = {
+            'id': _['id'] for _ in resource_dictionaries}
+    return project_definition
 
 
 def normalize_automation_definition(raw_automation_definition, folder):
@@ -380,6 +402,18 @@ def normalize_view_name(raw_view_name):
     return view_name
 
 
+def get_project_summary(project_dictionary):
+    project_summary = OrderedDict()
+    project_summary['crosscompute'] = __version__
+    project_summary['kind'] = 'project'
+    project_summary['id'] = project_dictionary['id']
+    project_summary['name'] = project_dictionary['name']
+    for key in ['tools', 'results', 'datasets']:
+        project_summary[key] = {
+            'id': _['id'] for _ in project_dictionary[key]}
+    return project_summary
+
+
 def get_print_dictionary(dictionary, folder):
     print_dictionary = {}
 
@@ -449,14 +483,6 @@ def get_template_dictionary(tool_definition, result_dictionary):
     return template_dictionary
 
 
-def make_template_dictionary(variable_definitions):
-    return {
-        'id': 'generated',
-        'name': 'Generated',
-        'blocks': [{'id': _['id']} for _ in variable_definitions],
-    }
-
-
 def get_test_dictionaries(dictionary):
     try:
         raw_test_dictionaries = dictionary['tests']
@@ -494,6 +520,14 @@ def get_template_block_dictionaries(dictionary, folder):
         raw_block_dictionaries = []
     return normalize_block_dictionaries(
         raw_block_dictionaries, with_data=False)
+
+
+def make_template_dictionary(variable_definitions):
+    return {
+        'id': 'generated',
+        'name': 'Generated',
+        'blocks': [{'id': _['id']} for _ in variable_definitions],
+    }
 
 
 def load_style_rule_strings(style_path):

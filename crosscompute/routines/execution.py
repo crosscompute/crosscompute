@@ -380,30 +380,19 @@ def get_data_by_id(variable_dictionaries):
     return {_['id']: _['data'] for _ in variable_dictionaries}
 
 
-def add_project(project_dictionary):
-    d = project_dictionary
-    return fetch_resource('projects', method='POST', data=d)
-
-
-def change_project(
-        project_id,
-        project_name,
-        tool_ids,
-        result_ids,
-        dataset_ids):
-    # TODO: Use project dictionary
-    d = {
-        'toolIds': tool_ids,
-        'resultIds': result_ids,
-        'datasetIds': dataset_ids,
-    }
-    if project_name:
-        d['name'] = project_name
-    return fetch_resource('projects', project_id, method='PATCH', data=d)
-
-
 def see_projects(project_ids=None):
     return see_resources('projects', project_ids)
+
+
+def set_project(project_dictionary):
+    project_id = project_dictionary.get('id')
+    method = 'PATCH' if project_id else 'POST'
+    return fetch_resource(
+        'projects', project_id, method, data=project_dictionary)
+
+
+def see_results(result_ids=None):
+    return see_resources('results', result_ids)
 
 
 def add_result(result_dictionary):
@@ -411,17 +400,13 @@ def add_result(result_dictionary):
     return fetch_resource('results', method='POST', data=d)
 
 
-def see_results(result_ids=None):
-    return see_resources('results', result_ids)
+def see_tools(tool_ids=None):
+    return see_resources('tools', tool_ids)
 
 
 def add_tool(tool_dictionary):
     d = tool_dictionary
     return fetch_resource('tools', method='POST', data=d)
-
-
-def see_tools(tool_ids=None):
-    return see_resources('tools', tool_ids)
 
 
 def see_resources(resource_name, resource_ids=None):
