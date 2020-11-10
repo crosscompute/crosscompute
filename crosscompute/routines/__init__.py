@@ -1,13 +1,21 @@
 from .connection import (
+    get_bash_configuration_text,
     get_client_url,
     get_echoes_client,
     get_resource_url,
     get_server_url,
     get_token)
 from .definition import (
-    load_definition)
+    get_put_dictionary,
+    load_definition,
+    normalize_block_dictionaries,
+    normalize_style_rule_strings)
 from .execution import (
-    run_automation)
+    add_project,
+    change_project,
+    run_automation,
+    run_safely,
+    see_projects)
 
 
 # flake8: noqa: E401

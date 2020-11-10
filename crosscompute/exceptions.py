@@ -1,7 +1,11 @@
-from pyramid.httpexceptions import HTTPBadRequest
+from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError
 
 
 class CrossComputeError(Exception):
+    pass
+
+
+class CrossComputeConnectionError(HTTPInternalServerError, CrossComputeError):
     pass
 
 

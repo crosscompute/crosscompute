@@ -1,5 +1,6 @@
-import requests
+import json
 import shlex
+import strictyaml
 import subprocess
 from collections import defaultdict
 from copy import deepcopy
@@ -12,14 +13,37 @@ from subprocess import CalledProcessError
 from sys import exc_info
 from traceback import print_exception
 
-from .connection import get_server_url, get_token
-from .definition import get_template_dictionary, load_definition
+from .connection import (
+    fetch_resource)
+from .definition import (
+    get_template_dictionary,
+    load_definition)
 from .serialization import (
-    load_value_json, save_json, LOAD_BY_EXTENSION_BY_VIEW,
+    load_value_json,
+    save_json,
+    LOAD_BY_EXTENSION_BY_VIEW,
     SAVE_BY_EXTENSION_BY_VIEW)
-from ..constants import AUTOMATION_FILE_NAME, L, S
+from ..constants import (
+    AUTOMATION_FILE_NAME,
+    L,
+    S)
 from ..exceptions import (
-    CrossComputeDefinitionError, CrossComputeError, CrossComputeExecutionError)
+    CrossComputeDefinitionError,
+    CrossComputeError,
+    CrossComputeExecutionError)
+
+
+def run_safely(function, arguments, as_json=True, is_quiet=False):
+    text_format = 'json' if as_json else 'yaml'
+    try:
+        d = function(*arguments)
+    except CrossComputeError as e:
+        if is_quiet:
+            exit(1)
+        exit(render_object(e.args[0], text_format))
+    if not is_quiet:
+        print(render_object(d, text_format))
+    return d
 
 
 def run_automation(path, is_mock=True):
@@ -49,16 +73,7 @@ def run_result_automation(result_definition, is_mock=True):
         'documents': document_dictionaries,
     }
     if not is_mock:
-        server_url = get_server_url()
-        token = get_token()
-        url = server_url + '/prints.json'
-        headers = {'Authorization': 'Bearer ' + token}
-        response = requests.post(url, headers=headers, json={
-            'documents': document_dictionaries})
-        if response.status_code != 200:
-            print(response.content)
-            raise HTTPInternalServerError({})
-        response_json = response.json()
+        response_json = fetch_resource('prints', method='POST', data=d)
         d['url'] = response_json['url']
     return d
 
@@ -131,6 +146,17 @@ def render_blocks(tool_definition, result_dictionary):
         block['view'] = variable_definition['view']
         block['data'] = variable_data
     return blocks
+
+
+def render_object(raw_object, text_format='yaml'):
+    try:
+        if text_format == 'yaml':
+            return strictyaml.as_document(raw_object).as_yaml().strip()
+        elif text_format == 'json':
+            return json.dumps(raw_object)
+    except Exception:
+        pass
+    return repr(raw_object)
 
 
 def find_relevant_path(path, name=''):
@@ -324,3 +350,34 @@ def get_by_id(variable_dictionaries):
 
 def get_data_by_id(variable_dictionaries):
     return {_['id']: _['data'] for _ in variable_dictionaries}
+
+
+def add_project(project_name):
+    d = {'name': project_name}
+    return fetch_resource('projects', method='POST', data=d)
+
+
+def change_project(
+        project_id,
+        project_name,
+        tool_ids,
+        result_ids,
+        dataset_ids):
+    d = {
+        'toolIds': tool_ids,
+        'resultIds': result_ids,
+        'datasetIds': dataset_ids,
+    }
+    if project_name:
+        d['name'] = project_name
+    return fetch_resource('projects', project_id, method='PATCH', data=d)
+
+
+def see_projects(project_ids=None):
+    if not project_ids:
+        return fetch_resource('projects')
+    project_dictionaries = []
+    for project_id in project_ids:
+        response_json = fetch_resource('projects', project_id)
+        project_dictionaries.append(response_json)
+    return project_dictionaries

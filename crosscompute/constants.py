@@ -4,6 +4,11 @@ from os.path import expanduser
 
 CLIENT_URL = 'https://crosscompute.com'
 SERVER_URL = 'https://services.crosscompute.com'
+BASH_CONFIGURATION_TEXT = '''
+export CROSSCOMPUTE_CLIENT={client_url}
+export CROSSCOMPUTE_SERVER={server_url}
+export CROSSCOMPUTE_TOKEN={token}
+'''.strip()
 
 
 AUTOMATION_FILE_NAME = 'automation.yml'

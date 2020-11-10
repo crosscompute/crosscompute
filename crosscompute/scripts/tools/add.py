@@ -2,7 +2,9 @@
 import json
 import requests
 from invisibleroads.scripts import LoggingScript
+from sys import exit
 
+from .. import ConnectingScript
 from ...exceptions import CrossComputeError
 from ...routines import (
     get_server_url,
@@ -23,33 +25,26 @@ crosscompute workers run {script_command}
 '''.rstrip()
 
 
-class AddToolScript(LoggingScript):
+class AddToolScript(ConnectingScript):
 
     def configure(self, argument_subparser):
         super().configure(argument_subparser)
         argument_subparser.add_argument(
-            '--mock', '-m', action='store_true', dest='is_mock')
+            '--mock', action='store_true', dest='is_mock')
         argument_subparser.add_argument(
-            '--response-format', '-r', choices=['text', 'json'],
-            default='text')
-        argument_subparser.add_argument('path')
+            'path', metavar='TOOL_DEFINITION_PATH')
 
     def run(self, args, argv):
         super().run(args, argv)
-        response_format = args.response_format
-        is_response_format_json = response_format == 'json'
+        as_json = args.as_json
         is_mock = args.is_mock
-        server_url = get_server_url()
-        token = get_token() if not is_mock else ''
+
+        run_safely(add_tool, [args.path, is_mock])
+
         try:
-            d = run(server_url, token, args.path, is_mock)
-        except CrossComputeError as e:
-            dictionary = e.args[0]
-            if is_response_format_json:
-                message_text = json.dumps(dictionary)
-            else:
-                message_text = '\n'.join(f'{k} {v}' for k, v in dictionary.items())
-            exit(message_text)
+            d = add_tool(args.path, is_mock)
+        except CrossComputeError:
+
         if is_response_format_json:
             print(json.dumps(d))
         elif is_mock:
@@ -58,20 +53,12 @@ class AddToolScript(LoggingScript):
             print(format_real_text(d))
 
 
-def run(server_url, token, path, is_mock=False):
-    url = server_url + '/tools.json'
-    headers = {'Authorization': 'Bearer ' + token}
+def run(path, is_mock=False):
     dictionary = load_definition(path, kinds=['tool'])
     if is_mock:
         return dictionary
-    response = requests.post(url, headers=headers, json={
+    return fetch_resource('tools', method='POST', data={
         'dictionary': dictionary})
-    d = response.json()
-    if response.status_code != 200:
-        raise CrossComputeError(d)
-    if 'script' in dictionary:
-        d['script'] = dictionary['script']
-    return d
 
 
 def format_mock_text(d):

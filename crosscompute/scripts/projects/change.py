@@ -1,52 +1,31 @@
-import json
-import requests
-
-from .. import AuthenticatingScript
+from .. import OutputtingScript
+from ...routines import change_project, run_safely
 
 
-class ChangeProjectScript(AuthenticatingScript):
+class ChangeProjectScript(OutputtingScript):
 
     def configure(self, argument_subparser):
         super().configure(argument_subparser)
-        argument_subparser.add_argument('projectId', metavar='PROJECT-ID')
-        argument_subparser.add_argument('--name')
-        argument_subparser.add_argument('--toolId', action='append')
-        argument_subparser.add_argument('--datasetId', action='append')
-        argument_subparser.add_argument('--resultId', action='append')
+        argument_subparser.add_argument(
+            'project_id', metavar='PROJECT_ID')
+        argument_subparser.add_argument(
+            '--name')
+        argument_subparser.add_argument(
+            '--tool', metavar='TOOL_ID', action='append',
+            dest='tool_ids')
+        argument_subparser.add_argument(
+            '--result', metavar='RESULT_ID', action='append',
+            dest='result_ids')
+        argument_subparser.add_argument(
+            '--dataset', metavar='DATASET_ID', action='append',
+            dest='dataset_ids')
 
     def run(self, args, argv):
         super().run(args, argv)
-        tool_ids = args.toolId or []
-        dataset_ids = args.datasetId or []
-        result_ids = args.resultId or []
-        d = run(
-            args.server_url,
-            args.token,
-            args.projectId,
+        run_safely(change_project, [
+            args.project_id,
             args.name,
-            tool_ids,
-            dataset_ids,
-            result_ids)
-        print(json.dumps(d))
-
-
-def run(
-    server_url,
-    token,
-    project_id,
-    project_name=None,
-    tool_ids=[],
-    dataset_ids=[],
-    result_ids=[],
-):
-    url = f'{server_url}/projects/{project_id}.json'
-    headers = {'Authorization': 'Bearer ' + token}
-    d = {
-        'toolIds': tool_ids,
-        'datasetIds': dataset_ids,
-        'resultIds': result_ids,
-    }
-    if project_name:
-        d['name'] = project_name
-    response = requests.patch(url, headers=headers, json=d)
-    return response.json()
+            args.tool_ids or [],
+            args.result_ids or [],
+            args.dataset_ids or [],
+        ], args.as_json, args.is_quiet)
