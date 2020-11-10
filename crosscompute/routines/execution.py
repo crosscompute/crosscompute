@@ -385,6 +385,15 @@ def see_results(result_ids=None):
     return see_resources('results', result_ids)
 
 
+def add_tool(tool_dictionary):
+    d = tool_dictionary
+    return fetch_resource('tools', method='POST', data=d)
+
+
+def see_tools(tool_ids=None):
+    return see_resources('tools', tool_ids)
+
+
 def see_resources(resource_name, resource_ids=None):
     if not resource_ids:
         return fetch_resource(resource_name)

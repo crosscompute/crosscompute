@@ -17,7 +17,8 @@ from .execution import (
     run_automation,
     run_safely,
     see_projects,
-    see_results)
+    see_results,
+    see_tools)
 
 
 # flake8: noqa: E401
