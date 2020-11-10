@@ -34,15 +34,14 @@ from ..exceptions import (
 
 
 def run_safely(function, arguments, as_json=True, is_quiet=False):
-    text_format = 'json' if as_json else 'yaml'
     try:
         d = function(*arguments)
     except CrossComputeError as e:
         if is_quiet:
             exit(1)
-        exit(render_object(e.args[0], text_format))
+        exit(render_object(e.args[0], as_json))
     if not is_quiet:
-        print(render_object(d, text_format))
+        print(render_object(d, as_json))
     return d
 
 
@@ -148,13 +147,11 @@ def render_blocks(tool_definition, result_dictionary):
     return blocks
 
 
-def render_object(raw_object, text_format='yaml'):
-    if text_format == 'yaml':
-        text = yaml.dump(raw_object)
-    elif text_format == 'json':
+def render_object(raw_object, as_json=False):
+    if as_json:
         text = json.dumps(raw_object)
     else:
-        text = repr(raw_object)
+        text = yaml.dump(raw_object)
     return text.strip()
 
 
@@ -352,6 +349,7 @@ def get_data_by_id(variable_dictionaries):
 
 
 def add_project(project_name):
+    # TODO: Use project_dictionary
     d = {'name': project_name}
     return fetch_resource('projects', method='POST', data=d)
 
@@ -362,6 +360,7 @@ def change_project(
         tool_ids,
         result_ids,
         dataset_ids):
+    # TODO: Use project dictionary
     d = {
         'toolIds': tool_ids,
         'resultIds': result_ids,

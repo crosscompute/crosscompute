@@ -2,6 +2,7 @@ from .. import OutputtingScript
 from ...routines import (
     add_result,
     load_definition,
+    render_object,
     run_safely)
 
 
@@ -22,6 +23,8 @@ class AddResultScript(OutputtingScript):
             '--projectId', metavar='PROJECT_ID',
             dest='project_id')
         argument_subparser.add_argument(
+            '--mock', action='store_true', dest='is_mock')
+        argument_subparser.add_argument(
             'result_definition_path',
             metavar='RESULT_DEFINITION_PATH')
 
@@ -31,6 +34,7 @@ class AddResultScript(OutputtingScript):
         tool_id = args.tool_id
         tool_version_id = args.tool_version_id
         project_id = args.project_id
+        as_json = args.as_json
         result_dictionary = load_definition(
             args.result_definition_path, kinds=['result'])
         if result_name:
@@ -48,6 +52,10 @@ class AddResultScript(OutputtingScript):
         if project_id:
             project_dictionary = result_dictionary.get('project', {})
             project_dictionary['id'] = project_id
-        run_safely(add_result, [
+        if args.is_mock:
+            print(render_object(result_dictionary, as_json))
+            return
+        d = run_safely(add_result, [
             result_dictionary,
-        ], args.as_json, args.is_quiet)
+        ], as_json, args.is_quiet)
+        print(render_object(d, as_json))

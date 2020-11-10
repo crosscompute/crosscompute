@@ -21,5 +21,5 @@ def launch(argv=sys.argv):
         'crosscompute',
         argv,
         description=__description__,
-        epilogue=get_bash_configuration_text(),
+        epilogue=get_bash_configuration_text('YOUR-TOKEN'),
         formatter_class=RawDescriptionHelpFormatter)

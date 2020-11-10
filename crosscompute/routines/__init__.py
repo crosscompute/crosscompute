@@ -13,7 +13,9 @@ from .definition import (
 from .execution import (
     add_project,
     add_result,
+    add_tool,
     change_project,
+    render_object,
     run_automation,
     run_safely,
     see_projects,

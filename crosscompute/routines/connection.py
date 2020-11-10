@@ -12,11 +12,11 @@ from ..macros import (
     get_environment_value)
 
 
-def get_bash_configuration_text():
+def get_bash_configuration_text(token):
     return BASH_CONFIGURATION_TEXT.format(
         client_url=get_client_url(),
         server_url=get_server_url(),
-        token=get_token('YOUR-TOKEN'))
+        token=get_token(token))
 
 
 def fetch_resource(resource_name, resource_id=None, method='GET', data=None):
@@ -38,7 +38,7 @@ def fetch_resource(resource_name, resource_id=None, method='GET', data=None):
     if status_code == 401:
         d['statusDescription'] = 'unauthorized'
         d['statusHelp'] = 'please check your server url and token'
-        d['bashEnvironment'] = get_bash_configuration_text()
+        d['bashEnvironment'] = get_bash_configuration_text('YOUR-TOKEN')
         raise CrossComputeConnectionError(d)
     elif status_code != 200:
         try:

@@ -1,85 +1,43 @@
-# TODO: Consider running worker after add if user asks for it
-import json
-import requests
-from invisibleroads.scripts import LoggingScript
-from sys import exit
-
-from .. import ConnectingScript
-from ...exceptions import CrossComputeError
+from .. import OutputtingScript
 from ...routines import (
-    get_server_url,
-    get_token,
-    load_definition)
+    add_tool,
+    get_bash_configuration_text,
+    load_definition,
+    render_object,
+    run_safely)
 
 
-MOCK_TEXT = '''
-tool name = {tool_name}
-tool version = {tool_version_name}
-input variable count = {input_variable_count}
-output variable count = {output_variable_count}
-'''.strip()
-REAL_TEXT = MOCK_TEXT + '''
-
-export CROSSCOMPUTE_TOKEN={token}
-crosscompute workers run {script_command}
-'''.rstrip()
-
-
-class AddToolScript(ConnectingScript):
+class AddToolScript(OutputtingScript):
 
     def configure(self, argument_subparser):
         super().configure(argument_subparser)
         argument_subparser.add_argument(
             '--mock', action='store_true', dest='is_mock')
         argument_subparser.add_argument(
-            'path', metavar='TOOL_DEFINITION_PATH')
+            'tool_definition_path',
+            metavar='TOOL_DEFINITION_PATH')
 
     def run(self, args, argv):
         super().run(args, argv)
         as_json = args.as_json
-        is_mock = args.is_mock
 
-        run_safely(add_tool, [args.path, is_mock])
+        tool_dictionary = load_definition(
+            args.tool_definition_path, kinds=['tool'])
 
-        try:
-            d = add_tool(args.path, is_mock)
-        except CrossComputeError:
+        if args.is_mock:
+            print(render_object(tool_dictionary, as_json))
+            return
+        d = run_safely(add_tool, [
+            tool_dictionary,
+        ], as_json, args.is_quiet)
 
-        if is_response_format_json:
-            print(json.dumps(d))
-        elif is_mock:
-            print(format_mock_text(d))
-        else:
-            print(format_real_text(d))
+        print(render_object(d, as_json))
+        if not as_json:
+            tool_version_dictionary = d['versions'][0]
+            script_dictionary = d.get('script', {})
+            token = tool_version_dictionary['token']
+            script_command = script_dictionary.get('command', '')
+            print('\n' + get_bash_configuration_text(token))
+            print('crosscompute workers run ' + script_command)
 
-
-def run(path, is_mock=False):
-    dictionary = load_definition(path, kinds=['tool'])
-    if is_mock:
-        return dictionary
-    return fetch_resource('tools', method='POST', data={
-        'dictionary': dictionary})
-
-
-def format_mock_text(d):
-    return MOCK_TEXT.format(
-        tool_name=d['name'],
-        tool_version_name=d['version']['name'],
-        input_variable_count=len(d['input']['variables']),
-        output_variable_count=len(d['output']['variables']))
-
-
-def format_real_text(d):
-    tool_version = d['versions'][0]
-    script_command = d['script']['command'] if 'script' in d else ''
-    return REAL_TEXT.format(
-        # tool_url=d['url'],
-        # tool_version_url=tool_version['url'],
-        tool_name=d['name'],
-        tool_version_name=tool_version['name'],
-        input_variable_count=len(tool_version['input'][
-            'variableById']),
-        output_variable_count=len(tool_version['output'][
-            'variableById']),
-        token=tool_version['token'],
-        script_command=script_command)
+        # TODO: Consider running worker
