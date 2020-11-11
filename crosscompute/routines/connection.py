@@ -12,11 +12,11 @@ from ..macros import (
     get_environment_value)
 
 
-def get_bash_configuration_text(token):
+def get_bash_configuration_text(default_token):
     return BASH_CONFIGURATION_TEXT.format(
         client_url=get_client_url(),
         server_url=get_server_url(),
-        token=get_token(token))
+        token=get_token(default_token))
 
 
 def fetch_resource(
@@ -76,7 +76,7 @@ def get_echoes_client(server_url, token):
     url = f'{server_url}/echoes/{token}.json'
     try:
         client = SSEClient(url)
-    except requests.ConnectionError:
+    except Exception:
         raise CrossComputeConnectionError({
             'url': 'could not connect to echoes ' + url})
     return client

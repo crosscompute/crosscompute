@@ -3,11 +3,11 @@ import yaml
 from .. import OutputtingScript
 from ...exceptions import CrossComputeError
 from ...routines import (
+    fetch_resource,
     get_project_summary,
     load_definition,
     render_object,
-    run_safely,
-    set_project)
+    run_safely)
 
 
 class SetProjectScript(OutputtingScript):
@@ -38,16 +38,14 @@ class SetProjectScript(OutputtingScript):
             if not is_quiet:
                 print(render_object(project_dictionary, as_json))
             return
-        d = run_safely(set_project, [
+        project_id = project_dictionary.get('id')
+        d = run_safely(fetch_resource, [
+            'projects', project_id,
+            'PATCH' if project_id else 'POST',
             project_dictionary,
         ], as_json, is_quiet)
 
         project_summary = get_project_summary(d)
         open(project_definition_path, 'wt').write('\n'.join([
             '---',
-            yaml.dump(project_summary).strip(),
-        ]))
-
-        if is_quiet:
-            return
-        print(render_object(d, as_json))
+            yaml.dump(project_summary).strip()]))

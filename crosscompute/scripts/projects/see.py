@@ -1,5 +1,5 @@
 from .. import OutputtingScript
-from ...routines import run_safely, see_projects
+from ...routines import fetch_resource, run_safely
 
 
 class SeeProjectsScript(OutputtingScript):
@@ -7,10 +7,10 @@ class SeeProjectsScript(OutputtingScript):
     def configure(self, argument_subparser):
         super().configure(argument_subparser)
         argument_subparser.add_argument(
-            'project_ids', metavar='PROJECT_ID', nargs='*')
+            'project_id', metavar='PROJECT_ID', nargs='?')
 
     def run(self, args, argv):
         super().run(args, argv)
-        run_safely(see_projects, [
-            args.project_ids,
+        run_safely(fetch_resource, [
+            'projects', args.project_id,
         ], args.as_json, args.is_quiet)

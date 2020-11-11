@@ -5,6 +5,7 @@ from collections import OrderedDict
 from os.path import dirname, join
 from tinycss2 import parse_stylesheet
 
+from .connection import fetch_resource
 from .. import __version__
 from ..constants import (
     DEFAULT_VIEW_NAME, L, PRINT_FORMAT_NAMES, VIEW_NAMES)
@@ -104,7 +105,14 @@ def normalize_result_definition(raw_result_definition, folder):
 
     tool_definition = dict(raw_result_definition.get(
         'tool', result_definition.get('tool', {})))
-    if 'path' in tool_definition:
+    if 'id' in tool_definition:
+        # TODO: Clean
+        tool_id = tool_definition['id']
+        tool_version_id = tool_definition.get(
+            'version', {}).get('id', 'latest')
+        tool_definition = fetch_resource(
+            'tools', tool_id + '/versions/' + tool_version_id)
+    elif 'path' in tool_definition:
         tool_definition_path = join(folder, tool_definition['path'])
         tool_definition = load_definition(tool_definition_path)
     result_definition['tool'] = tool_definition
@@ -172,7 +180,8 @@ def normalize_result_variable_dictionaries(
             variable_definition = variable_definition_by_id[variable_id]
         except KeyError:
             raise CrossComputeDefinitionError({
-                'id': f'could not find {variable_id} in tool definition'})
+                'id': 'could not find variable ' + variable_id
+                + ' in tool definition'})
         variable_view = variable_definition['view']
 
         try:
@@ -409,8 +418,10 @@ def get_project_summary(project_dictionary):
     project_summary['id'] = project_dictionary['id']
     project_summary['name'] = project_dictionary['name']
     for key in ['tools', 'results', 'datasets']:
-        project_summary[key] = {
-            'id': _['id'] for _ in project_dictionary[key]}
+        resource_dictionaries = project_dictionary[key]
+        if not resource_dictionaries:
+            continue
+        project_summary[key] = {'id': _['id'] for _ in resource_dictionaries}
     return project_summary
 
 

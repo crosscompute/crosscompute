@@ -1,11 +1,15 @@
+from os import environ
+
 from .. import OutputtingScript
 from ...exceptions import CrossComputeError
 from ...routines import (
-    add_tool,
+    fetch_resource,
     get_bash_configuration_text,
+    get_server_url,
     load_definition,
     render_object,
-    run_safely)
+    run_safely,
+    run_worker)
 
 
 class AddToolScript(OutputtingScript):
@@ -36,19 +40,19 @@ class AddToolScript(OutputtingScript):
             if not is_quiet:
                 print(render_object(tool_dictionary, as_json))
             return
-        d = run_safely(add_tool, [
-            tool_dictionary,
+        d = run_safely(fetch_resource, [
+            'tools', None, 'POST', tool_dictionary,
         ], as_json, is_quiet)
 
-        if is_quiet:
-            return
-        print(render_object(d, as_json))
-        if not as_json:
-            tool_version_dictionary = d['versions'][0]
+        environ['CROSSCOMPUTE_TOKEN'] = token = d['token']
+        if not is_quiet and not as_json:
             script_dictionary = d.get('script', {})
-            token = tool_version_dictionary['token']
             script_command = script_dictionary.get('command', '')
             print('\n' + get_bash_configuration_text(token))
             print('crosscompute workers run ' + script_command)
-
-        # TODO: Consider running worker
+        run_safely(run_worker, [
+            get_server_url(),
+            token,
+            as_json,
+            is_quiet,
+        ], as_json, is_quiet)

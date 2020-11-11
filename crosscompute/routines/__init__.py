@@ -1,4 +1,5 @@
 from .connection import (
+    fetch_resource,
     get_bash_configuration_text,
     get_client_url,
     get_echoes_client,
@@ -12,16 +13,10 @@ from .definition import (
     normalize_block_dictionaries,
     normalize_style_rule_strings)
 from .execution import (
-    add_result,
-    add_tool,
     render_object,
     run_automation,
     run_safely,
-    run_worker,
-    see_projects,
-    see_results,
-    see_tools,
-    set_project)
+    run_worker)
 
 
 # flake8: noqa: E401

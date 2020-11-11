@@ -1,7 +1,7 @@
 from .. import OutputtingScript
 from ...exceptions import CrossComputeError
 from ...routines import (
-    add_result,
+    fetch_resource,
     load_definition,
     render_object,
     run_safely)
@@ -34,10 +34,6 @@ class AddResultScript(OutputtingScript):
         if args.is_mock:
             print(render_object(result_dictionary, as_json))
             return
-        d = run_safely(add_result, [
-            result_dictionary,
+        run_safely(fetch_resource, [
+            'results', None, 'POST', result_dictionary,
         ], as_json, is_quiet)
-
-        if is_quiet:
-            return
-        print(render_object(d, as_json))
