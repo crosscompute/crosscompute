@@ -15,3 +15,8 @@ class CrossComputeDefinitionError(HTTPBadRequest, CrossComputeError):
 
 class CrossComputeExecutionError(HTTPBadRequest, CrossComputeError):
     pass
+
+
+class CrossComputeImplementationError(
+        HTTPInternalServerError, CrossComputeError):
+    pass

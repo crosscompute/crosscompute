@@ -1,10 +1,8 @@
-from .. import OutputtingScript
-from ...exceptions import CrossComputeError
+from .. import OutputtingScript, run_safely
+from ...constants import RESULT_FILE_NAME
 from ...routines import (
     fetch_resource,
-    load_definition,
-    render_object,
-    run_safely)
+    load_relevant_path)
 
 
 class AddResultScript(OutputtingScript):
@@ -19,21 +17,19 @@ class AddResultScript(OutputtingScript):
 
     def run(self, args, argv):
         super().run(args, argv)
-        result_definition_path = args.result_definition_path
-        as_json = args.as_json
         is_quiet = args.is_quiet
+        as_json = args.as_json
 
-        try:
-            result_dictionary = load_definition(
-                result_definition_path, kinds=['result'])
-        except CrossComputeError as e:
-            if is_quiet:
-                exit(1)
-            exit(render_object(e.args[0], as_json))
+        result_definition = run_safely(load_relevant_path, [
+            args.result_definition_path,
+            RESULT_FILE_NAME,
+            ['result'],
+        ], is_quiet, as_json)
 
         if args.is_mock:
-            print(render_object(result_dictionary, as_json))
             return
+        if not is_quiet and not as_json:
+            print('---')
         run_safely(fetch_resource, [
-            'results', None, 'POST', result_dictionary,
-        ], as_json, is_quiet)
+            'results', None, 'POST', result_definition,
+        ], is_quiet, as_json)

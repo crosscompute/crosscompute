@@ -1,13 +1,8 @@
-import yaml
-
-from .. import OutputtingScript
-from ...exceptions import CrossComputeError
+from .. import OutputtingScript, run_safely
+from ...constants import PROJECT_FILE_NAME
 from ...routines import (
     fetch_resource,
-    get_project_summary,
-    load_definition,
-    render_object,
-    run_safely)
+    load_relevant_path)
 
 
 class SetProjectScript(OutputtingScript):
@@ -22,30 +17,20 @@ class SetProjectScript(OutputtingScript):
 
     def run(self, args, argv):
         super().run(args, argv)
-        project_definition_path = args.project_definition_path
-        as_json = args.as_json
         is_quiet = args.is_quiet
+        as_json = args.as_json
 
-        try:
-            project_dictionary = load_definition(
-                project_definition_path, kinds=['project'])
-        except CrossComputeError as e:
-            if is_quiet:
-                exit(1)
-            exit(render_object(e.args[0], as_json))
+        project_definition = run_safely(load_relevant_path, [
+            args.project_definition_path,
+            PROJECT_FILE_NAME,
+            ['project'],
+        ], is_quiet, as_json)
+        project_id = project_definition.get('id')
 
-        if args.is_mock:
-            if not is_quiet:
-                print(render_object(project_dictionary, as_json))
-            return
-        project_id = project_dictionary.get('id')
-        d = run_safely(fetch_resource, [
+        if not is_quiet and not as_json:
+            print('---')
+        run_safely(fetch_resource, [
             'projects', project_id,
             'PATCH' if project_id else 'POST',
-            project_dictionary,
-        ], as_json, is_quiet)
-
-        project_summary = get_project_summary(d)
-        open(project_definition_path, 'wt').write('\n'.join([
-            '---',
-            yaml.dump(project_summary).strip()]))
+            project_definition,
+        ], is_quiet, as_json)

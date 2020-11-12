@@ -15,7 +15,10 @@ from conftest import (
 
 
 def test_run_automation():
-    d = run_automation(AUTOMATION_RESULT_DEFINITION_PATH, is_mock=True)
+    automation_definition = load_definition(
+        AUTOMATION_RESULT_DEFINITION_PATH,
+        ['automation'])
+    d = run_automation(automation_definition, is_mock=True)
     document_dictionaries = d['documents']
     assert len(document_dictionaries) == 3
     assert document_dictionaries[0]['blocks'][-1]['data']['value'] == 2

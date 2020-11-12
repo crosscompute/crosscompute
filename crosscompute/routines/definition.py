@@ -1,7 +1,6 @@
 import json
 import re
 import strictyaml
-from collections import OrderedDict
 from os.path import dirname, join
 from tinycss2 import parse_stylesheet
 
@@ -69,7 +68,7 @@ def normalize_definition(raw_definition, folder, kinds=None):
     return definition
 
 
-def normalize_project_definition(raw_project_definition, folder):
+def normalize_project_definition(raw_project_definition, folder=None):
     project_definition = {}
     for key in ['id', 'name']:
         if key not in raw_project_definition:
@@ -125,8 +124,7 @@ def normalize_result_definition(raw_result_definition, folder):
         'input', {}).get('variables', [])
     result_definition['input'] = {
         'variables': normalize_result_variable_dictionaries(
-            raw_variable_dictionaries, variable_definitions),
-    }
+            raw_variable_dictionaries, variable_definitions)}
 
     if 'print' in raw_result_definition:
         result_definition['print'] = get_print_dictionary(
@@ -135,11 +133,14 @@ def normalize_result_definition(raw_result_definition, folder):
     return result_definition
 
 
-def normalize_tool_definition(dictionary, folder):
-    try:
-        assert dictionary['kind'].lower() == 'tool'
-    except (KeyError, AssertionError):
-        raise CrossComputeDefinitionError({'kind': 'must be tool'})
+def normalize_tool_definition(dictionary, folder=None):
+    d = {}
+    d.update(normalize_tool_definition_head(dictionary))
+    d.update(normalize_tool_definition_body(dictionary, folder))
+    return d
+
+
+def normalize_tool_definition_head(dictionary):
     d = {}
     if 'id' in dictionary:
         d['id'] = dictionary['id']
@@ -150,8 +151,15 @@ def normalize_tool_definition(dictionary, folder):
         d['version'] = normalize_version_dictionary(dictionary['version'])
     except KeyError as e:
         raise CrossComputeDefinitionError({e.args[0]: 'is required'})
-    d['input'] = get_put_dictionary('input', dictionary, folder)
-    d['output'] = get_put_dictionary('output', dictionary, folder)
+    return d
+
+
+def normalize_tool_definition_body(dictionary, folder=None):
+    d = {}
+    for kind in ['input', 'output', 'log', 'debug']:
+        if kind not in dictionary:
+            continue
+        d[kind] = get_put_dictionary(kind, dictionary, folder)
     if 'tests' in dictionary:
         d['tests'] = get_test_dictionaries(dictionary)
     if 'script' in dictionary:
@@ -412,7 +420,7 @@ def normalize_view_name(raw_view_name):
 
 
 def get_project_summary(project_dictionary):
-    project_summary = OrderedDict()
+    project_summary = {}
     project_summary['crosscompute'] = __version__
     project_summary['kind'] = 'project'
     project_summary['id'] = project_dictionary['id']
@@ -521,7 +529,7 @@ def get_environment_dictionary(dictionary):
     return normalize_environment_dictionary(raw_environment_dictionary)
 
 
-def get_template_block_dictionaries(dictionary, folder):
+def get_template_block_dictionaries(dictionary, folder=None):
     if 'blocks' in dictionary:
         raw_block_dictionaries = dictionary['blocks']
     elif 'path' in dictionary and folder is not None:

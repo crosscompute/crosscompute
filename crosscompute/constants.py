@@ -14,6 +14,7 @@ export CROSSCOMPUTE_TOKEN={token}
 AUTOMATION_FILE_NAME = 'automation.yml'
 TOOL_FILE_NAME = 'tool.yml'
 RESULT_FILE_NAME = 'result.yml'
+PROJECT_FILE_NAME = 'project.yml'
 
 
 # TODO: Load supported views from server

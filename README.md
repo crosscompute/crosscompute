@@ -14,13 +14,14 @@ pip install -U crosscompute
 # export CROSSCOMPUTE_CLIENT=https://crosscompute.com
 # export CROSSCOMPUTE_SERVER=https://services.crosscompute.com
 export CROSSCOMPUTE_TOKEN=YOUR-TOKEN
+crosscompute
 ```
 
 ### Run Automation
 
 ```bash
 crosscompute automations run
-crosscompute automations run AUTOMATION-PATH
+crosscompute automations run automation.yml
 ```
 
 ### Add Tool
@@ -30,10 +31,10 @@ git clone git@github.com:crosscompute/crosscompute-examples
 cd crosscompute-examples/add-numbers
 
 # Mock
-crosscompute tools add .crosscompute.yml --mock
+crosscompute tools add tool.yml --mock
 
 # Real
-crosscompute tools add .crosscompute.yml
+crosscompute tools add tool.yml
 ```
 
 ### See Tool
@@ -60,32 +61,16 @@ crosscompute projects see | jq '.[] | {id:.id, name:.name}'
 crosscompute projects see PROJECT-ID
 ```
 
-### Add Project
+### Set Project
 
 ```
-crosscompute projects add --name "Project X"
-```
-
-### Change Project
-
-```
-crosscompute projects change PROJECT-ID \
-    --datasetId abc \
-    --toolId def \
-    --toolId ghi \
-    --resultId jkl \
-    --resultId mno
+crosscompute projects set project.yml
 ```
 
 ### Add Result
 
 ```
-crosscompute results add \
-    result.json \
-    --name RESULT-NAME \
-    --toolId TOOL-ID \
-    --toolVersionId TOOL-VERSION-ID \
-    --projectId PROJECT-ID
+crosscompute results add result.yml
 ```
 
 ## Development

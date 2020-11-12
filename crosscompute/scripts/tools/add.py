@@ -1,14 +1,11 @@
 from os import environ
 
-from .. import OutputtingScript
-from ...exceptions import CrossComputeError
+from .. import OutputtingScript, run_safely
+from ...constants import TOOL_FILE_NAME
 from ...routines import (
     fetch_resource,
     get_bash_configuration_text,
-    get_server_url,
-    load_definition,
-    render_object,
-    run_safely,
+    load_relevant_path,
     run_worker)
 
 
@@ -24,35 +21,25 @@ class AddToolScript(OutputtingScript):
 
     def run(self, args, argv):
         super().run(args, argv)
-        tool_definition_path = args.tool_definition_path
-        as_json = args.as_json
         is_quiet = args.is_quiet
+        as_json = args.as_json
 
-        try:
-            tool_dictionary = load_definition(
-                tool_definition_path, kinds=['tool'])
-        except CrossComputeError as e:
-            if is_quiet:
-                exit(1)
-            exit(render_object(e.args[0], as_json))
+        tool_definition = run_safely(load_relevant_path, [
+            args.tool_definition_path,
+            TOOL_FILE_NAME,
+            ['tool'],
+        ], is_quiet, as_json)
 
         if args.is_mock:
-            if not is_quiet:
-                print(render_object(tool_dictionary, as_json))
             return
-        d = run_safely(fetch_resource, [
-            'tools', None, 'POST', tool_dictionary,
-        ], as_json, is_quiet)
-
-        environ['CROSSCOMPUTE_TOKEN'] = token = d['token']
         if not is_quiet and not as_json:
-            script_dictionary = d.get('script', {})
-            script_command = script_dictionary.get('command', '')
-            print('\n' + get_bash_configuration_text(token))
+            print('---')
+        d = run_safely(fetch_resource, [
+            'tools', None, 'POST', tool_definition,
+        ], is_quiet, as_json)
+        environ['CROSSCOMPUTE_TOKEN'] = d['token']
+        if not is_quiet and not as_json:
+            script_command = d.get('script', {}).get('command', '')
+            print('\n' + get_bash_configuration_text())
             print('crosscompute workers run ' + script_command)
-        run_safely(run_worker, [
-            get_server_url(),
-            token,
-            as_json,
-            is_quiet,
-        ], as_json, is_quiet)
+        run_safely(run_worker, [], is_quiet, as_json)

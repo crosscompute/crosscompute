@@ -1,5 +1,5 @@
-from .. import OutputtingScript
-from ...routines import fetch_resource, run_safely
+from .. import OutputtingScript, run_safely
+from ...routines import fetch_resource
 
 
 class SeeProjectsScript(OutputtingScript):
@@ -11,6 +11,9 @@ class SeeProjectsScript(OutputtingScript):
 
     def run(self, args, argv):
         super().run(args, argv)
+        is_quiet = args.is_quiet
+        as_json = args.as_json
+
         run_safely(fetch_resource, [
             'projects', args.project_id,
-        ], args.as_json, args.is_quiet)
+        ], is_quiet, as_json)

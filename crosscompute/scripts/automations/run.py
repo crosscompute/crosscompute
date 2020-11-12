@@ -1,5 +1,6 @@
-from .. import OutputtingScript
-from ...routines import run_automation, run_safely
+from .. import OutputtingScript, run_safely
+from ...constants import AUTOMATION_FILE_NAME
+from ...routines import load_relevant_path, run_automation
 
 
 class RunAutomationScript(OutputtingScript):
@@ -14,9 +15,18 @@ class RunAutomationScript(OutputtingScript):
 
     def run(self, args, argv):
         super().run(args, argv)
-        as_json = args.as_json
         is_quiet = args.is_quiet
+        as_json = args.as_json
+
+        automation_definition = run_safely(load_relevant_path, [
+            args.automation_definition_path,
+            AUTOMATION_FILE_NAME,
+            ['automation'],
+        ], is_quiet, as_json)
+
+        if not is_quiet and not as_json:
+            print('---')
         run_safely(run_automation, [
-            args.automation_definition_path or '.',
+            automation_definition,
             args.is_mock,
-        ], as_json, is_quiet)
+        ], is_quiet, as_json)

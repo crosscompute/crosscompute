@@ -12,11 +12,11 @@ from ..macros import (
     get_environment_value)
 
 
-def get_bash_configuration_text(default_token):
+def get_bash_configuration_text():
     return BASH_CONFIGURATION_TEXT.format(
         client_url=get_client_url(),
         server_url=get_server_url(),
-        token=get_token(default_token))
+        token=get_token('YOUR-TOKEN'))
 
 
 def fetch_resource(
@@ -40,7 +40,7 @@ def fetch_resource(
     if status_code == 401:
         d['statusDescription'] = 'unauthorized'
         d['statusHelp'] = 'please check your server url and token'
-        d['bashEnvironment'] = get_bash_configuration_text('YOUR-TOKEN')
+        d['bashEnvironment'] = get_bash_configuration_text()
         raise CrossComputeConnectionError(d)
     elif status_code != 200:
         try:
@@ -72,7 +72,9 @@ def get_resource_url(server_url, resource_name, resource_id=None):
     return url + '.json'
 
 
-def get_echoes_client(server_url, token):
+def get_echoes_client():
+    server_url = get_server_url()
+    token = get_token()
     url = f'{server_url}/echoes/{token}.json'
     try:
         client = SSEClient(url)

@@ -1,11 +1,27 @@
 import csv
 import geojson
 import json
+import yaml
 from base64 import b64decode, b64encode
 
 from ..exceptions import CrossComputeExecutionError
 from ..macros import parse_number
 from ..symmetries import cache
+
+
+class NoAliasDumper(yaml.SafeDumper):
+    # https://ttl255.com/yaml-anchors-and-aliases-and-how-to-disable-them
+
+    def ignore_aliases(self, data):
+        return True
+
+
+def render_object(raw_object, as_json=False):
+    if as_json:
+        text = json.dumps(raw_object)
+    else:
+        text = yaml.dump(raw_object, Dumper=NoAliasDumper, sort_keys=False)
+    return text.strip()
 
 
 def save_json(target_path, value_by_id):

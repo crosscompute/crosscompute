@@ -1,7 +1,5 @@
-import json
 import shlex
 import subprocess
-import yaml
 from collections import defaultdict
 from copy import deepcopy
 from invisibleroads_macros_disk import make_folder, make_random_folder
@@ -21,32 +19,25 @@ from .definition import (
     load_definition)
 from .serialization import (
     load_value_json,
+    render_object,
     save_json,
     LOAD_BY_EXTENSION_BY_VIEW,
     SAVE_BY_EXTENSION_BY_VIEW)
-from ..constants import (
-    AUTOMATION_FILE_NAME,
-    L,
-    S)
+from ..constants import S
 from ..exceptions import (
     CrossComputeDefinitionError,
     CrossComputeError,
-    CrossComputeExecutionError)
+    CrossComputeExecutionError,
+    CrossComputeImplementationError)
 
 
-def run_automation(path, is_mock=True):
-    try:
-        automation_path = find_relevant_path(
-            path, AUTOMATION_FILE_NAME)
-    except OSError:
-        raise CrossComputeExecutionError({'automation': 'is missing'})
-    L.info(f'Loading {automation_path}...')
-    automation_definition = load_definition(automation_path, kinds=['automation'])
+def run_automation(automation_definition, is_mock):
     automation_kind = automation_definition['kind']
     if automation_kind == 'result':
         d = run_result_automation(automation_definition, is_mock)
     elif automation_kind == 'report':
-        d = {}
+        raise CrossComputeImplementationError({
+            'report': 'has not been implemented yet'})
     return d
 
 
@@ -66,8 +57,9 @@ def run_result_automation(result_definition, is_mock=True):
     return d
 
 
-def run_tool(tool_definition, result_dictionary):
-    script_command = tool_definition['script']['command']
+def run_tool(tool_definition, result_dictionary, script_command=None):
+    if not script_command:
+        script_command = tool_definition['script']['command']
     script_folder = tool_definition['folder']
     result_folder = get_result_folder(result_dictionary)
     folder_by_name = {k: make_folder(join(result_folder, k)) for k in [
@@ -96,24 +88,25 @@ def run_tool(tool_definition, result_dictionary):
     return result_dictionary
 
 
-def run_worker(server_url, token, as_json, is_quiet):
+def run_worker(script_command, is_quiet, as_json):
     # TODO: Check chores periodically even without echo
-    for echo_message in get_echoes_client(server_url, token):
+    for echo_message in get_echoes_client():
         event_name = echo_message.event
         if event_name == 'i':
             while True:
-                chore_dictionary = fetch_resource(
-                    'chores', server_url=server_url, token=token)
+                chore_dictionary = fetch_resource('chores')
                 if not chore_dictionary:
                     break
                 if not is_quiet:
-                    render_object(chore_dictionary, as_json)
+                    print(render_object(chore_dictionary, as_json))
                 # TODO: Get tool script from cloud
                 result_dictionary = chore_dictionary['result']
                 result_token = result_dictionary['token']
                 try:
                     result_dictionary = run_tool(
-                        chore_dictionary['tool'], result_dictionary)
+                        chore_dictionary['tool'],
+                        result_dictionary,
+                        script_command)
                 except CrossComputeError:
                     result_progress = -1
                 else:
@@ -121,10 +114,9 @@ def run_worker(server_url, token, as_json, is_quiet):
                 result_dictionary['progress'] = result_progress
                 fetch_resource(
                     'results', result_dictionary['id'],
-                    method='PATCH', data=result_dictionary,
-                    server_url=server_url, token=result_token)
+                    method='PATCH', data=result_dictionary, token=result_token)
         if not is_quiet:
-            render_object(echo_message.__dict__, as_json)
+            print(render_object(echo_message.__dict__, as_json))
 
 
 def run_script(script_command, script_folder, input_folder, output_folder, log_folder, debug_folder):
@@ -153,18 +145,6 @@ def run_script(script_command, script_folder, input_folder, output_folder, log_f
         raise CrossComputeExecutionError(e)
     stdout_file.close()
     stderr_file.close()
-
-
-def run_safely(function, arguments, as_json=True, is_quiet=False):
-    try:
-        d = function(*arguments)
-    except CrossComputeError as e:
-        if is_quiet:
-            exit(1)
-        exit(render_object(e.args[0], as_json))
-    if not is_quiet:
-        print(render_object(d, as_json))
-    return d
 
 
 def render_result(tool_definition, result_dictionary):
@@ -207,15 +187,17 @@ def render_blocks(tool_definition, result_dictionary):
     return blocks
 
 
-def render_object(raw_object, as_json=False):
-    if as_json:
-        text = json.dumps(raw_object)
-    else:
-        text = yaml.dump(raw_object)
-    return text.strip()
+def load_relevant_path(path, name, kinds):
+    try:
+        relevant_path = find_relevant_path(path, name)
+    except OSError:
+        raise CrossComputeExecutionError({name: 'could not be found'})
+    return load_definition(relevant_path, kinds)
 
 
-def find_relevant_path(path, name=''):
+def find_relevant_path(path, name):
+    if not path:
+        path = '.'
     if not exists(path):
         raise OSError({'path': 'is bad'})
     path = abspath(path)
