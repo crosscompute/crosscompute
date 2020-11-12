@@ -1,7 +1,6 @@
 ---
 crosscompute: 0.8.4
 kind: project
-id: p1
 name: Project 1
 tools:
   - id: t1
