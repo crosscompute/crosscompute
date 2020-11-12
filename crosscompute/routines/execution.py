@@ -60,7 +60,7 @@ def run_result_automation(result_definition, is_mock=True):
 def run_tool(tool_definition, result_dictionary, script_command=None):
     if not script_command:
         script_command = tool_definition['script']['command']
-    script_folder = tool_definition['folder']
+    script_folder = tool_definition.get('folder', '.')
     result_folder = get_result_folder(result_dictionary)
     folder_by_name = {k: make_folder(join(result_folder, k)) for k in [
         'input', 'output', 'log', 'debug']}
@@ -88,35 +88,47 @@ def run_tool(tool_definition, result_dictionary, script_command=None):
     return result_dictionary
 
 
-def run_worker(script_command, is_quiet, as_json):
+def run_worker(script_command=None, is_quiet=False, as_json=False):
     # TODO: Check chores periodically even without echo
-    for echo_message in get_echoes_client():
-        event_name = echo_message.event
-        if event_name == 'i':
-            while True:
-                chore_dictionary = fetch_resource('chores')
-                if not chore_dictionary:
-                    break
-                if not is_quiet:
-                    print(render_object(chore_dictionary, as_json))
-                # TODO: Get tool script from cloud
-                result_dictionary = chore_dictionary['result']
-                result_token = result_dictionary['token']
-                try:
-                    result_dictionary = run_tool(
-                        chore_dictionary['tool'],
-                        result_dictionary,
-                        script_command)
-                except CrossComputeError:
-                    result_progress = -1
-                else:
-                    result_progress = 100
-                result_dictionary['progress'] = result_progress
-                fetch_resource(
-                    'results', result_dictionary['id'],
-                    method='PATCH', data=result_dictionary, token=result_token)
-        if not is_quiet:
-            print(render_object(echo_message.__dict__, as_json))
+    result_count = 0
+    try:
+        for echo_message in get_echoes_client():
+            # if not is_quiet:
+            #   print(render_object(echo_message.__dict__, as_json) + '\n')
+            event_name = echo_message.event
+            if event_name == 'message':
+                if not is_quiet and not as_json:
+                    print('.', end='')
+            elif event_name == 'i':
+                while True:
+                    chore_dictionary = fetch_resource('chores')
+                    if not chore_dictionary:
+                        break
+                    if not is_quiet:
+                        print()
+                        print(render_object(chore_dictionary, as_json))
+                    # TODO: Get tool script from cloud
+                    result_dictionary = chore_dictionary['result']
+                    result_token = result_dictionary['token']
+                    try:
+                        result_dictionary = run_tool(
+                            chore_dictionary['tool'],
+                            result_dictionary, script_command)
+                    except CrossComputeError:
+                        result_progress = -1
+                    else:
+                        result_progress = 100
+                    result_dictionary['progress'] = result_progress
+                    fetch_resource(
+                        'results', result_dictionary['id'],
+                        method='PATCH', data=result_dictionary,
+                        token=result_token)
+                    result_count += 1
+    except KeyboardInterrupt:
+        pass
+    return {
+        'resultCount': result_count,
+    }
 
 
 def run_script(script_command, script_folder, input_folder, output_folder, log_folder, debug_folder):

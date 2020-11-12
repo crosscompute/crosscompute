@@ -8,7 +8,6 @@ from .connection import (
     get_token)
 from .definition import (
     check_dictionary,
-    get_project_summary,
     get_put_dictionary,
     load_definition,
     normalize_block_dictionaries,

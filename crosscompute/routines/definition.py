@@ -156,10 +156,10 @@ def normalize_tool_definition_head(dictionary):
 
 def normalize_tool_definition_body(dictionary, folder=None):
     d = {}
-    for kind in ['input', 'output', 'log', 'debug']:
-        if kind not in dictionary:
+    for key in ['input', 'output', 'log', 'debug']:
+        if key not in dictionary:
             continue
-        d[kind] = get_put_dictionary(kind, dictionary, folder)
+        d[key] = get_put_dictionary(key, dictionary, folder)
     if 'tests' in dictionary:
         d['tests'] = get_test_dictionaries(dictionary)
     if 'script' in dictionary:
@@ -417,20 +417,6 @@ def normalize_view_name(raw_view_name):
     if view_name not in VIEW_NAMES:
         raise CrossComputeDefinitionError({'view': 'must be ' + ' or '.join(VIEW_NAMES)})
     return view_name
-
-
-def get_project_summary(project_dictionary):
-    project_summary = {}
-    project_summary['crosscompute'] = __version__
-    project_summary['kind'] = 'project'
-    project_summary['id'] = project_dictionary['id']
-    project_summary['name'] = project_dictionary['name']
-    for key in ['tools', 'results', 'datasets']:
-        resource_dictionaries = project_dictionary[key]
-        if not resource_dictionaries:
-            continue
-        project_summary[key] = {'id': _['id'] for _ in resource_dictionaries}
-    return project_summary
 
 
 def get_print_dictionary(dictionary, folder):

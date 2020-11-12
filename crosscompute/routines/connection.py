@@ -37,10 +37,10 @@ def fetch_resource(
             'url': 'could not connect to server ' + url})
     status_code = response.status_code
     d = {'statusCode': status_code}
-    if status_code == 401:
-        d['statusDescription'] = 'unauthorized'
+    if status_code in [401, 403]:
         d['statusHelp'] = 'please check your server url and token'
-        d['bashEnvironment'] = get_bash_configuration_text()
+        d['serverUrl'] = server_url
+        d['token'] = token
         raise CrossComputeConnectionError(d)
     elif status_code != 200:
         try:
