@@ -34,6 +34,19 @@ PRINT_FORMAT_NAMES = [
 ]
 
 
+DEBUG_VARIABLE_DEFINITIONS = [{
+    'id': 'stdout',
+    'name': 'Standard Output',
+    'view': 'text',
+    'path': 'stdout.log',
+}, {
+    'id': 'stderr',
+    'name': 'Standard Error',
+    'view': 'text',
+    'path': 'stderr.log',
+}]
+
+
 S = {
     'folder': expanduser('~/.crosscompute'),
     'draft.id.length': 16,

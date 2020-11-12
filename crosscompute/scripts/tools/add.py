@@ -1,12 +1,12 @@
 from os import environ
+from os.path import join
 
 from .. import OutputtingScript, run_safely
 from ...constants import TOOL_FILE_NAME
 from ...routines import (
     fetch_resource,
     get_bash_configuration_text,
-    load_relevant_path,
-    run_worker)
+    load_relevant_path)
 
 
 class AddToolScript(OutputtingScript):
@@ -32,14 +32,13 @@ class AddToolScript(OutputtingScript):
 
         if args.is_mock:
             return
-        if not is_quiet and not as_json:
-            print('---')
         d = run_safely(fetch_resource, [
             'tools', None, 'POST', tool_definition,
         ], is_quiet, as_json)
         environ['CROSSCOMPUTE_TOKEN'] = d['token']
+        script_folder = join(
+            tool_definition['folder'], tool_definition['script']['folder'])
         if not is_quiet and not as_json:
-            script_command = d.get('script', {}).get('command', '')
             print('\n' + get_bash_configuration_text())
-            print('crosscompute workers run ' + script_command)
-        run_safely(run_worker, [], is_quiet, as_json)
+            print(f'cd {script_folder}')
+            print('crosscompute workers run')

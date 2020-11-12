@@ -352,15 +352,13 @@ def normalize_test_dictionaries(raw_test_dictionaries):
 
 
 def normalize_script_dictionary(raw_script_dictionary):
+    folder = raw_script_dictionary.get('folder', '.')
     try:
-        uri = raw_script_dictionary['uri']
-        folder = raw_script_dictionary['folder']
         command = raw_script_dictionary['command']
     except KeyError as e:
         raise CrossComputeDefinitionError({
             'script': 'requires ' + e.args[0]})
     return {
-        'uri': uri,
         'folder': folder,
         'command': command,
     }

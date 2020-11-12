@@ -28,8 +28,6 @@ class AddResultScript(OutputtingScript):
 
         if args.is_mock:
             return
-        if not is_quiet and not as_json:
-            print('---')
         run_safely(fetch_resource, [
             'results', None, 'POST', result_definition,
         ], is_quiet, as_json)

@@ -27,8 +27,6 @@ class SetProjectScript(OutputtingScript):
         ], is_quiet, as_json)
         project_id = project_definition.get('id')
 
-        if not is_quiet and not as_json:
-            print('---')
         run_safely(fetch_resource, [
             'projects', project_id,
             'PATCH' if project_id else 'POST',

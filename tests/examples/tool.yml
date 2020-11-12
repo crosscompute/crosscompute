@@ -36,10 +36,11 @@ tests:
     name: Floats
     path: tests/floats
 script:
-  uri: git@github.com:crosscompute/crosscompute-examples
-  folder: add-numbers
+  folder: .
   command: python run.py {input_folder} {output_folder}
-  # command: jupyter nbconvert run.ipynb --to notebook --execute --stdout
+repository:
+  uri: https://github.com/crosscompute/crosscompute
+  folder: tests/examples
 environment: 
   image: docker.io/library/python:slim-buster
   processor: cpu

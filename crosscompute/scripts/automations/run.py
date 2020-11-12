@@ -24,8 +24,6 @@ class RunAutomationScript(OutputtingScript):
             ['automation'],
         ], is_quiet, as_json)
 
-        if not is_quiet and not as_json:
-            print('---')
         run_safely(run_automation, [
             automation_definition,
             args.is_mock,

@@ -23,7 +23,7 @@ from .serialization import (
     save_json,
     LOAD_BY_EXTENSION_BY_VIEW,
     SAVE_BY_EXTENSION_BY_VIEW)
-from ..constants import S
+from ..constants import DEBUG_VARIABLE_DEFINITIONS, S
 from ..exceptions import (
     CrossComputeDefinitionError,
     CrossComputeError,
@@ -57,10 +57,13 @@ def run_result_automation(result_definition, is_mock=True):
     return d
 
 
-def run_tool(tool_definition, result_dictionary, script_command=None):
+def run_tool(
+        tool_definition, result_dictionary, script_command=None,
+        script_folder=None):
     if not script_command:
         script_command = tool_definition['script']['command']
-    script_folder = tool_definition.get('folder', '.')
+    if not script_folder:
+        script_folder = tool_definition.get('folder', '.')
     result_folder = get_result_folder(result_dictionary)
     folder_by_name = {k: make_folder(join(result_folder, k)) for k in [
         'input', 'output', 'log', 'debug']}
@@ -73,57 +76,60 @@ def run_tool(tool_definition, result_dictionary, script_command=None):
     run_script(
         script_command.format(
             input_folder=input_folder, output_folder=output_folder),
-        script_folder,
-        input_folder,
-        output_folder,
-        folder_by_name['log'],
-        folder_by_name['debug'])
+        script_folder, input_folder, output_folder,
+        folder_by_name['log'], folder_by_name['debug'])
     for folder_name in 'output', 'log', 'debug':
         if folder_name not in tool_definition:
             continue
+        variable_definitions = tool_definition[folder_name]['variables']
+        if folder_name == 'debug':
+            variable_definitions += DEBUG_VARIABLE_DEFINITIONS
         result_dictionary[folder_name] = {
             'variables': process_output_folder(
-                folder_by_name[folder_name],
-                tool_definition[folder_name]['variables'])}
+                folder_by_name[folder_name], variable_definitions)}
     return result_dictionary
 
 
-def run_worker(script_command=None, is_quiet=False, as_json=False):
+def run_worker(
+        script_command=None, script_folder=None, is_quiet=False, as_json=False):
     # TODO: Check chores periodically even without echo
     result_count = 0
     try:
         for echo_message in get_echoes_client():
-            # if not is_quiet:
-            #   print(render_object(echo_message.__dict__, as_json) + '\n')
             event_name = echo_message.event
             if event_name == 'message':
                 if not is_quiet and not as_json:
-                    print('.', end='')
+                    print('.', end='', flush=True)
             elif event_name == 'i':
                 while True:
                     chore_dictionary = fetch_resource('chores')
                     if not chore_dictionary:
                         break
                     if not is_quiet:
-                        print()
-                        print(render_object(chore_dictionary, as_json))
+                        print('\n' + render_object(chore_dictionary, as_json))
                     # TODO: Get tool script from cloud
                     result_dictionary = chore_dictionary['result']
                     result_token = result_dictionary['token']
                     try:
                         result_dictionary = run_tool(
                             chore_dictionary['tool'],
-                            result_dictionary, script_command)
-                    except CrossComputeError:
+                            result_dictionary, script_command, script_folder)
+                    except CrossComputeError as e:
+                        if not is_quiet:
+                            print(render_object(e.args[0], as_json))
                         result_progress = -1
                     else:
                         result_progress = 100
                     result_dictionary['progress'] = result_progress
+                    if not is_quiet:
+                        print(render_object(result_dictionary, as_json))
                     fetch_resource(
                         'results', result_dictionary['id'],
                         method='PATCH', data=result_dictionary,
                         token=result_token)
                     result_count += 1
+            elif not is_quiet:
+                print('\n' + render_object(echo_message.__dict__, as_json))
     except KeyboardInterrupt:
         pass
     return {

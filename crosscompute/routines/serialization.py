@@ -20,7 +20,8 @@ def render_object(raw_object, as_json=False):
     if as_json:
         text = json.dumps(raw_object)
     else:
-        text = yaml.dump(raw_object, Dumper=NoAliasDumper, sort_keys=False)
+        text = '---\n' + yaml.dump(
+            raw_object, Dumper=NoAliasDumper, sort_keys=False)
     return text.strip()
 
 
