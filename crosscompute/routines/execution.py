@@ -13,7 +13,8 @@ from traceback import print_exception
 
 from .connection import (
     fetch_resource,
-    get_echoes_client)
+    get_echoes_client,
+    get_token)
 from .definition import (
     get_template_dictionary,
     load_definition)
@@ -90,22 +91,29 @@ def run_tool(tool_definition, result_dictionary, script_command=None):
 
 
 def run_worker(script_command=None, is_quiet=False, as_json=False):
-    # TODO: Check chores periodically even without echo
-    d = defaultdict(int)
+    worker_dictionary = defaultdict(int)
+    tool_definition = fetch_resource('tools', get_token())
+    if not is_quiet:
+        print(render_object(tool_definition, as_json))
+    test_summary = run_tests(tool_definition)
+    if not is_quiet:
+        print(render_object(test_summary, as_json))
     try:
         for echo_message in get_echoes_client():
             event_name = echo_message.event
             if event_name == 'message':
                 if not is_quiet and not as_json:
                     print('.', end='', flush=True)
-            elif event_name == 'i':
-                d['result_count'] += process_result_input_stream(
-                    script_command, is_quiet, as_json)
+                worker_dictionary['ping count'] += 1
             elif not is_quiet:
                 print('\n' + render_object(echo_message.__dict__, as_json))
+            is_bored = worker_dictionary['ping count'] % 100 == 0
+            if event_name == 'i' or is_bored:
+                worker_dictionary['result count'] += process_result_input_stream(
+                    script_command, is_quiet, as_json)
     except KeyboardInterrupt:
         pass
-    return dict(d)
+    return dict(worker_dictionary)
 
 
 def run_script(script_command, script_folder, input_folder, output_folder, log_folder, debug_folder):
@@ -137,29 +145,31 @@ def run_script(script_command, script_folder, input_folder, output_folder, log_f
 
 
 def run_tests(tool_definition):
-    tool_definition_folder = tool_definition['folder']
+    tool_definition_folder = tool_definition.get('folder', '.')
     input_variable_definitions = tool_definition['input']['variables']
     test_dictionaries = tool_definition['tests']
-    d = {
-        'test total count': len(test_dictionaries),
-        'test passed count': 0,
-        'error by folder': {},
-    }
+    error_by_folder = {}
     for test_dictionary in test_dictionaries:
         relative_folder = test_dictionary['folder']
         test_folder = join(tool_definition_folder, relative_folder)
         input_folder = join(test_folder, 'input')
-        input_variable_dictionaries = process_variable_folder(input_folder, input_variable_definitions)
-        result_dictionary = {'input': {'variables': input_variable_dictionaries}}
         try:
+            input_variable_dictionaries = process_variable_folder(
+                input_folder, input_variable_definitions)
+            result_dictionary = {'input': {
+                'variables': input_variable_dictionaries}}
             result_dictionary = run_tool(tool_definition, result_dictionary)
         except CrossComputeError as e:
-            d['error by folder'][relative_folder] = e.args[0]
+            error_by_folder[relative_folder] = e.args[0]
             continue
-        d['test passed count'] += 1
-    if d['test passed count'] != d['test total count']:
+    test_count = len(test_dictionaries)
+    d = {
+        'tests total count': test_count,
+        'tests passed count': test_count - len(error_by_folder),
+    }
+    if error_by_folder:
+        d['error by folder'] = error_by_folder
         raise CrossComputeExecutionError(d)
-    d.pop('error by folder')
     return d
 
 
