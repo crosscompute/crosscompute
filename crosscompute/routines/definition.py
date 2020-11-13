@@ -344,11 +344,14 @@ def normalize_variable_path(variable_path):
 
 
 def normalize_test_dictionaries(raw_test_dictionaries):
-    return [{
-        'id': _['id'],
-        'name': _['name'],
-        'path': _['path'],
-    } for _ in raw_test_dictionaries]
+    try:
+        test_dictionaries = [{
+            'folder': _['folder'],
+        } for _ in raw_test_dictionaries]
+    except KeyError:
+        raise CrossComputeDefinitionError({
+            'folder': 'is required for each test'})
+    return test_dictionaries
 
 
 def normalize_script_dictionary(raw_script_dictionary):

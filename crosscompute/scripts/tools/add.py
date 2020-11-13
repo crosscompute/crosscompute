@@ -6,7 +6,8 @@ from ...constants import TOOL_FILE_NAME
 from ...routines import (
     fetch_resource,
     get_bash_configuration_text,
-    load_relevant_path)
+    load_relevant_path,
+    run_tests)
 
 
 class AddToolScript(OutputtingScript):
@@ -25,9 +26,11 @@ class AddToolScript(OutputtingScript):
         as_json = args.as_json
 
         tool_definition = run_safely(load_relevant_path, [
-            args.tool_definition_path,
-            TOOL_FILE_NAME,
-            ['tool'],
+            args.tool_definition_path, TOOL_FILE_NAME, ['tool'],
+        ], is_quiet, as_json)
+
+        run_safely(run_tests, [
+            tool_definition,
         ], is_quiet, as_json)
 
         if args.is_mock:

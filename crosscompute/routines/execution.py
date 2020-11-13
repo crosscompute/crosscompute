@@ -57,19 +57,18 @@ def run_result_automation(result_definition, is_mock=True):
     return d
 
 
-def run_tool(
-        tool_definition, result_dictionary, script_command=None,
-        script_folder=None):
+def run_tool(tool_definition, result_dictionary, script_command=None):
     if not script_command:
         script_command = tool_definition['script']['command']
-    if not script_folder:
-        script_folder = tool_definition.get('folder', '.')
+    script_folder = join(
+        tool_definition.get('folder', '.'),
+        tool_definition['script']['folder'])
     result_folder = get_result_folder(result_dictionary)
     folder_by_name = {k: make_folder(join(result_folder, k)) for k in [
         'input', 'output', 'log', 'debug']}
     input_folder = folder_by_name['input']
     output_folder = folder_by_name['output']
-    prepare_input_folder(
+    prepare_variable_folder(
         folder_by_name['input'],
         tool_definition['input']['variables'],
         result_dictionary['input']['variables'])
@@ -85,15 +84,14 @@ def run_tool(
         if folder_name == 'debug':
             variable_definitions += DEBUG_VARIABLE_DEFINITIONS
         result_dictionary[folder_name] = {
-            'variables': process_output_folder(
+            'variables': process_variable_folder(
                 folder_by_name[folder_name], variable_definitions)}
     return result_dictionary
 
 
-def run_worker(
-        script_command=None, script_folder=None, is_quiet=False, as_json=False):
+def run_worker(script_command=None, is_quiet=False, as_json=False):
     # TODO: Check chores periodically even without echo
-    result_count = 0
+    d = defaultdict(int)
     try:
         for echo_message in get_echoes_client():
             event_name = echo_message.event
@@ -101,40 +99,13 @@ def run_worker(
                 if not is_quiet and not as_json:
                     print('.', end='', flush=True)
             elif event_name == 'i':
-                while True:
-                    chore_dictionary = fetch_resource('chores')
-                    if not chore_dictionary:
-                        break
-                    if not is_quiet:
-                        print('\n' + render_object(chore_dictionary, as_json))
-                    # TODO: Get tool script from cloud
-                    result_dictionary = chore_dictionary['result']
-                    result_token = result_dictionary['token']
-                    try:
-                        result_dictionary = run_tool(
-                            chore_dictionary['tool'],
-                            result_dictionary, script_command, script_folder)
-                    except CrossComputeError as e:
-                        if not is_quiet:
-                            print(render_object(e.args[0], as_json))
-                        result_progress = -1
-                    else:
-                        result_progress = 100
-                    result_dictionary['progress'] = result_progress
-                    if not is_quiet:
-                        print(render_object(result_dictionary, as_json))
-                    fetch_resource(
-                        'results', result_dictionary['id'],
-                        method='PATCH', data=result_dictionary,
-                        token=result_token)
-                    result_count += 1
+                d['result_count'] += process_result_input_stream(
+                    script_command, is_quiet, as_json)
             elif not is_quiet:
                 print('\n' + render_object(echo_message.__dict__, as_json))
     except KeyboardInterrupt:
         pass
-    return {
-        'resultCount': result_count,
-    }
+    return dict(d)
 
 
 def run_script(script_command, script_folder, input_folder, output_folder, log_folder, debug_folder):
@@ -163,6 +134,33 @@ def run_script(script_command, script_folder, input_folder, output_folder, log_f
         raise CrossComputeExecutionError(e)
     stdout_file.close()
     stderr_file.close()
+
+
+def run_tests(tool_definition):
+    tool_definition_folder = tool_definition['folder']
+    input_variable_definitions = tool_definition['input']['variables']
+    test_dictionaries = tool_definition['tests']
+    d = {
+        'test total count': len(test_dictionaries),
+        'test passed count': 0,
+        'error by folder': {},
+    }
+    for test_dictionary in test_dictionaries:
+        relative_folder = test_dictionary['folder']
+        test_folder = join(tool_definition_folder, relative_folder)
+        input_folder = join(test_folder, 'input')
+        input_variable_dictionaries = process_variable_folder(input_folder, input_variable_definitions)
+        result_dictionary = {'input': {'variables': input_variable_dictionaries}}
+        try:
+            result_dictionary = run_tool(tool_definition, result_dictionary)
+        except CrossComputeError as e:
+            d['error by folder'][relative_folder] = e.args[0]
+            continue
+        d['test passed count'] += 1
+    if d['test passed count'] != d['test total count']:
+        raise CrossComputeExecutionError(d)
+    d.pop('error by folder')
+    return d
 
 
 def render_result(tool_definition, result_dictionary):
@@ -282,8 +280,8 @@ def get_result_folder(result_dictionary):
     return result_folder
 
 
-def prepare_input_folder(
-        input_folder, variable_definitions, variable_dictionaries):
+def prepare_variable_folder(
+        folder, variable_definitions, variable_dictionaries):
     value_by_id_by_path = defaultdict(dict)
     variable_data_by_id = get_data_by_id(variable_dictionaries)
     for variable_definition in variable_definitions:
@@ -293,7 +291,7 @@ def prepare_input_folder(
         except KeyError:
             raise CrossComputeDefinitionError({
                 'variable': f'could not find data for {variable_id}'})
-        file_path = join(input_folder, variable_definition['path'])
+        file_path = join(folder, variable_definition['path'])
         make_folder(dirname(file_path))
         if 'file' in variable_data:
             if not exists(file_path):
@@ -333,7 +331,7 @@ def prepare_input_folder(
             save_json(file_path, value_by_id)
 
 
-def process_output_folder(output_folder, variable_definitions):
+def process_variable_folder(folder, variable_definitions):
     load_value_json.cache_clear()
     variable_dictionaries = []
     for variable_definition in variable_definitions:
@@ -341,7 +339,7 @@ def process_output_folder(output_folder, variable_definitions):
         variable_path = variable_definition['path']
         variable_view = variable_definition['view']
         file_extension = splitext(variable_path)[1]
-        file_path = join(output_folder, variable_path)
+        file_path = join(folder, variable_path)
         try:
             load_by_extension = LOAD_BY_EXTENSION_BY_VIEW[variable_view]
         except KeyError:
@@ -370,6 +368,36 @@ def process_output_folder(output_folder, variable_definitions):
         variable_dictionaries.append({
             'id': variable_id, 'data': {'value': variable_value}})
     return variable_dictionaries
+
+
+def process_result_input_stream(script_command, is_quiet, as_json):
+    result_count = 0
+    while True:
+        chore_dictionary = fetch_resource('chores')
+        if not chore_dictionary:
+            break
+        if not is_quiet:
+            print('\n' + render_object(chore_dictionary, as_json))
+        # TODO: Get tool script from cloud
+        result_dictionary = chore_dictionary['result']
+        result_token = result_dictionary['token']
+        try:
+            result_dictionary = run_tool(
+                chore_dictionary['tool'], result_dictionary, script_command)
+        except CrossComputeError as e:
+            if not is_quiet:
+                print(render_object(e.args[0], as_json))
+            result_progress = -1
+        else:
+            result_progress = 100
+        result_dictionary['progress'] = result_progress
+        if not is_quiet:
+            print(render_object(result_dictionary, as_json))
+        fetch_resource(
+            'results', result_dictionary['id'], method='PATCH',
+            data=result_dictionary, token=result_token)
+        result_count += 1
+    return result_count
 
 
 def get_by_id(variable_dictionaries):

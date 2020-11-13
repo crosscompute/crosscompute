@@ -29,12 +29,8 @@ output:
       name: Standard
       path: templates/output/standard.md
 tests:
-  - id: integers
-    name: Integers
-    path: tests/integers
-  - id: floats
-    name: Floats
-    path: tests/floats
+  - folder: tests/integers
+  - folder: tests/floats
 script:
   folder: .
   command: python run.py {input_folder} {output_folder}

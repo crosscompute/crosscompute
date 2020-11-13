@@ -18,7 +18,11 @@ from .definition import (
     normalize_tool_definition_head)
 from .execution import (
     load_relevant_path,
+    process_variable_folder,
     run_automation,
+    run_script,
+    run_tests,
+    run_tool,
     run_worker)
 from .serialization import (
     render_object)
