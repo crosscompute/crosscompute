@@ -33,6 +33,10 @@ def save_text(target_path, value):
     open(target_path, 'wt').write(value)
 
 
+def save_binary_base64(target_path, value):
+    save_binary(target_path, b64decode(value))
+
+
 def save_binary(target_path, value):
     open(target_path, 'wb').write(value)
 
@@ -42,7 +46,7 @@ def save_text_json(target_path, value, variable_id, value_by_id_by_path):
 
 
 def save_text_txt(target_path, value, variable_id, value_by_id_by_path):
-    open(target_path, 'wt').write(value)
+    save_text(target_path, value)
 
 
 def save_number_json(target_path, value, variable_id, value_by_id_by_path):
@@ -55,7 +59,7 @@ def save_number_json(target_path, value, variable_id, value_by_id_by_path):
 
 
 def save_markdown_md(target_path, value, variable_id, value_by_id_by_path):
-    open(target_path, 'wt').write(value)
+    save_text(target_path, value)
 
 
 def save_table_csv(target_path, value, variable_id, value_by_id_by_path):
@@ -72,7 +76,7 @@ def save_table_csv(target_path, value, variable_id, value_by_id_by_path):
 
 
 def save_image_png(target_path, value, variable_id, value_by_id_by_path):
-    save_binary(target_path, b64decode(value))
+    save_binary_base64(target_path, value)
 
 
 def save_map_geojson(target_path, value, variable_id, value_by_id_by_path):
@@ -81,6 +85,12 @@ def save_map_geojson(target_path, value, variable_id, value_by_id_by_path):
 
 def load_text(source_path):
     return open(source_path, 'rt').read()
+
+
+def load_binary_base64(source_path):
+    variable_value = load_binary(source_path)
+    variable_value = b64encode(variable_value)
+    return variable_value.decode('utf-8')
 
 
 def load_binary(source_path):
@@ -128,9 +138,7 @@ def load_table_csv(source_path, variable_id):
 
 
 def load_image_png(source_path, variable_id):
-    variable_value = load_binary(source_path)
-    variable_value = b64encode(variable_value)
-    return variable_value.decode('utf-8')
+    return load_binary_base64(source_path)
 
 
 def load_map_geojson(source_path, variable_id):
