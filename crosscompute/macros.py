@@ -26,6 +26,14 @@ def sanitize_json_value(value):
     return None if value is None or isnan(value) else value
 
 
+def parse_number_safely(raw_value):
+    try:
+        value = parse_number(raw_value)
+    except (TypeError, ValueError):
+        value = raw_value
+    return value
+
+
 def parse_number(raw_value):
     try:
         value = int(raw_value)

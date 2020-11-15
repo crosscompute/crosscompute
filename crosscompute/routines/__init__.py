@@ -26,11 +26,19 @@ from .execution import (
     run_worker)
 from .serialization import (
     load_image_png,
+    load_map_geojson,
+    load_markdown_md,
     load_number_json,
+    load_table_csv,
+    load_text_json,
     load_text_txt,
+    load_value_json,
     render_object,
     save_image_png,
+    save_map_geojson,
+    save_markdown_md,
     save_number_json,
+    save_table_csv,
     save_text_json,
     save_text_txt)
 

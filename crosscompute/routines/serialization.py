@@ -5,7 +5,7 @@ import yaml
 from base64 import b64decode, b64encode
 
 from ..exceptions import CrossComputeExecutionError
-from ..macros import parse_number
+from ..macros import parse_number, parse_number_safely
 from ..symmetries import cache
 
 
@@ -54,7 +54,7 @@ def save_number_json(target_path, value, variable_id, value_by_id_by_path):
         value = parse_number(value)
     except ValueError:
         raise CrossComputeExecutionError({
-            'variable': f'could not parse {variable_id} as a number'})
+            'variable': f'could not save {variable_id} as a number'})
     value_by_id_by_path[target_path][variable_id] = value
 
 
@@ -72,7 +72,7 @@ def save_table_csv(target_path, value, variable_id, value_by_id_by_path):
             csv_writer.writerows(rows)
     except (KeyError, csv.Error):
         raise CrossComputeExecutionError({
-            'variable': f'could not parse {variable_id} as a table'})
+            'variable': f'could not save {variable_id} as a table csv'})
 
 
 def save_image_png(target_path, value, variable_id, value_by_id_by_path):
@@ -80,7 +80,7 @@ def save_image_png(target_path, value, variable_id, value_by_id_by_path):
 
 
 def save_map_geojson(target_path, value, variable_id, value_by_id_by_path):
-    geojson.dump(value, target_path)
+    geojson.dump(value, open(target_path, 'wt'))
 
 
 def load_text(source_path):
@@ -104,7 +104,7 @@ def load_value_json(source_path, variable_id):
         variable_value = d[variable_id]
     except KeyError:
         raise CrossComputeExecutionError({
-            'variable': f'could not find {variable_id} in {source_path}'})
+            'variable': f'could not load {variable_id} from {source_path}'})
     return variable_value
 
 
@@ -122,7 +122,7 @@ def load_number_json(source_path, variable_id):
         value = parse_number(value)
     except ValueError:
         raise CrossComputeExecutionError({
-            'variable': f'could not parse {variable_id} as a number'})
+            'variable': f'could not load {variable_id}={value} as a number'})
     return value
 
 
@@ -133,7 +133,7 @@ def load_markdown_md(source_path, variable_id):
 def load_table_csv(source_path, variable_id):
     csv_reader = csv.reader(open(source_path, 'rt'))
     columns = next(csv_reader)
-    rows = list(csv_reader)
+    rows = [[parse_number_safely(_) for _ in row] for row in csv_reader]
     return {'columns': columns, 'rows': rows}
 
 
@@ -142,7 +142,11 @@ def load_image_png(source_path, variable_id):
 
 
 def load_map_geojson(source_path, variable_id):
-    variable_value = geojson.load(open(source_path, 'rt'))
+    try:
+        variable_value = geojson.load(open(source_path, 'rt'))
+    except ValueError:
+        raise CrossComputeExecutionError({
+            'variable': f'could not load {variable_id} as a map geojson'})
     # TODO: Consider whether to assert FeatureCollection
     return variable_value
 
