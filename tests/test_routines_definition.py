@@ -1,6 +1,9 @@
+import json
+from crosscompute import __version__
 from crosscompute.exceptions import CrossComputeDefinitionError
-from crosscompute.routines.definition import (
+from crosscompute.routines import (
     load_definition,
+    load_raw_definition,
     normalize_data_dictionary,
     normalize_value)
 from pytest import raises
@@ -11,6 +14,33 @@ from conftest import (
     RESULT_BATCH_DEFINITION_PATH,
     TOOL_DEFINITION_PATH,
     TOOL_MINIMAL_DEFINITION_PATH)
+
+
+def test_load_raw_definition(tmpdir):
+    with raises(CrossComputeDefinitionError):
+        load_raw_definition(tmpdir.join('x.yml').strpath)
+
+    source_path = tmpdir.join('x.txt').strpath
+    with open(source_path, 'wt') as source_file:
+        source_file.write('')
+    with raises(CrossComputeDefinitionError):
+        load_raw_definition(tmpdir.join('x.txt').strpath)
+
+    source_path = tmpdir.join('x.json').strpath
+
+    with open(source_path, 'wt') as source_file:
+        json.dump({}, source_file)
+    with raises(CrossComputeDefinitionError):
+        load_raw_definition(source_path)
+
+    with open(source_path, 'wt') as source_file:
+        json.dump({'crosscompute': 'x'}, source_file)
+    with raises(CrossComputeDefinitionError):
+        load_raw_definition(source_path)
+
+    with open(source_path, 'wt') as source_file:
+        json.dump({'crosscompute': __version__}, source_file)
+    assert load_raw_definition(source_path) == {}
 
 
 def test_load_automation_result_definition():

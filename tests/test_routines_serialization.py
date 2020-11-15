@@ -155,6 +155,21 @@ def test_load_number_json(tmpdir):
     assert load_number_json(source_path, variable_id) == 1
 
 
+def test_load_table_csv(tmpdir):
+    source_path = tmpdir.join('table.csv').strpath
+    value = {
+        'columns': ['x', 'y'],
+        'rows': [['1', '2'], ['a', 'b']],
+    }
+    variable_id = 'a'
+    value_by_id_by_path = {}
+    save_table_csv(source_path, value, variable_id, value_by_id_by_path)
+    assert load_table_csv(source_path, variable_id) == {
+        'columns': ['x', 'y'],
+        'rows': [[1, 2], ['a', 'b']],
+    }
+
+
 def test_load_map_geojson(tmpdir):
     source_path = tmpdir.join('map.geojson').strpath
     variable_id = 'a'
