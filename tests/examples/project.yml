@@ -8,6 +8,3 @@ tools:
 results:
   - id: r1
   - id: r2
-datasets:
-  - id: d1
-  - id: d2

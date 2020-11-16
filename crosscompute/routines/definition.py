@@ -69,7 +69,7 @@ def normalize_definition(raw_definition, folder, kinds=None):
 
 
 def normalize_project_definition(raw_project_definition, folder=None):
-    project_definition = {}
+    project_definition = {'kind': 'project'}
     for key in ['id', 'name']:
         if key not in raw_project_definition:
             continue
@@ -100,7 +100,7 @@ def normalize_result_definition(raw_result_definition, folder):
         result_definition_path = join(folder, raw_result_definition['path'])
         result_definition = load_definition(result_definition_path, kinds=['result'])
     else:
-        result_definition = {}
+        result_definition = {'kind': 'result'}
 
     tool_definition = dict(raw_result_definition.get(
         'tool', result_definition.get('tool', {})))
@@ -129,12 +129,11 @@ def normalize_result_definition(raw_result_definition, folder):
     if 'print' in raw_result_definition:
         result_definition['print'] = get_print_dictionary(
             raw_result_definition['print'], folder)
-    result_definition['kind'] = 'result'
     return result_definition
 
 
 def normalize_tool_definition(dictionary, folder=None):
-    d = {}
+    d = {'kind': 'tool'}
     d.update(normalize_tool_definition_head(dictionary))
     d.update(normalize_tool_definition_body(dictionary, folder))
     return d

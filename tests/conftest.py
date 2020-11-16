@@ -7,6 +7,7 @@ from threading import Thread
 
 TESTS_FOLDER = dirname(__file__)
 EXAMPLES_FOLDER = join(TESTS_FOLDER, 'examples')
+PROJECT_DEFINITION_PATH = join(EXAMPLES_FOLDER, 'project.yml')
 AUTOMATION_RESULT_DEFINITION_PATH = join(EXAMPLES_FOLDER, 'automation.yml')
 RESULT_DEFINITION_PATH = join(EXAMPLES_FOLDER, 'result.yml')
 RESULT_BATCH_DEFINITION_PATH = join(EXAMPLES_FOLDER, 'result-batch.yml')

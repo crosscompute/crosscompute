@@ -4,43 +4,26 @@ from crosscompute.exceptions import CrossComputeDefinitionError
 from crosscompute.routines import (
     load_definition,
     load_raw_definition,
+    normalize_automation_definition,
     normalize_data_dictionary,
+    normalize_definition,
     normalize_value)
 from pytest import raises
 
 from conftest import (
     flatten_values,
     AUTOMATION_RESULT_DEFINITION_PATH,
+    PROJECT_DEFINITION_PATH,
     RESULT_BATCH_DEFINITION_PATH,
     TOOL_DEFINITION_PATH,
     TOOL_MINIMAL_DEFINITION_PATH)
 
 
-def test_load_raw_definition(tmpdir):
-    with raises(CrossComputeDefinitionError):
-        load_raw_definition(tmpdir.join('x.yml').strpath)
-
-    source_path = tmpdir.join('x.txt').strpath
-    with open(source_path, 'wt') as source_file:
-        source_file.write('')
-    with raises(CrossComputeDefinitionError):
-        load_raw_definition(tmpdir.join('x.txt').strpath)
-
-    source_path = tmpdir.join('x.json').strpath
-
-    with open(source_path, 'wt') as source_file:
-        json.dump({}, source_file)
-    with raises(CrossComputeDefinitionError):
-        load_raw_definition(source_path)
-
-    with open(source_path, 'wt') as source_file:
-        json.dump({'crosscompute': 'x'}, source_file)
-    with raises(CrossComputeDefinitionError):
-        load_raw_definition(source_path)
-
-    with open(source_path, 'wt') as source_file:
-        json.dump({'crosscompute': __version__}, source_file)
-    assert load_raw_definition(source_path) == {}
+def test_load_project_definition():
+    project_definition = load_definition(
+        PROJECT_DEFINITION_PATH, kinds=['project'])
+    assert_definition_types(project_definition)
+    assert project_definition['kind'] == 'project'
 
 
 def test_load_automation_result_definition():
@@ -72,7 +55,48 @@ def test_load_tool_definition():
     tool_definition = load_definition(
         TOOL_DEFINITION_PATH, kinds=['tool'])
     assert_definition_types(tool_definition)
+    assert tool_definition['kind'] == 'tool'
     assert len(tool_definition['tests']) == 2
+
+
+def test_load_raw_definition(tmpdir):
+    with raises(CrossComputeDefinitionError):
+        load_raw_definition(tmpdir.join('x.yml').strpath)
+
+    source_path = tmpdir.join('x.txt').strpath
+    with open(source_path, 'wt') as source_file:
+        source_file.write('')
+    with raises(CrossComputeDefinitionError):
+        load_raw_definition(tmpdir.join('x.txt').strpath)
+
+    source_path = tmpdir.join('x.json').strpath
+
+    with open(source_path, 'wt') as source_file:
+        json.dump({}, source_file)
+    with raises(CrossComputeDefinitionError):
+        load_raw_definition(source_path)
+
+    with open(source_path, 'wt') as source_file:
+        json.dump({'crosscompute': 'x'}, source_file)
+    with raises(CrossComputeDefinitionError):
+        load_raw_definition(source_path)
+
+    with open(source_path, 'wt') as source_file:
+        json.dump({'crosscompute': __version__}, source_file)
+    assert load_raw_definition(source_path) == {}
+
+
+def test_normalize_definition():
+    with raises(CrossComputeDefinitionError):
+        normalize_definition({}, None)
+    with raises(CrossComputeDefinitionError):
+        normalize_definition({'kind': 'tool'}, None, ['result'])
+    assert normalize_definition({'kind': 'x'}, None)['kind'] == 'x'
+
+
+def test_normalize_automation_definition():
+    with raises(CrossComputeDefinitionError):
+        normalize_automation_definition({}, None)
 
 
 def test_normalize_value():
