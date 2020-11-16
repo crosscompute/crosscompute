@@ -1,8 +1,8 @@
+import sys
 from math import isnan
 from os import environ
 from os.path import split
 from packaging.version import parse as parse_version
-from sys import exit
 
 
 def get_environment_value(name, default=None):
@@ -10,7 +10,7 @@ def get_environment_value(name, default=None):
         value = environ[name]
     except KeyError:
         if default is None:
-            exit(f'{name} is required in the environment')
+            sys.exit(f'{name} is required in the environment')
         value = default
     return value
 
