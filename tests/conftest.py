@@ -1,5 +1,8 @@
+import socket
 from collections.abc import ByteString, Sequence
+from http.server import HTTPServer
 from os.path import dirname, join
+from threading import Thread
 
 
 TESTS_FOLDER = dirname(__file__)
@@ -21,3 +24,21 @@ def flatten_values(d):
             vs.extend(v)
         values.append(v)
     return values
+
+
+def start_server(RequestHandler):
+    ip, port = make_server_address()
+    server = HTTPServer((ip, port), RequestHandler)
+    server_thread = Thread(target=server.serve_forever)
+    server_thread.setDaemon(True)
+    server_thread.start()
+    return f'http://{ip}:{port}'
+
+
+def make_server_address():
+    # https://realpython.com/testing-third-party-apis-with-mock-servers
+    s = socket.socket(socket.AF_INET, type=socket.SOCK_STREAM)
+    s.bind(('localhost', 0))
+    ip, port = s.getsockname()
+    s.close()
+    return ip, port
