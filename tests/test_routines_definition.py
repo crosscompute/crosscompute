@@ -7,16 +7,29 @@ from crosscompute.routines import (
     normalize_automation_definition,
     normalize_data_dictionary,
     normalize_definition,
+    normalize_result_definition,
+    normalize_tool_definition_head,
     normalize_value)
+from http.server import BaseHTTPRequestHandler
+from os import environ
 from pytest import raises
 
 from conftest import (
     flatten_values,
+    start_server,
     AUTOMATION_RESULT_DEFINITION_PATH,
     PROJECT_DEFINITION_PATH,
     RESULT_BATCH_DEFINITION_PATH,
     TOOL_DEFINITION_PATH,
     TOOL_MINIMAL_DEFINITION_PATH)
+
+
+class NormalizeResultDefinitionRequestHandler(BaseHTTPRequestHandler):
+
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(json.dumps({}).encode('utf-8'))
 
 
 def test_load_project_definition():
@@ -88,15 +101,39 @@ def test_load_raw_definition(tmpdir):
 
 def test_normalize_definition():
     with raises(CrossComputeDefinitionError):
-        normalize_definition({}, None)
+        normalize_definition({})
     with raises(CrossComputeDefinitionError):
-        normalize_definition({'kind': 'tool'}, None, ['result'])
-    assert normalize_definition({'kind': 'x'}, None)['kind'] == 'x'
+        normalize_definition({'kind': 'tool'}, kinds=['result'])
+    assert normalize_definition({'kind': 'x'})['kind'] == 'x'
 
 
 def test_normalize_automation_definition():
     with raises(CrossComputeDefinitionError):
-        normalize_automation_definition({}, None)
+        normalize_automation_definition({})
+
+
+def test_normalize_result_definition():
+    environ['CROSSCOMPUTE_SERVER'] = start_server(
+        NormalizeResultDefinitionRequestHandler)
+    environ['CROSSCOMPUTE_TOKEN'] = 'x'
+    result_definition = normalize_result_definition({
+        'tool': {'id': 'x'}})
+    assert 'tool' in result_definition
+
+
+def test_normalize_tool_definition_head():
+    with raises(CrossComputeDefinitionError):
+        normalize_tool_definition_head({})
+    d = normalize_tool_definition_head({
+        'id': 'a',
+        'slug': 'b',
+        'name': 'c',
+        'version': {'id': 'd'},
+    })
+    assert d['id'] == 'a'
+    assert d['slug'] == 'b'
+    assert d['name'] == 'c'
+    assert d['version']['id'] == 'd'
 
 
 def test_normalize_value():

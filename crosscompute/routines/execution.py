@@ -91,13 +91,13 @@ def run_tool(tool_definition, result_dictionary, script_command=None):
 
 
 def run_worker(script_command=None, is_quiet=False, as_json=False):
-    worker_dictionary = defaultdict(int)
     tool_definition = fetch_resource('tools', get_token())
     if not is_quiet:
         print(render_object(tool_definition, as_json))
     test_summary = run_tests(tool_definition)
     if not is_quiet:
         print(render_object(test_summary, as_json))
+    worker_dictionary = defaultdict(int)
     try:
         for echo_message in get_echoes_client():
             event_name = echo_message.event

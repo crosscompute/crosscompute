@@ -1,6 +1,7 @@
 from math import isnan
 from os import environ
 from os.path import split
+from packaging.version import parse as parse_version
 from sys import exit
 
 
@@ -51,3 +52,17 @@ def split_path(path):
             break
         pieces.append(piece)
     return pieces[::-1]
+
+
+def is_compatible_version(target_version_name, source_version_name):
+    target_version = parse_version(target_version_name)
+    source_version = parse_version(source_version_name)
+    try:
+        has_same_major = target_version.major == source_version.major
+        has_same_minor = target_version.minor == source_version.minor
+        has_same_micro = target_version.micro == source_version.micro
+    except AttributeError:
+        is_compatible = target_version_name == source_version_name
+    else:
+        is_compatible = has_same_major and has_same_minor and has_same_micro
+    return is_compatible

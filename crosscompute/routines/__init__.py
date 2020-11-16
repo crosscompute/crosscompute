@@ -16,6 +16,7 @@ from .definition import (
     normalize_data_dictionary,
     normalize_definition,
     normalize_project_definition,
+    normalize_result_definition,
     normalize_result_variable_dictionaries,
     normalize_style_rule_strings,
     normalize_tool_definition_body,

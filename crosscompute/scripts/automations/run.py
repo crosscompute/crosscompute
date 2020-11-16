@@ -8,7 +8,8 @@ class RunAutomationScript(OutputtingScript):
     def configure(self, argument_subparser):
         super().configure(argument_subparser)
         argument_subparser.add_argument(
-            '--mock', action='store_true', dest='is_mock')
+            '--mock', action='store_true', dest='is_mock',
+            help='perform dry run')
         argument_subparser.add_argument(
             'automation_definition_path',
             metavar='AUTOMATION_DEFINITION_PATH', nargs='?')

@@ -9,7 +9,7 @@ from .. import __version__
 from ..constants import (
     DEFAULT_VIEW_NAME, L, PRINT_FORMAT_NAMES, VIEW_NAMES)
 from ..exceptions import CrossComputeDefinitionError
-from ..macros import parse_number, split_path
+from ..macros import is_compatible_version, parse_number, split_path
 
 
 VARIABLE_TEXT_PATTERN = re.compile(r'({[^}]+})')
@@ -42,13 +42,13 @@ def load_raw_definition(path):
         protocol_name = raw_definition.pop('crosscompute')
     except KeyError:
         raise CrossComputeDefinitionError({'crosscompute': 'is required'})
-    if protocol_name != __version__:
+    if not is_compatible_version(__version__, protocol_name):
         raise CrossComputeDefinitionError({
             'crosscompute': 'should be ' + __version__})
     return dict(raw_definition)
 
 
-def normalize_definition(raw_definition, folder, kinds=None):
+def normalize_definition(raw_definition, folder=None, kinds=None):
     try:
         kind = raw_definition['kind'].lower()
     except KeyError:
@@ -87,7 +87,7 @@ def normalize_project_definition(raw_project_definition, folder=None):
     return project_definition
 
 
-def normalize_automation_definition(raw_automation_definition, folder):
+def normalize_automation_definition(raw_automation_definition, folder=None):
     try:
         path = join(folder, raw_automation_definition['path'])
     except KeyError as e:
@@ -95,7 +95,7 @@ def normalize_automation_definition(raw_automation_definition, folder):
     return load_definition(path, kinds=['result', 'report'])
 
 
-def normalize_result_definition(raw_result_definition, folder):
+def normalize_result_definition(raw_result_definition, folder=None):
     if 'path' in raw_result_definition:
         result_definition_path = join(folder, raw_result_definition['path'])
         result_definition = load_definition(result_definition_path, kinds=['result'])
@@ -105,7 +105,6 @@ def normalize_result_definition(raw_result_definition, folder):
     tool_definition = dict(raw_result_definition.get(
         'tool', result_definition.get('tool', {})))
     if 'id' in tool_definition:
-        # TODO: Clean
         tool_id = tool_definition['id']
         tool_version_id = tool_definition.get(
             'version', {}).get('id', 'latest')
@@ -130,42 +129,6 @@ def normalize_result_definition(raw_result_definition, folder):
         result_definition['print'] = get_print_dictionary(
             raw_result_definition['print'], folder)
     return result_definition
-
-
-def normalize_tool_definition(dictionary, folder=None):
-    d = {'kind': 'tool'}
-    d.update(normalize_tool_definition_head(dictionary))
-    d.update(normalize_tool_definition_body(dictionary, folder))
-    return d
-
-
-def normalize_tool_definition_head(dictionary):
-    d = {}
-    if 'id' in dictionary:
-        d['id'] = dictionary['id']
-    if 'slug' in dictionary:
-        d['slug'] = dictionary['slug']
-    try:
-        d['name'] = dictionary['name']
-        d['version'] = normalize_version_dictionary(dictionary['version'])
-    except KeyError as e:
-        raise CrossComputeDefinitionError({e.args[0]: 'is required'})
-    return d
-
-
-def normalize_tool_definition_body(dictionary, folder=None):
-    d = {}
-    for key in ['input', 'output', 'log', 'debug']:
-        if key not in dictionary:
-            continue
-        d[key] = get_put_dictionary(key, dictionary, folder)
-    if 'tests' in dictionary:
-        d['tests'] = get_test_dictionaries(dictionary)
-    if 'script' in dictionary:
-        d['script'] = get_script_dictionary(dictionary)
-    if 'environment' in dictionary:
-        d['environment'] = get_environment_dictionary(dictionary)
-    return d
 
 
 def normalize_result_variable_dictionaries(
@@ -202,6 +165,42 @@ def normalize_result_variable_dictionaries(
             'data': variable_data,
         })
     return variable_dictionaries
+
+
+def normalize_tool_definition(dictionary, folder=None):
+    d = {'kind': 'tool'}
+    d.update(normalize_tool_definition_head(dictionary))
+    d.update(normalize_tool_definition_body(dictionary, folder))
+    return d
+
+
+def normalize_tool_definition_head(dictionary):
+    d = {}
+    if 'id' in dictionary:
+        d['id'] = dictionary['id']
+    if 'slug' in dictionary:
+        d['slug'] = dictionary['slug']
+    try:
+        d['name'] = dictionary['name']
+        d['version'] = normalize_version_dictionary(dictionary['version'])
+    except KeyError as e:
+        raise CrossComputeDefinitionError({e.args[0]: 'is required'})
+    return d
+
+
+def normalize_tool_definition_body(dictionary, folder=None):
+    d = {}
+    for key in ['input', 'output', 'log', 'debug']:
+        if key not in dictionary:
+            continue
+        d[key] = get_put_dictionary(key, dictionary, folder)
+    if 'tests' in dictionary:
+        d['tests'] = get_test_dictionaries(dictionary)
+    if 'script' in dictionary:
+        d['script'] = get_script_dictionary(dictionary)
+    if 'environment' in dictionary:
+        d['environment'] = get_environment_dictionary(dictionary)
+    return d
 
 
 def normalize_version_dictionary(raw_version_dictionary):

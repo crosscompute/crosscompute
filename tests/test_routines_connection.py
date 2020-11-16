@@ -9,20 +9,20 @@ from crosscompute.routines import (
     get_echoes_client,
     get_resource_url)
 from http.server import BaseHTTPRequestHandler
+from os import environ
 from pytest import raises
 
 from conftest import start_server
 
 
 class FetchResourceRequestHandler(BaseHTTPRequestHandler):
-    # https://gist.github.com/nitaku/10d0662536f37a087e1b
 
     def do_GET(self):
-        if self.path == '/files.json':
+        if self.path == '/a.json':
             self.send_response(500)
-        elif self.path == '/datasets.json':
+        elif self.path == '/b.json':
             self.send_response(403)
-        elif self.path == '/prints.json':
+        elif self.path == '/c.json':
             self.send_response(400)
         else:
             self.send_response(200)
@@ -36,6 +36,12 @@ class FetchResourceRequestHandler(BaseHTTPRequestHandler):
 
 
 def test_get_bash_configuration_text():
+    environ['CROSSCOMPUTE_CLIENT'] = CLIENT_URL
+    environ['CROSSCOMPUTE_SERVER'] = SERVER_URL
+    try:
+        del environ['CROSSCOMPUTE_TOKEN']
+    except KeyError:
+        pass
     bash_configuration_text = get_bash_configuration_text()
     assert CLIENT_URL in bash_configuration_text
     assert SERVER_URL in bash_configuration_text
@@ -49,15 +55,15 @@ def test_fetch_resource():
 
     server_url = start_server(FetchResourceRequestHandler)
     with raises(CrossComputeImplementationError):
-        fetch_resource('files', data={}, server_url=server_url, token='a')
+        fetch_resource('a', data={}, server_url=server_url, token='a')
     with raises(CrossComputeConnectionError):
-        fetch_resource('datasets', server_url=server_url, token='a')
+        fetch_resource('b', server_url=server_url, token='a')
     with raises(CrossComputeExecutionError):
-        fetch_resource('prints', data={}, server_url=server_url, token='a')
+        fetch_resource('c', data={}, server_url=server_url, token='a')
     with raises(CrossComputeConnectionError):
-        fetch_resource('tools', 'x', server_url=server_url, token='a')
+        fetch_resource('d', 'x', server_url=server_url, token='a')
     assert fetch_resource(
-        'tools', 'x', data={}, server_url=server_url, token='a',
+        'd', 'x', data={}, server_url=server_url, token='a',
     ) == {}
 
 
@@ -74,6 +80,7 @@ def test_get_resource_url():
 
 
 def test_get_echoes_client(mocker):
+    environ['CROSSCOMPUTE_SERVER'] = SERVER_URL
     mocker.patch(
         'crosscompute.routines.connection.get_token',
         return_value='x')
