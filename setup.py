@@ -35,6 +35,7 @@ APPLICATION_REQUIREMENTS = [
 ]
 TEST_REQUIREMENTS = [
     'pytest-cov',
+    'pytest-mock',
 ]
 FOLDER = dirname(abspath(__file__))
 DESCRIPTION = '\n\n'.join(open(join(FOLDER, x)).read().strip() for x in [
