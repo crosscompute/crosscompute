@@ -60,6 +60,12 @@ def get_server_url():
     return get_environment_value('CROSSCOMPUTE_SERVER', SERVER_URL)
 
 
+def get_echoes_url():
+    server_url = get_environment_value('CROSSCOMPUTE_ECHOES', get_server_url())
+    token = get_token()
+    return f'{server_url}/echoes/{token}.json'
+
+
 def get_token(default=None):
     return get_environment_value('CROSSCOMPUTE_TOKEN', default)
 
@@ -72,12 +78,10 @@ def get_resource_url(server_url, resource_name, resource_id=None):
 
 
 def get_echoes_client():
-    server_url = get_server_url()
-    token = get_token()
-    url = f'{server_url}/echoes/{token}.json'
+    echoes_url = get_echoes_url()
     try:
-        client = SSEClient(url)
+        client = SSEClient(echoes_url)
     except Exception:
         raise CrossComputeConnectionError({
-            'url': 'could not connect to echoes ' + url})
+            'url': 'could not connect to echoes ' + echoes_url})
     return client

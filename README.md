@@ -12,6 +12,7 @@ pip install -U crosscompute
 
 ```bash
 # export CROSSCOMPUTE_CLIENT=https://crosscompute.com
+# export CROSSCOMPUTE_ECHOES=https://services.crosscompute.com
 # export CROSSCOMPUTE_SERVER=https://services.crosscompute.com
 export CROSSCOMPUTE_TOKEN=YOUR-TOKEN
 crosscompute
