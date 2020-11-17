@@ -82,8 +82,9 @@ def normalize_project_definition(raw_project_definition, folder=None):
                 resource_dictionaries):
             check_dictionary(
                 resource_dictionary, key + f'[{resource_index}]')
-        project_definition[key] = {
-            'id': _['id'] for _ in resource_dictionaries}
+        # project_definition[key] = {
+        #    'id': _['id'] for _ in resource_dictionaries}
+        project_definition[key] = [{'id': _['id']} for _ in resource_dictionaries]
     return project_definition
 
 
