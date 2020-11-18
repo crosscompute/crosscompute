@@ -1,3 +1,4 @@
+import re
 import shlex
 import subprocess
 from collections import defaultdict
@@ -30,6 +31,10 @@ from ..exceptions import (
     CrossComputeError,
     CrossComputeExecutionError,
     CrossComputeImplementationError)
+
+
+# https://stackoverflow.com/a/14693789/192092
+ANSI_ESCAPE_PATTERN = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 
 def run_automation(automation_definition, is_mock):
@@ -140,10 +145,9 @@ def run_script(script_command, script_folder, input_folder, output_folder, log_f
     except FileNotFoundError as e:
         raise CrossComputeDefinitionError(e)
     except CalledProcessError:
-        stdout_file.seek(0)
-        stderr_file.seek(0)
         raise CrossComputeExecutionError({
-            'stdout': stdout_file.read(), 'stderr': stderr_file.read()})
+            'stdout': clean_bash_output(stdout_file),
+            'stderr': clean_bash_output(stderr_file)})
     stdout_file.close()
     stderr_file.close()
 
@@ -422,3 +426,9 @@ def get_by_id(variable_dictionaries):
 
 def get_data_by_id(variable_dictionaries):
     return {_['id']: _['data'] for _ in variable_dictionaries}
+
+
+def clean_bash_output(output_file):
+    output_file.seek(0)
+    # TODO: Render ansi escape codes in jupyter error dialog
+    return ANSI_ESCAPE_PATTERN.sub('', output_file.read())
