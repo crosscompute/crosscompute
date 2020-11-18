@@ -1,98 +1,56 @@
-# TODO: Consider running worker after add if user asks for it
-import json
-import requests
-from invisibleroads.scripts import LoggingScript
+from os import chdir, environ
+from os.path import join
 
-from ...exceptions import CrossComputeError
+from .. import OutputtingScript, run_safely
+from ...constants import TOOL_FILE_NAME
 from ...routines import (
-    get_crosscompute_host,
-    get_crosscompute_token,
-    load_tool_definition)
+    fetch_resource,
+    get_bash_configuration_text,
+    load_relevant_path,
+    run_tests,
+    run_worker)
 
 
-MOCK_TEXT = '''
-tool name = {tool_name}
-tool version = {tool_version_name}
-input variable count = {input_variable_count}
-output variable count = {output_variable_count}
-'''.strip()
-REAL_TEXT = MOCK_TEXT + '''
-
-export CROSSCOMPUTE_TOKEN={token}
-crosscompute workers run {script_command}
-'''.rstrip()
-
-
-class AddToolScript(LoggingScript):
+class AddToolScript(OutputtingScript):
 
     def configure(self, argument_subparser):
         super().configure(argument_subparser)
         argument_subparser.add_argument(
-            '--mock', '-m', action='store_true', dest='is_mock')
+            '--mock', action='store_true', dest='is_mock',
+            help='perform dry run')
         argument_subparser.add_argument(
-            '--response-format', '-r', choices=['text', 'json'],
-            default='text')
-        argument_subparser.add_argument('path')
+            '--work', action='store_true', dest='with_worker',
+            help='run worker after adding tool')
+        argument_subparser.add_argument(
+            'tool_definition_path',
+            metavar='TOOL_DEFINITION_PATH')
 
     def run(self, args, argv):
         super().run(args, argv)
-        response_format = args.response_format
-        is_response_format_json = response_format == 'json'
-        is_mock = args.is_mock
-        host = get_crosscompute_host()
-        token = get_crosscompute_token() if not is_mock else ''
-        try:
-            d = run(host, token, args.path, is_mock)
-        except CrossComputeError as e:
-            dictionary = e.args[0]
-            if is_response_format_json:
-                message_text = json.dumps(dictionary)
-            else:
-                message_text = '\n'.join(f'{k} {v}' for k, v in dictionary.items())
-            exit(message_text)
-        if is_response_format_json:
-            print(json.dumps(d))
-        elif is_mock:
-            print(format_mock_text(d))
-        else:
-            print(format_real_text(d))
+        is_quiet = args.is_quiet
+        as_json = args.as_json
 
+        tool_definition = run_safely(load_relevant_path, [
+            args.tool_definition_path, TOOL_FILE_NAME, ['tool'],
+        ], is_quiet, as_json)
 
-def run(host, token, path, is_mock=False):
-    url = host + '/tools.json'
-    headers = {'Authorization': 'Bearer ' + token}
-    dictionary = load_tool_definition(path)
-    if is_mock:
-        return dictionary
-    response = requests.post(url, headers=headers, json={
-        'dictionary': dictionary})
-    d = response.json()
-    if response.status_code != 200:
-        raise CrossComputeError(d)
-    if 'script' in dictionary:
-        d['script'] = dictionary['script']
-    return d
+        run_safely(run_tests, [
+            tool_definition,
+        ], is_quiet, as_json)
 
-
-def format_mock_text(d):
-    return MOCK_TEXT.format(
-        tool_name=d['name'],
-        tool_version_name=d['version']['name'],
-        input_variable_count=len(d['input']['variables']),
-        output_variable_count=len(d['output']['variables']))
-
-
-def format_real_text(d):
-    tool_version = d['versions'][0]
-    script_command = d['script']['command'] if 'script' in d else ''
-    return REAL_TEXT.format(
-        # tool_url=d['url'],
-        # tool_version_url=tool_version['url'],
-        tool_name=d['name'],
-        tool_version_name=tool_version['name'],
-        input_variable_count=len(tool_version['input'][
-            'variableById']),
-        output_variable_count=len(tool_version['output'][
-            'variableById']),
-        token=tool_version['token'],
-        script_command=script_command)
+        if args.is_mock:
+            return
+        d = run_safely(fetch_resource, [
+            'tools', None, 'POST', tool_definition,
+        ], is_quiet, as_json)
+        environ['CROSSCOMPUTE_TOKEN'] = d['token']
+        tool_definition_folder = tool_definition['folder']
+        script_folder = join(
+            tool_definition_folder, tool_definition['script']['folder'])
+        if not is_quiet and not as_json:
+            print('\n' + get_bash_configuration_text())
+            print(f'cd {script_folder}')
+            print('crosscompute workers run')
+        if args.with_worker:
+            chdir(tool_definition_folder)
+            run_safely(run_worker, [], is_quiet, as_json)

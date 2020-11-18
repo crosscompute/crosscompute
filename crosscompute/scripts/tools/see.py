@@ -1,25 +1,19 @@
-import json
-import requests
-
-from .. import AuthenticatingScript
-from ...routines import get_resource_url
+from .. import OutputtingScript, run_safely
+from ...routines import fetch_resource
 
 
-class SeeToolScript(AuthenticatingScript):
+class SeeToolScript(OutputtingScript):
 
     def configure(self, argument_subparser):
         super().configure(argument_subparser)
         argument_subparser.add_argument(
-            'toolId', metavar='TOOL-ID', nargs='?')
+            'tool_id', metavar='TOOL_ID', nargs='?')
 
     def run(self, args, argv):
         super().run(args, argv)
-        d = run(args.host, args.token, args.toolId)
-        print(json.dumps(d))
+        is_quiet = args.is_quiet
+        as_json = args.as_json
 
-
-def run(host, token, tool_id=None):
-    url = get_resource_url(host, 'tools', tool_id)
-    headers = {'Authorization': 'Bearer ' + token}
-    response = requests.get(url, headers=headers)
-    return response.json()
+        run_safely(fetch_resource, [
+            'tools', args.tool_id,
+        ], is_quiet, as_json)

@@ -1,0 +1,11 @@
+---
+crosscompute: 0.8.4
+kind: result
+path: result.yml
+input:
+  variables:
+    - id: b
+      data:
+        - value: 1
+        - value: 2
+        - value: 3

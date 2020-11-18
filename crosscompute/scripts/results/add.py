@@ -1,55 +1,33 @@
-import json
-import requests
+from .. import OutputtingScript, run_safely
+from ...constants import RESULT_FILE_NAME
+from ...routines import (
+    fetch_resource,
+    load_relevant_path)
 
-from .. import AuthenticatingScript
 
-
-class AddResultScript(AuthenticatingScript):
+class AddResultScript(OutputtingScript):
 
     def configure(self, argument_subparser):
         super().configure(argument_subparser)
-        argument_subparser.add_argument('--name')
-        argument_subparser.add_argument('--toolId')
-        argument_subparser.add_argument('--toolVersionId')
-        argument_subparser.add_argument('--projectId')
-        argument_subparser.add_argument('path')
+        argument_subparser.add_argument(
+            '--mock', action='store_true', dest='is_mock')
+        argument_subparser.add_argument(
+            'result_definition_path',
+            metavar='RESULT_DEFINITION_PATH')
 
     def run(self, args, argv):
         super().run(args, argv)
-        result_name = args.name
-        tool_id = args.toolId
-        tool_version_id = args.toolVersionId
-        project_id = args.projectId
-        path = args.path
+        is_quiet = args.is_quiet
+        as_json = args.as_json
 
-        if path.endswith('.json'):
-            result_dictionary = json.load(open(path, 'rt'))
-        else:
-            exit()
+        result_definition = run_safely(load_relevant_path, [
+            args.result_definition_path,
+            RESULT_FILE_NAME,
+            ['result'],
+        ], is_quiet, as_json)
 
-        if result_name:
-            result_dictionary['name'] = result_name
-        if tool_id:
-            tool = result_dictionary.get('tool', {})
-            tool['id'] = tool_id
-            result_dictionary['tool'] = tool
-        if tool_version_id:
-            tool = result_dictionary.get('tool', {})
-            tool_version = tool.get('version', {})
-            tool_version['id'] = tool_version_id
-            tool['version'] = tool_version
-            result_dictionary['tool'] = tool
-        if project_id:
-            project = result_dictionary.get('project', {})
-            project['id'] = project_id
-
-        d = run(args.host, args.token, result_dictionary)
-        print(json.dumps(d))
-
-
-def run(host, token, result_dictionary):
-    url = host + '/results.json'
-    headers = {'Authorization': 'Bearer ' + token}
-    d = result_dictionary
-    response = requests.post(url, headers=headers, json=d)
-    return response.json()
+        if args.is_mock:
+            return
+        run_safely(fetch_resource, [
+            'results', None, 'POST', result_definition,
+        ], is_quiet, as_json)

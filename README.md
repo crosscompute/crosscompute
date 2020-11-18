@@ -1,44 +1,44 @@
 # CrossCompute
 
-Publish your tool by writing a configuration file.
+Automate your work by writing a configuration file.
 
 Please see https://crosscompute.com for examples and tutorials.
 
 ```bash
-# pip install -U crosscompute
-pip install https://github.com/crosscompute/crosscompute
+pip install -U crosscompute
+```
 
-export CROSSCOMPUTE_HOST=https://services.projects.crosscompute.com
+## Usage
+
+```bash
+# export CROSSCOMPUTE_CLIENT=https://crosscompute.com
+# export CROSSCOMPUTE_ECHOES=https://services.crosscompute.com
+# export CROSSCOMPUTE_SERVER=https://services.crosscompute.com
 export CROSSCOMPUTE_TOKEN=YOUR-TOKEN
+crosscompute
 ```
 
-## See Project
+### Run Automation
 
-```
-crosscompute projects see
-crosscompute projects see | jq
-crosscompute projects see | jq '.[] | {id:.id, name:.name}'
-crosscompute projects see PROJECT-ID
+```bash
+crosscompute automations run
+crosscompute automations run automation.yml
 ```
 
-## Add Project
+### Add Tool
 
-```
-crosscompute projects add --name "Project X"
-```
+```bash
+git clone git@github.com:crosscompute/crosscompute-examples
+cd crosscompute-examples/add-numbers
 
-## Change Project
+# Mock
+crosscompute tools add tool.yml --mock
 
-```
-crosscompute projects change PROJECT-ID \
-    --datasetId abc \
-    --toolId def \
-    --toolId ghi \
-    --resultId jkl \
-    --resultId mno
+# Real
+crosscompute tools add tool.yml
 ```
 
-## See Tool
+### See Tool
 
 ```
 crosscompute tools see
@@ -47,35 +47,40 @@ crosscompute tools see | jq .[].id
 crosscompute tools see TOOL-ID
 ```
 
-## Add Tool
+### Run Worker
 
-```
-cd ~/Documents
-git clone git@github.com:crosscompute/crosscompute-examples
-cd crosscompute-examples/add-numbers
-
-# Mock
-crosscompute tools add .crosscompute.yml --mock
-
-# Real
-crosscompute tools add .crosscompute.yml
-```
-
-## Add Result
-
-```
-crosscompute results add \
-    result.json \
-    --name RESULT-NAME \
-    --toolId TOOL-ID \
-    --toolVersionId TOOL-VERSION-ID \
-    --projectId PROJECT-ID
-```
-
-## Run Worker
-
-```
+```bash
 crosscompute workers run
+```
+
+### See Project
+
+```
+crosscompute projects see
+crosscompute projects see | jq
+crosscompute projects see | jq '.[] | {id:.id, name:.name}'
+crosscompute projects see PROJECT-ID
+```
+
+### Set Project
+
+```
+crosscompute projects set project.yml
+```
+
+### Add Result
+
+```
+crosscompute results add result.yml
+```
+
+## Development
+
+```bash
+git clone https://github.com/crosscompute/crosscompute
+cd crosscompute
+pip install -e .[test]
+pytest --cov=crosscompute --cov-report term-missing:skip-covered tests
 ```
 
 ## Acknowledgments
@@ -84,10 +89,10 @@ crosscompute workers run
 - Salah Ahmed
 - Rodrigo Guarachi
 - Polina Chernomaz
-- Marta Moreno
-- Ning Wei
 - Miguel Angel Gordián
 - Noé Domínguez Porras
+- Marta Moreno
+- Ning Wei
 - Elaine Chan
-- Jennifer Ruda
 - Aida Shoydokova
+- Jennifer Ruda

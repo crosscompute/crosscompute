@@ -1,0 +1,18 @@
+---
+crosscompute: 0.8.4
+kind: result
+name: '{a} {b} {c}'
+tool:
+  path: tool.yml
+input:
+  variables:
+    - id: a
+      data:
+        value: 1
+    - id: b
+      data:
+        value: 1
+print:
+  style:
+    path: result.css
+  format: pdf

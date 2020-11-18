@@ -1,25 +1,19 @@
-import json
-import requests
-
-from .. import AuthenticatingScript
-from ...routines import get_resource_url
+from .. import OutputtingScript, run_safely
+from ...routines import fetch_resource
 
 
-class SeeResultScript(AuthenticatingScript):
+class SeeResultScript(OutputtingScript):
 
     def configure(self, argument_subparser):
         super().configure(argument_subparser)
         argument_subparser.add_argument(
-            'resultId', metavar='RESULT-ID', nargs='?')
+            'result_id', metavar='RESULT_ID', nargs='?')
 
     def run(self, args, argv):
         super().run(args, argv)
-        d = run(args.host, args.token, args.resultId)
-        print(json.dumps(d))
+        is_quiet = args.is_quiet
+        as_json = args.as_json
 
-
-def run(host, token, result_id=None):
-    url = get_resource_url(host, 'results', result_id)
-    headers = {'Authorization': 'Bearer ' + token}
-    response = requests.get(url, headers=headers)
-    return response.json()
+        run_safely(fetch_resource, [
+            'results', args.result_id,
+        ], is_quiet, as_json)

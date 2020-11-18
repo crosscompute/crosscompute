@@ -1,45 +1,13 @@
-# TODO: Periodically check chores even without echo
+from .. import OutputtingScript, run_safely
+from ...routines import run_worker
+from ...symmetries import join_command_terms
 
 
-import base64
-import json
-import pandas
-import requests
-import subprocess
-from collections import defaultdict
-from invisibleroads_macros_disk import make_folder
-from os import environ
-from os.path import expanduser, join, splitext
-from sseclient import SSEClient
-
-from .. import AuthenticatingScript
-
-
-def save_json(target_path, value_by_id):
-    json.dump(value_by_id, open(target_path, 'wt'))
-
-
-def load_json(source_path):
-    return json.load(open(source_path, 'rt'))
-
-
-def load_csv(source_path):
-    return pandas.read_csv(source_path)
-
-
-SAVE_BY_EXTENSION = {
-    '.json': save_json,
-}
-LOAD_BY_EXTENSION = {
-    '.json': load_json,
-    '.csv': load_csv,
-}
-
-
-class RunWorkerScript(AuthenticatingScript):
+class RunWorkerScript(OutputtingScript):
 
     def run(self, args, argv):
         super().run(args, argv)
+<<<<<<< HEAD
         return run(args.host, args.token, argv)
 
 
@@ -289,5 +257,11 @@ def run(host, token, script_arguments):
                     'outputVariableDataById': output_variable_data_by_id,
                 })
                 # print(response.__dict__)
+=======
+        is_quiet = args.is_quiet
+        as_json = args.as_json
+>>>>>>> 5aced860f16d9b86fa4ca00f1f03bd3b44dcb87a
 
-                # TODO: Put result in cloud
+        run_safely(run_worker, [
+            join_command_terms(argv),
+        ], is_quiet, as_json)
