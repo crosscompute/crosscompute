@@ -462,6 +462,5 @@ def get_result_name(result_dictionary):
             if variable_view not in ['number', 'text']:
                 continue
             variable_value_by_id[variable_id] = variable_value
-    print(variable_value_by_id)
     raw_result_name = result_dictionary['name']
     return raw_result_name.format_map(SafeDict(variable_value_by_id))

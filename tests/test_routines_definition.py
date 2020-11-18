@@ -50,6 +50,7 @@ def test_load_result_batch_definition():
     result_definition = load_definition(
         RESULT_BATCH_DEFINITION_PATH, kinds=['result'])
     assert_definition_types(result_definition)
+    assert 'name' in result_definition
     variable_dictionaries = result_definition['input']['variables']
     assert variable_dictionaries[0]['id'] == 'a'
     assert variable_dictionaries[1]['data'] == [

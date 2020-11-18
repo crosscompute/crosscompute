@@ -103,6 +103,11 @@ def normalize_result_definition(raw_result_definition, folder=None):
     else:
         result_definition = {'kind': 'result'}
 
+    result_name = raw_result_definition.get(
+        'name', result_definition.get('name', ''))
+    if result_name:
+        result_definition['name'] = result_name
+
     tool_definition = dict(raw_result_definition.get(
         'tool', result_definition.get('tool', {})))
     if 'id' in tool_definition:
