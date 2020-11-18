@@ -118,8 +118,8 @@ def run_worker(script_command=None, is_quiet=False, as_json=False):
 
 def run_script(script_command, script_folder, input_folder, output_folder, log_folder, debug_folder):
     script_arguments = shlex.split(script_command)
-    stdout_file = open(join(debug_folder, 'stdout.log'), 'wt')
-    stderr_file = open(join(debug_folder, 'stderr.log'), 'wt')
+    stdout_file = open(join(debug_folder, 'stdout.log'), 'w+t')
+    stderr_file = open(join(debug_folder, 'stderr.log'), 'w+t')
     subprocess_options = {
         'cwd': script_folder,
         'stdout': stdout_file,
@@ -138,8 +138,11 @@ def run_script(script_command, script_folder, input_folder, output_folder, log_f
         }, **subprocess_options)
     except FileNotFoundError as e:
         raise CrossComputeDefinitionError(e)
-    except CalledProcessError as e:
-        raise CrossComputeExecutionError(e)
+    except CalledProcessError:
+        stdout_file.seek(0)
+        stderr_file.seek(0)
+        raise CrossComputeExecutionError({
+            'stdout': stdout_file.read(), 'stderr': stderr_file.read()})
     stdout_file.close()
     stderr_file.close()
 
