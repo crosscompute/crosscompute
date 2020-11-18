@@ -184,6 +184,8 @@ def render_result(tool_definition, result_dictionary):
         'blocks': blocks,
         'styles': styles,
     }
+    if 'name' in result_dictionary:
+        document_dictionary['name'] = result_dictionary['name']
     return document_dictionary
 
 
