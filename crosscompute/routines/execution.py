@@ -454,12 +454,11 @@ def get_result_name(result_dictionary):
         for variable_definition in put_dictionary['variables']:
             try:
                 variable_id = variable_definition['id']
-                variable_view = variable_definition['view']
                 variable_data = variable_definition['data']
                 variable_value = variable_data['value']
             except KeyError:
                 continue
-            if variable_view not in ['number', 'text']:
+            if type(variable_value) not in [int, float, str]:
                 continue
             variable_value_by_id[variable_id] = variable_value
     raw_result_name = result_dictionary['name']
