@@ -37,6 +37,13 @@ from ..exceptions import (
 ANSI_ESCAPE_PATTERN = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 
+class SafeDict(dict):
+    # https://stackoverflow.com/a/17215533/192092
+
+    def __missing__(self, key):
+        return '{' + key + '}'
+
+
 def run_automation(automation_definition, is_mock):
     automation_kind = automation_definition['kind']
     if automation_kind == 'result':
@@ -92,6 +99,8 @@ def run_tool(tool_definition, result_dictionary, script_command=None):
         result_dictionary[folder_name] = {
             'variables': process_variable_folder(
                 folder_by_name[folder_name], variable_definitions)}
+    if 'name' in result_dictionary:
+        result_dictionary['name'] = get_result_name(result_dictionary)
     return result_dictionary
 
 
@@ -432,3 +441,27 @@ def clean_bash_output(output_file):
     output_file.seek(0)
     # TODO: Render ansi escape codes in jupyter error dialog
     return ANSI_ESCAPE_PATTERN.sub('', output_file.read())
+
+
+def get_result_name(result_dictionary):
+    variable_value_by_id = {}
+    for key in ['input', 'output']:
+        if key not in result_dictionary:
+            continue
+        put_dictionary = result_dictionary[key]
+        if 'variables' not in put_dictionary:
+            continue
+        for variable_definition in put_dictionary['variables']:
+            try:
+                variable_id = variable_definition['id']
+                variable_view = variable_definition['view']
+                variable_data = variable_definition['data']
+                variable_value = variable_data['value']
+            except KeyError:
+                continue
+            if variable_view not in ['number', 'text']:
+                continue
+            variable_value_by_id[variable_id] = variable_value
+    print(variable_value_by_id)
+    raw_result_name = result_dictionary['name']
+    return raw_result_name.format_map(SafeDict(variable_value_by_id))

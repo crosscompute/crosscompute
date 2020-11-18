@@ -23,6 +23,7 @@ from .definition import (
     normalize_tool_definition_head,
     normalize_value)
 from .execution import (
+    get_result_name,
     load_relevant_path,
     process_variable_folder,
     run_automation,

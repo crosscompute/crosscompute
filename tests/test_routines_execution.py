@@ -2,6 +2,7 @@ from crosscompute.routines.definition import (
     load_definition)
 from crosscompute.routines.execution import (
     find_relevant_path,
+    get_result_name,
     run_automation,
     yield_result_dictionary)
 from os.path import basename, join, splitext
@@ -66,3 +67,16 @@ def test_yield_result_dictionary():
         RESULT_BATCH_DEFINITION_PATH, kinds=['result'])
     result_dictionaries = list(yield_result_dictionary(result_definition))
     assert len(result_dictionaries) == 3
+
+
+def test_get_result_name():
+    name_template = '{a} {b}'
+    assert get_result_name({'name': name_template}) == name_template
+    assert get_result_name({
+        'name': name_template,
+        'input': {
+            'variables': [
+                {'id': 'a', 'view': 'number', 'data': {'value': 1}},
+            ],
+        },
+    }) == '1 {b}'
