@@ -143,14 +143,15 @@ def run_script(script_command, script_folder, input_folder, output_folder, log_f
         'check': True,
     }
     try:
-        subprocess.run(script_arguments, env={
+        # TODO: Get environment variables
+        subprocess.run(script_arguments, env=dict(environ, **{
             'PATH': environ.get('PATH', ''),
             'VIRTUAL_ENV': environ.get('VIRTUAL_ENV', ''),
             'CROSSCOMPUTE_INPUT_FOLDER': input_folder,
             'CROSSCOMPUTE_OUTPUT_FOLDER': output_folder,
             'CROSSCOMPUTE_LOG_FOLDER': log_folder,
             'CROSSCOMPUTE_DEBUG_FOLDER': debug_folder,
-        }, **subprocess_options)
+        }), **subprocess_options)
     except FileNotFoundError as e:
         raise CrossComputeDefinitionError(e)
     except CalledProcessError:
