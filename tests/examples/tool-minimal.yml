@@ -14,3 +14,5 @@ output:
   variables:
     - id: c
       path: properties.json
+tests:
+  - folder: tests/strings

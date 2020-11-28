@@ -5,7 +5,7 @@ from collections import defaultdict
 from copy import deepcopy
 from invisibleroads_macros_disk import make_folder, make_random_folder
 from itertools import chain, product
-from os import environ
+from os import environ, getcwd
 from os.path import abspath, dirname, exists, isdir, join, splitext
 from pyramid.httpexceptions import HTTPInternalServerError
 from subprocess import CalledProcessError
@@ -13,6 +13,7 @@ from sys import exc_info
 from traceback import print_exception
 
 from .connection import (
+    get_bash_configuration_text,
     fetch_resource,
     get_echoes_client,
     get_token)
@@ -128,6 +129,10 @@ def run_worker(script_command=None, is_quiet=False, as_json=False):
                     script_command, is_quiet, as_json)
     except KeyboardInterrupt:
         pass
+    if not is_quiet and not as_json:
+        print('\n' + get_bash_configuration_text())
+        print('cd ' + getcwd())
+        print('crosscompute workers run')
     return dict(worker_dictionary)
 
 

@@ -9,11 +9,20 @@ from ..macros import parse_number, parse_number_safely
 from ..symmetries import cache
 
 
-class NoAliasDumper(yaml.SafeDumper):
+class FairDumper(yaml.SafeDumper):
     # https://ttl255.com/yaml-anchors-and-aliases-and-how-to-disable-them
 
     def ignore_aliases(self, data):
         return True
+
+    def represent_str(self, data):
+        parent_instance = super()
+        return parent_instance.represent_scalar(
+            'tag:yaml.org,2002:str', data, style='|',
+        ) if '\n' in data else parent_instance.represent_str(data)
+
+
+FairDumper.add_representer(str, FairDumper.represent_str)
 
 
 def render_object(raw_object, as_json=False):
@@ -21,7 +30,7 @@ def render_object(raw_object, as_json=False):
         text = json.dumps(raw_object)
     else:
         text = '---\n' + yaml.dump(
-            raw_object, Dumper=NoAliasDumper, sort_keys=False)
+            raw_object, Dumper=FairDumper, sort_keys=False)
     return text.strip()
 
 

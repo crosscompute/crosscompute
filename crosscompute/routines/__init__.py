@@ -19,6 +19,7 @@ from .definition import (
     normalize_result_definition,
     normalize_result_variable_dictionaries,
     normalize_style_rule_strings,
+    normalize_test_dictionaries,
     normalize_tool_definition_body,
     normalize_tool_definition_head,
     normalize_value)

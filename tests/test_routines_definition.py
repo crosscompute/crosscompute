@@ -8,6 +8,7 @@ from crosscompute.routines import (
     normalize_data_dictionary,
     normalize_definition,
     normalize_result_definition,
+    normalize_test_dictionaries,
     normalize_tool_definition_head,
     normalize_value)
 from http.server import BaseHTTPRequestHandler
@@ -152,6 +153,18 @@ def test_normalize_data_dictionary():
         normalize_data_dictionary({}, 'text')
     assert normalize_data_dictionary({
         'value': '1'}, 'number') == {'value': 1}
+
+
+def test_normalize_test_dictionaries():
+    with raises(CrossComputeDefinitionError):
+        normalize_test_dictionaries({})
+    with raises(CrossComputeDefinitionError):
+        normalize_test_dictionaries([])
+    with raises(CrossComputeDefinitionError):
+        normalize_test_dictionaries([[]])
+    with raises(CrossComputeDefinitionError):
+        normalize_test_dictionaries([{}])
+    assert normalize_test_dictionaries([{'folder': 'x'}])[0]['folder'] == 'x'
 
 
 def assert_definition_types(definition):

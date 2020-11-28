@@ -110,6 +110,7 @@ def normalize_result_definition(raw_result_definition, folder=None):
 
     tool_definition = dict(raw_result_definition.get(
         'tool', result_definition.get('tool', {})))
+    # TODO: Load tool by name
     if 'id' in tool_definition:
         tool_id = tool_definition['id']
         tool_version_id = tool_definition.get(
@@ -200,8 +201,8 @@ def normalize_tool_definition_body(dictionary, folder=None):
         if key not in dictionary:
             continue
         d[key] = get_put_dictionary(key, dictionary, folder)
-    if 'tests' in dictionary:
-        d['tests'] = get_test_dictionaries(dictionary)
+    d['tests'] = normalize_test_dictionaries(dictionary.get(
+        'tests', []))
     if 'script' in dictionary:
         d['script'] = get_script_dictionary(dictionary)
     if 'environment' in dictionary:
@@ -348,13 +349,20 @@ def normalize_variable_path(variable_path):
 
 
 def normalize_test_dictionaries(raw_test_dictionaries):
+    check_list(raw_test_dictionaries, 'tests')
+    if not raw_test_dictionaries:
+        raise CrossComputeDefinitionError({
+            'tests': 'must have at least one test defined'})
     try:
         test_dictionaries = [{
             'folder': _['folder'],
         } for _ in raw_test_dictionaries]
-    except KeyError:
+    except TypeError:
         raise CrossComputeDefinitionError({
-            'folder': 'is required for each test'})
+            'tests': 'must be a list of dictionaries'})
+    except KeyError as e:
+        raise CrossComputeDefinitionError({
+            e.args[0]: 'is required for each test'})
     return test_dictionaries
 
 
@@ -491,15 +499,6 @@ def get_template_dictionary(tool_definition, result_dictionary):
     else:
         template_dictionary = template_dictionaries[0]
     return template_dictionary
-
-
-def get_test_dictionaries(dictionary):
-    try:
-        raw_test_dictionaries = dictionary['tests']
-    except KeyError:
-        L.warning('missing tests definition')
-        raw_test_dictionaries = []
-    return normalize_test_dictionaries(raw_test_dictionaries)
 
 
 def get_script_dictionary(dictionary):
