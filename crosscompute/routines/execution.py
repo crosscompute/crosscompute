@@ -74,23 +74,17 @@ def run_result_automation(result_definition, is_mock=True):
 def run_tool(tool_definition, result_dictionary, script_command=None):
     if not script_command:
         script_command = tool_definition['script']['command']
-    script_folder = join(
-        tool_definition.get('folder', '.'),
-        tool_definition['script']['folder'])
+    script_folder = join(tool_definition.get(
+        'folder', '.'), tool_definition['script']['folder'])
     result_folder = get_result_folder(result_dictionary)
     folder_by_name = {k: make_folder(join(result_folder, k)) for k in [
         'input', 'output', 'log', 'debug']}
-    input_folder = folder_by_name['input']
-    output_folder = folder_by_name['output']
+    folder_by_key = {k + '_folder': v for k, v in folder_by_name.items()}
     prepare_variable_folder(
-        folder_by_name['input'],
-        tool_definition['input']['variables'],
+        folder_by_name['input'], tool_definition['input']['variables'],
         result_dictionary['input']['variables'])
-    run_script(
-        script_command.format(
-            input_folder=input_folder, output_folder=output_folder),
-        script_folder, input_folder, output_folder,
-        folder_by_name['log'], folder_by_name['debug'])
+    run_script(script_command.format(
+        **folder_by_key), script_folder, **folder_by_key)
     for folder_name in 'output', 'log', 'debug':
         if folder_name not in tool_definition:
             continue
@@ -98,8 +92,8 @@ def run_tool(tool_definition, result_dictionary, script_command=None):
         if folder_name == 'debug':
             variable_definitions += DEBUG_VARIABLE_DEFINITIONS
         result_dictionary[folder_name] = {
-            'variables': process_variable_folder(
-                folder_by_name[folder_name], variable_definitions)}
+            'variables': process_variable_folder(folder_by_name[
+                folder_name], variable_definitions)}
     if 'name' in result_dictionary:
         result_dictionary['name'] = get_result_name(result_dictionary)
     return result_dictionary
@@ -136,7 +130,9 @@ def run_worker(script_command=None, is_quiet=False, as_json=False):
     return dict(worker_dictionary)
 
 
-def run_script(script_command, script_folder, input_folder, output_folder, log_folder, debug_folder):
+def run_script(
+        script_command, script_folder, input_folder, output_folder,
+        log_folder, debug_folder):
     script_arguments = shlex.split(script_command)
     stdout_file = open(join(debug_folder, 'stdout.log'), 'w+t')
     stderr_file = open(join(debug_folder, 'stderr.log'), 'w+t')
