@@ -21,7 +21,7 @@ class FetchResourceRequestHandler(BaseHTTPRequestHandler):
         if self.path == '/a.json':
             self.send_response(500)
         elif self.path == '/b.json':
-            self.send_response(403)
+            self.send_response(401)
         elif self.path == '/c.json':
             self.send_response(400)
         else:
@@ -59,7 +59,7 @@ def test_fetch_resource():
     with raises(CrossComputeConnectionError):
         fetch_resource('b', server_url=server_url, token='a')
     with raises(CrossComputeExecutionError):
-        fetch_resource('c', data={}, server_url=server_url, token='a')
+        fetch_resource('c', data={'x': 'X'}, server_url=server_url, token='a')
     with raises(CrossComputeConnectionError):
         fetch_resource('d', 'x', server_url=server_url, token='a')
     assert fetch_resource(

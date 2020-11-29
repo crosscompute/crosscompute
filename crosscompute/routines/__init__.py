@@ -22,6 +22,7 @@ from .definition import (
     normalize_test_dictionaries,
     normalize_tool_definition_body,
     normalize_tool_definition_head,
+    normalize_tool_variable_dictionaries,
     normalize_value)
 from .execution import (
     get_result_name,

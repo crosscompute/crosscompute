@@ -1,6 +1,7 @@
 import json
 import re
 import strictyaml
+from invisibleroads_macros_text import normalize_key
 from os.path import dirname, join
 from tinycss2 import parse_stylesheet
 
@@ -147,11 +148,9 @@ def normalize_result_variable_dictionaries(
         raise CrossComputeDefinitionError({
             'id': 'is required for each variable'})
     variable_definition_by_id = {_['id']: _ for _ in variable_definitions}
-
     variable_dictionaries = []
     for (
-        variable_id,
-        raw_variable_dictionary,
+        variable_id, raw_variable_dictionary,
     ) in raw_variable_dictionary_by_id.items():
         try:
             variable_definition = variable_definition_by_id[variable_id]
@@ -160,7 +159,6 @@ def normalize_result_variable_dictionaries(
                 'id': 'could not find variable ' + variable_id
                 + ' in tool definition'})
         variable_view = variable_definition['view']
-
         try:
             variable_data = raw_variable_dictionary['data']
         except KeyError:
@@ -168,9 +166,7 @@ def normalize_result_variable_dictionaries(
                 'data': 'is required for each variable'})
         variable_data = normalize_data(variable_data, variable_view)
         variable_dictionaries.append({
-            'id': variable_id,
-            'data': variable_data,
-        })
+            'id': variable_id, 'data': variable_data})
     return variable_dictionaries
 
 
@@ -303,10 +299,11 @@ def normalize_tool_variable_dictionaries(
                 e.args[0]: 'is required for each variable'})
         variable_dictionary = {
             'id': variable_id,
-            'name': raw_variable_dictionary.get(
-                'name', variable_id),
-            'view': raw_variable_dictionary.get(
-                'view', DEFAULT_VIEW_NAME),
+            'name': raw_variable_dictionary.get('name') or normalize_key(
+                variable_id,
+                separate_camel_case=True,
+                separate_letter_digit=True).title(),
+            'view': raw_variable_dictionary.get('view') or DEFAULT_VIEW_NAME,
             'path': variable_path,
         }
         variable_dictionaries.append(variable_dictionary)

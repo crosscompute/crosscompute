@@ -1,5 +1,6 @@
 import json
 from crosscompute import __version__
+from crosscompute.constants import DEFAULT_VIEW_NAME
 from crosscompute.exceptions import CrossComputeDefinitionError
 from crosscompute.routines import (
     load_definition,
@@ -10,6 +11,7 @@ from crosscompute.routines import (
     normalize_result_definition,
     normalize_test_dictionaries,
     normalize_tool_definition_head,
+    normalize_tool_variable_dictionaries,
     normalize_value)
 from http.server import BaseHTTPRequestHandler
 from os import environ
@@ -153,6 +155,17 @@ def test_normalize_data_dictionary():
         normalize_data_dictionary({}, 'text')
     assert normalize_data_dictionary({
         'value': '1'}, 'number') == {'value': 1}
+
+
+def test_normalize_tool_variable_dictionaries():
+    with raises(CrossComputeDefinitionError):
+        normalize_tool_variable_dictionaries([{'id': 'x'}])
+    with raises(CrossComputeDefinitionError):
+        normalize_tool_variable_dictionaries([{'path': 'x'}])
+    d = normalize_tool_variable_dictionaries([{
+        'id': 'mosquito_count', 'path': 'x'}])[0]
+    assert d['name'] == 'Mosquito Count'
+    assert d['view'] == DEFAULT_VIEW_NAME
 
 
 def test_normalize_test_dictionaries():

@@ -45,7 +45,6 @@ def fetch_resource(
         d['responseContent'] = response.content.decode('utf-8')
         raise CrossComputeConnectionError(d)
     if status_code != 200:
-        # TODO: Check when this happens
         if response_json:
             d.update(response_json)
         raise (

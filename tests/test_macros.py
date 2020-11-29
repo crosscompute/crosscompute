@@ -24,8 +24,6 @@ def test_sanitize_json_value():
 
 
 def test_is_compatible_version():
-    assert is_compatible_version('x', 'x')
-    assert not is_compatible_version('x', 'y')
     assert is_compatible_version('1.2.3', '1.2.3.1')
     assert not is_compatible_version('1.2.3', '1.2.4')
     assert not is_compatible_version('1.2.3', '1.3.3')
