@@ -9,6 +9,7 @@ from crosscompute.routines import (
     normalize_data_dictionary,
     normalize_definition,
     normalize_result_definition,
+    normalize_template_dictionaries,
     normalize_test_dictionaries,
     normalize_tool_definition_head,
     normalize_tool_variable_dictionaries,
@@ -166,6 +167,22 @@ def test_normalize_tool_variable_dictionaries():
         'id': 'mosquito_count', 'path': 'x'}])[0]
     assert d['name'] == 'Mosquito Count'
     assert d['view'] == DEFAULT_VIEW_NAME
+
+
+def test_normalize_template_dictionaries():
+    with raises(CrossComputeDefinitionError):
+        normalize_template_dictionaries([{}], [])
+
+    d = normalize_template_dictionaries([{
+        'id': 'mosquito-report',
+    }], [])[0]
+    assert d['name'] == 'Generated'
+
+    d = normalize_template_dictionaries([{
+        'id': 'mosquito-report',
+        'blocks': [{'id': 'x'}],
+    }], [])[0]
+    assert d['name'] == 'Mosquito Report'
 
 
 def test_normalize_test_dictionaries():

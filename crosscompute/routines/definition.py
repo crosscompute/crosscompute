@@ -299,10 +299,8 @@ def normalize_tool_variable_dictionaries(
                 e.args[0]: 'is required for each variable'})
         variable_dictionary = {
             'id': variable_id,
-            'name': raw_variable_dictionary.get('name') or normalize_key(
-                variable_id,
-                separate_camel_case=True,
-                separate_letter_digit=True).title(),
+            'name': raw_variable_dictionary.get('name') or get_name_from_id(
+                variable_id),
             'view': raw_variable_dictionary.get('view') or DEFAULT_VIEW_NAME,
             'path': variable_path,
         }
@@ -316,7 +314,6 @@ def normalize_template_dictionaries(
     for raw_template_dictionary in raw_template_dictionaries:
         try:
             template_id = raw_template_dictionary['id']
-            template_name = raw_template_dictionary['name']
         except KeyError as e:
             raise CrossComputeDefinitionError({
                 e.args[0]: 'is required for each template'})
@@ -326,7 +323,8 @@ def normalize_template_dictionaries(
             continue
         template_dictionaries.append({
             'id': template_id,
-            'name': template_name,
+            'name': raw_template_dictionary.get('name') or get_name_from_id(
+                template_id),
             'blocks': block_dictionaries,
         })
     if not template_dictionaries:
@@ -585,3 +583,11 @@ def check_list(raw_value, value_name):
     if not isinstance(raw_value, list):
         raise CrossComputeDefinitionError({value_name: 'must be a list'})
     return raw_value
+
+
+def get_name_from_id(x_id):
+    return normalize_key(
+        x_id,
+        separate_camel_case=True,
+        separate_letter_digit=True,
+    ).title()
