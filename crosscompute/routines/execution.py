@@ -83,8 +83,10 @@ def run_tool(tool_definition, result_dictionary, script_command=None):
     prepare_variable_folder(
         folder_by_name['input'], tool_definition['input']['variables'],
         result_dictionary['input']['variables'])
+    script_environment = get_script_environment(tool_definition.get(
+        'environment', {}).get('variables', []), folder_by_key)
     run_script(script_command.format(
-        **folder_by_key), script_folder, **folder_by_key)
+        **folder_by_key), script_folder, script_environment)
     for folder_name in 'output', 'log', 'debug':
         if folder_name not in tool_definition:
             continue
@@ -130,29 +132,16 @@ def run_worker(script_command=None, is_quiet=False, as_json=False):
     return dict(worker_dictionary)
 
 
-def run_script(
-        script_command, script_folder, input_folder, output_folder,
-        log_folder, debug_folder):
+def run_script(script_command, script_folder, script_environment):
     script_arguments = shlex.split(script_command)
+    debug_folder = script_environment.get('CROSSCOMPUTE_DEBUG_FOLDER', '')
     stdout_file = open(join(debug_folder, 'stdout.log'), 'w+t')
     stderr_file = open(join(debug_folder, 'stderr.log'), 'w+t')
-    subprocess_options = {
-        'cwd': script_folder,
-        'stdout': stdout_file,
-        'stderr': stderr_file,
-        'encoding': 'utf-8',
-        'check': True,
-    }
     try:
-        # TODO: Get environment variables
-        subprocess.run(script_arguments, env=dict(environ, **{
-            'PATH': environ.get('PATH', ''),
-            'VIRTUAL_ENV': environ.get('VIRTUAL_ENV', ''),
-            'CROSSCOMPUTE_INPUT_FOLDER': input_folder,
-            'CROSSCOMPUTE_OUTPUT_FOLDER': output_folder,
-            'CROSSCOMPUTE_LOG_FOLDER': log_folder,
-            'CROSSCOMPUTE_DEBUG_FOLDER': debug_folder,
-        }), **subprocess_options)
+        subprocess.run(
+            script_arguments, env=script_environment, cwd=script_folder,
+            stdout=stdout_file, stderr=stderr_file, encoding='utf-8',
+            check=True)
     except FileNotFoundError as e:
         raise CrossComputeDefinitionError(e)
     except CalledProcessError:
@@ -214,7 +203,7 @@ def render_blocks(tool_definition, result_dictionary):
     output_variable_data_by_id = get_data_by_id(result_dictionary[
         'output']['variables'])
     template_dictionary = get_template_dictionary(
-        tool_definition, result_dictionary)
+        'output', tool_definition, result_dictionary)
     blocks = deepcopy(template_dictionary['blocks'])
     for block in blocks:
         if 'id' not in block:
@@ -439,12 +428,6 @@ def get_data_by_id(variable_dictionaries):
     return {_['id']: _['data'] for _ in variable_dictionaries}
 
 
-def clean_bash_output(output_file):
-    output_file.seek(0)
-    # TODO: Render ansi escape codes in jupyter error dialog
-    return ANSI_ESCAPE_PATTERN.sub('', output_file.read())
-
-
 def get_result_name(result_dictionary):
     variable_value_by_id = {}
     for key in ['input', 'output']:
@@ -465,3 +448,26 @@ def get_result_name(result_dictionary):
             variable_value_by_id[variable_id] = variable_value
     raw_result_name = result_dictionary['name']
     return raw_result_name.format_map(SafeDict(variable_value_by_id))
+
+
+def get_script_environment(environment_variable_definitions, folder_by_name):
+    d = {}
+    for variable_definition in environment_variable_definitions:
+        variable_id = variable_definition['id']
+        try:
+            d[variable_id] = environ[variable_id]
+        except KeyError:
+            raise CrossComputeExecutionError({
+                'environment': f'{variable_id} is required by the script'})
+    for key, path in folder_by_name.items():
+        d['CROSSCOMPUTE_' + key.upper()] = path
+    d.update({
+        'PATH': environ.get('PATH', ''),
+        'VIRTUAL_ENV': environ.get('VIRTUAL_ENV', '')})
+    return d
+
+
+def clean_bash_output(output_file):
+    output_file.seek(0)
+    # TODO: Render ansi escape codes in jupyter error dialog
+    return ANSI_ESCAPE_PATTERN.sub('', output_file.read())

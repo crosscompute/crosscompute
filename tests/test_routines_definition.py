@@ -3,6 +3,8 @@ from crosscompute import __version__
 from crosscompute.constants import DEFAULT_VIEW_NAME
 from crosscompute.exceptions import CrossComputeDefinitionError
 from crosscompute.routines import (
+    get_nested_value,
+    get_template_dictionary,
     load_definition,
     load_raw_definition,
     normalize_automation_definition,
@@ -195,6 +197,25 @@ def test_normalize_test_dictionaries():
     with raises(CrossComputeDefinitionError):
         normalize_test_dictionaries([{}])
     assert normalize_test_dictionaries([{'folder': 'x'}])[0]['folder'] == 'x'
+
+
+def test_get_template_dictionary():
+    assert get_template_dictionary('x', {'x': {}}, {})['id'] == 'generated'
+    assert get_template_dictionary('x', {'x': {'templates': [{
+        'id': 'standard',
+    }]}}, {'template': {
+        'id': 'STANDARD',
+    }})['id'] == 'standard'
+
+
+def test_get_nested_value():
+    with raises(CrossComputeDefinitionError):
+        get_nested_value({'a': []}, 'a', 'b', '')
+    with raises(CrossComputeDefinitionError):
+        get_nested_value({'a': {'b': []}}, 'a', 'b', {})
+    with raises(CrossComputeDefinitionError):
+        get_nested_value({'a': {'b': {}}}, 'a', 'b', [])
+    assert get_nested_value({}, 'a', 'b', '') == ''
 
 
 def assert_definition_types(definition):

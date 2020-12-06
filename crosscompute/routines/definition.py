@@ -114,8 +114,8 @@ def normalize_result_definition(raw_result_definition, folder=None):
     # TODO: Load tool by name
     if 'id' in tool_definition:
         tool_id = tool_definition['id']
-        tool_version_id = tool_definition.get(
-            'version', {}).get('id', 'latest')
+        tool_version_id = get_nested_value(
+            tool_definition, 'version', 'id', default_value='latest')
         tool_definition = fetch_resource(
             'tools', tool_id + '/versions/' + tool_version_id)
     elif 'path' in tool_definition:
@@ -124,11 +124,11 @@ def normalize_result_definition(raw_result_definition, folder=None):
     result_definition['tool'] = tool_definition
 
     raw_variable_dictionaries = sum([
-        result_definition.get('input', {}).get('variables', []),
-        raw_result_definition.get('input', {}).get('variables', []),
+        get_nested_value(result_definition, 'input', 'variables', []),
+        get_nested_value(raw_result_definition, 'input', 'variables', []),
     ], [])
-    variable_definitions = tool_definition.get(
-        'input', {}).get('variables', [])
+    variable_definitions = get_nested_value(
+        tool_definition, 'input', 'variables', [])
     result_definition['input'] = {
         'variables': normalize_result_variable_dictionaries(
             raw_variable_dictionaries, variable_definitions)}
@@ -137,37 +137,6 @@ def normalize_result_definition(raw_result_definition, folder=None):
         result_definition['print'] = get_print_dictionary(
             raw_result_definition['print'], folder)
     return result_definition
-
-
-def normalize_result_variable_dictionaries(
-        raw_variable_dictionaries, variable_definitions):
-    try:
-        raw_variable_dictionary_by_id = {
-            _['id']: _ for _ in raw_variable_dictionaries}
-    except KeyError:
-        raise CrossComputeDefinitionError({
-            'id': 'is required for each variable'})
-    variable_definition_by_id = {_['id']: _ for _ in variable_definitions}
-    variable_dictionaries = []
-    for (
-        variable_id, raw_variable_dictionary,
-    ) in raw_variable_dictionary_by_id.items():
-        try:
-            variable_definition = variable_definition_by_id[variable_id]
-        except KeyError:
-            raise CrossComputeDefinitionError({
-                'id': 'could not find variable ' + variable_id
-                + ' in tool definition'})
-        variable_view = variable_definition['view']
-        try:
-            variable_data = raw_variable_dictionary['data']
-        except KeyError:
-            raise CrossComputeDefinitionError({
-                'data': 'is required for each variable'})
-        variable_data = normalize_data(variable_data, variable_view)
-        variable_dictionaries.append({
-            'id': variable_id, 'data': variable_data})
-    return variable_dictionaries
 
 
 def normalize_tool_definition(dictionary, folder=None):
@@ -286,8 +255,40 @@ def normalize_style_rule_strings(raw_style_rule_strings):
     return style_rule_strings
 
 
-def normalize_tool_variable_dictionaries(
-        raw_variable_dictionaries):
+def normalize_result_variable_dictionaries(
+        raw_variable_dictionaries, variable_definitions):
+    check_list(raw_variable_dictionaries, 'variables')
+    try:
+        raw_variable_dictionary_by_id = {
+            _['id']: _ for _ in raw_variable_dictionaries}
+    except KeyError:
+        raise CrossComputeDefinitionError({
+            'id': 'is required for each result variable'})
+    variable_definition_by_id = {_['id']: _ for _ in variable_definitions}
+    variable_dictionaries = []
+    for (
+        variable_id, raw_variable_dictionary,
+    ) in raw_variable_dictionary_by_id.items():
+        try:
+            variable_definition = variable_definition_by_id[variable_id]
+        except KeyError:
+            raise CrossComputeDefinitionError({
+                'id': 'could not find variable ' + variable_id
+                + ' in tool definition'})
+        variable_view = variable_definition['view']
+        try:
+            variable_data = raw_variable_dictionary['data']
+        except KeyError:
+            raise CrossComputeDefinitionError({
+                'data': 'is required for each result variable'})
+        variable_data = normalize_data(variable_data, variable_view)
+        variable_dictionaries.append({
+            'id': variable_id, 'data': variable_data})
+    return variable_dictionaries
+
+
+def normalize_tool_variable_dictionaries(raw_variable_dictionaries):
+    check_list(raw_variable_dictionaries, 'variables')
     variable_dictionaries = []
     for raw_variable_dictionary in raw_variable_dictionaries:
         try:
@@ -296,7 +297,7 @@ def normalize_tool_variable_dictionaries(
                 raw_variable_dictionary['path'])
         except KeyError as e:
             raise CrossComputeDefinitionError({
-                e.args[0]: 'is required for each variable'})
+                e.args[0]: 'is required for each tool variable'})
         variable_dictionary = {
             'id': variable_id,
             'name': raw_variable_dictionary.get('name') or get_name_from_id(
@@ -305,6 +306,19 @@ def normalize_tool_variable_dictionaries(
             'path': variable_path,
         }
         variable_dictionaries.append(variable_dictionary)
+    return variable_dictionaries
+
+
+def normalize_environment_variable_dictionaries(raw_variable_dictionaries):
+    check_list(raw_variable_dictionaries, 'variables')
+    variable_dictionaries = []
+    for raw_variable_dictionary in raw_variable_dictionaries:
+        try:
+            variable_id = raw_variable_dictionary['id']
+        except KeyError as e:
+            raise CrossComputeDefinitionError({
+                e.args[0]: 'is required for each environment variable'})
+        variable_dictionaries.append({'id': variable_id})
     return variable_dictionaries
 
 
@@ -375,18 +389,20 @@ def normalize_script_dictionary(raw_script_dictionary):
 
 
 def normalize_environment_dictionary(raw_environment_dictionary):
+    d = {}
     try:
-        image = raw_environment_dictionary['image']
-        processor = raw_environment_dictionary['processor']
-        memory = raw_environment_dictionary['memory']
+        d.update({
+            'image': raw_environment_dictionary['image'],
+            'processor': raw_environment_dictionary['processor'],
+            'memory': raw_environment_dictionary['memory'],
+        })
     except KeyError as e:
         raise CrossComputeDefinitionError({
             'environment': 'requires ' + e.args[0]})
-    return {
-        'image': image,
-        'processor': processor,
-        'memory': memory,
-    }
+    if 'variables' in raw_environment_dictionary:
+        d['variables'] = normalize_environment_variable_dictionaries(
+            raw_environment_dictionary['variables'])
+    return d
 
 
 def normalize_block_dictionaries(raw_block_dictionaries, with_data=True):
@@ -481,13 +497,13 @@ def get_put_dictionary(key, dictionary, folder=None):
     return d
 
 
-def get_template_dictionary(tool_definition, result_dictionary):
-    template_dictionaries = tool_definition['output'].get('templates', [])
+def get_template_dictionary(key, tool_definition, result_dictionary):
+    template_dictionaries = tool_definition[key].get('templates', [])
     if not template_dictionaries:
-        variable_definitions = tool_definition['output'].get('variables', [])
+        variable_definitions = tool_definition[key].get('variables', [])
         return make_template_dictionary(variable_definitions)
-    template_id = result_dictionary.get('template', {}).get(
-        'id', '').casefold()
+    template_id = get_nested_value(
+        result_dictionary, 'template', 'id', '').casefold()
     for template_dictionary in template_dictionaries:
         if template_dictionary.get('id', '').casefold() == template_id:
             break
@@ -524,6 +540,24 @@ def get_template_block_dictionaries(dictionary, folder=None):
         raw_block_dictionaries = []
     return normalize_block_dictionaries(
         raw_block_dictionaries, with_data=False)
+
+
+def get_name_from_id(x_id):
+    return normalize_key(
+        x_id,
+        separate_camel_case=True,
+        separate_letter_digit=True,
+    ).title()
+
+
+def get_nested_value(dictionary, outer_key, inner_key, default_value):
+    d = check_dictionary(dictionary.get(outer_key, {}), outer_key)
+    value = d.get(inner_key, default_value)
+    if isinstance(default_value, dict):
+        check_dictionary(value, inner_key)
+    elif isinstance(default_value, list):
+        check_list(value, inner_key)
+    return value
 
 
 def make_template_dictionary(variable_definitions):
@@ -583,11 +617,3 @@ def check_list(raw_value, value_name):
     if not isinstance(raw_value, list):
         raise CrossComputeDefinitionError({value_name: 'must be a list'})
     return raw_value
-
-
-def get_name_from_id(x_id):
-    return normalize_key(
-        x_id,
-        separate_camel_case=True,
-        separate_letter_digit=True,
-    ).title()

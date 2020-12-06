@@ -8,7 +8,9 @@ from .connection import (
     get_token)
 from .definition import (
     check_dictionary,
+    get_nested_value,
     get_put_dictionary,
+    get_template_dictionary,
     load_definition,
     load_raw_definition,
     normalize_automation_definition,
