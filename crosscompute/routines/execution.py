@@ -11,6 +11,7 @@ from pyramid.httpexceptions import HTTPInternalServerError
 from subprocess import CalledProcessError
 from sys import exc_info
 from traceback import print_exception
+from urllib.request import urlretrieve as download
 
 from .connection import (
     fetch_resource,
@@ -324,8 +325,9 @@ def prepare_variable_folder(
         make_folder(dirname(file_path))
         if 'file' in variable_data:
             if not exists(file_path):
-                # TODO: Download file to path
-                pass
+                file_id = variable_data['file']['id']
+                d = fetch_resource('files', file_id)
+                download(d['urls']['get'], file_path)
             continue
         if 'value' not in variable_data:
             continue
