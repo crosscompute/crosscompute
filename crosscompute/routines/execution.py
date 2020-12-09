@@ -104,6 +104,7 @@ def run_tool(tool_definition, result_dictionary, script_command=None):
 
 def run_worker(script_command=None, is_quiet=False, as_json=False):
     # TODO: Make generalizable worker wrapper
+    # TODO: Use token to determine the worker type
     tool_definition = fetch_resource('tools', get_token())
     if not is_quiet:
         print(render_object(tool_definition, as_json))
