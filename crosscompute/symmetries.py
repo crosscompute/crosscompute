@@ -14,3 +14,6 @@ except AttributeError:
 
     def join_command_terms(terms):
         return ' '.join(shlex.quote(_) for _ in terms)
+
+
+from urllib.request import urlretrieve as download

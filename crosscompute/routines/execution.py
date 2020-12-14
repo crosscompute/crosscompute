@@ -11,7 +11,6 @@ from pyramid.httpexceptions import HTTPInternalServerError
 from subprocess import CalledProcessError
 from sys import exc_info
 from traceback import print_exception
-from urllib.request import urlretrieve as download
 
 from .connection import (
     get_bash_configuration_text,
@@ -33,6 +32,7 @@ from ..exceptions import (
     CrossComputeError,
     CrossComputeExecutionError,
     CrossComputeImplementationError)
+from ..symmetries import download
 
 
 # https://stackoverflow.com/a/14693789/192092

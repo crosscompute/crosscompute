@@ -28,6 +28,7 @@ def sanitize_json_value(value):
 
 
 def parse_number_safely(raw_value):
+    # TODO: Consider moving to invisibleroads_macros_configuration
     try:
         value = parse_number(raw_value)
     except (TypeError, ValueError):
@@ -36,6 +37,7 @@ def parse_number_safely(raw_value):
 
 
 def parse_number(raw_value):
+    # TODO: Consider moving to invisibleroads_macros_configuration
     try:
         value = int(raw_value)
     except ValueError:
