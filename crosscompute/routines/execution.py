@@ -10,7 +10,6 @@ from os.path import abspath, dirname, exists, isdir, join, splitext
 from subprocess import CalledProcessError
 from sys import exc_info
 from traceback import print_exception
-from urllib.request import urlretrieve as download
 
 from .connection import (
     fetch_resource,
@@ -33,6 +32,7 @@ from ..exceptions import (
     CrossComputeExecutionError,
     CrossComputeImplementationError,
     CrossComputeKeyboardInterrupt)
+from ..symmetries import download
 
 
 # https://stackoverflow.com/a/14693789/192092
