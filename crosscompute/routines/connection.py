@@ -1,3 +1,4 @@
+import json
 import requests
 from sseclient import SSEClient
 
@@ -8,9 +9,11 @@ from ..constants import (
 from ..exceptions import (
     CrossComputeConnectionError,
     CrossComputeExecutionError,
-    CrossComputeImplementationError)
+    CrossComputeImplementationError,
+    CrossComputeKeyboardInterrupt)
 from ..macros import (
     get_environment_value)
+from .serialization import render_object
 
 
 def get_bash_configuration_text():
@@ -86,3 +89,21 @@ def get_echoes_client():
         raise CrossComputeConnectionError({
             'url': 'could not connect to echoes ' + echoes_url})
     return client
+
+
+def yield_echo(statistics_dictionary, is_quiet=False, as_json=False):
+    statistics_dictionary['ping count'] = 0
+    try:
+        for echo_message in get_echoes_client():
+            event_name = echo_message.event
+            if event_name == 'message':
+                if not is_quiet and not as_json:
+                    print('.', end='', flush=True)
+                statistics_dictionary['ping count'] += 1
+                continue
+            elif not is_quiet:
+                print('\n' + render_object(echo_message.__dict__, as_json))
+            event_dictionary = json.loads(echo_message.data)
+            yield event_name, event_dictionary
+    except KeyboardInterrupt:
+        raise CrossComputeKeyboardInterrupt

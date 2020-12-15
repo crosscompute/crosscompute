@@ -20,3 +20,7 @@ class CrossComputeExecutionError(HTTPBadRequest, CrossComputeError):
 class CrossComputeImplementationError(
         HTTPInternalServerError, CrossComputeError):
     pass
+
+
+class CrossComputeKeyboardInterrupt(KeyboardInterrupt, CrossComputeError):
+    pass
