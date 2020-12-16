@@ -68,3 +68,11 @@ def is_compatible_version(target_version_name, source_version_name):
     else:
         is_compatible = has_same_major and has_same_minor and has_same_micro
     return is_compatible
+
+
+def get_plain_value(x):
+    if hasattr(x, 'items'):
+        return {k: get_plain_value(v) for k, v in x.items()}
+    if hasattr(x, 'append'):
+        return [get_plain_value(_) for _ in x]
+    return x

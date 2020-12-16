@@ -5,7 +5,7 @@ import yaml
 from base64 import b64decode, b64encode
 
 from ..exceptions import CrossComputeExecutionError
-from ..macros import parse_number, parse_number_safely
+from ..macros import get_plain_value, parse_number, parse_number_safely
 from ..symmetries import cache
 
 
@@ -166,7 +166,7 @@ def load_map_geojson(source_path, variable_id):
         raise CrossComputeExecutionError({
             'variable': f'could not load {variable_id} as a map geojson'})
     # TODO: Consider whether to assert FeatureCollection
-    return variable_value
+    return get_plain_value(variable_value)
 
 
 def load_electricity_network_json(source_path, variable_id):
