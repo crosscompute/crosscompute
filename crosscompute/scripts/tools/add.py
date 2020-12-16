@@ -36,7 +36,7 @@ class AddToolScript(OutputtingScript):
 
         result_dictionaries = run_safely(run_tests, [
             tool_definition,
-        ], is_quiet, as_json)
+        ], is_quiet, as_json)['results']
 
         if args.is_mock:
             return
