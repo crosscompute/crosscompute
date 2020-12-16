@@ -34,7 +34,7 @@ class AddToolScript(OutputtingScript):
             args.tool_definition_path, TOOL_FILE_NAME, ['tool'],
         ], is_quiet, as_json)
 
-        run_safely(run_tests, [
+        result_dictionaries = run_safely(run_tests, [
             tool_definition,
         ], is_quiet, as_json)
 
@@ -43,6 +43,11 @@ class AddToolScript(OutputtingScript):
         d = run_safely(fetch_resource, [
             'tools', None, 'POST', tool_definition,
         ], is_quiet, as_json)
+        for result_dictionary in result_dictionaries:
+            result_dictionary['tool'] = tool_definition
+            run_safely(fetch_resource, [
+                'results', None, 'POST', result_dictionary,
+            ], is_quiet, as_json)
         environ['CROSSCOMPUTE_TOKEN'] = d['token']
         tool_definition_folder = tool_definition['folder']
         script_folder = join(

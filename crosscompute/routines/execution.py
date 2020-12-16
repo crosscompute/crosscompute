@@ -159,6 +159,7 @@ def run_tests(tool_definition):
     input_variable_definitions = tool_definition['input']['variables']
     test_dictionaries = tool_definition['tests']
     error_by_folder = {}
+    result_dictionaries = []
     for test_dictionary in test_dictionaries:
         relative_folder = test_dictionary['folder']
         test_folder = join(tool_definition_folder, relative_folder)
@@ -172,6 +173,7 @@ def run_tests(tool_definition):
         except CrossComputeError as e:
             error_by_folder[relative_folder] = e.args[0]
             continue
+        result_dictionaries.append(result_dictionary)
     test_count = len(test_dictionaries)
     d = {
         'tests total count': test_count,
@@ -180,6 +182,7 @@ def run_tests(tool_definition):
     if error_by_folder:
         d['error by folder'] = error_by_folder
         raise CrossComputeExecutionError(d)
+    d['results'] = result_dictionaries
     return d
 
 
