@@ -7,16 +7,15 @@ from invisibleroads_macros_disk import make_folder, make_random_folder
 from itertools import chain, product
 from os import environ, getcwd
 from os.path import abspath, dirname, exists, isdir, join, splitext
-from pyramid.httpexceptions import HTTPInternalServerError
 from subprocess import CalledProcessError
 from sys import exc_info
 from traceback import print_exception
 
 from .connection import (
-    get_bash_configuration_text,
     fetch_resource,
-    get_echoes_client,
-    get_token)
+    get_bash_configuration_text,
+    get_token,
+    yield_echo)
 from .definition import (
     get_template_dictionary,
     load_definition)
@@ -31,7 +30,8 @@ from ..exceptions import (
     CrossComputeDefinitionError,
     CrossComputeError,
     CrossComputeExecutionError,
-    CrossComputeImplementationError)
+    CrossComputeImplementationError,
+    CrossComputeKeyboardInterrupt)
 from ..symmetries import download
 
 
@@ -103,7 +103,6 @@ def run_tool(tool_definition, result_dictionary, script_command=None):
 
 
 def run_worker(script_command=None, is_quiet=False, as_json=False):
-    # TODO: Make generalizable worker wrapper
     # TODO: Use token to determine the worker type
     tool_definition = fetch_resource('tools', get_token())
     if not is_quiet:
@@ -111,27 +110,19 @@ def run_worker(script_command=None, is_quiet=False, as_json=False):
     test_summary = run_tests(tool_definition)
     if not is_quiet:
         print(render_object(test_summary, as_json))
-    worker_dictionary = defaultdict(int)
+    d = {'result count': 0}
     try:
-        for echo_message in get_echoes_client():
-            event_name = echo_message.event
-            if event_name == 'message':
-                if not is_quiet and not as_json:
-                    print('.', end='', flush=True)
-                worker_dictionary['ping count'] += 1
-            elif not is_quiet:
-                print('\n' + render_object(echo_message.__dict__, as_json))
-            is_bored = worker_dictionary['ping count'] % 100 == 0
-            if event_name == 'i' or is_bored:
-                worker_dictionary['result count'] += process_result_input_stream(
+        for event_name, event_dictionary in yield_echo(d, is_quiet, as_json):
+            if event_name == 'i' or d['ping count'] % 100 == 0:
+                d['result count'] += process_result_input_stream(
                     script_command, is_quiet, as_json)
-    except KeyboardInterrupt:
+    except CrossComputeKeyboardInterrupt:
         pass
     if not is_quiet and not as_json:
         print('\n' + get_bash_configuration_text())
         print('cd ' + getcwd())
         print('crosscompute workers run')
-    return dict(worker_dictionary)
+    return d
 
 
 def run_script(script_command, script_folder, script_environment):
@@ -331,7 +322,7 @@ def prepare_variable_folder(
         try:
             save_by_extension = SAVE_BY_EXTENSION_BY_VIEW[variable_view]
         except KeyError:
-            raise HTTPInternalServerError({
+            raise CrossComputeImplementationError({
                 'view': 'is not yet implemented for save ' + variable_view})
         file_extension = splitext(file_path)[1]
         try:
@@ -350,7 +341,7 @@ def prepare_variable_folder(
             raise
         except Exception:
             print_exception(*exc_info())
-            raise HTTPInternalServerError({'path': 'triggered an exception'})
+            raise CrossComputeImplementationError({'path': 'triggered an exception'})
     for file_path, value_by_id in value_by_id_by_path.items():
         file_extension = splitext(file_path)[1]
         if file_extension == '.json':
@@ -369,7 +360,7 @@ def process_variable_folder(folder, variable_definitions):
         try:
             load_by_extension = LOAD_BY_EXTENSION_BY_VIEW[variable_view]
         except KeyError:
-            raise HTTPInternalServerError({
+            raise CrossComputeImplementationError({
                 'view': 'is not yet implemented for load ' + variable_view})
         try:
             load = load_by_extension[file_extension]
@@ -389,7 +380,7 @@ def process_variable_folder(folder, variable_definitions):
             raise
         except Exception:
             print_exception(*exc_info())
-            raise HTTPInternalServerError({'path': 'triggered an exception'})
+            raise CrossComputeImplementationError({'path': 'triggered an exception'})
         # TODO: Upload to google cloud if large
         variable_dictionaries.append({
             'id': variable_id, 'data': {'value': variable_value}})
