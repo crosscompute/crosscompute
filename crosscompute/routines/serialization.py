@@ -92,6 +92,15 @@ def save_map_geojson(target_path, value, variable_id, value_by_id_by_path):
     geojson.dump(value, open(target_path, 'wt'))
 
 
+def save_electricity_network_json(
+        target_path, value, variable_id, value_by_id_by_path):
+    save_json(target_path, value)
+
+
+def load_json(source_path):
+    return json.load(open(source_path, 'rt'))
+
+
 def load_text(source_path):
     return open(source_path, 'rt').read()
 
@@ -160,6 +169,10 @@ def load_map_geojson(source_path, variable_id):
     return variable_value
 
 
+def load_electricity_network_json(source_path, variable_id):
+    return load_json(source_path)
+
+
 SAVE_BY_EXTENSION_BY_VIEW = {
     'text': {
         '.json': save_text_json,
@@ -181,9 +194,13 @@ SAVE_BY_EXTENSION_BY_VIEW = {
         '.json': save_map_geojson,
         '.geojson': save_map_geojson,
     },
+    'electricity-network': {
+        '.json': save_electricity_network_json,
+    },
 }
 
 
+# TODO: Consider separating these views into different packages
 LOAD_BY_EXTENSION_BY_VIEW = {
     'text': {
         '.json': load_text_json,
@@ -204,5 +221,8 @@ LOAD_BY_EXTENSION_BY_VIEW = {
     'map': {
         '.json': load_map_geojson,
         '.geojson': load_map_geojson,
+    },
+    'electricity-network': {
+        '.json': load_electricity_network_json,
     },
 }
