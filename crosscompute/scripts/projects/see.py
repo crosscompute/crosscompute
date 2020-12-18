@@ -14,6 +14,7 @@ class SeeProjectsScript(OutputtingScript):
         is_quiet = args.is_quiet
         as_json = args.as_json
 
-        run_safely(fetch_resource, [
-            'projects', args.project_id,
-        ], is_quiet, as_json)
+        run_safely(fetch_resource, {
+            'resource_name': 'projects',
+            'resource_id': args.project_id,
+        }, is_quiet, as_json)

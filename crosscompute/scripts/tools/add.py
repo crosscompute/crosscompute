@@ -30,24 +30,35 @@ class AddToolScript(OutputtingScript):
         is_quiet = args.is_quiet
         as_json = args.as_json
 
-        tool_definition = run_safely(load_relevant_path, [
-            args.tool_definition_path, TOOL_FILE_NAME, ['tool'],
-        ], is_quiet, as_json)
+        tool_definition = run_safely(load_relevant_path, {
+            'path': args.tool_definition_path,
+            'name': TOOL_FILE_NAME,
+            'kinds': ['tool'],
+        }, is_quiet, as_json)
 
-        result_dictionaries = run_safely(run_tests, [
-            tool_definition,
-        ], is_quiet, as_json)['results']
+        result_dictionaries = run_safely(run_tests, {
+            'tool_definition': tool_definition,
+        }, is_quiet, as_json)['results']
 
         if args.is_mock:
             return
-        d = run_safely(fetch_resource, [
-            'tools', None, 'POST', tool_definition,
-        ], is_quiet, as_json)
+
+        d = run_safely(fetch_resource, {
+            'resource_name': 'tools',
+            'resource_id': None,
+            'method': 'POST',
+            'data': tool_definition,
+        }, is_quiet, as_json)
+
         for result_dictionary in result_dictionaries:
             result_dictionary['tool'] = tool_definition
-            run_safely(fetch_resource, [
-                'results', None, 'POST', result_dictionary,
-            ], is_quiet, as_json)
+            run_safely(fetch_resource, {
+                'resource_name': 'results',
+                'resource_id': None,
+                'method': 'POST',
+                'data': result_dictionary,
+            }, is_quiet, as_json)
+
         environ['CROSSCOMPUTE_TOKEN'] = d['token']
         tool_definition_folder = tool_definition['folder']
         script_folder = join(
@@ -58,4 +69,6 @@ class AddToolScript(OutputtingScript):
             print('crosscompute workers run')
         if args.with_worker:
             chdir(tool_definition_folder)
-            run_safely(run_worker, [], is_quiet, as_json)
+            run_safely(run_worker, {
+                'with_tests': False,
+            }, is_quiet, as_json)

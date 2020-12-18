@@ -21,15 +21,16 @@ class SetProjectScript(OutputtingScript):
         is_quiet = args.is_quiet
         as_json = args.as_json
 
-        project_definition = run_safely(load_relevant_path, [
-            args.project_definition_path,
-            PROJECT_FILE_NAME,
-            ['project'],
-        ], is_quiet, as_json)
+        project_definition = run_safely(load_relevant_path, {
+            'path': args.project_definition_path,
+            'name': PROJECT_FILE_NAME,
+            'kinds': ['project'],
+        }, is_quiet, as_json)
         project_id = project_definition.get('id')
 
-        run_safely(fetch_resource, [
-            'projects', project_id,
-            'PATCH' if project_id else 'POST',
-            project_definition,
-        ], is_quiet, as_json)
+        run_safely(fetch_resource, {
+            'resource_name': 'projects',
+            'resource_id': project_id,
+            'method': 'PATCH' if project_id else 'POST',
+            'data': project_definition,
+        }, is_quiet, as_json)

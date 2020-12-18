@@ -102,14 +102,16 @@ def run_tool(tool_definition, result_dictionary, script_command=None):
     return result_dictionary
 
 
-def run_worker(script_command=None, is_quiet=False, as_json=False):
+def run_worker(
+        script_command=None, with_tests=True, is_quiet=False, as_json=False):
     # TODO: Use token to determine the worker type
     tool_definition = fetch_resource('tools', get_token())
     if not is_quiet:
         print(render_object(tool_definition, as_json))
-    test_summary = run_tests(tool_definition)
-    if not is_quiet:
-        print(render_object(test_summary, as_json))
+    if with_tests:
+        test_summary = run_tests(tool_definition)
+        if not is_quiet:
+            print(render_object(test_summary, as_json))
     d = {'result count': 0}
     try:
         for event_name, event_dictionary in yield_echo(d, is_quiet, as_json):
@@ -381,7 +383,6 @@ def process_variable_folder(folder, variable_definitions):
         except Exception:
             print_exception(*exc_info())
             raise CrossComputeImplementationError({'path': 'triggered an exception'})
-        # TODO: Upload to google cloud if large
         variable_dictionaries.append({
             'id': variable_id, 'data': {'value': variable_value}})
     return variable_dictionaries

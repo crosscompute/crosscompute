@@ -10,6 +10,7 @@ class RunWorkerScript(OutputtingScript):
         is_quiet = args.is_quiet
         as_json = args.as_json
 
-        run_safely(run_worker, [
-            join_command_terms(argv),
-        ], is_quiet, as_json)
+        run_safely(run_worker, {
+            'script_command': join_command_terms(argv),
+            'with_tests': True,
+        }, is_quiet, as_json)

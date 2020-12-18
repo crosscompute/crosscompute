@@ -19,13 +19,13 @@ class RunAutomationScript(OutputtingScript):
         is_quiet = args.is_quiet
         as_json = args.as_json
 
-        automation_definition = run_safely(load_relevant_path, [
-            args.automation_definition_path,
-            AUTOMATION_FILE_NAME,
-            ['automation'],
-        ], is_quiet, as_json)
+        automation_definition = run_safely(load_relevant_path, {
+            'path': args.automation_definition_path,
+            'name': AUTOMATION_FILE_NAME,
+            'kinds': ['automation'],
+        }, is_quiet, as_json)
 
-        run_safely(run_automation, [
-            automation_definition,
-            args.is_mock,
-        ], is_quiet, as_json)
+        run_safely(run_automation, {
+            'automation_definition': automation_definition,
+            'is_mock': args.is_mock,
+        }, is_quiet, as_json)
