@@ -175,14 +175,14 @@ def load_electricity_network_json(source_path, variable_id):
 
 SAVE_BY_EXTENSION_BY_VIEW = {
     'text': {
+        '.txt': save_text_txt,
         '.json': save_text_json,
-        '.*': save_text_txt,
     },
     'number': {
         '.json': save_number_json,
     },
     'markdown': {
-        '.*': save_markdown_md,
+        '.md': save_markdown_md,
     },
     'table': {
         '.csv': save_table_csv,
@@ -191,8 +191,8 @@ SAVE_BY_EXTENSION_BY_VIEW = {
         '.png': save_image_png,
     },
     'map': {
-        '.json': save_map_geojson,
         '.geojson': save_map_geojson,
+        '.json': save_map_geojson,
     },
     'electricity-network': {
         '.json': save_electricity_network_json,
@@ -203,14 +203,14 @@ SAVE_BY_EXTENSION_BY_VIEW = {
 # TODO: Consider separating these views into different packages
 LOAD_BY_EXTENSION_BY_VIEW = {
     'text': {
+        '.txt': load_text_txt,
         '.json': load_text_json,
-        '.*': load_text_txt,
     },
     'number': {
         '.json': load_number_json,
     },
     'markdown': {
-        '.*': load_markdown_md,
+        '.md': load_markdown_md,
     },
     'table': {
         '.csv': load_table_csv,
@@ -219,8 +219,8 @@ LOAD_BY_EXTENSION_BY_VIEW = {
         '.png': load_image_png,
     },
     'map': {
-        '.json': load_map_geojson,
         '.geojson': load_map_geojson,
+        '.json': load_map_geojson,
     },
     'electricity-network': {
         '.json': load_electricity_network_json,
