@@ -51,5 +51,6 @@ DEBUG_VARIABLE_DEFINITIONS = [{
 S = {
     'folder': expanduser('~/.crosscompute'),
     'draft.id.length': 16,
+    'maximum_variable_value_length': 1024,
 }
 L = get_log('crosscompute')

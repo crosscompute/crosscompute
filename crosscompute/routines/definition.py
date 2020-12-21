@@ -550,7 +550,7 @@ def get_name_from_id(x_id):
     ).title()
 
 
-def get_nested_value(dictionary, outer_key, inner_key, default_value):
+def get_nested_value(dictionary, outer_key, inner_key, default_value=None):
     d = check_dictionary(dictionary.get(outer_key, {}), outer_key)
     value = d.get(inner_key, default_value)
     if isinstance(default_value, dict):

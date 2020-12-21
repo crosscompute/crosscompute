@@ -14,6 +14,7 @@ class SeeToolScript(OutputtingScript):
         is_quiet = args.is_quiet
         as_json = args.as_json
 
-        run_safely(fetch_resource, [
-            'tools', args.tool_id,
-        ], is_quiet, as_json)
+        run_safely(fetch_resource, {
+            'resource_name': 'tools',
+            'resource_id': args.tool_id,
+        }, is_quiet, as_json)

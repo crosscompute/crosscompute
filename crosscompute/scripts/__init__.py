@@ -26,15 +26,14 @@ def launch(argv=sys.argv):
         formatter_class=RawDescriptionHelpFormatter)
 
 
-def run_safely(function, arguments, is_quiet=False, as_json=False):
-    kwargs = {}
+def run_safely(function, value_by_key, is_quiet=False, as_json=False):
     function_parameters = inspect.signature(function).parameters
     for key in ['is_quiet', 'as_json']:
         if key not in function_parameters:
             continue
-        kwargs[key] = locals()[key]
+        value_by_key[key] = locals()[key]
     try:
-        d = function(*arguments, **kwargs)
+        d = function(**value_by_key)
     except CrossComputeError as e:
         sys.exit(1 if is_quiet else render_object(e.args[0], as_json))
     if not is_quiet:

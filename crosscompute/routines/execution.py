@@ -1,12 +1,16 @@
 import re
+import requests
 import shlex
 import subprocess
 from collections import defaultdict
 from copy import deepcopy
-from invisibleroads_macros_disk import make_folder, make_random_folder
+from invisibleroads_macros_disk import (
+    TemporaryStorage, make_folder, make_random_folder)
 from itertools import chain, product
+from mimetypes import guess_type
 from os import environ, getcwd
-from os.path import abspath, dirname, exists, isdir, join, splitext
+from os.path import (
+    abspath, basename, dirname, getsize, exists, isdir, join, splitext)
 from subprocess import CalledProcessError
 from sys import exc_info
 from traceback import print_exception
@@ -17,6 +21,7 @@ from .connection import (
     get_token,
     yield_echo)
 from .definition import (
+    get_nested_value,
     get_template_dictionary,
     load_definition)
 from .serialization import (
@@ -102,14 +107,16 @@ def run_tool(tool_definition, result_dictionary, script_command=None):
     return result_dictionary
 
 
-def run_worker(script_command=None, is_quiet=False, as_json=False):
+def run_worker(
+        script_command=None, with_tests=True, is_quiet=False, as_json=False):
     # TODO: Use token to determine the worker type
     tool_definition = fetch_resource('tools', get_token())
     if not is_quiet:
         print(render_object(tool_definition, as_json))
-    test_summary = run_tests(tool_definition)
-    if not is_quiet:
-        print(render_object(test_summary, as_json))
+    if with_tests:
+        test_summary = run_tests(tool_definition)
+        if not is_quiet:
+            print(render_object(test_summary, as_json))
     d = {'result count': 0}
     try:
         for event_name, event_dictionary in yield_echo(d, is_quiet, as_json):
@@ -296,6 +303,22 @@ def get_result_folder(result_dictionary):
     return result_folder
 
 
+def prepare_file(file_kind, file_path, file_view):
+    # TODO: Get projects using database using result
+    file_dictionary = fetch_resource('files', method='POST', data={
+        'name': basename(file_path),
+        'kind': 'dataset',
+        'view': file_view,
+        'type': guess_type(file_path)[0],
+        'size': getsize(file_path),
+    })
+    file_id = file_dictionary['id']
+    file_url = file_dictionary['urls']['get']
+    requests.put(file_url, data=open(file_path, 'rb'))
+    fetch_resource('files', file_id, method='PATCH')
+    return {'id': file_id}
+
+
 def prepare_variable_folder(
         folder, variable_definitions, variable_dictionaries):
     value_by_id_by_path = defaultdict(dict)
@@ -381,10 +404,50 @@ def process_variable_folder(folder, variable_definitions):
         except Exception:
             print_exception(*exc_info())
             raise CrossComputeImplementationError({'path': 'triggered an exception'})
-        # TODO: Upload to google cloud if large
         variable_dictionaries.append({
             'id': variable_id, 'data': {'value': variable_value}})
     return variable_dictionaries
+
+
+def process_variable_dictionary(
+        variable_dictionary, variable_definition, prepare_file):
+    variable_value = get_nested_value(variable_dictionary, 'data', 'value')
+    variable_value_length = len(repr(variable_value))
+    if variable_value_length < S['maximum_variable_value_length']:
+        return variable_dictionary
+    variable_id = variable_definition['id']
+    variable_view = variable_definition['view']
+    file_extension, save = list(SAVE_BY_EXTENSION_BY_VIEW[
+        variable_view].items())[0]
+    file_name = f'{variable_id}{file_extension}'
+    with TemporaryStorage() as storage:
+        file_path = join(storage.folder, file_name)
+        save(file_path, variable_value, variable_id, {})
+        file_dictionary = prepare_file('dataset', file_path, variable_view)
+    file_id = file_dictionary['id']
+    variable_dictionary['data'] = {'file': {'id': file_id}}
+    return variable_dictionary
+
+
+def process_result_definition(
+        result_dictionary, tool_definition, prepare_file):
+    for key in 'input', 'output', 'log', 'debug':
+        variable_dictionaries = get_nested_value(
+            result_dictionary, key, 'variables', [])
+        variable_definitions = get_nested_value(
+            tool_definition, key, 'variables', [])
+
+        variable_dictionary_by_id = {
+            _['id']: _ for _ in variable_dictionaries}
+        if not variable_dictionary_by_id:
+            continue
+
+        for variable_definition in variable_definitions:
+            variable_id = variable_definition['id']
+            variable_dictionary = variable_dictionary_by_id[variable_id]
+            process_variable_dictionary(
+                variable_dictionary, variable_definition, prepare_file)
+    return result_dictionary
 
 
 def process_result_input_stream(script_command, is_quiet, as_json):

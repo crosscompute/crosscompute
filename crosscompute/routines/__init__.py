@@ -32,6 +32,7 @@ from .definition import (
 from .execution import (
     get_result_name,
     load_relevant_path,
+    process_result_definition,
     process_variable_folder,
     run_automation,
     run_script,
