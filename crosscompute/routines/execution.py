@@ -7,7 +7,7 @@ from copy import deepcopy
 from invisibleroads_macros_disk import (
     TemporaryStorage, make_folder, make_random_folder)
 from itertools import chain, product
-from mimetypes import guess_type
+# from mimetypes import guess_type
 from os import environ, getcwd
 from os.path import (
     abspath, basename, dirname, getsize, exists, isdir, join, splitext)
@@ -303,16 +303,31 @@ def get_result_folder(result_dictionary):
     return result_folder
 
 
+def get_mime_type(file_path):
+    file_extension = splitext(file_path)[1]
+    try:
+        mime_type = {
+            '.csv': 'text/csv',
+            '.geojson': 'application/geo+json',
+            '.json': 'application/json',
+        }[file_extension]
+    except KeyError:
+        raise CrossComputeDefinitionError({'path': 'has unsupported extension'})
+    return mime_type
+
+
 def prepare_file(file_kind, file_path, file_view):
+    mime_type = get_mime_type(file_path)
+    print(file_kind, file_path, file_view, 'TYPE', mime_type)
     file_dictionary = fetch_resource('files', method='POST', data={
         'name': basename(file_path),
         'kind': 'dataset',
         'view': file_view,
-        'type': guess_type(file_path)[0],
+        'type': mime_type,
         'size': getsize(file_path),
     })
     file_id = file_dictionary['id']
-    file_url = file_dictionary['urls']['get']
+    file_url = file_dictionary['urls']['put']
     requests.put(file_url, data=open(file_path, 'rb'))
     fetch_resource('files', file_id, method='PATCH')
     return {'id': file_id}
