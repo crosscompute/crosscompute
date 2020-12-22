@@ -304,7 +304,6 @@ def get_result_folder(result_dictionary):
 
 
 def prepare_file(file_kind, file_path, file_view):
-    # TODO: Get projects using database using result
     file_dictionary = fetch_resource('files', method='POST', data={
         'name': basename(file_path),
         'kind': 'dataset',
@@ -459,17 +458,20 @@ def process_result_input_stream(script_command, is_quiet, as_json):
         if not is_quiet:
             print('\n' + render_object(chore_dictionary, as_json))
         # TODO: Get tool script from cloud
+        tool_definition = chore_dictionary['tool']
         result_dictionary = chore_dictionary['result']
         result_token = result_dictionary['token']
         try:
             result_dictionary = run_tool(
-                chore_dictionary['tool'], result_dictionary, script_command)
+                tool_definition, result_dictionary, script_command)
         except CrossComputeError as e:
             if not is_quiet:
                 print(render_object(e.args[0], as_json))
             result_progress = -1
         else:
             result_progress = 100
+        result_dictionary = process_result_definition(
+            result_dictionary, tool_definition, prepare_file)
         result_dictionary['progress'] = result_progress
         if not is_quiet:
             print(render_object(result_dictionary, as_json))

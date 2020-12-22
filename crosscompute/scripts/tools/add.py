@@ -7,6 +7,8 @@ from ...routines import (
     fetch_resource,
     get_bash_configuration_text,
     load_relevant_path,
+    prepare_file,
+    process_result_definition,
     run_tests,
     run_worker)
 
@@ -51,6 +53,8 @@ class AddToolScript(OutputtingScript):
         }, is_quiet, as_json)
 
         for result_dictionary in result_dictionaries:
+            result_dictionary = process_result_definition(
+                result_dictionary, tool_definition, prepare_file)
             result_dictionary['tool'] = tool_definition
             run_safely(fetch_resource, {
                 'resource_name': 'results',
