@@ -7,7 +7,7 @@ from copy import deepcopy
 from invisibleroads_macros_disk import (
     TemporaryStorage, make_folder, make_random_folder)
 from itertools import chain, product
-# from mimetypes import guess_type
+from mimetypes import guess_type
 from os import environ, getcwd
 from os.path import (
     abspath, basename, dirname, getsize, exists, isdir, join, splitext)
@@ -305,14 +305,13 @@ def get_result_folder(result_dictionary):
 
 def get_mime_type(file_path):
     file_extension = splitext(file_path)[1]
-    try:
-        mime_type = {
-            '.csv': 'text/csv',
-            '.geojson': 'application/geo+json',
-            '.json': 'application/json',
-        }[file_extension]
-    except KeyError:
-        raise CrossComputeDefinitionError({'path': 'has unsupported extension'})
+    if file_extension == '.geojson':
+        mime_type = 'application/geo+json'
+    else:
+        mime_type = guess_type(file_path)[0]
+    if mime_type is None:
+        raise CrossComputeDefinitionError({
+            'path': 'has unsupported extension'})
     return mime_type
 
 
