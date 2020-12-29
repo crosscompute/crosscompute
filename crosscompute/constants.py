@@ -26,6 +26,7 @@ VIEW_NAMES = [
     'image',
     'map',
     'electricity-network',
+    'file',
 ]
 DEFAULT_VIEW_NAME = 'text'
 
