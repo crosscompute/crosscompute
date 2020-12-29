@@ -304,6 +304,7 @@ def get_result_folder(result_dictionary):
 
 
 def get_mime_type(file_path):
+    print('XXX', file_path)
     file_extension = splitext(file_path)[1]
     if file_extension == '.geojson':
         mime_type = 'application/geo+json'

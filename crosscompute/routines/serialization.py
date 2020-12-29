@@ -46,7 +46,7 @@ def save_binary_base64(target_path, value):
     save_binary(target_path, b64decode(value))
 
 
-def save_binary(target_path, value):
+def save_binary(target_path, value, variable_id=None, value_by_id_by_path=None):
     open(target_path, 'wb').write(value)
 
 
@@ -111,7 +111,7 @@ def load_binary_base64(source_path):
     return variable_value.decode('utf-8')
 
 
-def load_binary(source_path):
+def load_binary(source_path, variable_id=None):
     return open(source_path, 'rb').read()
 
 
@@ -197,6 +197,10 @@ SAVE_BY_EXTENSION_BY_VIEW = {
     'electricity-network': {
         '.json': save_electricity_network_json,
     },
+    'file': {
+        '.bin': save_binary,
+        '.*': save_binary,
+    },
 }
 
 
@@ -224,5 +228,9 @@ LOAD_BY_EXTENSION_BY_VIEW = {
     },
     'electricity-network': {
         '.json': load_electricity_network_json,
+    },
+    'file': {
+        '.bin': load_binary,
+        '.*': load_binary,
     },
 }
