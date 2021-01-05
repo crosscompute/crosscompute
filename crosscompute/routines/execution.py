@@ -305,16 +305,31 @@ def get_result_folder(result_dictionary):
     return result_folder
 
 
+def get_mime_type(file_path):
+    print('XXX', file_path)
+    file_extension = splitext(file_path)[1]
+    if file_extension == '.geojson':
+        mime_type = 'application/geo+json'
+    else:
+        mime_type = guess_type(file_path)[0]
+    if mime_type is None:
+        raise CrossComputeDefinitionError({
+            'path': 'has unsupported extension'})
+    return mime_type
+
+
 def prepare_file(file_kind, file_path, file_view):
+    mime_type = get_mime_type(file_path)
+    print(file_kind, file_path, file_view, 'TYPE', mime_type)
     file_dictionary = fetch_resource('files', method='POST', data={
         'name': basename(file_path),
         'kind': 'dataset',
         'view': file_view,
-        'type': guess_type(file_path)[0],
+        'type': mime_type,
         'size': getsize(file_path),
     })
     file_id = file_dictionary['id']
-    file_url = file_dictionary['urls']['get']
+    file_url = file_dictionary['urls']['put']
     requests.put(file_url, data=open(file_path, 'rb'))
     fetch_resource('files', file_id, method='PATCH')
     return {'id': file_id}

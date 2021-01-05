@@ -39,9 +39,19 @@ def parse_number_safely(raw_value):
 def parse_number(raw_value):
     # TODO: Consider moving to invisibleroads_macros_configuration
     try:
-        value = int(raw_value)
+        integer_value = int(raw_value)
     except ValueError:
-        value = float(raw_value)
+        integer_value = None
+    try:
+        float_value = float(raw_value)
+    except ValueError:
+        float_value = None
+    if integer_value is None and float_value is None:
+        raise ValueError
+    elif integer_value != float_value:
+        value = float_value
+    else:
+        value = integer_value
     return value
 
 
