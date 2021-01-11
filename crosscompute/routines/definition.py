@@ -205,18 +205,34 @@ def normalize_data(raw_data, view_name):
 def normalize_data_dictionary(raw_data_dictionary, view_name):
     check_dictionary(raw_data_dictionary, 'data')
     has_value = 'value' in raw_data_dictionary
+    has_dataset = 'dataset' in raw_data_dictionary
     has_file = 'file' in raw_data_dictionary
-    if not has_value and not has_file:
+    if not has_value and not has_dataset and not has_file:
         raise CrossComputeDefinitionError({
             'data': 'must have value or file'})
     data_dictionary = {}
     if has_value:
         data_dictionary['value'] = normalize_value(
             raw_data_dictionary['value'], view_name)
+    elif has_dataset:
+        data_dictionary['dataset'] = normalize_dataset_dictionary(
+            raw_data_dictionary['dataset'])
     elif has_file:
         data_dictionary['file'] = normalize_file_dictionary(
             raw_data_dictionary['file'])
     return data_dictionary
+
+
+def normalize_value(raw_value, view_name):
+    if view_name == 'number':
+        try:
+            value = parse_number(raw_value)
+        except ValueError:
+            raise CrossComputeDefinitionError({
+                'value': f'could not parse number {raw_value}'})
+    else:
+        value = raw_value
+    return value
 
 
 def normalize_file_dictionary(raw_file_dictionary):
@@ -231,16 +247,24 @@ def normalize_file_dictionary(raw_file_dictionary):
     return file_dictionary
 
 
-def normalize_value(raw_value, view_name):
-    if view_name == 'number':
-        try:
-            value = parse_number(raw_value)
-        except ValueError:
-            raise CrossComputeDefinitionError({
-                'value': f'could not parse number {raw_value}'})
-    else:
-        value = raw_value
-    return value
+def normalize_dataset_dictionary(raw_dataset_dictionary):
+    check_dictionary(raw_dataset_dictionary, 'dataset')
+    try:
+        dataset_id = raw_dataset_dictionary['id']
+    except KeyError:
+        raise CrossComputeDefinitionError({
+            'id': 'is required for each dataset'})
+    try:
+        version_dictionary = raw_dataset_dictionary['version']
+    except KeyError:
+        raise CrossComputeDefinitionError({
+            'version': 'is required for each dataset'})
+    try:
+        version_id = version_dictionary['id']
+    except KeyError:
+        raise CrossComputeDefinitionError({
+            'id': 'is required for each version'})
+    return {'id': dataset_id, 'version': {'id': version_id}}
 
 
 def normalize_style_rule_strings(raw_style_rule_strings):

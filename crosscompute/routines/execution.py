@@ -6,6 +6,7 @@ import shlex
 import subprocess
 from collections import defaultdict
 from copy import deepcopy
+from functools import partial
 from invisibleroads_macros_disk import (
     TemporaryStorage, make_folder, make_random_folder)
 from itertools import chain, product
@@ -306,7 +307,6 @@ def get_result_folder(result_dictionary):
 
 
 def get_mime_type(file_path):
-    print('XXX', file_path)
     file_extension = splitext(file_path)[1]
     if file_extension == '.geojson':
         mime_type = 'application/geo+json'
@@ -318,21 +318,23 @@ def get_mime_type(file_path):
     return mime_type
 
 
-def prepare_file(file_kind, file_path, file_view):
+def prepare_dataset(file_path, file_view, project_dictionaries):
     mime_type = get_mime_type(file_path)
-    print(file_kind, file_path, file_view, 'TYPE', mime_type)
-    file_dictionary = fetch_resource('files', method='POST', data={
+    dataset_dictionary = fetch_resource('datasets', method='POST', data={
         'name': basename(file_path),
-        'kind': 'dataset',
         'view': file_view,
         'type': mime_type,
         'size': getsize(file_path),
+        'projects': project_dictionaries,
     })
+    dataset_id = dataset_dictionary['id']
+    dataset_version_id = dataset_dictionary['version']['id']
+    file_dictionary = dataset_dictionary['file']
     file_id = file_dictionary['id']
-    file_url = file_dictionary['urls']['put']
+    file_url = file_dictionary['url']
     requests.put(file_url, data=open(file_path, 'rb'))
     fetch_resource('files', file_id, method='PATCH')
-    return {'id': file_id}
+    return {'id': dataset_id, 'version': {'id': dataset_version_id}}
 
 
 def prepare_variable_folder(
@@ -348,11 +350,20 @@ def prepare_variable_folder(
                 'variable': f'could not find data for {variable_id}'})
         file_path = join(folder, variable_definition['path'])
         make_folder(dirname(file_path))
+        if 'dataset' in variable_data:
+            if not exists(file_path):
+                dataset_dictionary = variable_data['dataset']
+                dataset_id = dataset_dictionary['id']
+                dataset_version_id = dataset_dictionary['version']['id']
+                d = fetch_resource(
+                    'datasets', dataset_id + '/versions/' + dataset_version_id)
+                download(d['url'], file_path)
+            continue
         if 'file' in variable_data:
             if not exists(file_path):
                 file_id = variable_data['file']['id']
                 d = fetch_resource('files', file_id)
-                download(d['urls']['get'], file_path)
+                download(d['url'], file_path)
             continue
         if 'value' not in variable_data:
             continue
@@ -426,7 +437,7 @@ def process_variable_folder(folder, variable_definitions):
 
 
 def process_variable_dictionary(
-        variable_dictionary, variable_definition, prepare_file):
+        variable_dictionary, variable_definition, prepare_dataset):
     variable_value = get_nested_value(variable_dictionary, 'data', 'value')
     variable_value_length = len(repr(variable_value))
     if variable_value_length < S['maximum_variable_value_length']:
@@ -439,14 +450,19 @@ def process_variable_dictionary(
     with TemporaryStorage() as storage:
         file_path = join(storage.folder, file_name)
         save(file_path, variable_value, variable_id, {})
-        file_dictionary = prepare_file('dataset', file_path, variable_view)
-    file_id = file_dictionary['id']
-    variable_dictionary['data'] = {'file': {'id': file_id}}
+        dataset_dictionary = prepare_dataset(file_path, variable_view)
+    dataset_id = dataset_dictionary['id']
+    dataset_version_id = dataset_dictionary['version']['id']
+    variable_dictionary['data'] = {'dataset': {
+        'id': dataset_id, 'version': {'id': dataset_version_id}}}
     return variable_dictionary
 
 
 def process_result_definition(
-        result_dictionary, tool_definition, prepare_file):
+        result_dictionary, tool_definition, prepare_dataset):
+    prepare_dataset = partial(
+        prepare_dataset,
+        project_dictionaries=result_dictionary.get('projects', {}))
     for key in 'input', 'output', 'log', 'debug':
         variable_dictionaries = get_nested_value(
             result_dictionary, key, 'variables', [])
@@ -462,7 +478,7 @@ def process_result_definition(
             variable_id = variable_definition['id']
             variable_dictionary = variable_dictionary_by_id[variable_id]
             process_variable_dictionary(
-                variable_dictionary, variable_definition, prepare_file)
+                variable_dictionary, variable_definition, prepare_dataset)
     return result_dictionary
 
 
@@ -488,7 +504,7 @@ def process_result_input_stream(script_command, is_quiet, as_json):
         else:
             result_progress = 100
         result_dictionary = process_result_definition(
-            result_dictionary, tool_definition, prepare_file)
+            result_dictionary, tool_definition, prepare_dataset)
         result_dictionary['progress'] = result_progress
         if not is_quiet:
             print(render_object(result_dictionary, as_json))
