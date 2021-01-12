@@ -462,7 +462,7 @@ def process_result_definition(
         result_dictionary, tool_definition, prepare_dataset):
     prepare_dataset = partial(
         prepare_dataset,
-        project_dictionaries=result_dictionary.get('projects', {}))
+        project_dictionaries=result_dictionary.get('projects', []))
     for key in 'input', 'output', 'log', 'debug':
         variable_dictionaries = get_nested_value(
             result_dictionary, key, 'variables', [])
