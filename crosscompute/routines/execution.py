@@ -357,7 +357,7 @@ def prepare_variable_folder(
                 dataset_version_id = dataset_dictionary['version']['id']
                 d = fetch_resource(
                     'datasets', dataset_id + '/versions/' + dataset_version_id)
-                download(d['url'], file_path)
+                download(d['file']['url'], file_path)
             continue
         if 'file' in variable_data:
             if not exists(file_path):
