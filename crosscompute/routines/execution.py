@@ -145,8 +145,9 @@ def run_script(script_command, script_folder, script_environment):
             script_arguments, env=script_environment, cwd=script_folder,
             stdout=stdout_file, stderr=stderr_file, encoding='utf-8',
             check=True)
-    except FileNotFoundError as e:
-        raise CrossComputeDefinitionError(e)
+    except FileNotFoundError:
+        raise CrossComputeDefinitionError({
+            'script': 'could not run command ' + ' '.join(script_arguments)})
     except CalledProcessError:
         raise CrossComputeExecutionError({
             'stdout': clean_bash_output(stdout_file),
