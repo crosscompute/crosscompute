@@ -8,8 +8,11 @@ from crosscompute.routines import (
     load_definition,
     load_raw_definition,
     normalize_automation_definition,
+    normalize_data,
     normalize_data_dictionary,
     normalize_definition,
+    normalize_environment_variable_dictionaries,
+    normalize_file_dictionary,
     normalize_result_definition,
     normalize_template_dictionaries,
     normalize_test_dictionaries,
@@ -24,6 +27,7 @@ from conftest import (
     flatten_values,
     start_server,
     AUTOMATION_RESULT_DEFINITION_PATH,
+    EXAMPLES_FOLDER,
     PROJECT_DEFINITION_PATH,
     RESULT_BATCH_DEFINITION_PATH,
     TOOL_DEFINITION_PATH,
@@ -151,6 +155,22 @@ def test_normalize_value():
     assert normalize_value('5', 'number') == 5
 
 
+def test_normalize_data():
+    with raises(CrossComputeDefinitionError):
+        normalize_data('', 'text')
+    assert normalize_data([{'value': 'a'}], 'text')[0]['value'] == 'a'
+    with raises(CrossComputeDefinitionError):
+        normalize_data({'batch': {}}, 'number', EXAMPLES_FOLDER)
+    with raises(CrossComputeDefinitionError):
+        normalize_data({'batch': {'path': 'x.txt'}}, 'number', EXAMPLES_FOLDER)
+    assert normalize_data({
+        'batch': {'path': 'result-batch.txt'},
+    }, 'number', EXAMPLES_FOLDER)[0]['value'] == 1
+    assert normalize_data({
+        'value': 1,
+    }, 'number', EXAMPLES_FOLDER)['value'] == 1
+
+
 def test_normalize_data_dictionary():
     with raises(CrossComputeDefinitionError):
         normalize_data_dictionary([], 'text')
@@ -158,6 +178,20 @@ def test_normalize_data_dictionary():
         normalize_data_dictionary({}, 'text')
     assert normalize_data_dictionary({
         'value': '1'}, 'number') == {'value': 1}
+    assert normalize_data_dictionary({
+        'dataset': {'id': 'x', 'version': {'id': 'a'}},
+    }, 'number')['dataset']['id'] == 'x'
+    assert normalize_data_dictionary({
+        'file': {'id': 'x'},
+    }, 'number')['file']['id'] == 'x'
+
+
+def test_normalize_file_dictionary():
+    with raises(CrossComputeDefinitionError):
+        normalize_file_dictionary('')
+    with raises(CrossComputeDefinitionError):
+        normalize_file_dictionary({})
+    assert normalize_file_dictionary({'id': 'a'})['id'] == 'a'
 
 
 def test_normalize_tool_variable_dictionaries():
@@ -169,6 +203,14 @@ def test_normalize_tool_variable_dictionaries():
         'id': 'mosquito_count', 'path': 'x'}])[0]
     assert d['name'] == 'Mosquito Count'
     assert d['view'] == DEFAULT_VIEW_NAME
+
+
+def test_normalize_environment_variable_dictionaries():
+    with raises(CrossComputeDefinitionError):
+        normalize_environment_variable_dictionaries('')
+    with raises(CrossComputeDefinitionError):
+        normalize_environment_variable_dictionaries([{}])
+    normalize_environment_variable_dictionaries([{'id': 'a'}])
 
 
 def test_normalize_template_dictionaries():

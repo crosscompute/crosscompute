@@ -131,7 +131,7 @@ def normalize_result_definition(raw_result_definition, folder=None):
         tool_definition, 'input', 'variables', [])
     result_definition['input'] = {
         'variables': normalize_result_variable_dictionaries(
-            raw_variable_dictionaries, variable_definitions)}
+            raw_variable_dictionaries, variable_definitions, folder)}
 
     if 'print' in raw_result_definition:
         result_definition['print'] = get_print_dictionary(
@@ -191,14 +191,27 @@ def normalize_version_dictionary(raw_version_dictionary):
     return version_dictionary
 
 
-def normalize_data(raw_data, view_name):
-    if isinstance(raw_data, dict):
-        data = normalize_data_dictionary(raw_data, view_name)
-    elif isinstance(raw_data, list):
-        data = [normalize_data_dictionary(_, view_name) for _ in raw_data]
-    else:
+def normalize_data(raw_data, view_name, folder=None):
+    is_dictionary = isinstance(raw_data, dict)
+    is_list = isinstance(raw_data, list)
+    if not is_dictionary and not is_list:
         raise CrossComputeDefinitionError({
             'data': 'must be a dictionary or list'})
+    if is_list:
+        data = [normalize_data_dictionary(_, view_name) for _ in raw_data]
+    elif folder is not None and 'batch' in raw_data:
+        batch_dictionary = normalize_batch_dictionary(raw_data['batch'])
+        batch_path = batch_dictionary['path']
+        try:
+            batch_file = open(join(folder, batch_path))
+        except IOError:
+            raise CrossComputeDefinitionError({
+                'path': f'is bad for {batch_path}'})
+        data = [{
+            'value': normalize_value(_.strip(), view_name),
+        } for _ in batch_file]
+    else:
+        data = normalize_data_dictionary(raw_data, view_name)
     return data
 
 
@@ -209,7 +222,7 @@ def normalize_data_dictionary(raw_data_dictionary, view_name):
     has_file = 'file' in raw_data_dictionary
     if not has_value and not has_dataset and not has_file:
         raise CrossComputeDefinitionError({
-            'data': 'must have value or file'})
+            'data': 'must have value or dataset or file'})
     data_dictionary = {}
     if has_value:
         data_dictionary['value'] = normalize_value(
@@ -221,6 +234,18 @@ def normalize_data_dictionary(raw_data_dictionary, view_name):
         data_dictionary['file'] = normalize_file_dictionary(
             raw_data_dictionary['file'])
     return data_dictionary
+
+
+def normalize_batch_dictionary(raw_batch_dictionary):
+    check_dictionary(raw_batch_dictionary, 'batch')
+    try:
+        path = raw_batch_dictionary['path']
+    except KeyError:
+        raise CrossComputeDefinitionError({
+            'path': 'is required for batch'})
+    return {
+        'path': path,
+    }
 
 
 def normalize_value(raw_value, view_name):
@@ -280,7 +305,7 @@ def normalize_style_rule_strings(raw_style_rule_strings):
 
 
 def normalize_result_variable_dictionaries(
-        raw_variable_dictionaries, variable_definitions):
+        raw_variable_dictionaries, variable_definitions, folder=None):
     check_list(raw_variable_dictionaries, 'variables')
     try:
         raw_variable_dictionary_by_id = {
@@ -305,7 +330,7 @@ def normalize_result_variable_dictionaries(
         except KeyError:
             raise CrossComputeDefinitionError({
                 'data': 'is required for each result variable'})
-        variable_data = normalize_data(variable_data, variable_view)
+        variable_data = normalize_data(variable_data, variable_view, folder)
         variable_dictionaries.append({
             'id': variable_id, 'data': variable_data})
     return variable_dictionaries
@@ -339,9 +364,9 @@ def normalize_environment_variable_dictionaries(raw_variable_dictionaries):
     for raw_variable_dictionary in raw_variable_dictionaries:
         try:
             variable_id = raw_variable_dictionary['id']
-        except KeyError as e:
+        except KeyError:
             raise CrossComputeDefinitionError({
-                e.args[0]: 'is required for each environment variable'})
+                'id': 'is required for each environment variable'})
         variable_dictionaries.append({'id': variable_id})
     return variable_dictionaries
 
