@@ -190,7 +190,7 @@ def run_tests(tool_definition):
 
 def render_result(tool_definition, result_dictionary):
     blocks = render_blocks(tool_definition, result_dictionary)
-    styles = result_dictionary.get('style', {}).get('rules', [])
+    styles = result_dictionary.get('print', {}).get('style', {}).get('rules', [])
     document_dictionary = {
         'blocks': blocks,
         'styles': styles,
