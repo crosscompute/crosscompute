@@ -439,12 +439,16 @@ def process_variable_folder(folder, variable_definitions):
 
 def process_variable_dictionary(
         variable_dictionary, variable_definition, prepare_dataset):
+    variable_view = variable_definition['view']
     variable_value = get_nested_value(variable_dictionary, 'data', 'value')
     variable_value_length = len(repr(variable_value))
-    if variable_value_length < S['maximum_variable_value_length']:
+    if variable_view in [
+        'text',
+        'number',
+        'markdown',
+    ] and variable_value_length < S['maximum_variable_value_length']:
         return variable_dictionary
     variable_id = variable_definition['id']
-    variable_view = variable_definition['view']
     file_extension, save = list(SAVE_BY_EXTENSION_BY_VIEW[
         variable_view].items())[0]
     file_name = f'{variable_id}{file_extension}'
