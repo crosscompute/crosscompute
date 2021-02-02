@@ -1,5 +1,6 @@
-# TODO: Consider sanitize_json_values for result input, output, log, debug
+# TODO: Consider sanitize_json_value for result input, output, log, debug
 
+import json
 import re
 import requests
 import shlex
@@ -9,6 +10,7 @@ from copy import deepcopy
 from functools import partial
 from invisibleroads_macros_disk import (
     TemporaryStorage, make_folder, make_random_folder)
+from io import StringIO
 from itertools import chain, product
 from mimetypes import guess_type
 from os import environ, getcwd
@@ -40,6 +42,8 @@ from ..exceptions import (
     CrossComputeExecutionError,
     CrossComputeImplementationError,
     CrossComputeKeyboardInterrupt)
+from ..macros import (
+    sanitize_json_value)
 from ..symmetries import download
 
 
@@ -333,7 +337,11 @@ def prepare_dataset(file_path, file_view, project_dictionaries):
     file_dictionary = dataset_dictionary['file']
     file_id = file_dictionary['id']
     file_url = file_dictionary['url']
-    requests.put(file_url, data=open(file_path, 'rb'))
+    file_object = open(file_path, 'rb')
+    if file_path.endswith('json'):
+        d = sanitize_json_value(json.load(file_object))
+        file_object = StringIO(json.dumps(d))
+    requests.put(file_url, data=file_object)
     fetch_resource('files', file_id, method='PATCH')
     return {'id': dataset_id, 'version': {'id': dataset_version_id}}
 
