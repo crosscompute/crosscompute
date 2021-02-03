@@ -450,6 +450,8 @@ def process_variable_dictionary(
     variable_view = variable_definition['view']
     variable_value = get_nested_value(variable_dictionary, 'data', 'value')
     variable_value_length = len(repr(variable_value))
+    if 'value' not in variable_dictionary:
+        return variable_dictionary
     if variable_view in [
         'text',
         'number',
