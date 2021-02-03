@@ -92,6 +92,10 @@ def save_image_png(target_path, value, variable_id, value_by_id_by_path):
     save_binary_base64(target_path, value)
 
 
+def save_image_jpg(target_path, value, variable_id, value_by_id_by_path):
+    save_binary_base64(target_path, value)
+
+
 def save_map_geojson(target_path, value, variable_id, value_by_id_by_path):
     geojson.dump(value, open(target_path, 'wt'))
 
@@ -167,6 +171,10 @@ def load_image_png(source_path, variable_id):
     return load_binary_base64(source_path)
 
 
+def load_image_jpg(source_path, variable_id):
+    return load_binary_base64(source_path)
+
+
 def load_map_geojson(source_path, variable_id):
     try:
         variable_value = geojson.load(open(source_path, 'rt'))
@@ -197,6 +205,7 @@ SAVE_BY_EXTENSION_BY_VIEW = {
     },
     'image': {
         '.png': save_image_png,
+        '.jpg': save_image_jpg,
     },
     'map': {
         '.geojson': save_map_geojson,
@@ -229,6 +238,7 @@ LOAD_BY_EXTENSION_BY_VIEW = {
     },
     'image': {
         '.png': load_image_png,
+        '.jpg': load_image_jpg,
     },
     'map': {
         '.geojson': load_map_geojson,
