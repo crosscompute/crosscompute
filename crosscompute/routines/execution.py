@@ -448,10 +448,11 @@ def process_variable_folder(folder, variable_definitions):
 def process_variable_dictionary(
         variable_dictionary, variable_definition, prepare_dataset):
     variable_view = variable_definition['view']
-    variable_value = get_nested_value(variable_dictionary, 'data', 'value')
-    variable_value_length = len(repr(variable_value))
-    if 'value' not in variable_dictionary:
+    variable_data = variable_dictionary['data']
+    if 'value' not in variable_data:
         return variable_dictionary
+    variable_value = variable_data['value']
+    variable_value_length = len(repr(variable_value))
     if variable_view in [
         'text',
         'number',
