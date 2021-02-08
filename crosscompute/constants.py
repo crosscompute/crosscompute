@@ -40,12 +40,12 @@ DEBUG_VARIABLE_DEFINITIONS = [{
     'id': 'stdout',
     'name': 'Standard Output',
     'view': 'text',
-    'path': 'stdout.log',
+    'path': 'stdout.txt',
 }, {
     'id': 'stderr',
     'name': 'Standard Error',
     'view': 'text',
-    'path': 'stderr.log',
+    'path': 'stderr.txt',
 }]
 
 

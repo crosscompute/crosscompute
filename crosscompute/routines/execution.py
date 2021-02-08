@@ -101,11 +101,12 @@ def run_tool(tool_definition, result_dictionary, script_command=None):
     run_script(script_command.format(
         **folder_by_key), script_folder, script_environment)
     for folder_name in 'output', 'log', 'debug':
-        if folder_name not in tool_definition:
-            continue
-        variable_definitions = tool_definition[folder_name]['variables']
+        variable_definitions = get_nested_value(
+            tool_definition, folder_name, 'variables', [])
         if folder_name == 'debug':
             variable_definitions += DEBUG_VARIABLE_DEFINITIONS
+        if not variable_definitions:
+            continue
         result_dictionary[folder_name] = {
             'variables': process_variable_folder(folder_by_name[
                 folder_name], variable_definitions)}
@@ -142,8 +143,8 @@ def run_worker(
 def run_script(script_command, script_folder, script_environment):
     script_arguments = shlex.split(script_command)
     debug_folder = script_environment.get('CROSSCOMPUTE_DEBUG_FOLDER', '')
-    stdout_file = open(join(debug_folder, 'stdout.log'), 'w+t')
-    stderr_file = open(join(debug_folder, 'stderr.log'), 'w+t')
+    stdout_file = open(join(debug_folder, 'stdout.txt'), 'w+t')
+    stderr_file = open(join(debug_folder, 'stderr.txt'), 'w+t')
     try:
         subprocess.run(
             script_arguments, env=script_environment, cwd=script_folder,
