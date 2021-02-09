@@ -127,12 +127,11 @@ def run_worker(
         test_summary = run_tests(tool_definition)
         if not is_quiet:
             print(render_object(test_summary, as_json))
-    d = {'result count': 0}
+    d = defaultdict(int)
     while True:
         try:
             for [
-                event_name,
-                event_dictionary,
+                event_name, event_dictionary,
             ] in yield_echo(d, is_quiet, as_json):
                 if event_name == 'i' or d['ping count'] % 100 == 0:
                     d['result count'] += process_result_input_stream(
@@ -152,7 +151,7 @@ def run_worker(
         print('\n' + get_bash_configuration_text())
         print('cd ' + getcwd())
         print('crosscompute workers run')
-    return d
+    return dict(d)
 
 
 def run_script(script_command, script_folder, script_environment):
