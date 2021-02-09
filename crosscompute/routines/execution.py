@@ -5,6 +5,7 @@ import re
 import requests
 import shlex
 import subprocess
+import time
 from collections import defaultdict
 from copy import deepcopy
 from functools import partial
@@ -37,6 +38,7 @@ from .serialization import (
     SAVE_BY_EXTENSION_BY_VIEW)
 from ..constants import DEBUG_VARIABLE_DEFINITIONS, S
 from ..exceptions import (
+    CrossComputeConnectionError,
     CrossComputeDefinitionError,
     CrossComputeError,
     CrossComputeExecutionError,
@@ -126,13 +128,26 @@ def run_worker(
         if not is_quiet:
             print(render_object(test_summary, as_json))
     d = {'result count': 0}
-    try:
-        for event_name, event_dictionary in yield_echo(d, is_quiet, as_json):
-            if event_name == 'i' or d['ping count'] % 100 == 0:
-                d['result count'] += process_result_input_stream(
-                    script_command, is_quiet, as_json)
-    except CrossComputeKeyboardInterrupt:
-        pass
+    while True:
+        try:
+            for [
+                event_name,
+                event_dictionary,
+            ] in yield_echo(d, is_quiet, as_json):
+                if event_name == 'i' or d['ping count'] % 100 == 0:
+                    d['result count'] += process_result_input_stream(
+                        script_command, is_quiet, as_json)
+        except CrossComputeKeyboardInterrupt:
+            break
+        except (
+            CrossComputeConnectionError,
+            requests.exceptions.HTTPError,
+        ) as e:
+            print(e)
+            time.sleep(1)
+        except Exception:
+            print_exception(*exc_info())
+            time.sleep(1)
     if not is_quiet and not as_json:
         print('\n' + get_bash_configuration_text())
         print('cd ' + getcwd())
