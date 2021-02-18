@@ -18,7 +18,8 @@ from crosscompute.routines import (
     normalize_test_dictionaries,
     normalize_tool_definition_head,
     normalize_tool_variable_dictionaries,
-    normalize_value)
+    normalize_value,
+    parse_block_dictionaries)
 from http.server import BaseHTTPRequestHandler
 from os import environ
 from pytest import raises
@@ -258,6 +259,13 @@ def test_get_nested_value():
     with raises(CrossComputeDefinitionError):
         get_nested_value({'a': {'b': {}}}, 'a', 'b', [])
     assert get_nested_value({}, 'a', 'b', '') == ''
+
+
+def test_parse_block_dictionaries():
+    assert parse_block_dictionaries('', []) == []
+    assert parse_block_dictionaries('{ }', [])[0]['data']['value'] == '{ }'
+    assert parse_block_dictionaries('{x}', [])[0]['data']['value'] == '{x}'
+    assert parse_block_dictionaries('{x}', [{'id': 'x'}])[0]['id'] == 'x'
 
 
 def assert_definition_types(definition):
