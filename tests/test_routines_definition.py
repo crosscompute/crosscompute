@@ -101,7 +101,7 @@ def test_load_raw_definition(tmpdir):
         load_raw_definition(source_path)
 
     with open(source_path, 'wt') as source_file:
-        json.dump({'crosscompute': 'x'}, source_file)
+        json.dump({'crosscompute': '0.0.1'}, source_file)
     with raises(CrossComputeDefinitionError):
         load_raw_definition(source_path)
 
