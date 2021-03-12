@@ -60,26 +60,36 @@ class SafeDict(dict):
         return '{' + key + '}'
 
 
-def run_automation(automation_definition, is_mock):
+def run_automation(automation_definition, is_mock=True, log=None):
     automation_kind = automation_definition['kind']
     if automation_kind == 'result':
-        d = run_result_automation(automation_definition, is_mock)
+        d = run_result_automation(automation_definition, is_mock, log)
     elif automation_kind == 'report':
         raise CrossComputeImplementationError({
             'report': 'has not been implemented yet'})
     return d
 
 
-def run_result_automation(result_definition, is_mock=True):
+def run_report_automation(report_automation, is_mock=True, log=print):
+    d = {}
+    return d
+
+
+def run_result_automation(result_definition, is_mock=True, log=print):
+    result_dictionaries = list(yield_result_dictionary(result_definition))
+    result_count = len(result_dictionaries)
     document_dictionaries = []
-    for result_dictionary in yield_result_dictionary(result_definition):
+    for result_index, result_dictionary in enumerate(result_dictionaries):
+        log({
+            'index': result_index,
+            'count': result_count,
+            'result': result_dictionary,
+        })
         tool_definition = result_dictionary.pop('tool')
         result_dictionary = run_tool(tool_definition, result_dictionary)
         document_dictionary = render_result(tool_definition, result_dictionary)
         document_dictionaries.append(document_dictionary)
-    d = {
-        'documents': document_dictionaries,
-    }
+    d = {'documents': document_dictionaries}
     if not is_mock:
         response_json = fetch_resource('prints', method='POST', data=d)
         d['url'] = response_json['url']
