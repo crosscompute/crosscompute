@@ -60,7 +60,7 @@ class SafeDict(dict):
         return '{' + key + '}'
 
 
-def run_automation(automation_definition, is_mock=True, log=None):
+def run_automation(automation_definition, is_mock=True, log=print):
     automation_kind = automation_definition['kind']
     if automation_kind == 'result':
         d = run_result_automation(automation_definition, is_mock, log)
