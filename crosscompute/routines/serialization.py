@@ -4,7 +4,10 @@ import json
 import yaml
 from base64 import b64decode, b64encode
 
-from ..exceptions import CrossComputeExecutionError
+from ..exceptions import (
+    CrossComputeDefinitionError,
+    CrossComputeExecutionError,
+    CrossComputeImplementationError)
 from ..macros import get_plain_value, parse_number, parse_number_safely
 from ..symmetries import cache
 
@@ -252,3 +255,35 @@ LOAD_BY_EXTENSION_BY_VIEW = {
         '.*': load_binary_bin,
     },
 }
+
+
+def define_save(variable_view, file_extension):
+    try:
+        save_by_extension = SAVE_BY_EXTENSION_BY_VIEW[variable_view]
+    except KeyError:
+        raise CrossComputeImplementationError({
+            'view': 'is not yet implemented for save ' + variable_view})
+    try:
+        save = save_by_extension[file_extension]
+    except KeyError:
+        if '.*' not in save_by_extension:
+            raise CrossComputeDefinitionError({
+                'path': 'has unsupported extension ' + file_extension})
+        save = save_by_extension['.*']
+    return save
+
+
+def define_load(variable_view, file_extension):
+    try:
+        load_by_extension = LOAD_BY_EXTENSION_BY_VIEW[variable_view]
+    except KeyError:
+        raise CrossComputeImplementationError({
+            'view': 'is not yet implemented for load ' + variable_view})
+    try:
+        load = load_by_extension[file_extension]
+    except KeyError:
+        if '.*' not in load_by_extension:
+            raise CrossComputeDefinitionError({
+                'path': 'has unsupported extension ' + file_extension})
+        load = load_by_extension['.*']
+    return load

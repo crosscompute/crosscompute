@@ -14,9 +14,9 @@ from crosscompute.routines import (
     normalize_environment_variable_dictionaries,
     normalize_file_dictionary,
     normalize_result_definition,
-    normalize_template_dictionaries,
     normalize_test_dictionaries,
     normalize_tool_definition_head,
+    normalize_tool_template_dictionaries,
     normalize_tool_variable_dictionaries,
     normalize_value)
 from http.server import BaseHTTPRequestHandler
@@ -30,6 +30,7 @@ from conftest import (
     EXAMPLES_FOLDER,
     PROJECT_DEFINITION_PATH,
     RESULT_BATCH_DEFINITION_PATH,
+    RESULT_NESTED_DEFINITION_PATH,
     TOOL_DEFINITION_PATH,
     TOOL_MINIMAL_DEFINITION_PATH)
 
@@ -66,6 +67,15 @@ def test_load_result_batch_definition():
     assert variable_dictionaries[1]['data'] == [
         {'value': 1}, {'value': 2}, {'value': 3}]
     assert len(result_definition['print']['style']['rules']) == 2
+
+
+def test_load_result_nested_definition():
+    result_definition = load_definition(
+        RESULT_NESTED_DEFINITION_PATH, kinds=['result'])
+    assert_definition_types(result_definition)
+    variable_dictionaries = result_definition['input']['variables']
+    assert variable_dictionaries[0]['data'][0]['value'] == 10
+    assert variable_dictionaries[1]['data'][0]['value'] == 1
 
 
 def test_load_tool_minimal_definition():
@@ -160,15 +170,19 @@ def test_normalize_data():
         normalize_data('', 'text')
     assert normalize_data([{'value': 'a'}], 'text')[0]['value'] == 'a'
     with raises(CrossComputeDefinitionError):
-        normalize_data({'batch': {}}, 'number', EXAMPLES_FOLDER)
+        normalize_data({
+            'batch': {},
+        }, 'number', folder=EXAMPLES_FOLDER)
     with raises(CrossComputeDefinitionError):
-        normalize_data({'batch': {'path': 'x.txt'}}, 'number', EXAMPLES_FOLDER)
+        normalize_data({
+            'batch': {'path': 'x.txt'},
+        }, 'number', folder=EXAMPLES_FOLDER)
     assert normalize_data({
         'batch': {'path': 'result-batch.txt'},
-    }, 'number', EXAMPLES_FOLDER)[0]['value'] == 1
+    }, 'number', folder=EXAMPLES_FOLDER)[0]['value'] == 1
     assert normalize_data({
         'value': 1,
-    }, 'number', EXAMPLES_FOLDER)['value'] == 1
+    }, 'number')['value'] == 1
 
 
 def test_normalize_data_dictionary():
@@ -213,16 +227,10 @@ def test_normalize_environment_variable_dictionaries():
     normalize_environment_variable_dictionaries([{'id': 'a'}])
 
 
-def test_normalize_template_dictionaries():
-    with raises(CrossComputeDefinitionError):
-        normalize_template_dictionaries([{}], [])
+def test_normalize_tool_template_dictionaries():
+    assert len(normalize_tool_template_dictionaries([{}], [])) == 0
 
-    d = normalize_template_dictionaries([{
-        'id': 'mosquito-report',
-    }], [])[0]
-    assert d['name'] == 'Generated'
-
-    d = normalize_template_dictionaries([{
+    d = normalize_tool_template_dictionaries([{
         'id': 'mosquito-report',
         'blocks': [{'id': 'x'}],
     }], [])[0]

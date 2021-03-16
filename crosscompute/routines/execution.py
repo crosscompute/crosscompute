@@ -12,7 +12,7 @@ from functools import partial
 from invisibleroads_macros_disk import (
     TemporaryStorage, make_folder, make_random_folder)
 from io import StringIO
-from itertools import chain, product
+from itertools import product
 from mimetypes import guess_type
 from os import environ, getcwd
 from os.path import (
@@ -29,12 +29,14 @@ from .connection import (
 from .definition import (
     get_nested_value,
     get_template_dictionary,
+    get_variable_dictionary_by_id,
     load_definition)
 from .serialization import (
+    define_load,
+    define_save,
     load_value_json,
     render_object,
     save_json,
-    LOAD_BY_EXTENSION_BY_VIEW,
     SAVE_BY_EXTENSION_BY_VIEW)
 from ..constants import DEBUG_VARIABLE_DEFINITIONS, S
 from ..exceptions import (
@@ -65,13 +67,54 @@ def run_automation(automation_definition, is_mock=True, log=print):
     if automation_kind == 'result':
         d = run_result_automation(automation_definition, is_mock, log)
     elif automation_kind == 'report':
-        raise CrossComputeImplementationError({
-            'report': 'has not been implemented yet'})
+        d = run_report_automation(automation_definition, is_mock, log)
     return d
 
 
-def run_report_automation(report_automation, is_mock=True, log=print):
-    d = {}
+def run_report_automation(report_definition, is_mock=True, log=print):
+    report_styles = get_nested_value(report_definition, 'print', 'styles', [])
+    report_dictionaries = list(yield_result_dictionary(report_definition))
+    report_count = len(report_dictionaries)
+    document_dictionaries = []
+    for report_index, report_dictionary in enumerate(report_dictionaries):
+        log({
+            'index': report_index, 'count': report_count,
+            'report': report_dictionary})
+        variable_dictionaries = get_nested_value(
+            report_dictionary, 'input', 'variables', [])
+        document_blocks = []
+        for template_dictionary in report_dictionary['templates']:
+            template_kind = template_dictionary.get('kind')
+            if template_kind == 'result':
+                result_dictionary = deepcopy(template_dictionary)
+                tool_definition = result_dictionary.pop('tool')
+                old_variable_dictionary_by_id = get_variable_dictionary_by_id(
+                    get_nested_value(result_dictionary, 'input', 'variables'))
+                new_variable_dictionary_by_id = get_variable_dictionary_by_id(
+                    variable_dictionaries)
+                variable_dictionary_by_id = {
+                    **old_variable_dictionary_by_id,
+                    **new_variable_dictionary_by_id}
+                result_dictionary['input'][
+                    'variables'] = variable_dictionary_by_id.values()
+                result_dictionary = run_tool(tool_definition, result_dictionary)
+                document_dictionary = render_result(
+                    tool_definition, result_dictionary)
+                document_blocks.extend(document_dictionary.get('blocks', []))
+            elif template_kind == 'report':
+                raise CrossComputeImplementationError({
+                    'template': 'does not yet support report definitions'})
+            elif 'blocks' in template_dictionary:
+                raise CrossComputeImplementationError({
+                    'template': 'does not yet support report blocks'})
+            document_dictionaries.append({
+                'blocks': document_blocks,
+                'styles': report_styles,
+            })
+    d = {'documents': document_dictionaries}
+    if not is_mock:
+        response_json = fetch_resource('prints', method='POST', data=d)
+        d['url'] = response_json['url']
     return d
 
 
@@ -81,10 +124,8 @@ def run_result_automation(result_definition, is_mock=True, log=print):
     document_dictionaries = []
     for result_index, result_dictionary in enumerate(result_dictionaries):
         log({
-            'index': result_index,
-            'count': result_count,
-            'result': result_dictionary,
-        })
+            'index': result_index, 'count': result_count,
+            'result': result_dictionary})
         tool_definition = result_dictionary.pop('tool')
         result_dictionary = run_tool(tool_definition, result_dictionary)
         document_dictionary = render_result(tool_definition, result_dictionary)
@@ -300,28 +341,28 @@ def find_relevant_path(path, name):
 
 def yield_result_dictionary(result_definition):
     variable_ids = []
-    data_lists = []
-    for variable_dictionary in result_definition['input']['variables']:
+    variable_data_lists = []
+    for variable_dictionary in get_nested_value(result_definition, 'input', 'variables'):
+        variable_id = variable_dictionary['id']
+        if 'data' not in variable_dictionary:
+            continue
         variable_data = variable_dictionary['data']
         if not isinstance(variable_data, list):
             continue
-        variable_ids.append(variable_dictionary['id'])
-        data_lists.append(variable_data)
-    for variable_data_selection in product(*data_lists):
-        result_dictionary = dict(result_definition)
-        old_variable_id_data_generator = ((
-            _['id'],
-            _['data'],
-        ) for _ in result_dictionary['input']['variables'])
-        new_variable_id_data_generator = zip(
-            variable_ids, variable_data_selection)
-        variable_data_by_id = dict(chain(
-            old_variable_id_data_generator,
-            new_variable_id_data_generator))
-        result_dictionary['input']['variables'] = [{
-            'id': variable_id,
-            'data': variable_data,
-        } for variable_id, variable_data in variable_data_by_id.items()]
+        variable_ids.append(variable_id)
+        variable_data_lists.append(variable_data)
+    for variable_data_selection in product(*variable_data_lists):
+        result_dictionary = deepcopy(result_definition)
+        selected_data_by_id = dict(zip(variable_ids, variable_data_selection))
+
+        def update(variable_dictionary):
+            variable_id = variable_dictionary['id']
+            if variable_id in selected_data_by_id:
+                variable_dictionary['data'] = selected_data_by_id[variable_id]
+            return variable_dictionary
+
+        result_dictionary['input']['variables'] = [update(
+            _) for _ in result_dictionary['input']['variables']]
         yield result_dictionary
 
 
@@ -403,19 +444,8 @@ def prepare_variable_folder(
             continue
         variable_value = variable_data['value']
         variable_view = variable_definition['view']
-        try:
-            save_by_extension = SAVE_BY_EXTENSION_BY_VIEW[variable_view]
-        except KeyError:
-            raise CrossComputeImplementationError({
-                'view': 'is not yet implemented for save ' + variable_view})
         file_extension = splitext(file_path)[1]
-        try:
-            save = save_by_extension[file_extension]
-        except KeyError:
-            if '.*' not in save_by_extension:
-                raise CrossComputeDefinitionError({
-                    'path': 'has unsupported extension ' + file_extension})
-            save = save_by_extension['.*']
+        save = define_save(variable_view, file_extension)
         try:
             save(file_path, variable_value, variable_id, value_by_id_by_path)
         except ValueError:
@@ -441,18 +471,7 @@ def process_variable_folder(folder, variable_definitions):
         variable_view = variable_definition['view']
         file_extension = splitext(variable_path)[1]
         file_path = join(folder, variable_path)
-        try:
-            load_by_extension = LOAD_BY_EXTENSION_BY_VIEW[variable_view]
-        except KeyError:
-            raise CrossComputeImplementationError({
-                'view': 'is not yet implemented for load ' + variable_view})
-        try:
-            load = load_by_extension[file_extension]
-        except KeyError:
-            if '.*' not in load_by_extension:
-                raise CrossComputeDefinitionError({
-                    'path': 'has unsupported extension ' + file_extension})
-            load = load_by_extension['.*']
+        load = define_load(variable_view, file_extension)
         try:
             variable_value = load(file_path, variable_id)
         except OSError:
