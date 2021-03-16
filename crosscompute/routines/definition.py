@@ -2,6 +2,7 @@ import json
 import re
 import strictyaml
 from invisibleroads_macros_text import normalize_key
+from markdown2 import markdown
 from os.path import dirname, join, splitext
 from tinycss2 import parse_stylesheet
 
@@ -101,20 +102,20 @@ def normalize_automation_definition(raw_automation_definition, folder=None):
 
 
 def normalize_report_definition(raw_report_definition, folder=None):
-    report_definition = {}
+    report_definition = {'kind': 'report'}
 
     if 'name' in raw_report_definition:
         report_definition['name'] = raw_report_definition['name']
 
     raw_variable_dictionaries = get_nested_value(
-        report_definition, 'input', 'variables', [])
+        raw_report_definition, 'input', 'variables', [])
     report_definition['input'] = {
         'variables': normalize_report_variable_dictionaries(
             raw_variable_dictionaries, folder),
     }
 
     raw_template_dictionaries = get_nested_value(
-        report_definition, 'output', 'templates', [])
+        raw_report_definition, 'output', 'templates', [])
     report_definition['output'] = {
         'templates': normalize_report_template_dictionaries(
             raw_template_dictionaries, folder),
@@ -268,7 +269,7 @@ def normalize_data_dictionary(
         data_dictionary['file'] = normalize_file_dictionary(
             raw_data_dictionary['file'])
     elif has_path:
-        data_path = raw_data_dictionary['path']
+        data_path = join(folder, raw_data_dictionary['path'])
         file_extension = splitext(data_path)[1]
         load = define_load(view_name, file_extension)
         data_dictionary['value'] = load(data_path, variable_id)
@@ -433,7 +434,7 @@ def normalize_report_template_dictionaries(
         raw_template_dictionaries, folder=None):
     # TODO: Support report markdown templates
     template_dictionaries = []
-    for raw_template_dictionary in template_dictionaries:
+    for raw_template_dictionary in raw_template_dictionaries:
         try:
             template_path = raw_template_dictionary['path']
         except KeyError:
@@ -579,6 +580,18 @@ def get_print_dictionary(dictionary, folder):
         style_definition = {'rules': style_rules}
         print_dictionary['style'] = style_definition
 
+    if 'header' in dictionary:
+        raw_header_definition = dictionary['header']
+        if 'path' in raw_header_definition:
+            header_path = join(folder, raw_header_definition['path'])
+            print_dictionary['header'] = load_markdown_html(header_path)
+
+    if 'footer' in dictionary:
+        raw_footer_definition = dictionary['footer']
+        if 'path' in raw_footer_definition:
+            footer_path = join(folder, raw_footer_definition['path'])
+            print_dictionary['footer'] = load_markdown_html(footer_path)
+
     if 'format' in dictionary:
         raw_format = dictionary['format']
         if raw_format not in PRINT_FORMAT_NAMES:
@@ -707,6 +720,14 @@ def load_style_rule_strings(style_path):
     except OSError:
         raise CrossComputeDefinitionError({'path': 'is bad ' + style_path})
     return normalize_style_rule_strings([style_text])
+
+
+def load_markdown_html(markdown_path):
+    try:
+        markdown_text = open(markdown_path, 'rt').read()
+    except OSError:
+        raise CrossComputeDefinitionError({'path': 'is bad ' + markdown_path})
+    return markdown(markdown_text)
 
 
 def load_block_dictionaries(template_path):

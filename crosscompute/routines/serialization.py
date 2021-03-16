@@ -30,11 +30,15 @@ FairDumper.add_representer(str, FairDumper.represent_str)
 
 def render_object(raw_object, as_json=False):
     if as_json:
-        text = json.dumps(raw_object)
+        return json.dumps(raw_object)
+    if 'kind' in raw_object:
+        d = {'kind': raw_object['kind']}
+        if 'name' in raw_object:
+            d['name'] = raw_object['name']
     else:
-        text = '---\n' + yaml.dump(
-            raw_object, Dumper=FairDumper, sort_keys=False)
-    return text.strip()
+        d = raw_object
+    return '---\n' + yaml.dump(
+        d, Dumper=FairDumper, sort_keys=False).strip()
 
 
 def save_json(target_path, value_by_id):

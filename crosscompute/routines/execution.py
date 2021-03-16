@@ -62,28 +62,32 @@ class SafeDict(dict):
         return '{' + key + '}'
 
 
-def run_automation(automation_definition, is_mock=True, log=print):
+def run_automation(automation_definition, is_mock=True, log=None):
     automation_kind = automation_definition['kind']
-    if automation_kind == 'result':
-        d = run_result_automation(automation_definition, is_mock, log)
-    elif automation_kind == 'report':
+    if automation_kind == 'report':
         d = run_report_automation(automation_definition, is_mock, log)
+    elif automation_kind == 'result':
+        d = run_result_automation(automation_definition, is_mock, log)
     return d
 
 
-def run_report_automation(report_definition, is_mock=True, log=print):
-    report_styles = get_nested_value(report_definition, 'print', 'styles', [])
+def run_report_automation(report_definition, is_mock=True, log=None):
+    style_dictionary = get_nested_value(
+        report_definition, 'print', 'style', {})
+    style_rules = style_dictionary.get('rules', [])
     report_dictionaries = list(yield_result_dictionary(report_definition))
     report_count = len(report_dictionaries)
     document_dictionaries = []
     for report_index, report_dictionary in enumerate(report_dictionaries):
-        log({
+        log and log({
             'index': report_index, 'count': report_count,
-            'report': report_dictionary})
+            'definition': report_dictionary})
         variable_dictionaries = get_nested_value(
             report_dictionary, 'input', 'variables', [])
+        template_dictionaries = get_nested_value(
+            report_dictionary, 'output', 'templates', [])
         document_blocks = []
-        for template_dictionary in report_dictionary['templates']:
+        for template_dictionary in template_dictionaries:
             template_kind = template_dictionary.get('kind')
             if template_kind == 'result':
                 result_dictionary = deepcopy(template_dictionary)
@@ -107,10 +111,15 @@ def run_report_automation(report_definition, is_mock=True, log=print):
             elif 'blocks' in template_dictionary:
                 raise CrossComputeImplementationError({
                     'template': 'does not yet support report blocks'})
-            document_dictionaries.append({
-                'blocks': document_blocks,
-                'styles': report_styles,
-            })
+        document_dictionaries.append({
+            'name': get_result_name(report_dictionary),
+            'blocks': document_blocks,
+            'styles': style_rules,
+            'header': get_nested_value(
+                report_dictionary, 'print', 'header', ''),
+            'footer': get_nested_value(
+                report_dictionary, 'print', 'footer', ''),
+        })
     d = {'documents': document_dictionaries}
     if not is_mock:
         response_json = fetch_resource('prints', method='POST', data=d)
@@ -123,9 +132,9 @@ def run_result_automation(result_definition, is_mock=True, log=print):
     result_count = len(result_dictionaries)
     document_dictionaries = []
     for result_index, result_dictionary in enumerate(result_dictionaries):
-        log({
+        log and log({
             'index': result_index, 'count': result_count,
-            'result': result_dictionary})
+            'definition': result_dictionary})
         tool_definition = result_dictionary.pop('tool')
         result_dictionary = run_tool(tool_definition, result_dictionary)
         document_dictionary = render_result(tool_definition, result_dictionary)

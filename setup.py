@@ -27,6 +27,7 @@ APPLICATION_REQUIREMENTS = [
     'invisibleroads-macros-log >= 1.0.3',
     'invisibleroads-macros-security >= 1.0.1',
     'invisibleroads-macros-text >= 1.0.3',
+    'markdown2',
     'packaging >= 20.4',
     'pyramid',
     'pyyaml',
