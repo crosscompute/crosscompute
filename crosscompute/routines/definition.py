@@ -2,14 +2,17 @@ import json
 import re
 import strictyaml
 from invisibleroads_macros_text import normalize_key
-from os.path import dirname, join
+from markdown2 import markdown
+from os.path import dirname, join, splitext
 from tinycss2 import parse_stylesheet
 
 from .connection import fetch_resource
+from .serialization import define_load
 from .. import __version__
 from ..constants import (
     DEFAULT_VIEW_NAME, L, PRINT_FORMAT_NAMES, VIEW_NAMES)
-from ..exceptions import CrossComputeDefinitionError
+from ..exceptions import (
+    CrossComputeDefinitionError, CrossComputeImplementationError)
 from ..macros import is_compatible_version, parse_number, split_path
 
 
@@ -20,10 +23,7 @@ VARIABLE_ID_PATTERN = re.compile(r'{\s*([^}]+?)\s*}')
 def load_definition(path, kinds=None):
     # TODO: Use strictyaml schemas
     raw_definition = load_raw_definition(path)
-    folder = dirname(path)
-    definition = normalize_definition(raw_definition, folder, kinds)
-    definition['folder'] = folder
-    return definition
+    return normalize_definition(raw_definition, dirname(path), kinds)
 
 
 def load_raw_definition(path):
@@ -56,16 +56,22 @@ def normalize_definition(raw_definition, folder=None, kinds=None):
         raise CrossComputeDefinitionError({'kind': 'is required'})
     if kinds and kind not in kinds:
         raise CrossComputeDefinitionError({'kind': 'expected ' + ' or '.join(kinds)})
+
     if kind == 'project':
         definition = normalize_project_definition(raw_definition, folder)
     elif kind == 'automation':
         definition = normalize_automation_definition(raw_definition, folder)
+    elif kind == 'report':
+        definition = normalize_report_definition(raw_definition, folder)
     elif kind == 'result':
         definition = normalize_result_definition(raw_definition, folder)
     elif kind == 'tool':
         definition = normalize_tool_definition(raw_definition, folder)
     else:
         definition = raw_definition
+
+    if folder:
+        definition['folder'] = folder
     return definition
 
 
@@ -83,8 +89,6 @@ def normalize_project_definition(raw_project_definition, folder=None):
                 resource_dictionaries):
             check_dictionary(
                 resource_dictionary, key + f'[{resource_index}]')
-        # project_definition[key] = {
-        #    'id': _['id'] for _ in resource_dictionaries}
         project_definition[key] = [{'id': _['id']} for _ in resource_dictionaries]
     return project_definition
 
@@ -92,9 +96,36 @@ def normalize_project_definition(raw_project_definition, folder=None):
 def normalize_automation_definition(raw_automation_definition, folder=None):
     try:
         path = join(folder, raw_automation_definition['path'])
-    except KeyError as e:
-        raise CrossComputeDefinitionError({e.args[0]: 'required'})
+    except KeyError:
+        raise CrossComputeDefinitionError({'path': 'is required'})
     return load_definition(path, kinds=['result', 'report'])
+
+
+def normalize_report_definition(raw_report_definition, folder=None):
+    report_definition = {'kind': 'report'}
+
+    if 'name' in raw_report_definition:
+        report_definition['name'] = raw_report_definition['name']
+
+    raw_variable_dictionaries = get_nested_value(
+        raw_report_definition, 'input', 'variables', [])
+    report_definition['input'] = {
+        'variables': normalize_report_variable_dictionaries(
+            raw_variable_dictionaries, folder),
+    }
+
+    raw_template_dictionaries = get_nested_value(
+        raw_report_definition, 'output', 'templates', [])
+    report_definition['output'] = {
+        'templates': normalize_report_template_dictionaries(
+            raw_template_dictionaries, folder),
+    }
+
+    if 'print' in raw_report_definition:
+        report_definition['print'] = get_print_dictionary(
+            raw_report_definition['print'], folder)
+
+    return report_definition
 
 
 def normalize_result_definition(raw_result_definition, folder=None):
@@ -191,14 +222,15 @@ def normalize_version_dictionary(raw_version_dictionary):
     return version_dictionary
 
 
-def normalize_data(raw_data, view_name, folder=None):
+def normalize_data(raw_data, view_name, variable_id=None, folder=None):
     is_dictionary = isinstance(raw_data, dict)
     is_list = isinstance(raw_data, list)
     if not is_dictionary and not is_list:
         raise CrossComputeDefinitionError({
             'data': 'must be a dictionary or list'})
     if is_list:
-        data = [normalize_data_dictionary(_, view_name) for _ in raw_data]
+        data = [normalize_data_dictionary(
+            _, view_name, variable_id, folder) for _ in raw_data]
     elif folder is not None and 'batch' in raw_data:
         batch_dictionary = normalize_batch_dictionary(raw_data['batch'])
         batch_path = batch_dictionary['path']
@@ -211,18 +243,21 @@ def normalize_data(raw_data, view_name, folder=None):
             'value': normalize_value(_.strip(), view_name),
         } for _ in batch_file]
     else:
-        data = normalize_data_dictionary(raw_data, view_name)
+        data = normalize_data_dictionary(
+            raw_data, view_name, variable_id, folder)
     return data
 
 
-def normalize_data_dictionary(raw_data_dictionary, view_name):
+def normalize_data_dictionary(
+        raw_data_dictionary, view_name, variable_id=None, folder=None):
     check_dictionary(raw_data_dictionary, 'data')
     has_value = 'value' in raw_data_dictionary
     has_dataset = 'dataset' in raw_data_dictionary
     has_file = 'file' in raw_data_dictionary
-    if not has_value and not has_dataset and not has_file:
+    has_path = folder is not None and 'path' in raw_data_dictionary
+    if not has_value and not has_dataset and not has_file and not has_path:
         raise CrossComputeDefinitionError({
-            'data': 'must have value or dataset or file'})
+            'data': 'must have value or dataset or file or path'})
     data_dictionary = {}
     if has_value:
         data_dictionary['value'] = normalize_value(
@@ -233,6 +268,11 @@ def normalize_data_dictionary(raw_data_dictionary, view_name):
     elif has_file:
         data_dictionary['file'] = normalize_file_dictionary(
             raw_data_dictionary['file'])
+    elif has_path:
+        data_path = join(folder, raw_data_dictionary['path'])
+        file_extension = splitext(data_path)[1]
+        load = define_load(view_name, file_extension)
+        data_dictionary['value'] = load(data_path, variable_id)
     return data_dictionary
 
 
@@ -304,15 +344,33 @@ def normalize_style_rule_strings(raw_style_rule_strings):
     return style_rule_strings
 
 
+def normalize_report_variable_dictionaries(
+        raw_variable_dictionaries, folder=None):
+    check_list(raw_variable_dictionaries, 'variables')
+    raw_variable_dictionary_by_id = get_variable_dictionary_by_id(
+        raw_variable_dictionaries)
+    variable_dictionaries = []
+    for (
+        variable_id, raw_variable_dictionary,
+    ) in raw_variable_dictionary_by_id.items():
+        try:
+            variable_view = raw_variable_dictionary['view']
+            variable_data = raw_variable_dictionary['data']
+        except KeyError as e:
+            raise CrossComputeDefinitionError({
+                e.args[0]: 'is required for each report variable'})
+        variable_data = normalize_data(
+            variable_data, variable_view, variable_id, folder)
+        variable_dictionaries.append({
+            'id': variable_id, 'view': variable_view, 'data': variable_data})
+    return variable_dictionaries
+
+
 def normalize_result_variable_dictionaries(
         raw_variable_dictionaries, variable_definitions, folder=None):
     check_list(raw_variable_dictionaries, 'variables')
-    try:
-        raw_variable_dictionary_by_id = {
-            _['id']: _ for _ in raw_variable_dictionaries}
-    except KeyError:
-        raise CrossComputeDefinitionError({
-            'id': 'is required for each result variable'})
+    raw_variable_dictionary_by_id = get_variable_dictionary_by_id(
+        raw_variable_dictionaries)
     variable_definition_by_id = {_['id']: _ for _ in variable_definitions}
     variable_dictionaries = []
     for (
@@ -330,7 +388,8 @@ def normalize_result_variable_dictionaries(
         except KeyError:
             raise CrossComputeDefinitionError({
                 'data': 'is required for each result variable'})
-        variable_data = normalize_data(variable_data, variable_view, folder)
+        variable_data = normalize_data(
+            variable_data, variable_view, variable_id, folder)
         variable_dictionaries.append({
             'id': variable_id, 'data': variable_data})
     return variable_dictionaries
@@ -371,15 +430,35 @@ def normalize_environment_variable_dictionaries(raw_variable_dictionaries):
     return variable_dictionaries
 
 
-def normalize_template_dictionaries(
-        raw_template_dictionaries, variable_dictionaries, folder=None):
+def normalize_report_template_dictionaries(
+        raw_template_dictionaries, folder=None):
+    # TODO: Support report markdown templates
     template_dictionaries = []
     for raw_template_dictionary in raw_template_dictionaries:
         try:
-            template_id = raw_template_dictionary['id']
-        except KeyError as e:
+            template_path = raw_template_dictionary['path']
+        except KeyError:
+            raise CrossComputeDefinitionError({'path': 'is required'})
+        file_extension = splitext(template_path)[1]
+        if file_extension == '.yml':
+            template_definition = load_definition(join(
+                folder, template_path), kinds=['report', 'result'])
+            template_dictionaries.append(template_definition)
+        elif file_extension == '.md':
+            raise CrossComputeImplementationError({
+                'path': 'is not yet implemented for markdown templates'})
+        else:
             raise CrossComputeDefinitionError({
-                e.args[0]: 'is required for each template'})
+                'path': 'has unsupported extension ' + file_extension})
+    return template_dictionaries
+
+
+def normalize_tool_template_dictionaries(
+        raw_template_dictionaries, variable_dictionaries, folder=None):
+    template_dictionaries = []
+    for template_index, raw_template_dictionary in enumerate(
+            raw_template_dictionaries):
+        template_id = raw_template_dictionary.get('id', str(template_index))
         block_dictionaries = get_template_block_dictionaries(
             raw_template_dictionary, folder)
         if not block_dictionaries:
@@ -390,7 +469,7 @@ def normalize_template_dictionaries(
                 template_id),
             'blocks': block_dictionaries,
         })
-    if not template_dictionaries:
+    if not template_dictionaries and variable_dictionaries:
         template_dictionaries.append({
             'id': 'generated',
             'name': 'Generated',
@@ -431,10 +510,7 @@ def normalize_script_dictionary(raw_script_dictionary):
     except KeyError as e:
         raise CrossComputeDefinitionError({
             'script': 'requires ' + e.args[0]})
-    return {
-        'folder': folder,
-        'command': command,
-    }
+    return {'folder': folder, 'command': command}
 
 
 def normalize_environment_dictionary(raw_environment_dictionary):
@@ -504,6 +580,18 @@ def get_print_dictionary(dictionary, folder):
         style_definition = {'rules': style_rules}
         print_dictionary['style'] = style_definition
 
+    if 'header' in dictionary:
+        raw_header_definition = dictionary['header']
+        if 'path' in raw_header_definition:
+            header_path = join(folder, raw_header_definition['path'])
+            print_dictionary['header'] = load_markdown_html(header_path)
+
+    if 'footer' in dictionary:
+        raw_footer_definition = dictionary['footer']
+        if 'path' in raw_footer_definition:
+            footer_path = join(folder, raw_footer_definition['path'])
+            print_dictionary['footer'] = load_markdown_html(footer_path)
+
     if 'format' in dictionary:
         raw_format = dictionary['format']
         if raw_format not in PRINT_FORMAT_NAMES:
@@ -539,11 +627,20 @@ def get_put_dictionary(key, dictionary, folder=None):
         L.warning(f'missing {key} templates definition')
         template_dictionaries = []
     else:
-        template_dictionaries = normalize_template_dictionaries(
+        template_dictionaries = normalize_tool_template_dictionaries(
             template_dictionaries, variable_dictionaries, folder)
         d['templates'] = template_dictionaries
 
     return d
+
+
+def get_variable_dictionary_by_id(variable_dictionaries):
+    try:
+        variable_dictionary_by_id = {_['id']: _ for _ in variable_dictionaries}
+    except KeyError:
+        raise CrossComputeDefinitionError({
+            'id': 'is required for each variable'})
+    return variable_dictionary_by_id
 
 
 def get_template_dictionary(key, tool_definition, result_dictionary):
@@ -623,6 +720,14 @@ def load_style_rule_strings(style_path):
     except OSError:
         raise CrossComputeDefinitionError({'path': 'is bad ' + style_path})
     return normalize_style_rule_strings([style_text])
+
+
+def load_markdown_html(markdown_path):
+    try:
+        markdown_text = open(markdown_path, 'rt').read()
+    except OSError:
+        raise CrossComputeDefinitionError({'path': 'is bad ' + markdown_path})
+    return markdown(markdown_text)
 
 
 def load_block_dictionaries(template_path):

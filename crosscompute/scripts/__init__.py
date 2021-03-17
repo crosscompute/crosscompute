@@ -5,7 +5,9 @@ from invisibleroads.scripts import LoggingScript, launch_script
 
 from .. import __description__
 from ..exceptions import CrossComputeError
-from ..routines import get_bash_configuration_text, render_object
+from ..routines import (
+    get_bash_configuration_text,
+    render_object)
 
 
 class OutputtingScript(LoggingScript):

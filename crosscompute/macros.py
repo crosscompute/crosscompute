@@ -86,3 +86,20 @@ def get_plain_value(x):
     if hasattr(x, 'append'):
         return [get_plain_value(_) for _ in x]
     return x
+
+
+'''
+def resolve_paths(x, folder, key=None):
+    if isinstance(x, dict):
+        for k, v in x.items():
+            if k not in ['folder', 'path']:
+                resolve_paths(v, folder, k)
+                continue
+            if key == 'variables':
+                continue
+            x[k] = join(folder, v)
+    elif isinstance(x, list):
+        for v in x:
+            resolve_paths(v, folder, key)
+    return x
+'''

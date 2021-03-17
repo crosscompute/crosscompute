@@ -1,0 +1,15 @@
+---
+crosscompute: 0.8.4
+kind: result
+name: '{a} {b} {c}'
+tool:
+  path: ../../tool.yml
+input:
+  variables:
+    - id: a
+      data:
+        batch:
+          path: a.txt
+    - id: b
+      data:
+        value: 1
