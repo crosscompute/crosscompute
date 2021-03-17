@@ -80,11 +80,7 @@ def run_result_automation(result_definition, is_mock=True, log=print):
     result_count = len(result_dictionaries)
     document_dictionaries = []
     for result_index, result_dictionary in enumerate(result_dictionaries):
-        log({
-            'index': result_index,
-            'count': result_count,
-            'result': result_dictionary,
-        })
+        log({'status': 'RUNNING', 'data': {'index': result_index, 'count': result_count}})
         tool_definition = result_dictionary.pop('tool')
         result_dictionary = run_tool(tool_definition, result_dictionary)
         document_dictionary = render_result(tool_definition, result_dictionary)
