@@ -109,12 +109,21 @@ def run_report_automation(report_definition, is_mock=True, log=None):
                 document_dictionary = render_result(
                     tool_definition, result_dictionary)
                 document_blocks.extend(document_dictionary.get('blocks', []))
+                # TODO: Replace this with article wrappers
+                document_blocks.append({
+                    'view': 'markdown',
+                    'data': {
+                        'value': '<div style="page-break-after: always;" />',
+                    },
+                })
             elif template_kind == 'report':
                 raise CrossComputeImplementationError({
                     'template': 'does not yet support report definitions'})
             elif 'blocks' in template_dictionary:
                 raise CrossComputeImplementationError({
                     'template': 'does not yet support report blocks'})
+        if document_blocks:
+            document_blocks.pop()
         document_dictionaries.append({
             'name': get_result_name(report_dictionary),
             'blocks': document_blocks,
