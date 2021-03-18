@@ -97,20 +97,20 @@ def run_report_automation(report_definition, is_mock=True, log=None):
                     **new_variable_dictionary_by_id}
                 variable_dictionaries = variable_dictionary_by_id.values()
                 result_dictionary['input']['variables'] = variable_dictionaries
-                result_name = get_result_name(result_dictionary)
-                log and log({report_index: {template_index: {
-                    'status': 'RUNNING', 'name': result_name}}})
+                log and log({'index': [
+                    report_index, template_index,
+                ], 'status': 'RUNNING', 'name': get_result_name(result_dictionary)})
                 try:
                     result_dictionary = run_tool(tool_definition, result_dictionary)
                 except CrossComputeError:
-                    log and log({report_index: {template_index: {
-                        'status': 'ERROR', 'name': result_name}}})
+                    log and log({'index': [
+                        report_index, template_index], 'status': 'ERROR'})
                     raise
                 document_dictionary = render_result(
                     tool_definition, result_dictionary)
-                result_name = get_result_name(result_dictionary)  # Evaluate again
-                log and log({report_index: {template_index: {
-                    'status': 'DONE', 'name': result_name}}})
+                log and log({'index': [
+                    report_index, template_index,
+                ], 'status': 'DONE', 'name': get_result_name(result_dictionary)})
                 document_blocks.extend(document_dictionary.get('blocks', []))
                 # TODO: Replace this with article wrappers
                 document_blocks.append({
@@ -126,7 +126,8 @@ def run_report_automation(report_definition, is_mock=True, log=None):
         if document_blocks:
             document_blocks.pop()
         report_name = get_result_name(report_dictionary)
-        log and log({report_index: {'status': 'DONE', 'name': report_name}})
+        log and log({'index': [
+            report_index], 'status': 'DONE', 'name': report_name})
         document_dictionaries.append({
             'name': report_name,
             'blocks': document_blocks,
@@ -147,18 +148,19 @@ def run_result_automation(result_definition, is_mock=True, log=None):
     document_dictionaries = []
     for result_index, result_dictionary in enumerate(yield_result_dictionary(
             result_definition)):
-        result_name = get_result_name(result_dictionary)
-        # log and log({'key': result_index, 'data': })
-        log and log({result_index: {'status': 'RUNNING', 'name': result_name}})
+        log and log({'index': [
+            result_index,
+        ], 'status': 'RUNNING', 'name': get_result_name(result_dictionary)})
         tool_definition = result_dictionary.pop('tool')
         try:
             result_dictionary = run_tool(tool_definition, result_dictionary)
         except CrossComputeError:
-            log and log({result_index: {'status': 'ERROR', 'name': result_name}})
+            log and log({'index': [result_index], 'status': 'ERROR'})
             raise
         document_dictionary = render_result(tool_definition, result_dictionary)
-        result_name = get_result_name(result_dictionary)  # Evaluate again
-        log and log({result_index: {'status': 'DONE', 'name': result_name}})
+        log and log({'index': [
+            result_index,
+        ], 'status': 'DONE', 'name': get_result_name(result_dictionary)})
         document_dictionaries.append(document_dictionary)
     d = {'documents': document_dictionaries}
     if not is_mock:
