@@ -14,11 +14,11 @@ log_dictionary = {}
 debug_dictionary = {}
 
 
-if a % 3 == 0:
+if a < 10:
     output_dictionary['c'] = a + b
     log_dictionary['e'] = a + b
     debug_dictionary['g'] = a + b
-elif a % 4 == 0:
+if a < 100:
     output_dictionary['d'] = a * b
     log_dictionary['f'] = a * b
     debug_dictionary['h'] = a * b
