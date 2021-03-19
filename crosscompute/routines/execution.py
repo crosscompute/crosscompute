@@ -79,20 +79,24 @@ def run_report_automation(report_definition, is_mock=True, log=None):
     style_dictionary = get_nested_value(
         report_definition, 'print', 'style', {})
     style_rules = style_dictionary.get('rules', [])
+    with ThreadPoolExecutor() as executor:
+        document_dictionaries = executor.map(run_report,
+            enumerate(yield_result_dictionary(report_definition)),
+            repeat(style_rules),
+            repeat(log))
     '''
-    # with ThreadPoolExecutor() as executor:
     # with ProcessPoolExecutor() as executor:
     with Pool() as pool:
         document_dictionaries = pool.starmap(run_report, [
             enumerate(yield_result_dictionary(report_definition)),
             repeat(style_rules),
             repeat(log)])
-    '''
     document_dictionaries = list(map(
         run_report,
         enumerate(yield_result_dictionary(report_definition)),
         repeat(style_rules),
         repeat(log)))
+    '''
     d = {'documents': document_dictionaries}
     if not is_mock:
         response_json = fetch_resource('prints', method='POST', data=d)
@@ -109,13 +113,6 @@ def run_report(enumerated_report_dictionary, style_rules, log):
     report_name = get_result_name(report_dictionary)
     log and log({'index': [
         report_index], 'status': 'RUNNING', 'name': report_name})
-    document_block_packs = list(map(
-        run_template,
-        enumerate(template_dictionaries),
-        repeat(variable_dictionaries),
-        repeat(report_index),
-        repeat(log)))
-    '''
     with ThreadPoolExecutor() as executor:
         document_block_packs = executor.map(
             run_template,
@@ -123,7 +120,7 @@ def run_report(enumerated_report_dictionary, style_rules, log):
             repeat(variable_dictionaries),
             repeat(report_index),
             repeat(log))
-    # TODO: https://stackoverflow.com/questions/6974695/python-process-pool-non-daemonic
+    '''
     # with ProcessPoolExecutor() as executor:
     # with Pool() as pool:
         document_block_packs = pool.starmap(run_template, [
@@ -131,6 +128,12 @@ def run_report(enumerated_report_dictionary, style_rules, log):
             repeat(variable_dictionaries),
             repeat(report_index),
             repeat(log)])
+    document_block_packs = list(map(
+        run_template,
+        enumerate(template_dictionaries),
+        repeat(variable_dictionaries),
+        repeat(report_index),
+        repeat(log)))
     '''
     document_blocks = []
     for blocks in document_block_packs:
