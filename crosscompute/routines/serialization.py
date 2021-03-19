@@ -31,12 +31,14 @@ FairDumper.add_representer(str, FairDumper.represent_str)
 def render_object(raw_object, as_json=False):
     if as_json:
         return json.dumps(raw_object)
-    if 'kind' in raw_object:
-        d = {'kind': raw_object['kind']}
-        if 'name' in raw_object:
-            d['name'] = raw_object['name']
-    else:
-        d = raw_object
+    d = {}
+    for key in ['kind', 'name', 'id']:
+        if key not in raw_object:
+            continue
+        d[key] = raw_object[key]
+    for key, value in raw_object.items():
+        if isinstance(value, list):
+            d[key] = len(value)
     return '---\n' + yaml.dump(
         d, Dumper=FairDumper, sort_keys=False).strip()
 

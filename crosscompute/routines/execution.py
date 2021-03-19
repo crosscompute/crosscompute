@@ -7,13 +7,17 @@ import shlex
 import subprocess
 import time
 from collections import defaultdict
+from concurrent.futures import (
+    # ProcessPoolExecutor,
+    ThreadPoolExecutor)
 from copy import deepcopy
 from functools import partial
 from invisibleroads_macros_disk import (
     TemporaryStorage, make_folder, make_random_folder)
 from io import StringIO
-from itertools import product
+from itertools import product, repeat
 from mimetypes import guess_type
+from multiprocessing import Pool
 from os import environ, getcwd
 from os.path import (
     abspath, basename, dirname, getsize, exists, isdir, join, splitext)
@@ -75,77 +79,124 @@ def run_report_automation(report_definition, is_mock=True, log=None):
     style_dictionary = get_nested_value(
         report_definition, 'print', 'style', {})
     style_rules = style_dictionary.get('rules', [])
-    document_dictionaries = []
-    for report_index, report_dictionary in enumerate(yield_result_dictionary(
-            report_definition)):
-        variable_dictionaries = get_nested_value(
-            report_dictionary, 'input', 'variables', [])
-        template_dictionaries = get_nested_value(
-            report_dictionary, 'output', 'templates', [])
-        report_name = get_result_name(report_dictionary)
-        log and log({'index': [
-            report_index], 'status': 'RUNNING', 'name': report_name})
-        document_blocks = []
-        for template_index, template_dictionary in enumerate(template_dictionaries):
-            template_kind = template_dictionary.get('kind')
-            if template_kind == 'result':
-                result_dictionary = deepcopy(template_dictionary)
-                tool_definition = result_dictionary.pop('tool')
-                old_variable_dictionary_by_id = get_variable_dictionary_by_id(
-                    get_nested_value(result_dictionary, 'input', 'variables'))
-                new_variable_dictionary_by_id = get_variable_dictionary_by_id(
-                    variable_dictionaries)
-                variable_dictionary_by_id = {
-                    **old_variable_dictionary_by_id,
-                    **new_variable_dictionary_by_id}
-                variable_dictionaries = variable_dictionary_by_id.values()
-                result_dictionary['input']['variables'] = variable_dictionaries
-                result_name = get_result_name(result_dictionary)
-                log and log({'index': [
-                    report_index, template_index,
-                ], 'status': 'RUNNING', 'name': result_name})
-                try:
-                    result_dictionary = run_tool(tool_definition, result_dictionary)
-                except CrossComputeError:
-                    log and log({'index': [
-                        report_index, template_index], 'status': 'ERROR'})
-                    raise
-                document_dictionary = render_result(
-                    tool_definition, result_dictionary)
-                result_name = get_result_name(result_dictionary)  # Recompute
-                log and log({'index': [
-                    report_index, template_index,
-                ], 'status': 'DONE', 'name': result_name})
-                document_blocks.extend(document_dictionary.get('blocks', []))
-                # TODO: Replace this with article wrappers
-                document_blocks.append({
-                    'view': 'markdown',
-                    'data': {'value': '<div style="page-break-after: always;" />'},
-                })
-            elif template_kind == 'report':
-                raise CrossComputeImplementationError({
-                    'template': 'does not yet support report definitions'})
-            elif 'blocks' in template_dictionary:
-                raise CrossComputeImplementationError({
-                    'template': 'does not yet support report blocks'})
-        if document_blocks:
-            document_blocks.pop()
-        log and log({'index': [
-            report_index], 'status': 'DONE', 'name': report_name})
-        document_dictionaries.append({
-            'name': report_name,
-            'blocks': document_blocks,
-            'styles': style_rules,
-            'header': get_nested_value(
-                report_dictionary, 'print', 'header', ''),
-            'footer': get_nested_value(
-                report_dictionary, 'print', 'footer', ''),
-        })
+    '''
+    # with ThreadPoolExecutor() as executor:
+    # with ProcessPoolExecutor() as executor:
+    with Pool() as pool:
+        document_dictionaries = pool.starmap(run_report, [
+            enumerate(yield_result_dictionary(report_definition)),
+            repeat(style_rules),
+            repeat(log)])
+    '''
+    document_dictionaries = list(map(
+        run_report,
+        enumerate(yield_result_dictionary(report_definition)),
+        repeat(style_rules),
+        repeat(log)))
     d = {'documents': document_dictionaries}
     if not is_mock:
         response_json = fetch_resource('prints', method='POST', data=d)
         d['url'] = response_json['url']
     return d
+
+
+def run_report(enumerated_report_dictionary, style_rules, log):
+    report_index, report_dictionary = enumerated_report_dictionary
+    variable_dictionaries = get_nested_value(
+        report_dictionary, 'input', 'variables', [])
+    template_dictionaries = get_nested_value(
+        report_dictionary, 'output', 'templates', [])
+    report_name = get_result_name(report_dictionary)
+    log and log({'index': [
+        report_index], 'status': 'RUNNING', 'name': report_name})
+    document_block_packs = list(map(
+        run_template,
+        enumerate(template_dictionaries),
+        repeat(variable_dictionaries),
+        repeat(report_index),
+        repeat(log)))
+    '''
+    with ThreadPoolExecutor() as executor:
+        document_block_packs = executor.map(
+            run_template,
+            enumerate(template_dictionaries),
+            repeat(variable_dictionaries),
+            repeat(report_index),
+            repeat(log))
+    # TODO: https://stackoverflow.com/questions/6974695/python-process-pool-non-daemonic
+    # with ProcessPoolExecutor() as executor:
+    # with Pool() as pool:
+        document_block_packs = pool.starmap(run_template, [
+            enumerate(template_dictionaries),
+            repeat(variable_dictionaries),
+            repeat(report_index),
+            repeat(log)])
+    '''
+    document_blocks = []
+    for blocks in document_block_packs:
+        document_blocks.extend(blocks)
+    if document_blocks:
+        document_blocks.pop()
+    log and log({'index': [
+        report_index], 'status': 'DONE', 'name': report_name})
+    return {
+        'name': report_name,
+        'blocks': document_blocks,
+        'styles': style_rules,
+        'header': get_nested_value(report_dictionary, 'print', 'header', ''),
+        'footer': get_nested_value(report_dictionary, 'print', 'footer', ''),
+    }
+
+
+def run_template(
+        enumerated_template_dictionary,
+        variable_dictionaries,
+        report_index,
+        log):
+    document_blocks = []
+    template_index, template_dictionary = enumerated_template_dictionary
+    template_kind = template_dictionary.get('kind')
+    if template_kind == 'result':
+        result_dictionary = deepcopy(template_dictionary)
+        tool_definition = result_dictionary.pop('tool')
+        old_variable_dictionary_by_id = get_variable_dictionary_by_id(
+            get_nested_value(result_dictionary, 'input', 'variables'))
+        new_variable_dictionary_by_id = get_variable_dictionary_by_id(
+            variable_dictionaries)
+        variable_dictionary_by_id = {
+            **old_variable_dictionary_by_id,
+            **new_variable_dictionary_by_id}
+        variable_dictionaries = variable_dictionary_by_id.values()
+        result_dictionary['input']['variables'] = variable_dictionaries
+        result_name = get_result_name(result_dictionary)
+        log and log({'index': [
+            report_index, template_index,
+        ], 'status': 'RUNNING', 'name': result_name})
+        try:
+            result_dictionary = run_tool(tool_definition, result_dictionary)
+        except CrossComputeError:
+            log and log({'index': [
+                report_index, template_index], 'status': 'ERROR'})
+            raise
+        document_dictionary = render_result(
+            tool_definition, result_dictionary)
+        result_name = get_result_name(result_dictionary)  # Recompute
+        log and log({'index': [
+            report_index, template_index,
+        ], 'status': 'DONE', 'name': result_name})
+        document_blocks.extend(document_dictionary.get('blocks', []))
+        # TODO: Replace this with article wrappers
+        document_blocks.append({
+            'view': 'markdown',
+            'data': {'value': '<div style="page-break-after: always;" />'},
+        })
+    elif template_kind == 'report':
+        raise CrossComputeImplementationError({
+            'template': 'does not yet support report definitions'})
+    elif 'blocks' in template_dictionary:
+        raise CrossComputeImplementationError({
+            'template': 'does not yet support report blocks'})
+    return document_blocks
 
 
 def run_result_automation(result_definition, is_mock=True, log=None):
