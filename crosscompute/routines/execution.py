@@ -8,7 +8,6 @@ import subprocess
 import time
 from collections import defaultdict
 from concurrent.futures import (
-    # ProcessPoolExecutor,
     ThreadPoolExecutor)
 from copy import deepcopy
 from functools import partial
@@ -17,7 +16,6 @@ from invisibleroads_macros_disk import (
 from io import StringIO
 from itertools import product, repeat
 from mimetypes import guess_type
-from multiprocessing import Pool
 from os import environ, getcwd
 from os.path import (
     abspath, basename, dirname, getsize, exists, isdir, join, splitext)
@@ -80,23 +78,11 @@ def run_report_automation(report_definition, is_mock=True, log=None):
         report_definition, 'print', 'style', {})
     style_rules = style_dictionary.get('rules', [])
     with ThreadPoolExecutor() as executor:
-        document_dictionaries = executor.map(run_report,
+        document_dictionaries = executor.map(
+            run_report,
             enumerate(yield_result_dictionary(report_definition)),
             repeat(style_rules),
             repeat(log))
-    '''
-    # with ProcessPoolExecutor() as executor:
-    with Pool() as pool:
-        document_dictionaries = pool.starmap(run_report, [
-            enumerate(yield_result_dictionary(report_definition)),
-            repeat(style_rules),
-            repeat(log)])
-    document_dictionaries = list(map(
-        run_report,
-        enumerate(yield_result_dictionary(report_definition)),
-        repeat(style_rules),
-        repeat(log)))
-    '''
     d = {'documents': document_dictionaries}
     if not is_mock:
         response_json = fetch_resource('prints', method='POST', data=d)
@@ -120,21 +106,6 @@ def run_report(enumerated_report_dictionary, style_rules, log):
             repeat(variable_dictionaries),
             repeat(report_index),
             repeat(log))
-    '''
-    # with ProcessPoolExecutor() as executor:
-    # with Pool() as pool:
-        document_block_packs = pool.starmap(run_template, [
-            enumerate(template_dictionaries),
-            repeat(variable_dictionaries),
-            repeat(report_index),
-            repeat(log)])
-    document_block_packs = list(map(
-        run_template,
-        enumerate(template_dictionaries),
-        repeat(variable_dictionaries),
-        repeat(report_index),
-        repeat(log)))
-    '''
     document_blocks = []
     for blocks in document_block_packs:
         document_blocks.extend(blocks)
@@ -203,30 +174,36 @@ def run_template(
 
 
 def run_result_automation(result_definition, is_mock=True, log=None):
-    document_dictionaries = []
-    for result_index, result_dictionary in enumerate(yield_result_dictionary(
-            result_definition)):
-        result_name = get_result_name(result_dictionary)
-        log and log({'index': [
-            result_index,
-        ], 'status': 'RUNNING', 'name': result_name})
-        tool_definition = result_dictionary.pop('tool')
-        try:
-            result_dictionary = run_tool(tool_definition, result_dictionary)
-        except CrossComputeError:
-            log and log({'index': [result_index], 'status': 'ERROR'})
-            raise
-        document_dictionary = render_result(tool_definition, result_dictionary)
-        result_name = get_result_name(result_dictionary)  # Recompute
-        log and log({'index': [
-            result_index,
-        ], 'status': 'DONE', 'name': result_name})
-        document_dictionaries.append(document_dictionary)
-    d = {'documents': document_dictionaries}
+    with ThreadPoolExecutor() as executor:
+        document_dictionaries = executor.map(
+            run_result,
+            enumerate(yield_result_dictionary(result_definition)),
+            repeat(log))
+    d = {'documents': list(document_dictionaries)}
     if not is_mock:
         response_json = fetch_resource('prints', method='POST', data=d)
         d['url'] = response_json['url']
     return d
+
+
+def run_result(enumerated_result_dictionary, log):
+    result_index, result_dictionary = enumerated_result_dictionary
+    result_name = get_result_name(result_dictionary)
+    log and log({'index': [
+        result_index,
+    ], 'status': 'RUNNING', 'name': result_name})
+    tool_definition = result_dictionary.pop('tool')
+    try:
+        result_dictionary = run_tool(tool_definition, result_dictionary)
+    except CrossComputeError:
+        log and log({'index': [result_index], 'status': 'ERROR'})
+        raise
+    document_dictionary = render_result(tool_definition, result_dictionary)
+    result_name = get_result_name(result_dictionary)  # Recompute
+    log and log({'index': [
+        result_index,
+    ], 'status': 'DONE', 'name': result_name})
+    return document_dictionary
 
 
 def run_tool(tool_definition, result_dictionary, script_command=None):
