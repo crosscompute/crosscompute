@@ -83,7 +83,7 @@ def run_report_automation(report_definition, is_mock=True, log=None):
             enumerate(yield_result_dictionary(report_definition)),
             repeat(style_rules),
             repeat(log))
-    d = {'documents': document_dictionaries}
+    d = {'documents': list(document_dictionaries)}
     if not is_mock:
         response_json = fetch_resource('prints', method='POST', data=d)
         d['url'] = response_json['url']
