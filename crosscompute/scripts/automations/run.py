@@ -28,5 +28,5 @@ class RunAutomationScript(OutputtingScript):
         run_safely(run_automation, {
             'automation_definition': automation_definition,
             'is_mock': args.is_mock,
-            'log': print,
-        }, is_quiet, as_json)
+            'log': None if is_quiet or as_json else print,
+        }, is_quiet=True)

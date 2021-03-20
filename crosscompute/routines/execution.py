@@ -3,7 +3,6 @@
 import json
 import re
 import requests
-import shlex
 import subprocess
 import time
 from collections import defaultdict
@@ -19,7 +18,6 @@ from mimetypes import guess_type
 from os import environ, getcwd
 from os.path import (
     abspath, basename, dirname, getsize, exists, isdir, join, splitext)
-from subprocess import CalledProcessError
 from sys import exc_info
 from traceback import print_exception
 
@@ -275,19 +273,18 @@ def run_worker(
 
 
 def run_script(script_command, script_folder, script_environment):
-    script_arguments = shlex.split(script_command)
     debug_folder = script_environment.get('CROSSCOMPUTE_DEBUG_FOLDER', '')
     stdout_file = open(join(debug_folder, 'stdout.txt'), 'w+t')
     stderr_file = open(join(debug_folder, 'stderr.txt'), 'w+t')
     try:
         subprocess.run(
-            script_arguments, env=script_environment, cwd=script_folder,
+            script_command, env=script_environment, cwd=script_folder,
             stdout=stdout_file, stderr=stderr_file, encoding='utf-8',
-            check=True)
+            shell=True, check=True)
     except FileNotFoundError:
         raise CrossComputeDefinitionError({
-            'script': 'could not run command ' + ' '.join(script_arguments)})
-    except CalledProcessError:
+            'script': 'could not run command ' + script_command})
+    except subprocess.CalledProcessError:
         raise CrossComputeExecutionError({
             'stdout': clean_bash_output(stdout_file),
             'stderr': clean_bash_output(stderr_file)})
@@ -618,7 +615,7 @@ def process_result_input_stream(script_command, is_quiet, as_json):
         if not chore_dictionary:
             break
         if not is_quiet:
-            print('\n' + render_object(chore_dictionary, as_json))
+            print('{', end='', flush=True)
         # TODO: Get tool script from cloud
         tool_definition = chore_dictionary['tool']
         result_dictionary = chore_dictionary['result']
@@ -636,7 +633,7 @@ def process_result_input_stream(script_command, is_quiet, as_json):
             result_dictionary, tool_definition, prepare_dataset)
         result_dictionary['progress'] = result_progress
         if not is_quiet:
-            print(render_object(result_dictionary, as_json))
+            print('}', end='', flush=True)
         fetch_resource(
             'results', result_dictionary['id'], method='PATCH',
             data=result_dictionary, token=result_token)

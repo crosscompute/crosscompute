@@ -13,7 +13,6 @@ from ..exceptions import (
     CrossComputeKeyboardInterrupt)
 from ..macros import (
     get_environment_value)
-from .serialization import render_object
 
 
 def get_bash_configuration_text():
@@ -102,7 +101,7 @@ def yield_echo(statistics_dictionary, is_quiet=False, as_json=False):
                 statistics_dictionary['ping count'] += 1
                 continue
             elif not is_quiet:
-                print('\n' + render_object(echo_message.__dict__, as_json))
+                print('$', end='', flush=True)
             event_dictionary = json.loads(echo_message.data)
             yield event_name, event_dictionary
     except KeyboardInterrupt:
