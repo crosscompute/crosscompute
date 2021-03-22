@@ -75,20 +75,37 @@ def run_report_automation(report_definition, is_mock=True, log=None):
     style_dictionary = get_nested_value(
         report_definition, 'print', 'style', {})
     style_rules = style_dictionary.get('rules', [])
+    if not is_mock:
+        response_json = fetch_resource('prints', method='POST')
+        print_id = response_json['id']
+    else:
+        print_id = None
+
+    def save(document_index, document_dictionary):
+        if not is_mock:
+            fetch_resource(
+                'prints', f'{print_id}/documents/{document_index}',
+                method='PUT', data=document_dictionary)
+        return document_dictionary
+
     with ThreadPoolExecutor() as executor:
         document_dictionaries = executor.map(
             run_report,
             enumerate(yield_result_dictionary(report_definition)),
             repeat(style_rules),
-            repeat(log))
-    d = {'documents': list(document_dictionaries)}
+            repeat(log),
+            repeat(save))
+    document_dictionaries = list(document_dictionaries)
+    document_count = len(document_dictionaries)
+    d = {'documents': document_dictionaries}
     if not is_mock:
-        response_json = fetch_resource('prints', method='POST', data=d)
+        response_json = fetch_resource(
+            'prints', print_id, method='PATCH', data={'count': document_count})
         d['url'] = response_json['url']
     return d
 
 
-def run_report(enumerated_report_dictionary, style_rules, log):
+def run_report(enumerated_report_dictionary, style_rules, log=None, save=None):
     report_index, report_dictionary = enumerated_report_dictionary
     variable_dictionaries = get_nested_value(
         report_dictionary, 'input', 'variables', [])
@@ -111,13 +128,15 @@ def run_report(enumerated_report_dictionary, style_rules, log):
         document_blocks.pop()
     log and log({'index': [
         report_index], 'status': 'DONE', 'name': report_name})
-    return {
+    document_dictionary = {
         'name': report_name,
         'blocks': document_blocks,
         'styles': style_rules,
         'header': get_nested_value(report_dictionary, 'print', 'header', ''),
         'footer': get_nested_value(report_dictionary, 'print', 'footer', ''),
     }
+    save and save(report_index, document_dictionary)
+    return document_dictionary
 
 
 def run_template(
@@ -172,19 +191,36 @@ def run_template(
 
 
 def run_result_automation(result_definition, is_mock=True, log=None):
+    if not is_mock:
+        response_json = fetch_resource('prints', method='POST')
+        print_id = response_json['id']
+    else:
+        print_id = None
+
+    def save(document_index, document_dictionary):
+        if not is_mock:
+            fetch_resource(
+                'prints', f'{print_id}/documents/{document_index}',
+                method='PUT', data=document_dictionary)
+        return document_dictionary
+
     with ThreadPoolExecutor() as executor:
         document_dictionaries = executor.map(
             run_result,
             enumerate(yield_result_dictionary(result_definition)),
-            repeat(log))
-    d = {'documents': list(document_dictionaries)}
+            repeat(log),
+            repeat(save))
+    document_dictionaries = list(document_dictionaries)
+    document_count = len(document_dictionaries)
+    d = {'documents': document_dictionaries}
     if not is_mock:
-        response_json = fetch_resource('prints', method='POST', data=d)
+        response_json = fetch_resource('prints', print_id, method='PATCH', data={
+            'count': document_count})
         d['url'] = response_json['url']
     return d
 
 
-def run_result(enumerated_result_dictionary, log):
+def run_result(enumerated_result_dictionary, log=None, save=None):
     result_index, result_dictionary = enumerated_result_dictionary
     result_name = get_result_name(result_dictionary)
     log and log({'index': [
@@ -201,6 +237,7 @@ def run_result(enumerated_result_dictionary, log):
     log and log({'index': [
         result_index,
     ], 'status': 'DONE', 'name': result_name})
+    save and save(result_index, document_dictionary)
     return document_dictionary
 
 
@@ -330,6 +367,8 @@ def render_result(tool_definition, result_dictionary):
     document_dictionary = {
         'blocks': blocks,
         'styles': styles,
+        'header': get_nested_value(result_dictionary, 'print', 'header', ''),
+        'footer': get_nested_value(result_dictionary, 'print', 'footer', ''),
     }
     if 'name' in result_dictionary:
         document_dictionary['name'] = result_dictionary['name']
