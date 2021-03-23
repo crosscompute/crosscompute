@@ -258,8 +258,8 @@ def run_tool(tool_definition, result_dictionary, script_command=None):
     run_script(script_command.format(
         **folder_by_key), script_folder, script_environment)
     for folder_name in 'output', 'log', 'debug':
-        variable_definitions = get_nested_value(
-            tool_definition, folder_name, 'variables', [])
+        variable_definitions = list(get_nested_value(
+            tool_definition, folder_name, 'variables', []))
         if folder_name == 'debug':
             variable_definitions += DEBUG_VARIABLE_DEFINITIONS
         if not variable_definitions:
