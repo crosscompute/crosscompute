@@ -47,6 +47,7 @@ from ..exceptions import (
     CrossComputeImplementationError,
     CrossComputeKeyboardInterrupt)
 from ..macros import (
+    sanitize_name,
     sanitize_json_value)
 from ..symmetries import download
 
@@ -707,7 +708,8 @@ def get_result_name(result_dictionary):
                 continue
             variable_value_by_id[variable_id] = variable_value
     raw_result_name = result_dictionary['name']
-    return raw_result_name.format_map(SafeDict(variable_value_by_id))
+    result_name = raw_result_name.format_map(SafeDict(variable_value_by_id))
+    return sanitize_name(result_name)
 
 
 def get_script_environment(environment_variable_definitions, folder_by_name):
