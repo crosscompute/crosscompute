@@ -168,7 +168,11 @@ def load_markdown_md(source_path, variable_id):
 
 
 def load_table_csv(source_path, variable_id):
-    csv_reader = csv.reader(open(source_path, 'rt'))
+    try:
+        csv_reader = csv.reader(open(source_path, 'rt'))
+    except IOError:
+        raise CrossComputeExecutionError({
+            'variable': f'could not load {variable_id} from {source_path}'})
     columns = next(csv_reader)
     rows = [[parse_number_safely(_) for _ in row] for row in csv_reader]
     return {'columns': columns, 'rows': rows}
@@ -187,7 +191,7 @@ def load_map_geojson(source_path, variable_id):
         variable_value = geojson.load(open(source_path, 'rt'))
     except ValueError:
         raise CrossComputeExecutionError({
-            'variable': f'could not load {variable_id} as a map geojson'})
+            'variable': f'could not load {variable_id} from {source_path}'})
     # TODO: Consider whether to assert FeatureCollection
     return get_plain_value(variable_value)
 
