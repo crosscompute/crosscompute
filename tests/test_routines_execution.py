@@ -71,7 +71,7 @@ def test_yield_result_dictionary():
 
 def test_get_result_name():
     name_template = '{a} {b}'
-    assert get_result_name({'name': name_template}) == name_template
+    assert get_result_name({'name': name_template}) == 'a b'
     assert get_result_name({
         'name': name_template,
         'input': {
@@ -79,4 +79,4 @@ def test_get_result_name():
                 {'id': 'a', 'view': 'number', 'data': {'value': 1}},
             ],
         },
-    }) == '1 {b}'
+    }) == '1 b'
