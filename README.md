@@ -89,7 +89,7 @@ pytest --cov=crosscompute --cov-report term-missing:skip-covered --cov-config=to
 - Salah Ahmed
 - Rodrigo Guarachi
 - Polina Chernomaz
-- Miguel Angel Gordián
+- Miguel Ángel Gordián
 - Noé Domínguez Porras
 - Marta Moreno
 - Ning Wei
