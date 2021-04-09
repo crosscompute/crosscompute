@@ -22,7 +22,7 @@ def sanitize_name(name):
 
 
 def is_valid_name_character(x):
-    if x.isalpha():
+    if x.isalpha() or x.isdigit():
         return True
     if x in [' ', '-', '_', ',', '.']:
         return True
