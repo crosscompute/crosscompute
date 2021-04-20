@@ -2,6 +2,8 @@
 - Start from scratch
 - Define AddProjectScript, ChangeProjectScript, SeeProjectScript
 - Define AddToolScript, SeeToolScript
+- Support reports
+- Parallelize report and result automations using ThreadPoolExecutor
 
 # 0.7
 - Add memory_level, processor_level to work script

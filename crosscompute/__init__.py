@@ -1,2 +1,2 @@
 __description__ = 'Automate your work by writing a configuration file'
-__version__ = '0.8.4.6'
+__version__ = '0.8.4.7'
