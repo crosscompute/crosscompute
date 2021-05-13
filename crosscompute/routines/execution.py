@@ -701,6 +701,9 @@ def get_result_name(result_dictionary):
             try:
                 variable_id = variable_definition['id']
                 variable_data = variable_definition['data']
+                if type(variable_data) is not dict:
+                    raise CrossComputeExecutionError({'definition': f'{variable_id} has a bad structure, it couldn\'t be batch'})
+
                 variable_value = variable_data['value']
             except KeyError:
                 continue
