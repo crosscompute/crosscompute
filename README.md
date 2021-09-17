@@ -1,6 +1,12 @@
 # CrossCompute
 
-Transform your notebook or script into a web-based report, tool, widget, dashboard or wizard.
+Transform your notebook or script into a web-based
+
+- report
+- tool
+- widget
+- dashboard
+- wizard
 
 Please see https://crosscompute.com for examples and tutorials.
 
