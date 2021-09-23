@@ -33,8 +33,9 @@ cd crosscompute
 pip install -e .[test]
 pytest \
     --cov=crosscompute \
+    --cov-config=tox.ini \
     --cov-report term-missing:skip-covered \
-    --cov-config=tox.ini tests
+    tests
 ```
 
 ## Acknowledgments
