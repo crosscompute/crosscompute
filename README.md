@@ -8,6 +8,10 @@ Automate your Jupyter notebooks and scripts as web-based reports, tools, widgets
 - Dashboards are widgets in a layout.
 - Wizards are step-by-step questions that generate a specific web-based report.
 
+[See examples and tutorials](https://crosscompute.com).
+
+## Usage
+
 ```bash
 # Update package
 pip install crosscompute -U
@@ -20,10 +24,6 @@ crosscompute serve.yml
 ```
 
 [See documentation](https://github.com/crosscompute/crosscompute-docs).
-
-[See examples and tutorials](https://crosscompute.com).
-
-## Usage
 
 ## Development
 
