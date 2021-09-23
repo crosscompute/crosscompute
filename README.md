@@ -31,7 +31,10 @@ crosscompute serve.yml
 git clone https://github.com/crosscompute/crosscompute
 cd crosscompute
 pip install -e .[test]
-pytest --cov=crosscompute --cov-report term-missing:skip-covered --cov-config=tox.ini tests
+pytest \
+    --cov=crosscompute \
+    --cov-report term-missing:skip-covered \
+    --cov-config=tox.ini tests
 ```
 
 ## Acknowledgments
