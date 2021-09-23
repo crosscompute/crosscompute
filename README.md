@@ -1,6 +1,6 @@
 # CrossCompute
 
-Transform your notebook or script into a web-based resource.
+Automate your Jupyter notebooks and scripts as web-based reports, tools, widgets, dashboards, wizards.
 
 - Reports are documents that update when the data changes.
 - Tools are forms that transform input variables into output variables.
