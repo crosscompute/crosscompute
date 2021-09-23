@@ -8,11 +8,12 @@ Transform your notebook or script into a web-based
 - dashboard
 - wizard
 
-Please see https://crosscompute.com for examples and tutorials.
-
 ```bash
 pip install -U crosscompute
 ```
+
+- Read documentation at https://github.com/crosscompute/crosscompute-docs.
+Please see https://crosscompute.com for more examples and tutorials.
 
 ## Usage
 
