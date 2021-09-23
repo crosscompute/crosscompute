@@ -28,14 +28,23 @@ crosscompute serve.yml
 ## Development
 
 ```bash
+# Clone repository
 git clone https://github.com/crosscompute/crosscompute
+
+# Install with dependencies for tests
 cd crosscompute
 pip install -e .[test]
+
+# Run tests
 pytest \
     --cov=crosscompute \
     --cov-config=tox.ini \
     --cov-report term-missing:skip-covered \
     tests
+
+# Build package for PyPI
+pip install build
+python -m build --sdist --wheel
 ```
 
 ## Acknowledgments
