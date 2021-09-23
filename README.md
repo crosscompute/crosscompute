@@ -12,8 +12,8 @@ Transform your notebook or script into a web-based
 pip install -U crosscompute
 ```
 
-- Read documentation at https://github.com/crosscompute/crosscompute-docs.
-Please see https://crosscompute.com for more examples and tutorials.
+- [See documentation](https://github.com/crosscompute/crosscompute-docs).
+- [See examples and tutorials](https://crosscompute.com).
 
 ## Usage
 
