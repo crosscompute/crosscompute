@@ -9,8 +9,8 @@ Transform your notebook or script into a web-based resource.
 - Wizards are step-by-step questions that generate a specific web-based report.
 
 ```bash
-# Install package
-pip install crosscompute
+# Update package
+pip install crosscompute -U
 
 # Initialize configuration
 crosscompute
