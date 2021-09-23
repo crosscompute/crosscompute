@@ -1,15 +1,22 @@
 # CrossCompute
 
-Transform your notebook or script into a web-based
+Transform your notebook or script into a web-based resource.
 
-- report
-- tool
-- widget
-- dashboard
-- wizard
+- Reports are documents that update when the data changes.
+- Tools are forms that transform input variables into output variables.
+- Widgets are interactive visualizations that update when the data changes.
+- Dashboards are widgets in a layout.
+- Wizards are step-by-step questions that generate a specific web-based report.
 
 ```bash
-pip install -U crosscompute
+# Install package
+pip install crosscompute
+
+# Initialize configuration
+crosscompute
+
+# Serve analytics
+crosscompute serve.yml
 ```
 
 [See documentation](https://github.com/crosscompute/crosscompute-docs).
