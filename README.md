@@ -45,6 +45,10 @@ pytest \
 # Build package for PyPI
 pip install build
 python -m build --sdist --wheel
+
+# Publish package on PyPI
+pip install twine --upgrade
+python -m twine upload dist/*
 ```
 
 ## Acknowledgments
