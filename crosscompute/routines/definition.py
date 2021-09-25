@@ -460,7 +460,7 @@ def normalize_tool_template_dictionaries(
             raw_template_dictionaries):
         template_id = raw_template_dictionary.get('id', str(template_index))
         block_dictionaries = get_template_block_dictionaries(
-            raw_template_dictionary, folder)
+            raw_template_dictionary, variable_dictionaries, folder)
         if not block_dictionaries:
             continue
         template_dictionaries.append({
@@ -553,7 +553,10 @@ def normalize_block_dictionaries(raw_block_dictionaries, with_data=True):
                 raw_data_dictionary, view_name)
             block_dictionary['data'] = data_dictionary
         elif with_data:
-            raise CrossComputeDefinitionError({'data': 'is required'})
+            message = 'is required for variable'
+            if has_id:
+                message += ' ' + block_dictionary['id']
+            raise CrossComputeDefinitionError({'data': message})
         block_dictionaries.append(block_dictionary)
     return block_dictionaries
 
@@ -676,12 +679,14 @@ def get_environment_dictionary(dictionary):
     return normalize_environment_dictionary(raw_environment_dictionary)
 
 
-def get_template_block_dictionaries(dictionary, folder=None):
+def get_template_block_dictionaries(
+        dictionary, variable_dictionaries, folder=None):
     if 'blocks' in dictionary:
         raw_block_dictionaries = dictionary['blocks']
     elif 'path' in dictionary and folder is not None:
         template_path = join(folder, dictionary['path'])
-        raw_block_dictionaries = load_block_dictionaries(template_path)
+        raw_block_dictionaries = load_block_dictionaries(
+            template_path, variable_dictionaries)
     else:
         raw_block_dictionaries = []
     return normalize_block_dictionaries(
@@ -730,16 +735,19 @@ def load_markdown_html(markdown_path):
     return markdown(markdown_text)
 
 
-def load_block_dictionaries(template_path):
+def load_block_dictionaries(template_path, variable_dictionaries):
     try:
         template_text = open(template_path, 'rt').read()
     except IOError:
         raise CrossComputeDefinitionError({
             'path': f'is bad for {template_path}'})
-    return parse_block_dictionaries(template_text)
+    return parse_block_dictionaries(template_text, variable_dictionaries)
 
 
-def parse_block_dictionaries(template_text):
+def parse_block_dictionaries(template_text, variable_dictionaries):
+    # TODO: Gather variables on first pass
+    # TODO: Generate block dictionaries on second pass
+
     block_dictionaries = []
     for text in VARIABLE_TEXT_PATTERN.split(template_text):
         text = text.strip()
