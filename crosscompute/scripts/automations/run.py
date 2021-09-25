@@ -29,4 +29,4 @@ class RunAutomationScript(OutputtingScript):
             'automation_definition': automation_definition,
             'is_mock': args.is_mock,
             'log': None if is_quiet or as_json else print,
-        }, is_quiet=True)
+        }, is_quiet, as_json)
