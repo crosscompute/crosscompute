@@ -259,8 +259,8 @@ def run_tool(tool_definition, result_dictionary, script_command=None):
     run_script(script_command.format(
         **folder_by_key), script_folder, script_environment)
     for folder_name in 'output', 'log', 'debug':
-        variable_definitions = get_nested_value(
-            tool_definition, folder_name, 'variables', [])
+        variable_definitions = list(get_nested_value(
+            tool_definition, folder_name, 'variables', []))
         if folder_name == 'debug':
             variable_definitions += DEBUG_VARIABLE_DEFINITIONS
         if not variable_definitions:
@@ -701,6 +701,9 @@ def get_result_name(result_dictionary):
             try:
                 variable_id = variable_definition['id']
                 variable_data = variable_definition['data']
+                if type(variable_data) is not dict:
+                    raise CrossComputeExecutionError({'definition': f'{variable_id} has a bad structure, it couldn\'t be batch'})
+
                 variable_value = variable_data['value']
             except KeyError:
                 continue
