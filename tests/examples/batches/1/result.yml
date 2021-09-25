@@ -1,14 +1,15 @@
 ---
 crosscompute: 0.8.4
 kind: result
-path: result.yml
+name: '{a} {b} {c}'
+tool:
+  path: ../../tool.yml
 input:
   variables:
     - id: a
       data:
         batch:
-          path: result-batch-a.txt
+          path: a.txt
     - id: b
       data:
-        batch:
-          path: result-batch-b.txt
+        value: 1

@@ -1,4 +1,5 @@
 import sys
+from invisibleroads_macros_text import compact_whitespace
 from math import isnan
 from os import environ
 from os.path import split
@@ -13,6 +14,19 @@ def get_environment_value(name, default=None):
             sys.exit(f'{name} is required in the environment')
         value = default
     return value
+
+
+def sanitize_name(name):
+    return compact_whitespace(''.join(
+        _ if is_valid_name_character(_) else ' ' for _ in name))
+
+
+def is_valid_name_character(x):
+    if x.isalpha() or x.isdigit():
+        return True
+    if x in [' ', '-', '_', ',', '.']:
+        return True
+    return False
 
 
 def sanitize_json_value(value):

@@ -3,21 +3,21 @@
 import json
 import re
 import requests
-import shlex
 import subprocess
 import time
 from collections import defaultdict
+from concurrent.futures import (
+    ThreadPoolExecutor)
 from copy import deepcopy
 from functools import partial
 from invisibleroads_macros_disk import (
     TemporaryStorage, make_folder, make_random_folder)
 from io import StringIO
-from itertools import chain, product
+from itertools import product, repeat
 from mimetypes import guess_type
 from os import environ, getcwd
 from os.path import (
     abspath, basename, dirname, getsize, exists, isdir, join, splitext)
-from subprocess import CalledProcessError
 from sys import exc_info
 from traceback import print_exception
 
@@ -29,12 +29,14 @@ from .connection import (
 from .definition import (
     get_nested_value,
     get_template_dictionary,
+    get_variable_dictionary_by_id,
     load_definition)
 from .serialization import (
+    define_load,
+    define_save,
     load_value_json,
     render_object,
     save_json,
-    LOAD_BY_EXTENSION_BY_VIEW,
     SAVE_BY_EXTENSION_BY_VIEW)
 from ..constants import DEBUG_VARIABLE_DEFINITIONS, S
 from ..exceptions import (
@@ -45,6 +47,7 @@ from ..exceptions import (
     CrossComputeImplementationError,
     CrossComputeKeyboardInterrupt)
 from ..macros import (
+    sanitize_name,
     sanitize_json_value)
 from ..symmetries import download
 
@@ -60,30 +63,183 @@ class SafeDict(dict):
         return '{' + key + '}'
 
 
-def run_automation(automation_definition, is_mock):
+def run_automation(automation_definition, is_mock=True, log=None):
     automation_kind = automation_definition['kind']
-    if automation_kind == 'result':
-        d = run_result_automation(automation_definition, is_mock)
-    elif automation_kind == 'report':
-        raise CrossComputeImplementationError({
-            'report': 'has not been implemented yet'})
+    if automation_kind == 'report':
+        d = run_report_automation(automation_definition, is_mock, log)
+    elif automation_kind == 'result':
+        d = run_result_automation(automation_definition, is_mock, log)
     return d
 
 
-def run_result_automation(result_definition, is_mock=True):
-    document_dictionaries = []
-    for result_dictionary in yield_result_dictionary(result_definition):
-        tool_definition = result_dictionary.pop('tool')
-        result_dictionary = run_tool(tool_definition, result_dictionary)
-        document_dictionary = render_result(tool_definition, result_dictionary)
-        document_dictionaries.append(document_dictionary)
-    d = {
-        'documents': document_dictionaries,
-    }
+def run_report_automation(report_definition, is_mock=True, log=None):
+    style_dictionary = get_nested_value(
+        report_definition, 'print', 'style', {})
+    style_rules = style_dictionary.get('rules', [])
     if not is_mock:
-        response_json = fetch_resource('prints', method='POST', data=d)
+        response_json = fetch_resource('prints', method='POST')
+        print_id = response_json['id']
+    else:
+        print_id = None
+
+    def save(document_index, document_dictionary):
+        if not is_mock:
+            fetch_resource(
+                'prints', f'{print_id}/documents/{document_index}',
+                method='PUT', data=document_dictionary)
+        return document_dictionary
+
+    with ThreadPoolExecutor() as executor:
+        document_dictionaries = executor.map(
+            run_report,
+            enumerate(yield_result_dictionary(report_definition)),
+            repeat(style_rules),
+            repeat(log),
+            repeat(save))
+    document_dictionaries = list(document_dictionaries)
+    document_count = len(document_dictionaries)
+    d = {'documents': document_dictionaries}
+    if not is_mock:
+        response_json = fetch_resource(
+            'prints', print_id, method='PATCH', data={'count': document_count})
         d['url'] = response_json['url']
     return d
+
+
+def run_report(enumerated_report_dictionary, style_rules, log=None, save=None):
+    report_index, report_dictionary = enumerated_report_dictionary
+    variable_dictionaries = get_nested_value(
+        report_dictionary, 'input', 'variables', [])
+    template_dictionaries = get_nested_value(
+        report_dictionary, 'output', 'templates', [])
+    report_name = get_result_name(report_dictionary)
+    log and log({'index': [
+        report_index], 'status': 'RUNNING', 'name': report_name})
+    with ThreadPoolExecutor() as executor:
+        document_block_packs = executor.map(
+            run_template,
+            enumerate(template_dictionaries),
+            repeat(variable_dictionaries),
+            repeat(report_index),
+            repeat(log))
+    document_blocks = []
+    for blocks in document_block_packs:
+        document_blocks.extend(blocks)
+    if document_blocks:
+        document_blocks.pop()
+    log and log({'index': [
+        report_index], 'status': 'DONE', 'name': report_name})
+    document_dictionary = {
+        'name': report_name,
+        'blocks': document_blocks,
+        'styles': style_rules,
+        'header': get_nested_value(report_dictionary, 'print', 'header', ''),
+        'footer': get_nested_value(report_dictionary, 'print', 'footer', ''),
+    }
+    save and save(report_index, document_dictionary)
+    return document_dictionary
+
+
+def run_template(
+        enumerated_template_dictionary,
+        variable_dictionaries,
+        report_index,
+        log):
+    document_blocks = []
+    template_index, template_dictionary = enumerated_template_dictionary
+    template_kind = template_dictionary.get('kind')
+    if template_kind == 'result':
+        result_dictionary = deepcopy(template_dictionary)
+        tool_definition = result_dictionary.pop('tool')
+        old_variable_dictionary_by_id = get_variable_dictionary_by_id(
+            get_nested_value(result_dictionary, 'input', 'variables'))
+        new_variable_dictionary_by_id = get_variable_dictionary_by_id(
+            variable_dictionaries)
+        variable_dictionary_by_id = {
+            **old_variable_dictionary_by_id,
+            **new_variable_dictionary_by_id}
+        variable_dictionaries = variable_dictionary_by_id.values()
+        result_dictionary['input']['variables'] = variable_dictionaries
+        result_name = get_result_name(result_dictionary)
+        log and log({'index': [
+            report_index, template_index,
+        ], 'status': 'RUNNING', 'name': result_name})
+        try:
+            result_dictionary = run_tool(tool_definition, result_dictionary)
+        except CrossComputeError:
+            log and log({'index': [
+                report_index, template_index], 'status': 'ERROR'})
+            raise
+        document_dictionary = render_result(
+            tool_definition, result_dictionary)
+        result_name = get_result_name(result_dictionary)  # Recompute
+        log and log({'index': [
+            report_index, template_index,
+        ], 'status': 'DONE', 'name': result_name})
+        document_blocks.extend(document_dictionary.get('blocks', []))
+        # TODO: Replace this with article wrappers
+        document_blocks.append({
+            'view': 'markdown',
+            'data': {'value': '<div style="page-break-after: always;" />'},
+        })
+    elif template_kind == 'report':
+        raise CrossComputeImplementationError({
+            'template': 'does not yet support report definitions'})
+    elif 'blocks' in template_dictionary:
+        raise CrossComputeImplementationError({
+            'template': 'does not yet support report blocks'})
+    return document_blocks
+
+
+def run_result_automation(result_definition, is_mock=True, log=None):
+    if not is_mock:
+        response_json = fetch_resource('prints', method='POST')
+        print_id = response_json['id']
+    else:
+        print_id = None
+
+    def save(document_index, document_dictionary):
+        if not is_mock:
+            fetch_resource(
+                'prints', f'{print_id}/documents/{document_index}',
+                method='PUT', data=document_dictionary)
+        return document_dictionary
+
+    with ThreadPoolExecutor() as executor:
+        document_dictionaries = executor.map(
+            run_result,
+            enumerate(yield_result_dictionary(result_definition)),
+            repeat(log),
+            repeat(save))
+    document_dictionaries = list(document_dictionaries)
+    document_count = len(document_dictionaries)
+    d = {'documents': document_dictionaries}
+    if not is_mock:
+        response_json = fetch_resource('prints', print_id, method='PATCH', data={
+            'count': document_count})
+        d['url'] = response_json['url']
+    return d
+
+
+def run_result(enumerated_result_dictionary, log=None, save=None):
+    result_index, result_dictionary = enumerated_result_dictionary
+    result_name = get_result_name(result_dictionary)
+    log and log({'index': [
+        result_index,
+    ], 'status': 'RUNNING', 'name': result_name})
+    tool_definition = result_dictionary.pop('tool')
+    try:
+        result_dictionary = run_tool(tool_definition, result_dictionary)
+    except CrossComputeError:
+        log and log({'index': [result_index], 'status': 'ERROR'})
+        raise
+    document_dictionary = render_result(tool_definition, result_dictionary)
+    result_name = get_result_name(result_dictionary)  # Recompute
+    log and log({'index': [
+        result_index,
+    ], 'status': 'DONE', 'name': result_name})
+    save and save(result_index, document_dictionary)
+    return document_dictionary
 
 
 def run_tool(tool_definition, result_dictionary, script_command=None):
@@ -103,8 +259,8 @@ def run_tool(tool_definition, result_dictionary, script_command=None):
     run_script(script_command.format(
         **folder_by_key), script_folder, script_environment)
     for folder_name in 'output', 'log', 'debug':
-        variable_definitions = get_nested_value(
-            tool_definition, folder_name, 'variables', [])
+        variable_definitions = list(get_nested_value(
+            tool_definition, folder_name, 'variables', []))
         if folder_name == 'debug':
             variable_definitions += DEBUG_VARIABLE_DEFINITIONS
         if not variable_definitions:
@@ -155,19 +311,18 @@ def run_worker(
 
 
 def run_script(script_command, script_folder, script_environment):
-    script_arguments = shlex.split(script_command)
     debug_folder = script_environment.get('CROSSCOMPUTE_DEBUG_FOLDER', '')
     stdout_file = open(join(debug_folder, 'stdout.txt'), 'w+t')
     stderr_file = open(join(debug_folder, 'stderr.txt'), 'w+t')
     try:
         subprocess.run(
-            script_arguments, env=script_environment, cwd=script_folder,
+            script_command, env=script_environment, cwd=script_folder,
             stdout=stdout_file, stderr=stderr_file, encoding='utf-8',
-            check=True)
+            shell=True, check=True)
     except FileNotFoundError:
         raise CrossComputeDefinitionError({
-            'script': 'could not run command ' + ' '.join(script_arguments)})
-    except CalledProcessError:
+            'script': 'could not run command ' + script_command})
+    except subprocess.CalledProcessError:
         raise CrossComputeExecutionError({
             'stdout': clean_bash_output(stdout_file),
             'stderr': clean_bash_output(stderr_file)})
@@ -213,6 +368,8 @@ def render_result(tool_definition, result_dictionary):
     document_dictionary = {
         'blocks': blocks,
         'styles': styles,
+        'header': get_nested_value(result_dictionary, 'print', 'header', ''),
+        'footer': get_nested_value(result_dictionary, 'print', 'footer', ''),
     }
     if 'name' in result_dictionary:
         document_dictionary['name'] = result_dictionary['name']
@@ -290,28 +447,28 @@ def find_relevant_path(path, name):
 
 def yield_result_dictionary(result_definition):
     variable_ids = []
-    data_lists = []
-    for variable_dictionary in result_definition['input']['variables']:
+    variable_data_lists = []
+    for variable_dictionary in get_nested_value(result_definition, 'input', 'variables'):
+        variable_id = variable_dictionary['id']
+        if 'data' not in variable_dictionary:
+            continue
         variable_data = variable_dictionary['data']
         if not isinstance(variable_data, list):
             continue
-        variable_ids.append(variable_dictionary['id'])
-        data_lists.append(variable_data)
-    for variable_data_selection in product(*data_lists):
-        result_dictionary = dict(result_definition)
-        old_variable_id_data_generator = ((
-            _['id'],
-            _['data'],
-        ) for _ in result_dictionary['input']['variables'])
-        new_variable_id_data_generator = zip(
-            variable_ids, variable_data_selection)
-        variable_data_by_id = dict(chain(
-            old_variable_id_data_generator,
-            new_variable_id_data_generator))
-        result_dictionary['input']['variables'] = [{
-            'id': variable_id,
-            'data': variable_data,
-        } for variable_id, variable_data in variable_data_by_id.items()]
+        variable_ids.append(variable_id)
+        variable_data_lists.append(variable_data)
+    for variable_data_selection in product(*variable_data_lists):
+        result_dictionary = deepcopy(result_definition)
+        selected_data_by_id = dict(zip(variable_ids, variable_data_selection))
+
+        def update(variable_dictionary):
+            variable_id = variable_dictionary['id']
+            if variable_id in selected_data_by_id:
+                variable_dictionary['data'] = selected_data_by_id[variable_id]
+            return variable_dictionary
+
+        result_dictionary['input']['variables'] = [update(
+            _) for _ in result_dictionary['input']['variables']]
         yield result_dictionary
 
 
@@ -393,19 +550,8 @@ def prepare_variable_folder(
             continue
         variable_value = variable_data['value']
         variable_view = variable_definition['view']
-        try:
-            save_by_extension = SAVE_BY_EXTENSION_BY_VIEW[variable_view]
-        except KeyError:
-            raise CrossComputeImplementationError({
-                'view': 'is not yet implemented for save ' + variable_view})
         file_extension = splitext(file_path)[1]
-        try:
-            save = save_by_extension[file_extension]
-        except KeyError:
-            if '.*' not in save_by_extension:
-                raise CrossComputeDefinitionError({
-                    'path': 'has unsupported extension ' + file_extension})
-            save = save_by_extension['.*']
+        save = define_save(variable_view, file_extension)
         try:
             save(file_path, variable_value, variable_id, value_by_id_by_path)
         except ValueError:
@@ -431,18 +577,7 @@ def process_variable_folder(folder, variable_definitions):
         variable_view = variable_definition['view']
         file_extension = splitext(variable_path)[1]
         file_path = join(folder, variable_path)
-        try:
-            load_by_extension = LOAD_BY_EXTENSION_BY_VIEW[variable_view]
-        except KeyError:
-            raise CrossComputeImplementationError({
-                'view': 'is not yet implemented for load ' + variable_view})
-        try:
-            load = load_by_extension[file_extension]
-        except KeyError:
-            if '.*' not in load_by_extension:
-                raise CrossComputeDefinitionError({
-                    'path': 'has unsupported extension ' + file_extension})
-            load = load_by_extension['.*']
+        load = define_load(variable_view, file_extension)
         try:
             variable_value = load(file_path, variable_id)
         except OSError:
@@ -520,7 +655,7 @@ def process_result_input_stream(script_command, is_quiet, as_json):
         if not chore_dictionary:
             break
         if not is_quiet:
-            print('\n' + render_object(chore_dictionary, as_json))
+            print('{', end='', flush=True)
         # TODO: Get tool script from cloud
         tool_definition = chore_dictionary['tool']
         result_dictionary = chore_dictionary['result']
@@ -538,7 +673,7 @@ def process_result_input_stream(script_command, is_quiet, as_json):
             result_dictionary, tool_definition, prepare_dataset)
         result_dictionary['progress'] = result_progress
         if not is_quiet:
-            print(render_object(result_dictionary, as_json))
+            print('}', end='', flush=True)
         fetch_resource(
             'results', result_dictionary['id'], method='PATCH',
             data=result_dictionary, token=result_token)
@@ -573,7 +708,8 @@ def get_result_name(result_dictionary):
                 continue
             variable_value_by_id[variable_id] = variable_value
     raw_result_name = result_dictionary['name']
-    return raw_result_name.format_map(SafeDict(variable_value_by_id))
+    result_name = raw_result_name.format_map(SafeDict(variable_value_by_id))
+    return sanitize_name(result_name)
 
 
 def get_script_environment(environment_variable_definitions, folder_by_name):

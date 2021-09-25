@@ -24,16 +24,48 @@ output:
       name: C
       view: number
       path: properties.json
+    - id: d
+      name: D
+      view: number
+      path: properties.json
   templates:
     - id: standard
       name: Standard
       path: templates/output/standard.md
+log:
+  variables:
+    - id: e
+      name: E
+      view: number
+      path: properties.json
+    - id: f
+      name: F
+      view: number
+      path: properties.json
+  templates:
+    - id: standard
+      name: Standard
+      path: templates/log/standard.md
+debug:
+  variables:
+    - id: g
+      name: G
+      view: number
+      path: properties.json
+    - id: h
+      name: H
+      view: number
+      path: properties.json
+  templates:
+    - id: standard
+      name: Standard
+      path: templates/debug/standard.md
 tests:
   - folder: tests/integers
   - folder: tests/floats
 script:
   folder: .
-  command: python run.py {input_folder} {output_folder}
+  command: python run.py {input_folder} {output_folder} {log_folder} {debug_folder}
 repository:
   uri: https://github.com/crosscompute/crosscompute
   folder: tests/examples

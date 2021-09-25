@@ -1,0 +1,10 @@
+---
+crosscompute: 0.8.4
+kind: result
+path: batches/1/result.yml
+input:
+  variables:
+    - id: b
+      data:
+        batch:
+          path: result-batch.txt
