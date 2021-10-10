@@ -14,7 +14,7 @@ Automate your Jupyter notebooks and scripts as web-based reports, tools, widgets
 
 ```bash
 # Update package
-pip install crosscompute -U
+pip install crosscompute --upgrade
 
 # Initialize configuration
 crosscompute
@@ -53,7 +53,7 @@ python -m twine upload dist/*
 
 ## Acknowledgments
 
-- Olga Creutzburg
+- [Olga Creutzburg](https://www.linkedin.com/in/olga-creutzburg)
 - Salah Ahmed
 - Rodrigo Guarachi
 - Polina Chernomaz

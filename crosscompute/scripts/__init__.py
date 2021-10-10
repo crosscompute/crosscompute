@@ -1,10 +1,15 @@
+from collections import defaultdict
+from os import listdir
+from os.path import splitext
+from sys import argv
+
 from .. import __version__
-# from sys import argv
 
 
 def launch():
-    print(DEFAULT_CONFIGURATION)
-    # print(argv)
+    # print(DEFAULT_CONFIGURATION)
+    print(argv)
+    print(get_configuration_paths_by_format())
     # configuration = load_configuration()
     # if not configuration:
     # check if configuration file exists
@@ -15,12 +20,29 @@ def launch():
     # render default configuration to yaml, ini, toml
 
 
-def get_configuration_path(configuration_folder):
-    pass
+def get_configuration_paths_by_format(configuration_folder='.'):
+    configuration_paths_by_format = defaultdict(list)
+    for path in listdir(configuration_folder):
+        root, extension = splitext(path)
+        if extension in ['.yaml', '.yml']:
+            configuration_format = 'yaml'
+        elif extension in ['.cfg', '.ini']:
+            configuration_format = 'ini'
+        elif extension == '.toml':
+            configuration_format = 'toml'
+        else:
+            continue
+        configuration_paths_by_format[configuration_format].append(path)
+    return dict(configuration_paths_by_format)
 
 
 def load_configuration(configuration_path):
     pass
+
+
+# TODO: Draft function that loads configuration file
+# TODO: Render input markdown
+# TODO: Implement rough crosscompute-image plugin
 
 
 DEFAULT_CONFIGURATION = {
