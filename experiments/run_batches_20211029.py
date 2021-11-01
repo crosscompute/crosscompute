@@ -1,16 +1,40 @@
 # TODO: Run batches in separate thread
 import json
 import re
-import subprocess
+# import subprocess
 import yaml
 from collections import defaultdict
+from invisibleroads_macros_text.keys import normalize_key
 from markdown import markdown
 from os import getenv, makedirs
-from os.path import dirname, join, relpath
+from os.path import basename, dirname, join, relpath
 from pyramid.config import Configurator
 # from pyramid.response import Response
 from sys import argv
 from wsgiref.simple_server import make_server
+
+
+automation_path_template = '/a/{automation_slug}'
+batch_path_template = '/b/{batch_slug}'
+
+
+def first_true(iterable, default=False, pred=None):
+    # https://docs.python.org/3/library/itertools.html
+    """Returns the first true value in the iterable.
+
+    If no true value is found, returns *default*
+
+    If *pred* is not None, returns the first item
+    for which pred(item) is true.
+
+    """
+    # first_true([a,b,c], x) --> a or b or c or x
+    # first_true([a,b], x, f) --> a if f(a) else b if f(b) else x
+    return next(filter(pred, iterable), default)
+
+
+def get_slug_from_name(name):
+    return normalize_key(name, word_separator='-')
 
 
 VARIABLE_ID_PATTERN = re.compile(r'{\s*([^}]+?)\s*}')
@@ -35,8 +59,9 @@ batch_folder = batch_configuration['folder']
 # TODO: Consider renaming to relative_input_folder
 input_folder = join(batch_folder, 'input')
 output_folder = join(batch_folder, 'output')
+'''
 try:
-    makedirs(output_folder)
+    makedirs(join(configuration_folder, output_folder))
 except OSError:
     pass
 command_environment = {
@@ -50,11 +75,11 @@ subprocess.run(
     shell=True,
     cwd=configuration_folder,
     env=command_environment)
+'''
 
 
 # TODO: Do both output and input
 batch_configuration = {'input': {'variables': []}, 'output': {'variables': []}}
-batch_configuration
 
 variable_definitions_by_path = defaultdict(list)
 output_variable_definitions = configuration['output']['variables']
@@ -106,7 +131,32 @@ for variable_definition in variable_definitions:
 
 batch_variable_definitions = batch_configuration['output']['variables']
 variable_data_by_id = {_['id']: _['data'] for _ in batch_variable_definitions}
-variable_data_by_id
+
+
+automation_name = configuration['name']
+# TODO: Let user set automation slug in configuration file
+automation_slug = get_slug_from_name(automation_name)
+automation_path = automation_path_template.format(
+    automation_slug=automation_slug)
+
+batch_dictionaries = []
+for batch_configuration in configuration['batches']:
+    batch_folder = batch_configuration['folder']
+    # TODO: Let user set batch name and slug
+    batch_name = basename(batch_folder)
+    batch_slug = get_slug_from_name(batch_name)
+    batch_path = batch_path_template.format(
+        batch_slug=batch_slug)
+    batch_dictionaries.append({
+        'name': batch_name,
+        'path': batch_path,
+    })
+
+automation_dictionaries = [{
+    'name': automation_name,
+    'path': automation_path,
+    'batches': batch_dictionaries,
+}]
 
 
 def render_variable_from_regex_match(match):
@@ -134,12 +184,34 @@ def render_variable_from_regex_match(match):
 
 # Define routes and views
 def home(request):
-    automation_configurations = [{
-        'url': '/a/randomize-histograms',
-    }]
+    # TODO: List links for all automations
+    # TODO: List links for all batches of each automation
+    # TODO: Let user set automation slug in configuration file
+    # TODO: Let user set batch name and slug
     return {
-        'automation_configurations': automation_configurations,
+        'automations': automation_dictionaries,
     }
+
+
+def is_matching_route_path(path, request):
+    return path.casefold() == request.path.casefold()
+
+
+def get_dictionary_matching_request(dictionaries, request):
+    return next(filter(
+        lambda _: is_matching_route_path(_['path'], request),
+        dictionaries))
+
+
+# def matches_route_path
+
+
+def see_automation(request):
+    print(request.path)
+    # matchdict = request.matchdict
+    # automation_slug = matchdict['automation_slug']
+    return get_dictionary_matching_request(
+        automation_dictionaries, request)
 
 
 def see_automation_batch(request):
@@ -199,6 +271,10 @@ with Configurator() as config:
         route_name='home',
         renderer='home.jinja2')
     config.add_view(
+        see_automation,
+        route_name='automation',
+        renderer='automation.jinja2')
+    config.add_view(
         see_automation_batch,
         route_name='automation batch',
         # renderer='automation-batch.jinja2',
@@ -210,5 +286,9 @@ with Configurator() as config:
 
 
 # Start server
-server = make_server('0.0.0.0', 8000, app)
+server_port = 8000
+print(f'http://127.0.0.1:{server_port}')
+
+
+server = make_server('0.0.0.0', server_port, app)
 server.serve_forever()

@@ -1,3 +1,9 @@
-{% for automation_configuration in automation_configurations %}
-  {{ automation_configuration['url'] }}
+<h1>Automations</h1>
+
+<ul>
+{% for automation in automations %}
+  <li>
+    <a href="{{ automation['path'] }}">{{ automation['name'] }}</a></h2>
+  </li>
 {% endfor %}
+</ul>
