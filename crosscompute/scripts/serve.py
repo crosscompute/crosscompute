@@ -17,7 +17,7 @@ if __name__ == '__main__':
     configure_logging_from(args)
 
     with Configurator() as config:
-        pass
+        config.include('pyramid_jinja2')
     app = config.make_wsgi_app()
 
     serve(app, host=args.host, port=args.port)
