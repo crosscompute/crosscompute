@@ -1,44 +1,24 @@
 # TODO: Separate configuration validation
 # TODO: Support case when user does not specify configuration file
 # TODO: Improve output when running batches
-# TODO: Separate run_batch(batch_folder) into a function
-import subprocess
-import yaml
-from os import getenv
-from os.path import dirname, join, relpath
-from sys import argv
+
+
+from argparse import ArgumentParser
+
+from crosscompute import Automation
+from crosscompute.routines import (
+    configure_argument_parser_for_logging,
+    configure_logging)
 
 
 if __name__ == '__main__':
-    configuration_path = argv[1]
-    configuration_folder = dirname(configuration_path)
-    configuration = yaml.safe_load(open(configuration_path, 'rt'))
-    print(configuration)
+    argument_parser = ArgumentParser()
+    argument_parser.add_argument(
+        'configuration_path')
+    configure_argument_parser_for_logging(argument_parser)
+    args = argument_parser.parse_args()
 
-    script_definition = configuration['script']
-    script_folder = script_definition['folder']
-    command_string = script_definition['command']
+    configure_logging(args.verbosity)
 
-    for batch_definition in configuration['batches']:
-        print(batch_definition)
-
-        batch_folder = batch_definition['folder']
-        input_folder = join(batch_folder, 'input')
-        output_folder = join(batch_folder, 'output')
-
-        command_environment = {
-            'PATH': getenv('PATH', ''),
-            'CROSSCOMPUTE_INPUT_FOLDER': relpath(
-                input_folder, script_folder),
-            'CROSSCOMPUTE_OUTPUT_FOLDER': relpath(
-                output_folder, script_folder),
-        }
-
-        print(command_string)
-        print(command_environment)
-
-        subprocess.run(
-            command_string,
-            shell=True,
-            cwd=configuration_folder,
-            env=command_environment)
+    automation = Automation.load(args.configuration_path)
+    automation.run()
