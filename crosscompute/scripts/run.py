@@ -8,17 +8,17 @@ from argparse import ArgumentParser
 from crosscompute import Automation
 from crosscompute.routines import (
     configure_argument_parser_for_logging,
-    configure_logging)
+    configure_logging_from)
 
 
 if __name__ == '__main__':
-    argument_parser = ArgumentParser()
-    argument_parser.add_argument(
+    a = ArgumentParser()
+    a.add_argument(
         'configuration_path')
-    configure_argument_parser_for_logging(argument_parser)
-    args = argument_parser.parse_args()
+    configure_argument_parser_for_logging(a)
+    args = a.parse_args()
 
-    configure_logging(args.verbosity)
+    configure_logging_from(args)
 
     automation = Automation.load(args.configuration_path)
     automation.run()

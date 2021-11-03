@@ -1,8 +1,10 @@
+import logging
 import subprocess
 import yaml
 from os import getenv
 from os.path import dirname, join, relpath
 
+from ..macros.disk import make_folder
 from ..macros.log import format_path
 
 
@@ -59,14 +61,17 @@ class Automation():
         }
         environment = default_environment | (custom_environment or {})
         logging.debug('environment = %s', environment)
-        logging.info('input_folder = %s', format_path(join(
-            self.configuration_folder, input_folder)))
-        logging.info('output_folder = %s', format_path(join(
-            self.configuration_folder, output_folder)))
-        logging.info('log_folder = %s', format_path(join(
-            self.configuration_folder, log_folder)))
-        logging.info('debug_folder = %s', format_path(join(
-            self.configuration_folder, debug_folder)))
+
+        for folder_label, relative_folder in {
+            'input': input_folder,
+            'output': output_folder,
+            'log': log_folder,
+            'debug': debug_folder,
+        }.items():
+            folder = make_folder(join(
+                self.configuration_folder, relative_folder))
+            logging.info(f'{folder_label}_folder = {format_path(folder)}')
+
         # TODO: Capture stdout and stderr for live output
         subprocess.run(
             self.command_string,

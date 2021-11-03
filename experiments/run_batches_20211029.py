@@ -18,21 +18,6 @@ automation_path_template = '/a/{automation_slug}'
 batch_path_template = '/b/{batch_slug}'
 
 
-def first_true(iterable, default=False, pred=None):
-    # https://docs.python.org/3/library/itertools.html
-    """Returns the first true value in the iterable.
-
-    If no true value is found, returns *default*
-
-    If *pred* is not None, returns the first item
-    for which pred(item) is true.
-
-    """
-    # first_true([a,b,c], x) --> a or b or c or x
-    # first_true([a,b], x, f) --> a if f(a) else b if f(b) else x
-    return next(filter(pred, iterable), default)
-
-
 def get_slug_from_name(name):
     return normalize_key(name, word_separator='-')
 
@@ -60,21 +45,9 @@ batch_folder = batch_configuration['folder']
 input_folder = join(batch_folder, 'input')
 output_folder = join(batch_folder, 'output')
 '''
-try:
-    makedirs(join(configuration_folder, output_folder))
-except OSError:
-    pass
 command_environment = {
-    'PATH': getenv('PATH', ''),
     # 'VIRTUAL_ENV': getenv('VIRTUAL_ENV', ''),
-    'CROSSCOMPUTE_INPUT_FOLDER': relpath(input_folder, script_folder),
-    'CROSSCOMPUTE_OUTPUT_FOLDER': relpath(output_folder, script_folder),
 }
-subprocess.run(
-    command_string,
-    shell=True,
-    cwd=configuration_folder,
-    env=command_environment)
 '''
 
 
