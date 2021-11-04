@@ -99,6 +99,10 @@ if __name__ == '__main__':
             raise HTTPNotFound
         return FileResponse(style_path, request)
 
+    def send_echoes(request):
+        for changes in watch(configuration_folder):
+            yield 'data: *\n\n'.encode()
+
     def see_automation(request):
         return find_dictionary(automation_dictionaries, 'url', request.path)
 
@@ -213,6 +217,7 @@ if __name__ == '__main__':
 
         config.add_route('home', '/')
         config.add_route('style', STYLE_ROUTE)
+        config.add_route('echoes', '/echoes')
         config.add_route('automation', AUTOMATION_ROUTE)
         config.add_route('automation batch', AUTOMATION_ROUTE + BATCH_ROUTE)
         config.add_route(
@@ -229,6 +234,9 @@ if __name__ == '__main__':
         config.add_view(
             see_style,
             route_name='style')
+        config.add_view(
+            send_echoes,
+            route_name='echoes')
         config.add_view(
             see_automation,
             route_name='automation',
