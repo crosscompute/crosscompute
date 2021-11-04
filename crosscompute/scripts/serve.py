@@ -158,6 +158,7 @@ if __name__ == '__main__':
                 variable_data=variable_data)
             '''
             image_url = request.path + '/' + variable_path
+            # TODO: Split into crosscompute-image
             replacement_text = f"<img src='{image_url}'>"
             return replacement_text
 
