@@ -13,8 +13,7 @@ from crosscompute.routines import (
 
 if __name__ == '__main__':
     a = ArgumentParser()
-    a.add_argument(
-        'configuration_path')
+    a.add_argument('configuration_path')
     configure_argument_parser_for_logging(a)
     args = a.parse_args()
 

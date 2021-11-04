@@ -4,8 +4,7 @@ import yaml
 from os import getenv
 from os.path import dirname, join, relpath
 
-from ..macros.disk import make_folder
-from ..macros.log import format_path
+from ..macros import format_path, make_folder
 
 
 class Automation():

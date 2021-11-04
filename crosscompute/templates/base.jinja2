@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+{%- for style_url in style['urls'] %}
+  <link rel="stylesheet" href="{{ style_url }}">
+{% endfor %}
+</head>
+<body>
+{% block body_content %}
+{{ content | safe }}
+{% endblock %}
+</body>
+</html>
