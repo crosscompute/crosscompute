@@ -6,6 +6,7 @@
 # TODO: Sanitize variable path for security
 # TODO: Test with and without request for FileResponse
 # TODO: Run server in separate thread
+# TODO: Define includeme for pyramid
 import re
 from argparse import ArgumentParser
 from markdown import markdown
@@ -91,7 +92,6 @@ if __name__ == '__main__':
     def see_home(request):
         return {
             'automations': automation_dictionaries,
-            # 'style': {'urls': style_urls},
         }
 
     def see_style(request):
@@ -201,8 +201,6 @@ if __name__ == '__main__':
         # TODO: Make more robust
         if not normpath(path).startswith(join(
                 configuration_folder, variable_folder)):
-            print(path)
-            print(configuration_folder, variable_folder)
             raise HTTPBadRequest
         return FileResponse(path, request=request)
 

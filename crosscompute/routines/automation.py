@@ -28,7 +28,7 @@ class Automation():
         return instance
 
     def run(self, custom_environment=None):
-        # TODO: Support custom environment
+        # TODO: Load base custom environment from configuration
         for batch_definition in self.configuration['batches']:
             batch_folder = batch_definition['folder']
             self.run_batch(batch_folder, custom_environment)
@@ -77,3 +77,6 @@ class Automation():
             shell=True,
             cwd=self.configuration_folder,
             env=environment)
+
+    def serve(self):
+        pass
