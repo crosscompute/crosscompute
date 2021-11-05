@@ -9,6 +9,7 @@ from watchgod import DefaultWatcher, run_process
 
 from ..constants import HOST, PORT
 from ..macros import format_path, make_folder
+from ..views import AutomationViews
 
 
 class Automation():
@@ -26,6 +27,7 @@ class Automation():
         instance.configuration = configuration
         instance.script_folder = script_definition['folder']
         instance.command_string = command_string
+        instance.views = AutomationViews(configuration, configuration_folder)
 
         logging.debug('configuration_folder = %s', configuration_folder)
         logging.debug('command_string = %s', command_string)
@@ -83,11 +85,16 @@ class Automation():
             env=environment)
 
     def serve(self, host=HOST, port=PORT, is_static=False):
-        with Configurator() as config:
-            pass
+        with Configurator(settings={
+            'jinja2.globals': {'style': {'urls': []}},
+        }) as config:
+            config.include('pyramid_jinja2')
+            config.include(self.views.includeme)
         app = config.make_wsgi_app()
 
         def run_server():
+            # TODO: Reload automation if configuration changed
+            # TODO: Search for configuration if the file is gone
             serve(app, host=host, port=port)
 
         if is_static:

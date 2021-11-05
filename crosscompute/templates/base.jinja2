@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-{%- for style_url in style['urls'] %}
-  <link rel="stylesheet" href="{{ style_url }}">
+{%- for url in style['urls'] %}
+  <link rel="stylesheet" href="{{ url }}">
 {% endfor %}
 </head>
 <body>

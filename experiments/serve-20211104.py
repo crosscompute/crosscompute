@@ -8,7 +8,6 @@
 # TODO: Run server in separate thread
 # TODO: Define includeme for pyramid
 import re
-from argparse import ArgumentParser
 from markdown import markdown
 from os.path import basename, join, normpath
 from pyramid.config import Configurator
@@ -16,20 +15,14 @@ from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPNotFound)
 from pyramid.response import FileResponse
-from waitress import serve
 
-from crosscompute import Automation
 from crosscompute.macros import normalize_key
-from crosscompute.routines import (
-    configure_argument_parser_for_logging,
-    configure_logging_from)
 
 
 AUTOMATION_ROUTE = '/a/{automation_slug}'
 BATCH_ROUTE = '/b/{batch_slug}'
 REPORT_ROUTE = '/{variable_type}'
 FILE_ROUTE = '/{variable_path}'
-STYLE_ROUTE = '/style.css'
 VARIABLE_TYPES = 'i', 'o', 'l', 'd'
 VARIABLE_ID_PATTERN = re.compile(r'{\s*([^}]+?)\s*}')
 
@@ -46,15 +39,6 @@ def find_dictionary(dictionaries, key, value):
     return next(filter(lambda item: is_match(item[key]), dictionaries))
 
 
-if __name__ == '__main__':
-    a = ArgumentParser()
-    a.add_argument('configuration_path')
-    configure_argument_parser_for_logging(a)
-    args = a.parse_args()
-
-    configure_logging_from(args)
-
-    automation = Automation.load(args.configuration_path)
     configuration = automation.configuration
     configuration_folder = automation.configuration_folder
 
@@ -81,9 +65,6 @@ if __name__ == '__main__':
     })
 
     style_urls = []
-    display_configuration = configuration.get('display', {})
-    style_configuration = display_configuration.get('style', {})
-    style_path = style_configuration.get('path')
     if style_path:
         style_urls.append(STYLE_ROUTE)
 
@@ -206,15 +187,9 @@ if __name__ == '__main__':
             raise HTTPBadRequest
         return FileResponse(path, request=request)
 
-    # automation.serve()
-
     with Configurator(settings={
         'jinja2.globals': {'style': {'urls': style_urls}},
     }) as config:
-        config.include('pyramid_jinja2')
-
-        config.add_route('home', '/')
-        config.add_route('style', STYLE_ROUTE)
         config.add_route('echoes', '/echoes')
         config.add_route('automation', AUTOMATION_ROUTE)
         config.add_route('automation batch', AUTOMATION_ROUTE + BATCH_ROUTE)
@@ -225,13 +200,6 @@ if __name__ == '__main__':
             'automation batch report file',
             AUTOMATION_ROUTE + BATCH_ROUTE + REPORT_ROUTE + FILE_ROUTE)
 
-        config.add_view(
-            see_home,
-            route_name='home',
-            renderer='crosscompute:templates/home.jinja2')
-        config.add_view(
-            see_style,
-            route_name='style')
         config.add_view(
             send_echoes,
             route_name='echoes')
@@ -250,6 +218,3 @@ if __name__ == '__main__':
         config.add_view(
             see_automation_batch_report_file,
             route_name='automation batch report file')
-
-    app = config.make_wsgi_app()
-    serve(app, host=args.host, port=args.port)
