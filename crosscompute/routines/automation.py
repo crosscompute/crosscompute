@@ -3,7 +3,11 @@ import subprocess
 import yaml
 from os import getenv
 from os.path import dirname, join, relpath
+from pyramid.config import Configurator
+from waitress import serve
+from watchgod import DefaultWatcher, run_process
 
+from ..constants import HOST, PORT
 from ..macros import format_path, make_folder
 
 
@@ -78,5 +82,18 @@ class Automation():
             cwd=self.configuration_folder,
             env=environment)
 
-    def serve(self):
-        pass
+    def serve(self, host=HOST, port=PORT, is_static=False):
+        with Configurator() as config:
+            pass
+        app = config.make_wsgi_app()
+
+        def run_server():
+            serve(app, host=host, port=port)
+
+        if is_static:
+            run_server()
+        else:
+            run_process(
+                self.configuration_folder,
+                run_server,
+                watcher_cls=DefaultWatcher)

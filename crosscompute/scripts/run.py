@@ -1,4 +1,4 @@
-# TODO: Separate configuration validation
+# TODO: Validate configuration
 # TODO: Support case when user does not specify configuration file
 # TODO: Improve output when running batches
 
