@@ -64,23 +64,10 @@ def find_dictionary(dictionaries, key, value):
         'batches': batch_dictionaries,
     })
 
-    style_urls = []
-    if style_path:
-        style_urls.append(STYLE_ROUTE)
-
     def see_home(request):
         return {
             'automations': automation_dictionaries,
         }
-
-    def see_style(request):
-        if not style_path:
-            raise HTTPNotFound
-        return FileResponse(style_path, request)
-
-    def send_echoes(request):
-        for changes in watch(configuration_folder):
-            yield 'data: *\n\n'.encode()
 
     def see_automation(request):
         return find_dictionary(automation_dictionaries, 'url', request.path)
@@ -200,9 +187,6 @@ def find_dictionary(dictionaries, key, value):
             'automation batch report file',
             AUTOMATION_ROUTE + BATCH_ROUTE + REPORT_ROUTE + FILE_ROUTE)
 
-        config.add_view(
-            send_echoes,
-            route_name='echoes')
         config.add_view(
             see_automation,
             route_name='automation',

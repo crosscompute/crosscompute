@@ -16,9 +16,15 @@ if __name__ == '__main__':
         '--port',
         default=PORT)
     a.add_argument(
+        '--production',
+        dest='is_production',
+        action='store_true',
+        help='disable server restart on file change')
+    a.add_argument(
         '--static',
         dest='is_static',
-        action='store_true')
+        action='store_true',
+        help='disable page update on file change')
     a.add_argument('configuration_path')
     configure_argument_parser_for_logging(a)
     args = a.parse_args()
@@ -30,4 +36,4 @@ if __name__ == '__main__':
     automation.serve(
         args.host,
         args.port,
-        args.is_static)
+        args.is_production)

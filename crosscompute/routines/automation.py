@@ -1,15 +1,16 @@
 import logging
 import subprocess
 import yaml
+from multiprocessing import Process
 from os import getenv
-from os.path import dirname, join, relpath
+from os.path import dirname, join, relpath, splitext
 from pyramid.config import Configurator
 from waitress import serve
-from watchgod import DefaultWatcher, run_process
+from watchgod import watch
 
 from ..constants import HOST, PORT
 from ..macros import format_path, make_folder
-from ..views import AutomationViews
+from ..views import AutomationViews, EchoViews
 
 
 class Automation():
@@ -27,7 +28,10 @@ class Automation():
         instance.configuration = configuration
         instance.script_folder = script_definition['folder']
         instance.command_string = command_string
-        instance.views = AutomationViews(configuration, configuration_folder)
+        instance.automation_views = AutomationViews(
+            configuration, configuration_folder)
+        instance.echo_views = EchoViews(
+            configuration_folder)
 
         logging.debug('configuration_folder = %s', configuration_folder)
         logging.debug('command_string = %s', command_string)
@@ -84,23 +88,52 @@ class Automation():
             cwd=self.configuration_folder,
             env=environment)
 
-    def serve(self, host=HOST, port=PORT, is_static=False):
-        with Configurator(settings={
-            'jinja2.globals': {'style': {'urls': []}},
-        }) as config:
+    def serve(
+            self,
+            host=HOST,
+            port=PORT,
+            is_production=False,
+            is_static=False):
+        with Configurator() as config:
             config.include('pyramid_jinja2')
-            config.include(self.views.includeme)
+            config.include(self.automation_views.includeme)
+            if not is_static:
+                config.include(self.echo_views.includeme)
         app = config.make_wsgi_app()
 
         def run_server():
             # TODO: Reload automation if configuration changed
             # TODO: Search for configuration if the file is gone
+            print('run_server')
             serve(app, host=host, port=port)
 
-        if is_static:
+        def handle_changes(changes):
+            # TODO: move this to class
+            print('handle_changes', changes)
+            self.echo_views.queue.put('*')
+            # import time; time.sleep(1)
+
+        if is_production:
             run_server()
-        else:
-            run_process(
-                self.configuration_folder,
-                run_server,
-                watcher_cls=DefaultWatcher)
+            return
+
+        server_process = Process(target=run_server)
+        server_process.start()
+        for changes in watch(self.configuration_folder):
+            for changed_type, changed_path in changes:
+                changed_extension = splitext(changed_path)[1]
+                print(changed_type, changed_path, changed_extension)
+                if changed_extension in ['.yml']:
+                    print('SERVER RESTART')
+                    server_process.terminate()
+                    # !!! might need to join here
+                    server_process = Process(target=run_server)
+                    server_process.start()
+
+        '''
+        run_process(
+            self.configuration_folder,
+            run_server,
+            callback=handle_changes,
+            watcher_cls=DefaultWatcher)
+        '''

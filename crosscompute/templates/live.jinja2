@@ -1,0 +1,42 @@
+{% extends 'base.jinja2' %}
+
+{% block body_script %}
+{# TODO: Use constant for /echoes #}
+ECHOES_ROUTE = '/echoes'
+
+let echoSource
+let serverTime
+// TODO: Fix name of timeout
+let timeout
+
+function connect() {
+  echoSource = new EventSource(ECHOES_ROUTE)
+
+  echoSource.onopen = function() {
+    console.log('connected')
+    clearTimeout(timeout)
+  }
+
+  echoSource.onmessage = function(message) {
+    const messageData = message.data
+    console.log(messageData, serverTime)
+    if (messageData != serverTime) {
+      if (serverTime) {
+        console.log('RELOAD!')
+        location.reload()
+      }
+      serverTime = messageData
+    }
+  }
+
+  echoSource.onerror = function() {
+    console.log('disconnected')
+    echoSource.close()
+    // connectionIntervalId = setInterval(connect, 1000)
+    clearTimeout(timeout)
+    timeout = setTimeout(connect, 1000)
+  }
+}
+
+connect()
+{% endblock %}

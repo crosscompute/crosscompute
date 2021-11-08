@@ -9,7 +9,12 @@
 </head>
 <body>
 {% block body_content %}
-{{ content | safe }}
+{{ body_content | safe }}
 {% endblock %}
+<script>
+{% block body_script %}
+{{ body_script }}
+{% endblock %}
+</script>
 </body>
 </html>
