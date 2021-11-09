@@ -11,3 +11,12 @@ PORT = 7000
 
 
 STYLE_ROUTE = '/style.css'
+
+
+AUTOMATION_CONFIGURATION_EXTENSIONS = [
+    '.yaml',
+    '.yml',
+    '.toml',
+    '.ini',
+    '.cfg',
+]

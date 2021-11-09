@@ -8,33 +8,36 @@ from pyramid.config import Configurator
 from waitress import serve
 from watchgod import watch
 
-from ..constants import HOST, PORT
+from ..constants import AUTOMATION_CONFIGURATION_EXTENSIONS, HOST, PORT
 from ..macros import format_path, make_folder
 from ..views import AutomationViews, EchoViews
 
 
 class Automation():
 
-    @classmethod
-    def load(Class, configuration_path):
+    def initialize_from_path(self, configuration_path):
         configuration = yaml.safe_load(open(configuration_path, 'rt'))
-        script_definition = configuration['script']
         configuration_folder = dirname(configuration_path)
+        script_definition = configuration['script']
         command_string = script_definition['command']
 
-        instance = Class()
-        instance.configuration_path = configuration_path
-        instance.configuration_folder = configuration_folder
-        instance.configuration = configuration
-        instance.script_folder = script_definition['folder']
-        instance.command_string = command_string
-        instance.automation_views = AutomationViews(
+        self.configuration_path = configuration_path
+        self.configuration_folder = configuration_folder
+        self.configuration = configuration
+        self.script_folder = script_definition['folder']
+        self.command_string = command_string
+        self.automation_views = AutomationViews(
             configuration, configuration_folder)
-        instance.echo_views = EchoViews(
+        self.echo_views = EchoViews(
             configuration_folder)
 
+        logging.debug('configuration_path = %s', configuration_path)
         logging.debug('configuration_folder = %s', configuration_folder)
-        logging.debug('command_string = %s', command_string)
+
+    @classmethod
+    def load(Class, configuration_path):
+        instance = Class()
+        instance.initialize_from_path(configuration_path)
         return instance
 
     def run(self, custom_environment=None):
@@ -89,31 +92,13 @@ class Automation():
             env=environment)
 
     def serve(
-            self,
-            host=HOST,
-            port=PORT,
-            is_production=False,
-            is_static=False):
-        with Configurator() as config:
-            config.include('pyramid_jinja2')
-            config.include(self.automation_views.includeme)
-            if not is_static:
-                config.include(self.echo_views.includeme)
-        app = config.make_wsgi_app()
+            self, host=HOST, port=PORT, is_production=False, is_static=False):
 
         def run_server():
-            # TODO: Reload automation if configuration changed
-            # TODO: Search for configuration if the file is gone
-            print('run_server')
+            app = self.get_app(is_static)
             serve(app, host=host, port=port)
 
-        def handle_changes(changes):
-            # TODO: move this to class
-            print('handle_changes', changes)
-            self.echo_views.queue.put('*')
-            # import time; time.sleep(1)
-
-        if is_production:
+        if is_production and is_static:
             run_server()
             return
 
@@ -121,19 +106,20 @@ class Automation():
         server_process.start()
         for changes in watch(self.configuration_folder):
             for changed_type, changed_path in changes:
+                logging.debug(changed_type, changed_path)
                 changed_extension = splitext(changed_path)[1]
-                print(changed_type, changed_path, changed_extension)
-                if changed_extension in ['.yml']:
-                    print('SERVER RESTART')
+                if changed_extension in AUTOMATION_CONFIGURATION_EXTENSIONS:
                     server_process.terminate()
-                    # !!! might need to join here
+                    # TODO: Consider watchgod/main.py#L154
+                    # TODO: Search for configuration if the file is gone
+                    self.initialize_from_path(self.configuration_path)
                     server_process = Process(target=run_server)
                     server_process.start()
 
-        '''
-        run_process(
-            self.configuration_folder,
-            run_server,
-            callback=handle_changes,
-            watcher_cls=DefaultWatcher)
-        '''
+    def get_app(self, is_static=False):
+        with Configurator() as config:
+            config.include('pyramid_jinja2')
+            config.include(self.automation_views.includeme)
+            if not is_static:
+                config.include(self.echo_views.includeme)
+        return config.make_wsgi_app()
