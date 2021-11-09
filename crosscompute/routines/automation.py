@@ -1,7 +1,6 @@
 import logging
 import subprocess
 import yaml
-from multiprocessing import Process
 from os import getenv
 from os.path import dirname, join, relpath, splitext
 from pyramid.config import Configurator
@@ -9,7 +8,7 @@ from waitress import serve
 from watchgod import watch
 
 from ..constants import AUTOMATION_CONFIGURATION_EXTENSIONS, HOST, PORT
-from ..macros import format_path, make_folder
+from ..macros import StoppableProcess, format_path, make_folder
 from ..views import AutomationViews, EchoViews
 
 
@@ -102,18 +101,17 @@ class Automation():
             run_server()
             return
 
-        server_process = Process(target=run_server)
+        server_process = StoppableProcess(target=run_server)
         server_process.start()
         for changes in watch(self.configuration_folder):
             for changed_type, changed_path in changes:
                 logging.debug('%s %s', changed_type, changed_path)
                 changed_extension = splitext(changed_path)[1]
                 if changed_extension in AUTOMATION_CONFIGURATION_EXTENSIONS:
-                    server_process.terminate()
-                    # TODO: Consider watchgod/main.py#L154
+                    server_process.stop()
                     # TODO: Search for configuration if the file is gone
                     self.initialize_from_path(self.configuration_path)
-                    server_process = Process(target=run_server)
+                    server_process = StoppableProcess(target=run_server)
                     server_process.start()
 
     def get_app(self, is_static=False):
