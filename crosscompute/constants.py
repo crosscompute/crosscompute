@@ -26,3 +26,4 @@ AUTOMATION_CONFIGURATION_EXTENSIONS = [
     '.ini',
     '.cfg',
 ]
+AUTOMATION_NAME = 'Automation {automation_index}'

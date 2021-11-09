@@ -1,17 +1,16 @@
-{% extends 'base.jinja2' %}
+{% extends 'live.jinja2' %}
 
 {% block body_content %}
 <h1>{{ name }}</h1>
 
 <div>
-  <a href="/">Home</a> &gt;
-  <a href="{{ path }}">{{ name }}</a>
+  <a href="{{ HOME_ROUTE }}">Home</a> &gt;
+  <a href="{{ url }}">{{ name }}</a>
 </div>
 
 <ul>
 {% for batch in batches %}
   <li>
-    {# <a href="{{ url }}{{ batch['url'] }}">{{ batch['name'] }}</a> #}
     {{ batch['name'] }}
     <a href="{{ url }}{{ batch['url'] }}/o">[output]</a>
   </li>

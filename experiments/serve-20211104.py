@@ -16,40 +16,10 @@ from pyramid.httpexceptions import (
     HTTPNotFound)
 from pyramid.response import FileResponse
 
-from crosscompute.macros import normalize_key
-
 
 VARIABLE_TYPES = 'i', 'o', 'l', 'd'
 VARIABLE_ID_PATTERN = re.compile(r'{\s*([^}]+?)\s*}')
 
-
-
-
-def find_dictionary(dictionaries, key, value):
-
-    def is_match(v):
-        return v.casefold() == value.casefold()
-
-    return next(filter(lambda item: is_match(item[key]), dictionaries))
-
-
-    configuration = automation.configuration
-    configuration_folder = automation.configuration_folder
-
-    batch_dictionaries = []
-    batch_definitions = configuration['batches']
-    for batch_definition in batch_definitions:
-        batch_folder = batch_definition['folder']
-        batch_name = basename(batch_folder)
-        batch_slug = get_slug_from_name(batch_name)
-        batch_url = BATCH_ROUTE.format(batch_slug=batch_slug)
-        batch_dictionaries.append({
-            'name': batch_name,
-            'url': batch_url,
-        })
-
-    def see_automation(request):
-        return find_dictionary(automation_dictionaries, 'url', request.path)
 
     def see_automation_batch(request):
         return {}
@@ -153,27 +123,6 @@ def find_dictionary(dictionaries, key, value):
             raise HTTPBadRequest
         return FileResponse(path, request=request)
 
-    with Configurator(settings={
-        'jinja2.globals': {'style': {'urls': style_urls}},
-    }) as config:
-        config.add_route('echoes', '/echoes')
-        config.add_route('automation', AUTOMATION_ROUTE)
-        config.add_route('automation batch', AUTOMATION_ROUTE + BATCH_ROUTE)
-        config.add_route(
-            'automation batch report',
-            AUTOMATION_ROUTE + BATCH_ROUTE + REPORT_ROUTE)
-        config.add_route(
-            'automation batch report file',
-            AUTOMATION_ROUTE + BATCH_ROUTE + REPORT_ROUTE + FILE_ROUTE)
-
-        config.add_view(
-            see_automation,
-            route_name='automation',
-            renderer='crosscompute:templates/automation.jinja2')
-        config.add_view(
-            see_automation_batch,
-            route_name='automation batch',
-            renderer='crosscompute:templates/batch.jinja2')
         config.add_view(
             see_automation_batch_report,
             route_name='automation batch report',
