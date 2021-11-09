@@ -6,7 +6,6 @@ ECHOES_ROUTE = '/echoes'
 
 let echoSource
 let serverTime
-// TODO: Fix name of timeout
 let reconnectionId
 
 function connect() {
@@ -33,7 +32,7 @@ function connect() {
     console.log('disconnected')
     echoSource.close()
     clearTimeout(reconnectionId)
-    reconnectionId = setTimeout(connect, 3000)
+    reconnectionId = setTimeout(connect, 1000)
   }
 }
 

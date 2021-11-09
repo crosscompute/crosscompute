@@ -106,7 +106,7 @@ class Automation():
         server_process.start()
         for changes in watch(self.configuration_folder):
             for changed_type, changed_path in changes:
-                logging.debug(changed_type, changed_path)
+                logging.debug('%s %s', changed_type, changed_path)
                 changed_extension = splitext(changed_path)[1]
                 if changed_extension in AUTOMATION_CONFIGURATION_EXTENSIONS:
                     server_process.terminate()
