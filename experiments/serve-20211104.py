@@ -21,9 +21,6 @@ VARIABLE_TYPES = 'i', 'o', 'l', 'd'
 VARIABLE_ID_PATTERN = re.compile(r'{\s*([^}]+?)\s*}')
 
 
-    def see_automation_batch(request):
-        return {}
-
     def see_automation_batch_report(request):
         # TODO: Fix temporary code
         matchdict = request.matchdict
@@ -86,7 +83,6 @@ VARIABLE_ID_PATTERN = re.compile(r'{\s*([^}]+?)\s*}')
         report_content = markdown(report_markdown)
         return {
             'content': report_content,
-            'style': {'urls': style_urls},
         }
 
     def see_automation_batch_report_file(request):
@@ -121,12 +117,3 @@ VARIABLE_ID_PATTERN = re.compile(r'{\s*([^}]+?)\s*}')
         if not normpath(path).startswith(join(
                 configuration_folder, variable_folder)):
             raise HTTPBadRequest
-        return FileResponse(path, request=request)
-
-        config.add_view(
-            see_automation_batch_report,
-            route_name='automation batch report',
-            renderer='crosscompute:templates/base.jinja2')
-        config.add_view(
-            see_automation_batch_report_file,
-            route_name='automation batch report file')

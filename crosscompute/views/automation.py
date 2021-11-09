@@ -133,8 +133,13 @@ class AutomationViews():
         return {}
 
     def see_automation_batch_report_file(self, request):
-        print(request.path)
-        print(request.matchdict)
+        automation_dictionary = find_dictionary(
+            self.automation_dictionaries,
+            'url',
+            request.path,
+            'startswith')
+        # print(request.path)
+        # print(request.matchdict)
         # TODO: Test if we can omit request kwarg to FileResponse
         # return FileResponse(path, request=request)
         from pyramid.response import Response
