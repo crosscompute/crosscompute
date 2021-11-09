@@ -1,15 +1,10 @@
 {% extends 'base.jinja2' %}
 
 {% block body_script %}
-{# TODO: Use constant for /echoes #}
-ECHOES_ROUTE = '/echoes'
-
-let echoSource
-let serverTime
-let reconnectionId
+let echoSource, serverTime, reconnectionId
 
 function connect() {
-  echoSource = new EventSource(ECHOES_ROUTE)
+  echoSource = new EventSource('{{ ECHOES_ROUTE }}')
 
   echoSource.onopen = function() {
     console.log('connected')

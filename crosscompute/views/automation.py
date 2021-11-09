@@ -4,6 +4,7 @@ from pyramid.response import FileResponse
 
 from ..constants import (
     AUTOMATION_ROUTE,
+    HOME_ROUTE,
     STYLE_ROUTE)
 from ..macros import (
     get_slug_from_name)
@@ -36,7 +37,7 @@ class AutomationViews():
     def includeme(self, config):
         config.include(self.configure_stylesheets)
 
-        config.add_route('home', '/')
+        config.add_route('home', HOME_ROUTE)
 
         config.add_view(
             self.see_home,

@@ -2,6 +2,8 @@
 from pyramid.response import Response
 from time import time
 
+from ..constants import ECHOES_ROUTE
+
 
 class EchoViews():
 
@@ -11,10 +13,19 @@ class EchoViews():
         self.time = time()
 
     def includeme(self, config):
-        config.add_route('echoes', '/echoes')
+        config.add_route('echoes', ECHOES_ROUTE)
+
         config.add_view(
             self.see_echoes,
             route_name='echoes')
+
+        def update_renderer_globals():
+            renderer_environment = config.get_jinja2_environment()
+            renderer_environment.globals.update({
+                'ECHOES_ROUTE': ECHOES_ROUTE,
+            })
+
+        config.action(None, update_renderer_globals)
 
     def see_echoes(self, request):
         response = Response(headerlist=[

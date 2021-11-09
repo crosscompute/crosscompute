@@ -36,4 +36,5 @@ if __name__ == '__main__':
     automation.serve(
         args.host,
         args.port,
-        args.is_production)
+        args.is_production,
+        args.is_static)
