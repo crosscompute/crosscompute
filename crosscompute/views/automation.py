@@ -85,6 +85,13 @@ class AutomationViews():
             self.see_automation_batch,
             route_name='automation batch',
             renderer='crosscompute:templates/batch.jinja2')
+        config.add_view(
+            self.see_automation_batch_report,
+            route_name='automation batch report',
+            renderer='crosscompute:templates/live.jinja2')
+        config.add_view(
+            self.see_automation_batch_report_file,
+            route_name='automation batch report file')
 
     def configure_stylesheets(self, config):
         if not self.style_path:
@@ -121,3 +128,14 @@ class AutomationViews():
 
     def see_automation_batch(self, request):
         return {}
+
+    def see_automation_batch_report(self, request):
+        return {}
+
+    def see_automation_batch_report_file(self, request):
+        print(request.path)
+        print(request.matchdict)
+        # TODO: Test if we can omit request kwarg to FileResponse
+        # return FileResponse(path, request=request)
+        from pyramid.response import Response
+        return Response('hey')
