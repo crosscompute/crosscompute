@@ -11,6 +11,11 @@ PORT = 7000
 
 
 STYLE_ROUTE = '/style.css'
+ECHOES_ROUTE = '/echoes'
+AUTOMATION_ROUTE = '/a/{automation_slug}'
+BATCH_ROUTE = '/b/{batch_slug}'
+REPORT_ROUTE = '/{variable_type}'
+FILE_ROUTE = '/{variable_path}'
 
 
 AUTOMATION_CONFIGURATION_EXTENSIONS = [

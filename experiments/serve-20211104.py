@@ -19,16 +19,10 @@ from pyramid.response import FileResponse
 from crosscompute.macros import normalize_key
 
 
-AUTOMATION_ROUTE = '/a/{automation_slug}'
-BATCH_ROUTE = '/b/{batch_slug}'
-REPORT_ROUTE = '/{variable_type}'
-FILE_ROUTE = '/{variable_path}'
 VARIABLE_TYPES = 'i', 'o', 'l', 'd'
 VARIABLE_ID_PATTERN = re.compile(r'{\s*([^}]+?)\s*}')
 
 
-def get_slug_from_name(name):
-    return normalize_key(name, word_separator='-')
 
 
 def find_dictionary(dictionaries, key, value):
@@ -53,21 +47,6 @@ def find_dictionary(dictionaries, key, value):
             'name': batch_name,
             'url': batch_url,
         })
-
-    automation_dictionaries = []
-    automation_name = configuration['name']
-    automation_slug = get_slug_from_name(automation_name)
-    automation_url = AUTOMATION_ROUTE.format(automation_slug=automation_slug)
-    automation_dictionaries.append({
-        'name': automation_name,
-        'url': automation_url,
-        'batches': batch_dictionaries,
-    })
-
-    def see_home(request):
-        return {
-            'automations': automation_dictionaries,
-        }
 
     def see_automation(request):
         return find_dictionary(automation_dictionaries, 'url', request.path)

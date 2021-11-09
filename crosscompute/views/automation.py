@@ -3,7 +3,10 @@ from pyramid.httpexceptions import HTTPNotFound
 from pyramid.response import FileResponse
 
 from ..constants import (
+    AUTOMATION_ROUTE,
     STYLE_ROUTE)
+from ..macros import (
+    get_slug_from_name)
 
 
 class AutomationViews():
@@ -18,6 +21,17 @@ class AutomationViews():
         self.configuration_folder = configuration_folder
         self.style_path = style_path
         self.style_urls = [STYLE_ROUTE] if style_path else []
+
+        automation_dictionaries = []
+        automation_name = configuration.get('name', 'Automation 1')
+        automation_slug = get_slug_from_name(automation_name)
+        automation_url = AUTOMATION_ROUTE.format(
+            automation_slug=automation_slug)
+        automation_dictionaries.append({
+            'name': automation_name,
+            'url': automation_url,
+        })
+        self.automation_dictionaries = automation_dictionaries
 
     def includeme(self, config):
         config.include(self.configure_stylesheets)
@@ -47,7 +61,9 @@ class AutomationViews():
         config.action(None, update_renderer_globals)
 
     def see_home(self, request):
-        return {}
+        return {
+            'automations': self.automation_dictionaries,
+        }
 
     def see_style(self, request):
         style_path = self.style_path
