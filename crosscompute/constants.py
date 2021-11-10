@@ -27,3 +27,6 @@ AUTOMATION_CONFIGURATION_EXTENSIONS = [
     '.cfg',
 ]
 AUTOMATION_NAME = 'Automation {automation_index}'
+
+
+VARIABLE_TYPE_NAMES = 'input', 'output', 'log', 'debug'

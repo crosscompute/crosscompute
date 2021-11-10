@@ -1,6 +1,6 @@
 import logging
 from os.path import basename, join
-from pyramid.httpexceptions import HTTPNotFound
+from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
 from pyramid.response import FileResponse
 
 from ..constants import (
@@ -10,10 +10,12 @@ from ..constants import (
     FILE_ROUTE,
     HOME_ROUTE,
     REPORT_ROUTE,
-    STYLE_ROUTE)
+    STYLE_ROUTE,
+    VARIABLE_TYPE_NAMES)
 from ..macros import (
-    find_dictionary,
-    get_slug_from_name)
+    find_item,
+    get_slug_from_name,
+    is_path_in_folder)
 
 
 class AutomationViews():
@@ -50,11 +52,14 @@ class AutomationViews():
             batch_url = BATCH_ROUTE.format(batch_slug=batch_slug)
             batch_dictionaries.append({
                 'name': batch_name,
+                'slug': batch_slug,
                 'url': batch_url,
+                'folder': batch_folder,
             })
 
         automation_dictionaries.append({
             'name': automation_name,
+            'slug': automation_slug,
             'url': automation_url,
             'batches': batch_dictionaries,
         })
@@ -113,9 +118,11 @@ class AutomationViews():
 
     def see_style(self, request):
         style_path = self.style_path
-        if not style_path:
+        try:
+            response = FileResponse(style_path, request)
+        except TypeError:
             raise HTTPNotFound
-        return FileResponse(style_path, request)
+        return response
 
     def see_home(self, request):
         return {
@@ -123,8 +130,15 @@ class AutomationViews():
         }
 
     def see_automation(self, request):
-        return find_dictionary(
-            self.automation_dictionaries, 'url', request.path)
+        matchdict = request.matchdict
+        automation_slug = matchdict['automation_slug']
+        try:
+            automation_dictionary = find_item(
+                self.automation_dictionaries, 'slug', automation_slug,
+                normalize=str.casefold)
+        except StopIteration:
+            raise HTTPNotFound
+        return automation_dictionary
 
     def see_automation_batch(self, request):
         return {}
@@ -133,14 +147,38 @@ class AutomationViews():
         return {}
 
     def see_automation_batch_report_file(self, request):
-        automation_dictionary = find_dictionary(
-            self.automation_dictionaries,
-            'url',
-            request.path,
-            'startswith')
-        # print(request.path)
-        # print(request.matchdict)
-        # TODO: Test if we can omit request kwarg to FileResponse
-        # return FileResponse(path, request=request)
-        from pyramid.response import Response
-        return Response('hey')
+        matchdict = request.matchdict
+        automation_slug = matchdict['automation_slug']
+        batch_slug = matchdict['batch_slug']
+        variable_type = matchdict['variable_type']
+        variable_path = matchdict['variable_path']
+        try:
+            automation_dictionary = find_item(
+                self.automation_dictionaries, 'slug',
+                automation_slug, normalize=str.casefold)
+            batch_dictionary = find_item(
+                automation_dictionary['batches'], 'slug',
+                batch_slug, normalize=str.casefold)
+        except StopIteration:
+            raise HTTPNotFound
+        try:
+            variable_type_name = find_item(
+                VARIABLE_TYPE_NAMES, 0, variable_type, normalize=str.casefold)
+        except StopIteration:
+            raise HTTPBadRequest
+        variable_definitions = self.configuration.get(
+            variable_type_name, {}).get('variables', [])
+        try:
+            variable_definition = find_item(
+                variable_definitions, 'path', variable_path,
+                normalize=str.casefold)
+        except StopIteration:
+            raise HTTPNotFound
+        logging.debug(variable_definition)
+        batch_folder = batch_dictionary['folder']
+        variable_folder = join(batch_folder, variable_type_name)
+        folder = join(self.configuration_folder, variable_folder)
+        path = join(folder, variable_path)
+        if not is_path_in_folder(path, folder):
+            raise HTTPBadRequest
+        return FileResponse(path, request=request)
