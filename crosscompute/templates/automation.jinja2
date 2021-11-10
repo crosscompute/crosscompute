@@ -12,7 +12,7 @@
 {% for batch in batches %}
   <li>
     {{ batch['name'] }}
-    <a href="{{ url }}{{ batch['url'] }}/o">[output]</a>
+    <a href="{{ url }}{{ batch['url'] }}/o" target="_blank">[output]</a>
   </li>
 {% endfor %}
 </ul>

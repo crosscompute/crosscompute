@@ -1,3 +1,4 @@
+import re
 from os import getenv
 from os.path import expanduser
 
@@ -19,14 +20,10 @@ REPORT_ROUTE = '/{variable_type}'
 FILE_ROUTE = '/{variable_path}'
 
 
-AUTOMATION_CONFIGURATION_EXTENSIONS = [
-    '.yaml',
-    '.yml',
-    '.toml',
-    '.ini',
-    '.cfg',
-]
+CONFIGURATION_EXTENSIONS = '.yaml', '.yml', '.toml', '.ini', '.cfg'
+TEMPLATE_EXTENSIONS = '.md', '.ipynb'
+
+
 AUTOMATION_NAME = 'Automation {automation_index}'
-
-
 VARIABLE_TYPE_NAMES = 'input', 'output', 'log', 'debug'
+VARIABLE_ID_PATTERN = re.compile(r'{\s*([^}]+?)\s*}')

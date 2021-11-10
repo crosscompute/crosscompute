@@ -1,3 +1,4 @@
+# TODO: Send refresh without server restart for template changes
 import logging
 import subprocess
 import yaml
@@ -7,7 +8,8 @@ from pyramid.config import Configurator
 from waitress import serve
 from watchgod import watch
 
-from ..constants import AUTOMATION_CONFIGURATION_EXTENSIONS, HOST, PORT
+from ..constants import (
+    CONFIGURATION_EXTENSIONS, HOST, PORT, TEMPLATE_EXTENSIONS)
 from ..macros import StoppableProcess, format_path, make_folder
 from ..views import AutomationViews, EchoViews
 
@@ -107,12 +109,24 @@ class Automation():
             for changed_type, changed_path in changes:
                 logging.debug('%s %s', changed_type, changed_path)
                 changed_extension = splitext(changed_path)[1]
-                if changed_extension in AUTOMATION_CONFIGURATION_EXTENSIONS:
+                # if changed_extension in CONFIGURATION_EXTENSIONS:
+                if changed_extension in sum([
+                    CONFIGURATION_EXTENSIONS,
+                    TEMPLATE_EXTENSIONS,
+                ], ()):
                     server_process.stop()
                     # TODO: Search for configuration if the file is gone
                     self.initialize_from_path(self.configuration_path)
                     server_process = StoppableProcess(target=run_server)
                     server_process.start()
+                '''
+                elif changed_extension in TEMPLATE_EXTENSIONS:
+                    print(changed_extension, TEMPLATE_EXTENSIONS)
+                    # print(self.echo_views.queues)
+                    self.echo_views.reset_time()
+                    # for queue in self.echo_views.queues:
+                    # queue.put(changed_path)
+                '''
 
     def get_app(self, is_static=False):
         with Configurator() as config:

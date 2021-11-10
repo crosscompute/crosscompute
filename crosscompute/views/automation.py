@@ -3,9 +3,11 @@
 # TODO: List links for all automations
 # TODO: Let user customize homepage title
 # TODO: Add tests
+# TODO: Validate variable definitions for id and view
 
 
 import logging
+from markdown import markdown
 from os.path import basename, join
 from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
 from pyramid.response import FileResponse
@@ -18,6 +20,7 @@ from ..constants import (
     HOME_ROUTE,
     REPORT_ROUTE,
     STYLE_ROUTE,
+    VARIABLE_ID_PATTERN,
     VARIABLE_TYPE_NAMES)
 from ..macros import (
     find_item,
@@ -139,46 +142,60 @@ class AutomationViews():
         }
 
     def see_automation(self, request):
-        matchdict = request.matchdict
-        automation_slug = matchdict['automation_slug']
-        try:
-            automation_dictionary = find_item(
-                self.automation_dictionaries, 'slug', automation_slug,
-                normalize=str.casefold)
-        except StopIteration:
-            raise HTTPNotFound
-        return automation_dictionary
+        return self.get_automation_dictionary_from(request)
 
     def see_automation_batch(self, request):
         return {}
 
     def see_automation_batch_report(self, request):
+        variable_type_name = self.get_variable_type_name_from(request)
+        variable_definitions = self.get_variable_definitions(
+            variable_type_name)
+        template_texts = self.get_template_texts(variable_type_name)
+
+        def render_variable_from(match):
+            replacement_text = matching_text = match.group(0)
+            variable_id = match.group(1)
+            try:
+                variable_definition = find_item(
+                    variable_definitions, 'id', variable_id)
+            except StopIteration:
+                logging.warning(
+                    'undefined variable_id=%s in template', variable_id)
+                return matching_text
+            variable_view = variable_definition['view']
+
+            if variable_type_name == 'input':
+                if variable_view == 'number':
+                    # TODO: Load variable data from batch folder
+                    variable_data = variable_definition.get('data', '')
+                    replacement_text = (
+                        f'<input type="number" class="input {variable_id}" '
+                        f'value="{variable_data}">')
+            elif variable_type_name == 'output':
+                if variable_view == 'image':
+                    # TODO: Split into crosscompute-image
+                    variable_path = variable_definition['path']
+                    image_url = request.path + '/' + variable_path
+                    replacement_text = f'<img src="{image_url}">'
+            return replacement_text
+
+        report_markdown = VARIABLE_ID_PATTERN.sub(
+            render_variable_from, '\n'.join(template_texts))
+        report_content = markdown(report_markdown)
         return {
-            'body_content': 'whee',
+            'body_content': report_content,
         }
 
     def see_automation_batch_report_file(self, request):
         matchdict = request.matchdict
-        automation_slug = matchdict['automation_slug']
-        batch_slug = matchdict['batch_slug']
-        variable_type = matchdict['variable_type']
+        automation_dictionary = self.get_automation_dictionary_from(request)
+        batch_dictionary = self.get_batch_dictionary_from(
+            request, automation_dictionary)
+        variable_type_name = self.get_variable_type_name_from(request)
+        variable_definitions = self.get_variable_definitions(
+            variable_type_name)
         variable_path = matchdict['variable_path']
-        try:
-            automation_dictionary = find_item(
-                self.automation_dictionaries, 'slug',
-                automation_slug, normalize=str.casefold)
-            batch_dictionary = find_item(
-                automation_dictionary['batches'], 'slug',
-                batch_slug, normalize=str.casefold)
-        except StopIteration:
-            raise HTTPNotFound
-        try:
-            variable_type_name = find_item(
-                VARIABLE_TYPE_NAMES, 0, variable_type, normalize=str.casefold)
-        except StopIteration:
-            raise HTTPBadRequest
-        variable_definitions = self.configuration.get(
-            variable_type_name, {}).get('variables', [])
         try:
             variable_definition = find_item(
                 variable_definitions, 'path', variable_path,
@@ -193,3 +210,59 @@ class AutomationViews():
         if not is_path_in_folder(path, folder):
             raise HTTPBadRequest
         return FileResponse(path, request=request)
+
+    def get_automation_dictionary_from(self, request):
+        matchdict = request.matchdict
+        automation_slug = matchdict['automation_slug']
+        try:
+            automation_dictionary = find_item(
+                self.automation_dictionaries, 'slug', automation_slug,
+                normalize=str.casefold)
+        except StopIteration:
+            raise HTTPNotFound
+        return automation_dictionary
+
+    def get_batch_dictionary_from(self, request, automation_dictionary):
+        matchdict = request.matchdict
+        batch_slug = matchdict['batch_slug']
+        try:
+            batch_dictionary = find_item(
+                automation_dictionary['batches'], 'slug',
+                batch_slug, normalize=str.casefold)
+        except StopIteration:
+            raise HTTPNotFound
+        return batch_dictionary
+
+    def get_variable_type_name_from(self, request):
+        matchdict = request.matchdict
+        variable_type = matchdict['variable_type']
+        try:
+            variable_type_name = find_item(
+                VARIABLE_TYPE_NAMES, 0, variable_type, normalize=str.casefold)
+        except StopIteration:
+            raise HTTPBadRequest
+        return variable_type_name
+
+    def get_variable_definitions(self, variable_type_name):
+        return self.configuration.get(
+            variable_type_name, {}).get('variables', [])
+
+    def get_template_definitions(self, variable_type_name):
+        return self.configuration.get(
+            variable_type_name, {}).get('templates', [])
+
+    def get_template_texts(self, variable_type_name):
+        template_definitions = self.get_template_definitions(
+            variable_type_name)
+        template_paths = [
+            _['path'] for _ in template_definitions if 'path' in _]
+        if template_paths:
+            template_texts = [open(join(
+                self.configuration_folder, _,
+            ), 'rt').read() for _ in template_paths]
+        else:
+            variable_definitions = self.get_variable_definitions(
+                variable_type_name)
+            variable_ids = [_['id'] for _ in variable_definitions if 'id' in _]
+            template_texts = [' '.join('{' + _ + '}' for _ in variable_ids)]
+        return template_texts

@@ -9,7 +9,10 @@ class EchoViews():
 
     def __init__(self, folder):
         self.folder = folder
-        # self.queue = Queue()
+        # self.queues = []
+        self.reset_time()
+
+    def reset_time(self):
         self.time = time()
 
     def includeme(self, config):
@@ -28,10 +31,13 @@ class EchoViews():
         config.action(None, update_renderer_globals)
 
     def see_echoes(self, request):
+        # queue = Queue()
+        # self.queues.append(queue)
         response = Response(headerlist=[
             ('Content-Type', 'text/event-stream'),
             ('Cache-Control', 'no-cache'),
         ])
+        # response.app_iter = self.yield_echoes(queue)
         response.app_iter = self.yield_echoes()
         return response
 
@@ -39,7 +45,9 @@ class EchoViews():
         yield f'data: {self.time}\n\n'.encode()
         '''
         while True:
-            x = self.queue.get()
-            print('see_echoes', x)
-            yield f'data: {x}\n\n'.encode()
+            # x = queue.get()
+            # print('xxx', x)
+            # logging.debug('sending refresh after change in %s', x)
+            import time; time.sleep(1)
+            yield f'data: {self.time}\n\n'.encode()
         '''
