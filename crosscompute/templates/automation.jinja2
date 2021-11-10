@@ -5,14 +5,14 @@
 
 <div>
   <a href="{{ HOME_ROUTE }}">Home</a> &gt;
-  <a href="{{ url }}">{{ name }}</a>
+  <a href="{{ uri }}">{{ name }}</a>
 </div>
 
 <ul>
 {% for batch in batches %}
   <li>
     {{ batch['name'] }}
-    <a href="{{ url }}{{ batch['url'] }}/o" target="_blank">[output]</a>
+    <a href="{{ uri }}{{ batch['uri'] }}/o" target="_blank">[output]</a>
   </li>
 {% endfor %}
 </ul>

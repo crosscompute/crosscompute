@@ -8,7 +8,7 @@
 
 import logging
 from markdown import markdown
-from os.path import basename, join
+from os.path import basename, exists, join
 from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
 from pyramid.response import FileResponse
 
@@ -31,53 +31,44 @@ from ..macros import (
 class AutomationViews():
 
     def __init__(self, configuration, configuration_folder):
-        display_configuration = configuration.get('display', {})
-        style_configuration = display_configuration.get('style', {})
-        style_path = join(
-            configuration_folder, style_configuration.get('path'))
-
         self.configuration = configuration
         self.configuration_folder = configuration_folder
-        self.style_path = style_path
-        self.style_urls = [STYLE_ROUTE] if style_path else []
-        self.script_urls = []
-
-        # TODO: Consider moving to a separate function
-        automation_dictionaries = []
+        # TODO: Consider moving rest to a separate function
+        automation_definitions = []
         automation_name = configuration.get(
             'name', AUTOMATION_NAME.format(automation_index=0))
         automation_slug = get_slug_from_name(automation_name)
-        automation_url = AUTOMATION_ROUTE.format(
+        automation_uri = AUTOMATION_ROUTE.format(
             automation_slug=automation_slug)
 
-        batch_dictionaries = []
-        batch_definitions = configuration.get('batches', [])
-        for batch_definition in batch_definitions:
+        batch_definitions = []
+        for batch_definition in configuration.get('batches', []):
             try:
                 batch_folder = batch_definition['folder']
             except KeyError:
-                logging.warning('folder required for each batch')
+                logging.error('folder required for each batch')
                 continue
             batch_name = batch_definition.get('name', basename(batch_folder))
             batch_slug = get_slug_from_name(batch_name)
-            batch_url = BATCH_ROUTE.format(batch_slug=batch_slug)
-            batch_dictionaries.append({
+            batch_uri = BATCH_ROUTE.format(batch_slug=batch_slug)
+            batch_definitions.append({
                 'name': batch_name,
                 'slug': batch_slug,
-                'url': batch_url,
+                'uri': batch_uri,
                 'folder': batch_folder,
             })
 
-        automation_dictionaries.append({
+        automation_definitions.append({
             'name': automation_name,
             'slug': automation_slug,
-            'url': automation_url,
-            'batches': batch_dictionaries,
+            'uri': automation_uri,
+            'batches': batch_definitions,
         })
-        self.automation_dictionaries = automation_dictionaries
+        self.automation_definitions = automation_definitions
+        self.style_definitions = self.get_style_definitions()
 
     def includeme(self, config):
-        config.include(self.configure_stylesheets)
+        config.include(self.configure_styles_and_scripts)
 
         config.add_route('home', HOME_ROUTE)
         config.add_route('automation', AUTOMATION_ROUTE)
@@ -109,40 +100,51 @@ class AutomationViews():
             self.see_automation_batch_report_file,
             route_name='automation batch report file')
 
-    def configure_stylesheets(self, config):
-        if not self.style_path:
-            return
+    def configure_styles_and_scripts(self, config):
+        if self.style_definitions:
+            config.add_route('style', STYLE_ROUTE)
+            config.add_view(
+                self.see_style,
+                route_name='style')
 
-        config.add_route('style', STYLE_ROUTE)
-        config.add_view(
-            self.see_style,
-            route_name='style')
+        script_definitions = []
 
         def update_renderer_globals():
             renderer_environment = config.get_jinja2_environment()
             renderer_environment.globals.update({
+                'styles': self.style_definitions,
+                'scripts': script_definitions,
                 'HOME_ROUTE': HOME_ROUTE,
-                'style': {'urls': self.style_urls},
-                'script': {'urls': self.script_urls},
             })
 
         config.action(None, update_renderer_globals)
 
     def see_style(self, request):
-        style_path = self.style_path
+        matchdict = request.matchdict
+        style_path = matchdict['style_path']
         try:
-            response = FileResponse(style_path, request)
+            find_item(self.style_definitions, 'path', style_path)
+        except StopIteration:
+            raise HTTPNotFound
+
+        folder = self.configuration_folder
+        path = join(folder, style_path)
+        if not is_path_in_folder(path, folder):
+            raise HTTPBadRequest
+
+        try:
+            response = FileResponse(path, request)
         except TypeError:
             raise HTTPNotFound
         return response
 
     def see_home(self, request):
         return {
-            'automations': self.automation_dictionaries,
+            'automations': self.automation_definitions,
         }
 
     def see_automation(self, request):
-        return self.get_automation_dictionary_from(request)
+        return self.get_automation_definition_from(request)
 
     def see_automation_batch(self, request):
         return {}
@@ -161,7 +163,8 @@ class AutomationViews():
                     variable_definitions, 'id', variable_id)
             except StopIteration:
                 logging.warning(
-                    'undefined variable_id=%s in template', variable_id)
+                    '%s specified in template but missing in configuration',
+                    variable_id)
                 return matching_text
             variable_view = variable_definition['view']
 
@@ -176,8 +179,8 @@ class AutomationViews():
                 if variable_view == 'image':
                     # TODO: Split into crosscompute-image
                     variable_path = variable_definition['path']
-                    image_url = request.path + '/' + variable_path
-                    replacement_text = f'<img src="{image_url}">'
+                    image_uri = request.path + '/' + variable_path
+                    replacement_text = f'<img src="{image_uri}">'
             return replacement_text
 
         report_markdown = VARIABLE_ID_PATTERN.sub(
@@ -189,9 +192,9 @@ class AutomationViews():
 
     def see_automation_batch_report_file(self, request):
         matchdict = request.matchdict
-        automation_dictionary = self.get_automation_dictionary_from(request)
-        batch_dictionary = self.get_batch_dictionary_from(
-            request, automation_dictionary)
+        automation_definition = self.get_automation_definition_from(request)
+        batch_definition = self.get_batch_definition_from(
+            request, automation_definition)
         variable_type_name = self.get_variable_type_name_from(request)
         variable_definitions = self.get_variable_definitions(
             variable_type_name)
@@ -203,7 +206,7 @@ class AutomationViews():
         except StopIteration:
             raise HTTPNotFound
         logging.debug(variable_definition)
-        batch_folder = batch_dictionary['folder']
+        batch_folder = batch_definition['folder']
         variable_folder = join(batch_folder, variable_type_name)
         folder = join(self.configuration_folder, variable_folder)
         path = join(folder, variable_path)
@@ -211,27 +214,27 @@ class AutomationViews():
             raise HTTPBadRequest
         return FileResponse(path, request=request)
 
-    def get_automation_dictionary_from(self, request):
+    def get_automation_definition_from(self, request):
         matchdict = request.matchdict
         automation_slug = matchdict['automation_slug']
         try:
-            automation_dictionary = find_item(
-                self.automation_dictionaries, 'slug', automation_slug,
+            automation_definition = find_item(
+                self.automation_definitions, 'slug', automation_slug,
                 normalize=str.casefold)
         except StopIteration:
             raise HTTPNotFound
-        return automation_dictionary
+        return automation_definition
 
-    def get_batch_dictionary_from(self, request, automation_dictionary):
+    def get_batch_definition_from(self, request, automation_definition):
         matchdict = request.matchdict
         batch_slug = matchdict['batch_slug']
         try:
-            batch_dictionary = find_item(
-                automation_dictionary['batches'], 'slug',
+            batch_definition = find_item(
+                automation_definition['batches'], 'slug',
                 batch_slug, normalize=str.casefold)
         except StopIteration:
             raise HTTPNotFound
-        return batch_dictionary
+        return batch_definition
 
     def get_variable_type_name_from(self, request):
         matchdict = request.matchdict
@@ -242,6 +245,31 @@ class AutomationViews():
         except StopIteration:
             raise HTTPBadRequest
         return variable_type_name
+
+    def get_style_definitions(self):
+        display_configuration = self.configuration.get('display', {})
+        style_definitions = []
+        for style_definition in display_configuration.get('styles', []):
+            uri = style_definition.get('uri', '').strip()
+            path = style_definition.get('path', '').strip()
+
+            if uri:
+                if path:
+                    pass
+                elif uri.startswith(HOME_ROUTE):
+                    path = uri.removeprefix(HOME_ROUTE)
+            else:
+                if path:
+                    uri = HOME_ROUTE + path
+                else:
+                    logging.error('uri or path required for each style')
+                    continue
+
+            if not exists(join(self.configuration_folder, path)):
+                logging.error('style not found at path %s', path)
+
+            style_definitions.append({'uri': uri, 'path': path})
+        return style_definitions
 
     def get_variable_definitions(self, variable_type_name):
         return self.configuration.get(

@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-{%- for url in style['urls'] %}
-  <link rel="stylesheet" href="{{ url }}">
-{% endfor -%}
+{%- for style in styles %}
+  <link rel="stylesheet" href="{{ style['uri'] }}">
+{%- endfor -%}
 </head>
 <body>
 {%- block body_content %}
 {{ body_content | safe }}
 {% endblock -%}
-{% for url in script['urls'] %}
-<script src="{{ url }}"></script>
+{%- for script in scripts %}
+<script src="{{ script['uri'] }}"></script>
 {% endfor -%}
 <script>
 {%- block body_script %}
