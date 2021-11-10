@@ -3,13 +3,19 @@ import logging
 import subprocess
 import yaml
 from os import getenv
-from os.path import dirname, join, relpath, splitext
+from os.path import (
+    dirname, join, relpath,
+    # splitext,
+)
 from pyramid.config import Configurator
 from waitress import serve
 from watchgod import watch
 
 from ..constants import (
-    CONFIGURATION_EXTENSIONS, HOST, PORT, TEMPLATE_EXTENSIONS)
+    # CONFIGURATION_EXTENSIONS,
+    HOST, PORT,
+    # TEMPLATE_EXTENSIONS,
+)
 from ..macros import StoppableProcess, format_path, make_folder
 from ..views import AutomationViews, EchoViews
 
@@ -108,17 +114,19 @@ class Automation():
         for changes in watch(self.configuration_folder):
             for changed_type, changed_path in changes:
                 logging.debug('%s %s', changed_type, changed_path)
-                changed_extension = splitext(changed_path)[1]
+                # changed_extension = splitext(changed_path)[1]
+                '''
                 # if changed_extension in CONFIGURATION_EXTENSIONS:
                 if changed_extension in sum([
                     CONFIGURATION_EXTENSIONS,
                     TEMPLATE_EXTENSIONS,
                 ], ()):
-                    server_process.stop()
-                    # TODO: Search for configuration if the file is gone
-                    self.initialize_from_path(self.configuration_path)
-                    server_process = StoppableProcess(target=run_server)
-                    server_process.start()
+                '''
+                server_process.stop()
+                # TODO: Search for configuration if the file is gone
+                self.initialize_from_path(self.configuration_path)
+                server_process = StoppableProcess(target=run_server)
+                server_process.start()
                 '''
                 elif changed_extension in TEMPLATE_EXTENSIONS:
                     print(changed_extension, TEMPLATE_EXTENSIONS)
