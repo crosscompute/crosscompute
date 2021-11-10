@@ -10,8 +10,6 @@ from pyramid.response import Response
 from sys import argv
 from waitress import serve
 
-from .. import __version__
-
 
 def launch():
     print(DEFAULT_CONFIGURATION)
@@ -97,7 +95,7 @@ def load_configuration(configuration_path, configuration_format):
 
 
 DEFAULT_CONFIGURATION = {
-    'crosscompute': __version__,
+    'crosscompute': '0.9.0',
     'name': 'Name of Your Resource',
     'version': '0.0.0',
 }

@@ -5,16 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 {%- for url in style['urls'] %}
   <link rel="stylesheet" href="{{ url }}">
-{% endfor %}
+{% endfor -%}
 </head>
 <body>
-{% block body_content %}
+{%- block body_content %}
 {{ body_content | safe }}
-{% endblock %}
+{% endblock -%}
+{% for url in script['urls'] %}
+<script src="{{ url }}"></script>
+{% endfor -%}
 <script>
-{% block body_script %}
+{%- block body_script %}
 {{ body_script }}
-{% endblock %}
+{% endblock -%}
 </script>
 </body>
 </html>

@@ -1,3 +1,10 @@
+# TODO: Let user set automation slug in configuration file
+# TODO: Let user set batch name and slug
+# TODO: List links for all automations
+# TODO: Let user customize homepage title
+# TODO: Add tests
+
+
 import logging
 from os.path import basename, join
 from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
@@ -30,6 +37,7 @@ class AutomationViews():
         self.configuration_folder = configuration_folder
         self.style_path = style_path
         self.style_urls = [STYLE_ROUTE] if style_path else []
+        self.script_urls = []
 
         # TODO: Consider moving to a separate function
         automation_dictionaries = []
@@ -112,6 +120,7 @@ class AutomationViews():
             renderer_environment.globals.update({
                 'HOME_ROUTE': HOME_ROUTE,
                 'style': {'urls': self.style_urls},
+                'script': {'urls': self.script_urls},
             })
 
         config.action(None, update_renderer_globals)
@@ -144,7 +153,9 @@ class AutomationViews():
         return {}
 
     def see_automation_batch_report(self, request):
-        return {}
+        return {
+            'body_content': 'whee',
+        }
 
     def see_automation_batch_report_file(self, request):
         matchdict = request.matchdict
