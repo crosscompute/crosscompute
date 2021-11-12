@@ -12,7 +12,7 @@ PORT = 7000
 
 
 HOME_ROUTE = '/'
-STYLE_ROUTE = HOME_ROUTE + '{style_path}'
+STYLE_ROUTE = HOME_ROUTE + 'styles/{style_path}'
 ECHOES_ROUTE = HOME_ROUTE + 'echoes'
 AUTOMATION_ROUTE = HOME_ROUTE + 'a/{automation_slug}'
 BATCH_ROUTE = HOME_ROUTE + 'b/{batch_slug}'

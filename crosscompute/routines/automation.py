@@ -25,13 +25,14 @@ class Automation():
     def initialize_from_path(self, configuration_path):
         configuration = yaml.safe_load(open(configuration_path, 'rt'))
         configuration_folder = dirname(configuration_path)
-        script_definition = configuration['script']
-        command_string = script_definition['command']
+        script_definition = configuration.get('script', {})
+        script_folder = script_definition.get('folder', '')
+        command_string = script_definition.get('command', '')
 
         self.configuration_path = configuration_path
         self.configuration_folder = configuration_folder
         self.configuration = configuration
-        self.script_folder = script_definition['folder']
+        self.script_folder = script_folder
         self.command_string = command_string
         self.automation_views = AutomationViews(
             configuration, configuration_folder)
@@ -48,6 +49,10 @@ class Automation():
         return instance
 
     def run(self, custom_environment=None):
+        if not self.command_string:
+            logging.warning(
+                'command not defined in script configuration')
+            return
         # TODO: Load base custom environment from configuration
         for batch_definition in self.configuration['batches']:
             batch_folder = batch_definition['folder']

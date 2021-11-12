@@ -181,6 +181,13 @@ class AutomationViews():
                     variable_path = variable_definition['path']
                     image_uri = request.path + '/' + variable_path
                     replacement_text = f'<img src="{image_uri}">'
+                elif variable_view == 'map-mapbox':
+                    variable_path = variable_definition['path']
+                    # consider adding style
+                    # add script
+                    # add div
+                    # populate options into script
+                    # replacement_text = f''
             return replacement_text
 
         report_markdown = VARIABLE_ID_PATTERN.sub(
@@ -256,7 +263,7 @@ class AutomationViews():
             if uri:
                 if path:
                     pass
-                elif uri.startswith(HOME_ROUTE):
+                elif not uri.startswith('//') and uri.startswith(HOME_ROUTE):
                     path = uri.removeprefix(HOME_ROUTE)
             else:
                 if path:
@@ -265,10 +272,14 @@ class AutomationViews():
                     logging.error('uri or path required for each style')
                     continue
 
-            if not exists(join(self.configuration_folder, path)):
-                logging.error('style not found at path %s', path)
-
-            style_definitions.append({'uri': uri, 'path': path})
+            d = {'uri': uri}
+            if path:
+                if not path.endswith('.css'):
+                    logging.warning('style path should end with .css')
+                elif not exists(join(self.configuration_folder, path)):
+                    logging.error('style not found at path %s', path)
+                d['path'] = path
+            style_definitions.append(d)
         return style_definitions
 
     def get_variable_definitions(self, variable_type_name):
