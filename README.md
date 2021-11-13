@@ -1,12 +1,12 @@
 # CrossCompute
 
-Automate your Jupyter notebooks and scripts as web-based reports, tools, widgets, dashboards, wizards.
+Automate your Jupyter notebooks and scripts as web-based reports, tools, widgets, dashboards, forms.
 
 - Reports are documents that update when the data changes.
+- Forms are step-by-step questions that generate a specific web-based report.
 - Tools are forms that transform input variables into output variables.
 - Widgets are interactive visualizations that update when the data changes.
 - Dashboards are widgets in a layout.
-- Wizards are step-by-step questions that generate a specific web-based report.
 
 [See examples and tutorials](https://crosscompute.com).
 
