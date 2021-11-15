@@ -21,7 +21,7 @@ from ..constants import (
     REPORT_ROUTE,
     STYLE_ROUTE,
     VARIABLE_ID_PATTERN,
-    VARIABLE_TYPE_NAMES)
+    VARIABLE_TYPE_NAME_BY_LETTER)
 from ..macros import (
     find_item,
     get_slug_from_name,
@@ -245,11 +245,11 @@ class AutomationViews():
 
     def get_variable_type_name_from(self, request):
         matchdict = request.matchdict
-        variable_type = matchdict['variable_type']
+        variable_type_letter = matchdict['variable_type']
         try:
-            variable_type_name = find_item(
-                VARIABLE_TYPE_NAMES, 0, variable_type, normalize=str.casefold)
-        except StopIteration:
+            variable_type_name = VARIABLE_TYPE_NAME_BY_LETTER[
+                variable_type_letter]
+        except KeyError:
             raise HTTPBadRequest
         return variable_type_name
 
@@ -267,7 +267,7 @@ class AutomationViews():
                     path = uri.removeprefix(HOME_ROUTE)
             else:
                 if path:
-                    uri = HOME_ROUTE + path
+                    uri = STYLE_ROUTE.format(style_path=path)
                 else:
                     logging.error('uri or path required for each style')
                     continue

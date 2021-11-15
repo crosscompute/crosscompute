@@ -4,8 +4,14 @@ import operator
 def find_item(items, key, value, normalize=lambda _: _, compare=operator.eq):
     normalized_value = normalize(value)
 
-    def is_match(v):
-        normalized_v = normalize(v)
-        return compare(normalized_value, normalized_v)
+    def is_match(item):
+        try:
+            v = item.get(key)
+        except KeyError:
+            is_match = False
+        else:
+            normalized_v = normalize(v)
+            is_match = compare(normalized_value, normalized_v)
+        return is_match
 
-    return next(filter(lambda _: is_match(_[key]), items))
+    return next(filter(is_match, items))

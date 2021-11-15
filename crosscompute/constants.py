@@ -26,4 +26,5 @@ TEMPLATE_EXTENSIONS = '.md', '.ipynb'
 
 AUTOMATION_NAME = 'Automation {automation_index}'
 VARIABLE_TYPE_NAMES = 'input', 'output', 'log', 'debug'
+VARIABLE_TYPE_NAME_BY_LETTER = {_[0]: _ for _ in VARIABLE_TYPE_NAMES}
 VARIABLE_ID_PATTERN = re.compile(r'{\s*([^}]+?)\s*}')
