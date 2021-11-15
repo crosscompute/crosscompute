@@ -15,9 +15,9 @@ HOME_ROUTE = '/'
 STYLE_ROUTE = HOME_ROUTE + 'styles/{style_path}'
 ECHOES_ROUTE = HOME_ROUTE + 'echoes'
 AUTOMATION_ROUTE = HOME_ROUTE + 'a/{automation_slug}'
-BATCH_ROUTE = HOME_ROUTE + 'b/{batch_slug}'
-REPORT_ROUTE = HOME_ROUTE + '{variable_type}'
-FILE_ROUTE = HOME_ROUTE + '{variable_path}'
+BATCH_ROUTE = '/b/{batch_slug}'
+REPORT_ROUTE = '/{variable_type}'
+FILE_ROUTE = '/{variable_path}'
 
 
 CONFIGURATION_EXTENSIONS = '.yaml', '.yml', '.toml', '.ini', '.cfg'

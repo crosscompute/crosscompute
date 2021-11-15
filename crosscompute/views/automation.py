@@ -4,9 +4,11 @@
 # TODO: Let user customize homepage title
 # TODO: Add tests
 # TODO: Validate variable definitions for id and view
+# TODO: Log error if automation requires view that is not installed
 
 
 import logging
+from abc import ABC, abstractmethod
 from markdown import markdown
 from os.path import basename, exists, join
 from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
@@ -166,22 +168,31 @@ class AutomationViews():
                     '%s specified in template but missing in configuration',
                     variable_id)
                 return matching_text
-            variable_view = variable_definition['view']
+            view_name = variable_definition['view']
+            # variable_view = self.variable_view_by_name[view_name]
+            # variable_view.render(type_name, variable_definition)
 
             if variable_type_name == 'input':
-                if variable_view == 'number':
+                if view_name == 'number':
                     # TODO: Load variable data from batch folder
                     variable_data = variable_definition.get('data', '')
                     replacement_text = (
                         f'<input type="number" class="input {variable_id}" '
                         f'value="{variable_data}">')
             elif variable_type_name == 'output':
-                if variable_view == 'image':
+                if view_name == 'image':
                     # TODO: Split into crosscompute-image
+                    variable_id = variable_definition['id']
+                    variable_data = None
                     variable_path = variable_definition['path']
-                    image_uri = request.path + '/' + variable_path
-                    replacement_text = f'<img src="{image_uri}">'
-                elif variable_view == 'map-mapbox':
+                    request_path = request.path
+                    # image_uri = request.path + '/' + variable_path
+                    # replacement_text = f'<img src="{image_uri}">'
+                    variable_view = ImageView()
+                    replacement_text = variable_view.render(
+                        variable_type_name, variable_id, variable_data,
+                        variable_path, request_path)
+                elif view_name == 'map-mapbox':
                     variable_path = variable_definition['path']
                     # consider adding style
                     # add script
@@ -305,3 +316,30 @@ class AutomationViews():
             variable_ids = [_['id'] for _ in variable_definitions if 'id' in _]
             template_texts = [' '.join('{' + _ + '}' for _ in variable_ids)]
         return template_texts
+
+
+class VariableView(ABC):
+
+    @abstractmethod
+    # def render(self, type_name, variable_definition):
+    def render(
+            self, type_name, variable_id, variable_data, variable_path,
+            request_path):
+        pass
+
+
+class NullView(VariableView):
+
+    def render(
+            self, type_name, variable_id, variable_data, variable_path,
+            request_path):
+        return ''
+
+
+class ImageView(VariableView):
+
+    def render(
+            self, type_name, variable_id, variable_data, variable_path,
+            request_path):
+        image_uri = request_path + '/' + variable_path
+        return f'<img src="{image_uri}">'
