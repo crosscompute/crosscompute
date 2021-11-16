@@ -10,6 +10,7 @@
 import logging
 from abc import ABC, abstractmethod
 from markdown import markdown
+from os import getenv
 from os.path import basename, exists, join
 from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
 from pyramid.response import FileResponse
@@ -25,6 +26,7 @@ from ..constants import (
     VARIABLE_ID_PATTERN,
     VARIABLE_TYPE_NAME_BY_LETTER)
 from ..macros import (
+    append_once,
     find_item,
     get_slug_from_name,
     is_path_in_folder)
@@ -67,7 +69,7 @@ class AutomationViews():
             'batches': batch_definitions,
         })
         self.automation_definitions = automation_definitions
-        self.style_definitions = self.get_style_definitions()
+        self.style_uris = self.get_style_uris()
 
     def includeme(self, config):
         config.include(self.configure_styles_and_scripts)
@@ -103,32 +105,27 @@ class AutomationViews():
             route_name='automation batch report file')
 
     def configure_styles_and_scripts(self, config):
-        if self.style_definitions:
+        if self.style_uris:
             config.add_route('style', STYLE_ROUTE)
             config.add_view(
                 self.see_style,
                 route_name='style')
 
-        script_definitions = []
-
         def update_renderer_globals():
             renderer_environment = config.get_jinja2_environment()
             renderer_environment.globals.update({
-                'styles': self.style_definitions,
-                'scripts': script_definitions,
+                'style_uris': self.style_uris,
                 'HOME_ROUTE': HOME_ROUTE,
             })
 
         config.action(None, update_renderer_globals)
 
     def see_style(self, request):
-        matchdict = request.matchdict
-        style_path = matchdict['style_path']
-        try:
-            find_item(self.style_definitions, 'path', style_path)
-        except StopIteration:
+        if request.path not in self.style_uris:
             raise HTTPNotFound
 
+        matchdict = request.matchdict
+        style_path = matchdict['style_path']
         folder = self.configuration_folder
         path = join(folder, style_path)
         if not is_path_in_folder(path, folder):
@@ -169,23 +166,22 @@ class AutomationViews():
                     variable_id)
                 return matching_text
             view_name = variable_definition['view']
+            # TODO: Load variable data from batch folder
+            variable_data = variable_definition.get('data', '')
+            variable_path = variable_definition.get('path', '')
+            request_path = request.path
             # variable_view = self.variable_view_by_name[view_name]
             # variable_view.render(type_name, variable_definition)
 
             if variable_type_name == 'input':
                 if view_name == 'number':
-                    # TODO: Load variable data from batch folder
-                    variable_data = variable_definition.get('data', '')
-                    replacement_text = (
-                        f'<input type="number" class="input {variable_id}" '
-                        f'value="{variable_data}">')
+                    variable_view = NumberView()
+                    replacement_text = variable_view.render(
+                        variable_type_name, variable_id, variable_data,
+                        variable_path, request_path)
             elif variable_type_name == 'output':
                 if view_name == 'image':
                     # TODO: Split into crosscompute-image
-                    variable_id = variable_definition['id']
-                    variable_data = None
-                    variable_path = variable_definition['path']
-                    request_path = request.path
                     # image_uri = request.path + '/' + variable_path
                     # replacement_text = f'<img src="{image_uri}">'
                     variable_view = ImageView()
@@ -193,19 +189,23 @@ class AutomationViews():
                         variable_type_name, variable_id, variable_data,
                         variable_path, request_path)
                 elif view_name == 'map-mapbox':
-                    variable_path = variable_definition['path']
-                    # consider adding style
-                    # add script
-                    # add div
-                    # populate options into script
-                    # replacement_text = f''
+                    variable_view = MapMapboxView()
+                    replacement_text = variable_view.render(
+                        variable_type_name, variable_id, variable_data,
+                        variable_path, request_path)
             return replacement_text
 
         report_markdown = VARIABLE_ID_PATTERN.sub(
             render_variable_from, '\n'.join(template_texts))
         report_content = markdown(report_markdown)
+
+        print(VariableView.__dict__)
+
         return {
-            'body_content': report_content,
+            'style_uris': self.style_uris + VariableView.style_uris,
+            'script_uris': VariableView.script_uris,
+            'content_html': report_content,
+            'script_text': '\n'.join(VariableView.script_texts),
         }
 
     def see_automation_batch_report_file(self, request):
@@ -264,34 +264,23 @@ class AutomationViews():
             raise HTTPBadRequest
         return variable_type_name
 
-    def get_style_definitions(self):
+    def get_style_uris(self):
         display_configuration = self.configuration.get('display', {})
-        style_definitions = []
+        style_uris = []
+
         for style_definition in display_configuration.get('styles', []):
             uri = style_definition.get('uri', '').strip()
             path = style_definition.get('path', '').strip()
-
-            if uri:
-                if path:
-                    pass
-                elif not uri.startswith('//') and uri.startswith(HOME_ROUTE):
-                    path = uri.removeprefix(HOME_ROUTE)
-            else:
-                if path:
-                    uri = STYLE_ROUTE.format(style_path=path)
-                else:
-                    logging.error('uri or path required for each style')
-                    continue
-
-            d = {'uri': uri}
+            if not uri and not path:
+                logging.error('uri or path required for each style')
+                continue
             if path:
-                if not path.endswith('.css'):
-                    logging.warning('style path should end with .css')
-                elif not exists(join(self.configuration_folder, path)):
+                if not exists(join(self.configuration_folder, path)):
                     logging.error('style not found at path %s', path)
-                d['path'] = path
-            style_definitions.append(d)
-        return style_definitions
+                uri = STYLE_ROUTE.format(style_path=path)
+            style_uris.append(uri)
+
+        return style_uris
 
     def get_variable_definitions(self, variable_type_name):
         return self.configuration.get(
@@ -320,26 +309,93 @@ class AutomationViews():
 
 class VariableView(ABC):
 
+    index = -1
+    style_uris = []
+    style_texts = []
+    script_uris = []
+    script_texts = []
+
+    def __init__(self):
+        if hasattr(self, 'initialize'):
+            getattr(self, 'initialize')()
+        VariableView.index += 1
+
     @abstractmethod
-    # def render(self, type_name, variable_definition):
     def render(
-            self, type_name, variable_id, variable_data, variable_path,
-            request_path):
+            self, type_name, variable_id, variable_data=None,
+            variable_path=None, request_path=None):
         pass
 
 
 class NullView(VariableView):
 
     def render(
-            self, type_name, variable_id, variable_data, variable_path,
-            request_path):
+            self, type_name, variable_id, variable_data=None,
+            variable_path=None, request_path=None):
         return ''
+
+
+class NumberView(VariableView):
+
+    def render(
+            self, type_name, variable_id, variable_data=None,
+            variable_path=None, request_path=None):
+        return (
+            f'<input type="number" class="{type_name} {variable_id}" '
+            f'value="{variable_data}">')
 
 
 class ImageView(VariableView):
 
     def render(
-            self, type_name, variable_id, variable_data, variable_path,
-            request_path):
+            self, type_name, variable_id, variable_data=None,
+            variable_path=None, request_path=None):
+        # TODO: Support type_name == 'input'
         image_uri = request_path + '/' + variable_path
-        return f'<img src="{image_uri}">'
+        return f'<img class="{type_name} {variable_id}" src="{image_uri}">'
+
+
+class MapMapboxView(VariableView):
+
+    style_uri = 'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.css'
+    script_uri = 'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.js'
+
+    def initialize(self):
+        append_once(MapMapboxView.style_uri, VariableView.style_uris)
+        append_once(MapMapboxView.script_uri, VariableView.script_uris)
+        mapbox_token = getenv('MAPBOX_TOKEN')
+        if not mapbox_token:
+            logging.error('MAPBOX_TOKEN is not defined in the environment')
+        append_once(
+            f"mapboxgl.accessToken = '{mapbox_token}'",
+            VariableView.script_texts)
+
+    def render(
+            self, type_name, variable_id, variable_data=None,
+            variable_path=None, request_path=None):
+        element_id = f'v{VariableView.index}'
+        # TODO: Allow override of style
+        # TODO: Allow override of center
+        # TODO: Allow override of zoom
+        # TODO: Allow specification of preserveDrawingBuffer
+        append_once((
+            "new mapboxgl.Map({"
+            f"container: '{element_id}',"
+            "style: 'mapbox://styles/mapbox/streets-v11',"
+            "center: [-74.5, 40],"
+            "zoom: 5,"
+            "preserveDrawingBuffer: true})"
+        ), VariableView.script_texts)
+        return (
+            f'<div id="{element_id}" class="{type_name} {variable_id}">'
+            '</div>')
+
+
+'''
+class MapPyDeckScreenGridView(VariableView):
+
+    def render(
+            self, type_name, variable_id, variable_data=None,
+            variable_path=None, request_path=None):
+        pass
+'''

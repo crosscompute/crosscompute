@@ -3,21 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-{%- for style in styles %}
-  <link rel="stylesheet" href="{{ style['uri'] }}">
-{%- endfor -%}
+{%- for style_uri in style_uris %}
+  <link rel="stylesheet" href="{{ style_uri }}">
+{%- endfor %}
 </head>
 <body>
 {%- block body_content %}
-{{ body_content | safe }}
+{{ content_html | safe }}
 {% endblock -%}
-{%- for script in scripts %}
-<script src="{{ script['uri'] }}"></script>
+{%- for script_uri in script_uris %}
+<script src="{{ script_uri }}"></script>
 {% endfor -%}
 <script>
 {%- block body_script %}
-{{ body_script }}
-{% endblock -%}
+{{ script_text | safe }}
+{%- endblock %}
 </script>
 </body>
 </html>
