@@ -165,34 +165,22 @@ class AutomationViews():
                     '%s specified in template but missing in configuration',
                     variable_id)
                 return matching_text
-            view_name = variable_definition['view']
+            # view_name = variable_definition['view']
             # TODO: Load variable data from batch folder
             variable_data = variable_definition.get('data', '')
             variable_path = variable_definition.get('path', '')
+            try:
+                variable_view = variable_definition['view_instance']
+            except KeyError:
+                logging.error()
+                return ''
+
             request_path = request.path
             # variable_view = self.variable_view_by_name[view_name]
             # variable_view.render(type_name, variable_definition)
-
-            if variable_type_name == 'input':
-                if view_name == 'number':
-                    variable_view = NumberView()
-                    replacement_text = variable_view.render(
-                        variable_type_name, variable_id, variable_data,
-                        variable_path, request_path)
-            elif variable_type_name == 'output':
-                if view_name == 'image':
-                    # TODO: Split into crosscompute-image
-                    # image_uri = request.path + '/' + variable_path
-                    # replacement_text = f'<img src="{image_uri}">'
-                    variable_view = ImageView()
-                    replacement_text = variable_view.render(
-                        variable_type_name, variable_id, variable_data,
-                        variable_path, request_path)
-                elif view_name == 'map-mapbox':
-                    variable_view = MapMapboxView()
-                    replacement_text = variable_view.render(
-                        variable_type_name, variable_id, variable_data,
-                        variable_path, request_path)
+            replacement_text = variable_view.render(
+                variable_type_name, variable_id, variable_data,
+                variable_path, request_path)
             return replacement_text
 
         report_markdown = VARIABLE_ID_PATTERN.sub(
@@ -283,8 +271,25 @@ class AutomationViews():
         return style_uris
 
     def get_variable_definitions(self, variable_type_name):
-        return self.configuration.get(
+        variable_definitions = self.configuration.get(
             variable_type_name, {}).get('variables', [])
+        for variable_definition in variable_definitions:
+            try:
+                view_name = variable_definition['view']
+            except KeyError:
+                logging.error('view required for each variable')
+                continue
+            try:
+                # TODO: Load using importlib.metadata
+                variable_definition['view_instance'] = {
+                    'number': NumberView(),
+                    'image': ImageView(),
+                    'map-mapbox': MapMapboxView(),
+                }[view_name]
+            except KeyError:
+                logging.error(f'{view_name} view not installed')
+                continue
+        return variable_definitions
 
     def get_template_definitions(self, variable_type_name):
         return self.configuration.get(
