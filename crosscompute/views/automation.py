@@ -21,10 +21,10 @@ from ..constants import (
     BATCH_ROUTE,
     FILE_ROUTE,
     HOME_ROUTE,
-    REPORT_ROUTE,
+    PAGE_ROUTE,
+    PAGE_TYPE_NAME_BY_LETTER,
     STYLE_ROUTE,
-    VARIABLE_ID_PATTERN,
-    VARIABLE_TYPE_NAME_BY_LETTER)
+    VARIABLE_ID_PATTERN)
 from ..macros import (
     append_once,
     find_item,
@@ -78,11 +78,11 @@ class AutomationViews():
         config.add_route('automation', AUTOMATION_ROUTE)
         config.add_route('automation batch', AUTOMATION_ROUTE + BATCH_ROUTE)
         config.add_route(
-            'automation batch report',
-            AUTOMATION_ROUTE + BATCH_ROUTE + REPORT_ROUTE)
+            'automation batch page',
+            AUTOMATION_ROUTE + BATCH_ROUTE + PAGE_ROUTE)
         config.add_route(
-            'automation batch report file',
-            AUTOMATION_ROUTE + BATCH_ROUTE + REPORT_ROUTE + FILE_ROUTE)
+            'automation batch page file',
+            AUTOMATION_ROUTE + BATCH_ROUTE + PAGE_ROUTE + FILE_ROUTE)
 
         config.add_view(
             self.see_home,
@@ -97,12 +97,12 @@ class AutomationViews():
             route_name='automation batch',
             renderer='crosscompute:templates/batch.jinja2')
         config.add_view(
-            self.see_automation_batch_report,
-            route_name='automation batch report',
+            self.see_automation_batch_page,
+            route_name='automation batch page',
             renderer='crosscompute:templates/live.jinja2')
         config.add_view(
-            self.see_automation_batch_report_file,
-            route_name='automation batch report file')
+            self.see_automation_batch_page_file,
+            route_name='automation batch page file')
 
     def configure_styles_and_scripts(self, config):
         if self.style_uris:
@@ -148,62 +148,24 @@ class AutomationViews():
     def see_automation_batch(self, request):
         return {}
 
-    def see_automation_batch_report(self, request):
-        variable_type_name = self.get_variable_type_name_from(request)
+    def see_automation_batch_page(self, request):
+        page_type_name = self.get_page_type_name_from(request)
         variable_definitions = self.get_variable_definitions(
-            variable_type_name)
-        template_texts = self.get_template_texts(variable_type_name)
+            page_type_name)
+        template_texts = self.get_template_texts(page_type_name)
+        page_text = '\n'.join(template_texts)
+        return render_page_dictionary(
+            request, self.style_uris, page_type_name, page_text,
+            variable_definitions)
 
-        def render_variable_from(match):
-            replacement_text = matching_text = match.group(0)
-            variable_id = match.group(1)
-            try:
-                variable_definition = find_item(
-                    variable_definitions, 'id', variable_id)
-            except StopIteration:
-                logging.warning(
-                    '%s specified in template but missing in configuration',
-                    variable_id)
-                return matching_text
-            # view_name = variable_definition['view']
-            # TODO: Load variable data from batch folder
-            variable_data = variable_definition.get('data', '')
-            variable_path = variable_definition.get('path', '')
-            try:
-                variable_view = variable_definition['view_instance']
-            except KeyError:
-                logging.error()
-                return ''
-
-            request_path = request.path
-            # variable_view = self.variable_view_by_name[view_name]
-            # variable_view.render(type_name, variable_definition)
-            replacement_text = variable_view.render(
-                variable_type_name, variable_id, variable_data,
-                variable_path, request_path)
-            return replacement_text
-
-        report_markdown = VARIABLE_ID_PATTERN.sub(
-            render_variable_from, '\n'.join(template_texts))
-        report_content = markdown(report_markdown)
-
-        print(VariableView.__dict__)
-
-        return {
-            'style_uris': self.style_uris + VariableView.style_uris,
-            'script_uris': VariableView.script_uris,
-            'content_html': report_content,
-            'script_text': '\n'.join(VariableView.script_texts),
-        }
-
-    def see_automation_batch_report_file(self, request):
+    def see_automation_batch_page_file(self, request):
         matchdict = request.matchdict
         automation_definition = self.get_automation_definition_from(request)
         batch_definition = self.get_batch_definition_from(
             request, automation_definition)
-        variable_type_name = self.get_variable_type_name_from(request)
+        page_type_name = self.get_page_type_name_from(request)
         variable_definitions = self.get_variable_definitions(
-            variable_type_name)
+            page_type_name)
         variable_path = matchdict['variable_path']
         try:
             variable_definition = find_item(
@@ -213,7 +175,7 @@ class AutomationViews():
             raise HTTPNotFound
         logging.debug(variable_definition)
         batch_folder = batch_definition['folder']
-        variable_folder = join(batch_folder, variable_type_name)
+        variable_folder = join(batch_folder, page_type_name)
         folder = join(self.configuration_folder, variable_folder)
         path = join(folder, variable_path)
         if not is_path_in_folder(path, folder):
@@ -242,15 +204,15 @@ class AutomationViews():
             raise HTTPNotFound
         return batch_definition
 
-    def get_variable_type_name_from(self, request):
+    def get_page_type_name_from(self, request):
         matchdict = request.matchdict
-        variable_type_letter = matchdict['variable_type']
+        page_type_letter = matchdict['page_type']
         try:
-            variable_type_name = VARIABLE_TYPE_NAME_BY_LETTER[
-                variable_type_letter]
+            page_type_name = PAGE_TYPE_NAME_BY_LETTER[
+                page_type_letter]
         except KeyError:
             raise HTTPBadRequest
-        return variable_type_name
+        return page_type_name
 
     def get_style_uris(self):
         display_configuration = self.configuration.get('display', {})
@@ -271,25 +233,8 @@ class AutomationViews():
         return style_uris
 
     def get_variable_definitions(self, variable_type_name):
-        variable_definitions = self.configuration.get(
+        return self.configuration.get(
             variable_type_name, {}).get('variables', [])
-        for variable_definition in variable_definitions:
-            try:
-                view_name = variable_definition['view']
-            except KeyError:
-                logging.error('view required for each variable')
-                continue
-            try:
-                # TODO: Load using importlib.metadata
-                variable_definition['view_instance'] = {
-                    'number': NumberView(),
-                    'image': ImageView(),
-                    'map-mapbox': MapMapboxView(),
-                }[view_name]
-            except KeyError:
-                logging.error(f'{view_name} view not installed')
-                continue
-        return variable_definitions
 
     def get_template_definitions(self, variable_type_name):
         return self.configuration.get(
@@ -314,37 +259,31 @@ class AutomationViews():
 
 class VariableView(ABC):
 
-    index = -1
-    style_uris = []
-    style_texts = []
-    script_uris = []
-    script_texts = []
-
-    def __init__(self):
-        if hasattr(self, 'initialize'):
-            getattr(self, 'initialize')()
-        VariableView.index += 1
+    def __init__(self, style_uris, script_uris, script_texts):
+        self.style_uris = style_uris
+        self.script_uris = script_uris
+        self.script_texts = script_texts
 
     @abstractmethod
-    def render(
-            self, type_name, variable_id, variable_data=None,
-            variable_path=None, request_path=None):
+    def render_html(
+            self, type_name, variable_index, variable_id,
+            variable_data=None, variable_path=None, request_path=None):
         pass
 
 
 class NullView(VariableView):
 
-    def render(
-            self, type_name, variable_id, variable_data=None,
-            variable_path=None, request_path=None):
+    def render_html(
+            self, type_name, variable_index, variable_id,
+            variable_data=None, variable_path=None, request_path=None):
         return ''
 
 
 class NumberView(VariableView):
 
-    def render(
-            self, type_name, variable_id, variable_data=None,
-            variable_path=None, request_path=None):
+    def render_html(
+            self, type_name, variable_index, variable_id,
+            variable_data=None, variable_path=None, request_path=None):
         return (
             f'<input type="number" class="{type_name} {variable_id}" '
             f'value="{variable_data}">')
@@ -352,9 +291,9 @@ class NumberView(VariableView):
 
 class ImageView(VariableView):
 
-    def render(
-            self, type_name, variable_id, variable_data=None,
-            variable_path=None, request_path=None):
+    def render_html(
+            self, type_name, variable_index, variable_id,
+            variable_data=None, variable_path=None, request_path=None):
         # TODO: Support type_name == 'input'
         image_uri = request_path + '/' + variable_path
         return f'<img class="{type_name} {variable_id}" src="{image_uri}">'
@@ -365,42 +304,92 @@ class MapMapboxView(VariableView):
     style_uri = 'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.css'
     script_uri = 'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.js'
 
-    def initialize(self):
-        append_once(MapMapboxView.style_uri, VariableView.style_uris)
-        append_once(MapMapboxView.script_uri, VariableView.script_uris)
+    def __init__(self, style_uris, script_uris, script_texts):
+        append_once(self.style_uri, style_uris)
+        append_once(self.script_uri, script_uris)
         mapbox_token = getenv('MAPBOX_TOKEN')
         if not mapbox_token:
             logging.error('MAPBOX_TOKEN is not defined in the environment')
         append_once(
             f"mapboxgl.accessToken = '{mapbox_token}'",
-            VariableView.script_texts)
+            script_texts)
+        super().__init__(style_uris, script_uris, script_texts)
 
-    def render(
-            self, type_name, variable_id, variable_data=None,
+    def render_html(
+            self, type_name, variable_index, variable_id, variable_data=None,
             variable_path=None, request_path=None):
-        element_id = f'v{VariableView.index}'
+        element_id = f'v{variable_index}'
         # TODO: Allow override of style
         # TODO: Allow override of center
         # TODO: Allow override of zoom
         # TODO: Allow specification of preserveDrawingBuffer
         append_once((
             "new mapboxgl.Map({"
-            f"container: '{element_id}',"
-            "style: 'mapbox://styles/mapbox/streets-v11',"
-            "center: [-74.5, 40],"
-            "zoom: 5,"
-            "preserveDrawingBuffer: true})"
-        ), VariableView.script_texts)
+            f"container: '{element_id}', "
+            "style: 'mapbox://styles/mapbox/streets-v11', "
+            "center: [-74.5, 40], "
+            "zoom: 5, "
+            # "preserveDrawingBuffer: true})"
+        ), self.script_texts)
         return (
             f'<div id="{element_id}" class="{type_name} {variable_id}">'
             '</div>')
 
 
-'''
-class MapPyDeckScreenGridView(VariableView):
+def render_page_dictionary(
+        request, style_uris, page_type_name, page_text, variable_definitions):
+    style_uris = style_uris.copy()
+    script_uris = []
+    script_texts = []
+    variable_ids = []
 
-    def render(
-            self, type_name, variable_id, variable_data=None,
-            variable_path=None, request_path=None):
-        pass
-'''
+    def render_html(match):
+        matching_text = match.group(0)
+        variable_id = match.group(1)
+        try:
+            definition = find_item(variable_definitions, 'id', variable_id)
+        except StopIteration:
+            logging.warning(
+                '%s specified in template but missing in configuration',
+                variable_id)
+            return matching_text
+        # TODO: Load data from batch folder
+        variable_ids.append(variable_id)
+        variable_data = definition.get('data', '')
+        variable_path = definition.get('path', '')
+        variable_view_class = get_variable_view_class(definition)
+        variable_view = variable_view_class(
+            style_uris, script_uris, script_texts)
+        return variable_view.render_html(
+            page_type_name, len(variable_ids) - 1, variable_id, variable_data,
+            variable_path, request.path)
+
+    content_markdown = VARIABLE_ID_PATTERN.sub(render_html, page_text)
+    content_html = markdown(content_markdown)
+    script_text = '\n'.join(script_texts)
+    return {
+        'style_uris': style_uris,
+        'script_uris': script_uris,
+        'content_html': content_html,
+        'script_text': script_text,
+    }
+
+
+def get_variable_view_class(variable_definition):
+    # TODO: Validate views early
+    try:
+        view_name = variable_definition['view']
+    except KeyError:
+        logging.error('view required for each variable')
+        return NullView
+    try:
+        # TODO: Load using importlib.metadata
+        VariableView = {
+            'number': NumberView,
+            'image': ImageView,
+            'map-mapbox': MapMapboxView,
+        }[view_name]
+    except KeyError:
+        logging.error(f'{view_name} view not installed')
+        return NullView
+    return VariableView

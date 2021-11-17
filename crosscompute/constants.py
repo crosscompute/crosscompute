@@ -16,7 +16,7 @@ STYLE_ROUTE = HOME_ROUTE + 'styles/{style_path}'
 ECHOES_ROUTE = HOME_ROUTE + 'echoes'
 AUTOMATION_ROUTE = HOME_ROUTE + 'a/{automation_slug}'
 BATCH_ROUTE = '/b/{batch_slug}'
-REPORT_ROUTE = '/{variable_type}'
+PAGE_ROUTE = '/{page_type}'
 FILE_ROUTE = '/{variable_path}'
 
 
@@ -25,6 +25,6 @@ TEMPLATE_EXTENSIONS = '.md', '.ipynb'
 
 
 AUTOMATION_NAME = 'Automation {automation_index}'
-VARIABLE_TYPE_NAMES = 'input', 'output', 'log', 'debug'
-VARIABLE_TYPE_NAME_BY_LETTER = {_[0]: _ for _ in VARIABLE_TYPE_NAMES}
+PAGE_TYPE_NAMES = 'input', 'output', 'log', 'debug'
+PAGE_TYPE_NAME_BY_LETTER = {_[0]: _ for _ in PAGE_TYPE_NAMES}
 VARIABLE_ID_PATTERN = re.compile(r'{\s*([^}]+?)\s*}')
