@@ -14,6 +14,7 @@ from os import getenv
 from os.path import basename, exists, join
 from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
 from pyramid.response import FileResponse
+from string import Template
 
 from ..constants import (
     AUTOMATION_NAME,
@@ -29,6 +30,24 @@ from ..macros import (
     find_item,
     get_slug_from_name,
     is_path_in_folder)
+
+
+MAP_MAPBOX_SCRIPT_TEXT_TEMPLATE = Template('''\
+const $element_id = new mapboxgl.Map({
+    container: '$element_id',
+    style: 'mapbox://styles/mapbox/streets-v11',
+    center: [-74.5, 40],
+    zoom: 5,
+})
+$element_id.on('load', () => {
+    $element_id.addSource('$element_id', {
+        'type': 'geojson',
+        'data': '$data_uri'})
+    $element_id.addLayer({
+        'id': '$element_id',
+        'type': 'fill',
+        'source': '$element_id'})
+})''')
 
 
 class AutomationViews():
@@ -260,65 +279,65 @@ class VariableView(ABC):
 
     @abstractmethod
     def render(
-            self, type_name, variable_index, variable_id,
-            variable_data=None, variable_path=None, request_path=None):
+            self, type_name, variable_index, variable_id, variable_data=None,
+            variable_path=None, variable_settings=None, request_path=None):
         return {
-            'style_uris': [],
-            'script_uris': [],
-            'content_html': '',
-            'script_text': '',
+            'css_uris': [],
+            'js_uris': [],
+            'html_text': '',
+            'js_texts': [],
         }
 
 
 class NullView(VariableView):
 
     def render(
-            self, type_name, variable_index, variable_id,
-            variable_data=None, variable_path=None, request_path=None):
+            self, type_name, variable_index, variable_id, variable_data=None,
+            variable_path=None, variable_settings=None, request_path=None):
         return {
-            'style_uris': [],
-            'script_uris': [],
-            'content_html': '',
-            'script_text': '',
+            'css_uris': [],
+            'js_uris': [],
+            'html_text': '',
+            'js_texts': [],
         }
 
 
 class NumberView(VariableView):
 
     def render(
-            self, type_name, variable_index, variable_id,
-            variable_data=None, variable_path=None, request_path=None):
+            self, type_name, variable_index, variable_id, variable_data=None,
+            variable_path=None, variable_settings=None, request_path=None):
         element_id = f'v{variable_index}'
-        content_html = (
+        html_text = (
             f'<input id="{element_id}" '
             f'class="{type_name} number {variable_id}" '
             f'value="{variable_data}" type="number">')
         return {
-            'style_uris': [],
-            'script_uris': [],
-            'content_html': content_html,
-            'script_text': '',
+            'css_uris': [],
+            'js_uris': [],
+            'html_text': html_text,
+            'js_texts': [],
         }
 
 
 class ImageView(VariableView):
 
     def render(
-            self, type_name, variable_index, variable_id,
-            variable_data=None, variable_path=None, request_path=None):
+            self, type_name, variable_index, variable_id, variable_data=None,
+            variable_path=None, variable_settings=None, request_path=None):
         # TODO: Support type_name == 'input'
         element_id = f'v{variable_index}'
         data_uri = request_path + '/' + variable_path
-        content_html = (
+        html_text = (
             f'<img id="{element_id}" '
             f'class="{type_name} image {variable_id}" '
             f'src="{data_uri}">'
         )
         return {
-            'style_uris': [],
-            'script_uris': [],
-            'content_html': content_html,
-            'script_text': '',
+            'css_uris': [],
+            'js_uris': [],
+            'html_text': html_text,
+            'js_texts': [],
         }
 
 
@@ -329,7 +348,7 @@ class MapMapboxView(VariableView):
 
     def render(
             self, type_name, variable_index, variable_id, variable_data=None,
-            variable_path=None, request_path=None):
+            variable_path=None, variable_settings=None, request_path=None):
         element_id = f'v{variable_index}'
         content_html = (
             f'<div id="{element_id}" '
@@ -340,18 +359,14 @@ class MapMapboxView(VariableView):
         if not mapbox_token:
             logging.error('MAPBOX_TOKEN is not defined in the environment')
 
-        script_texts = [f"mapboxgl.accessToken = '{mapbox_token}'", (
-            f"const {element_id} = new mapboxgl.Map({"
-            f"container: '{element_id}', "
-            "style: 'mapbox://styles/mapbox/streets-v11', "
-            "center: [-74.5, 40], "
-            "zoom: 5, "
-            # "preserveDrawingBuffer: true})"
-        ), (
-            element_id + ".on('load'"
-            f"{element_id}.on('load', () => " + '{ ' +
-            f"{element_id}.addSource('{element_id}', {'type': 'geojson', 'data': '{data_uri}'}); {element_id}.addLayer({'type': 'fill', 'source': '{element_id}'})"
-        )]
+        script_texts = [
+            f"mapboxgl.accessToken = '{mapbox_token}'",
+            MAP_MAPBOX_SCRIPT_TEXT_TEMPLATE.substitute({
+                'element_id': element_id,
+                'data_uri': data_uri,
+            }),
+        ]
+        # "preserveDrawingBuffer: true})"
         # TODO: Allow override of style
         # TODO: Allow override of center
         # TODO: Allow override of zoom
@@ -361,6 +376,11 @@ class MapMapboxView(VariableView):
             'script_uris': [self.script_uri],
             'content_html': content_html,
             'script_texts': script_texts,
+
+            'css_uris': [self.css_uri],
+            'js_uris': [self.js_uri],
+            'html_txt': html_text,
+            'js_txts': js_texts,
         }
 
 
@@ -384,6 +404,7 @@ def render_page_dictionary(
         variable_index = len(variable_ids) - 1
         variable_data = definition.get('data', '')
         variable_path = definition.get('path', '')
+        variable_settings = definition.get('settings', {})
         variable_view = get_variable_view_class(definition)()
         d = variable_view.render(
             page_type_name, variable_index, variable_id, variable_data,
