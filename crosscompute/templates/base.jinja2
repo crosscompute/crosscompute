@@ -8,15 +8,15 @@
 {%- endfor %}
 </head>
 <body>
-{%- block body_content %}
-{{ content_html | safe }}
+{%- block body_html %}
+{{ html_text | safe }}
 {% endblock -%}
-{%- for script_uri in script_uris %}
-<script src="{{ script_uri }}"></script>
+{%- for js_uri in js_uris %}
+<script src="{{ js_uri }}"></script>
 {% endfor -%}
 <script>
-{%- block body_script %}
-{{ script_text | safe }}
+{%- block body_js %}
+{{ js_text | safe }}
 {%- endblock %}
 </script>
 </body>

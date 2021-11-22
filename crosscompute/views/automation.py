@@ -27,15 +27,17 @@ from ..constants import (
     STYLE_ROUTE,
     VARIABLE_ID_PATTERN)
 from ..macros import (
+    extend_uniquely,
     find_item,
     get_slug_from_name,
     is_path_in_folder)
 
 
+MAP_MAPBOX_STYLE_URI = 'mapbox://styles/mapbox/dark-v10'
 MAP_MAPBOX_SCRIPT_TEXT_TEMPLATE = Template('''\
 const $element_id = new mapboxgl.Map({
     container: '$element_id',
-    style: 'mapbox://styles/mapbox/streets-v11',
+    style: '$style_uri',
     center: [-74.5, 40],
     zoom: 5,
 })
@@ -47,6 +49,7 @@ $element_id.on('load', () => {
         'id': '$element_id',
         'type': 'fill',
         'source': '$element_id'})
+    console.log($element_id.getSource('$element_id').tileBounds.bounds)
 })''')
 
 
@@ -87,10 +90,10 @@ class AutomationViews():
             'batches': batch_definitions,
         })
         self.automation_definitions = automation_definitions
-        self.style_uris = self.get_style_uris()
+        self.css_uris = self.get_css_uris()
 
     def includeme(self, config):
-        config.include(self.configure_styles_and_scripts)
+        config.include(self.configure_styles)
 
         config.add_route('home', HOME_ROUTE)
         config.add_route('automation', AUTOMATION_ROUTE)
@@ -122,8 +125,8 @@ class AutomationViews():
             self.see_automation_batch_page_file,
             route_name='automation batch page file')
 
-    def configure_styles_and_scripts(self, config):
-        if self.style_uris:
+    def configure_styles(self, config):
+        if self.css_uris:
             config.add_route('style', STYLE_ROUTE)
             config.add_view(
                 self.see_style,
@@ -132,14 +135,14 @@ class AutomationViews():
         def update_renderer_globals():
             renderer_environment = config.get_jinja2_environment()
             renderer_environment.globals.update({
-                'style_uris': self.style_uris,
+                'css_uris': self.css_uris,
                 'HOME_ROUTE': HOME_ROUTE,
             })
 
         config.action(None, update_renderer_globals)
 
     def see_style(self, request):
-        if request.path not in self.style_uris:
+        if request.path not in self.css_uris:
             raise HTTPNotFound
 
         matchdict = request.matchdict
@@ -173,7 +176,7 @@ class AutomationViews():
         template_texts = self.get_template_texts(page_type_name)
         page_text = '\n'.join(template_texts)
         return render_page_dictionary(
-            request, self.style_uris, page_type_name, page_text,
+            request, self.css_uris, page_type_name, page_text,
             variable_definitions)
 
     def see_automation_batch_page_file(self, request):
@@ -232,9 +235,9 @@ class AutomationViews():
             raise HTTPBadRequest
         return page_type_name
 
-    def get_style_uris(self):
+    def get_css_uris(self):
         display_configuration = self.configuration.get('display', {})
-        style_uris = []
+        css_uris = []
 
         for style_definition in display_configuration.get('styles', []):
             uri = style_definition.get('uri', '').strip()
@@ -246,9 +249,9 @@ class AutomationViews():
                 if not exists(join(self.configuration_folder, path)):
                     logging.error('style not found at path %s', path)
                 uri = STYLE_ROUTE.format(style_path=path)
-            style_uris.append(uri)
+            css_uris.append(uri)
 
-        return style_uris
+        return css_uris
 
     def get_variable_definitions(self, variable_type_name):
         return self.configuration.get(
@@ -343,14 +346,14 @@ class ImageView(VariableView):
 
 class MapMapboxView(VariableView):
 
-    style_uri = 'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.css'
-    script_uri = 'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.js'
+    css_uri = 'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.css'
+    js_uri = 'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.js'
 
     def render(
             self, type_name, variable_index, variable_id, variable_data=None,
             variable_path=None, variable_settings=None, request_path=None):
         element_id = f'v{variable_index}'
-        content_html = (
+        html_text = (
             f'<div id="{element_id}" '
             f'class="{type_name} map-mapbox {variable_id}"></div>')
         data_uri = request_path + '/' + variable_path
@@ -358,36 +361,32 @@ class MapMapboxView(VariableView):
         mapbox_token = getenv('MAPBOX_TOKEN')
         if not mapbox_token:
             logging.error('MAPBOX_TOKEN is not defined in the environment')
+        style_uri = variable_settings.get('style', MAP_MAPBOX_STYLE_URI)
 
-        script_texts = [
+        js_texts = [
             f"mapboxgl.accessToken = '{mapbox_token}'",
             MAP_MAPBOX_SCRIPT_TEXT_TEMPLATE.substitute({
                 'element_id': element_id,
                 'data_uri': data_uri,
+                'style_uri': style_uri,
             }),
         ]
         # "preserveDrawingBuffer: true})"
-        # TODO: Allow override of style
         # TODO: Allow override of center
         # TODO: Allow override of zoom
         # TODO: Allow specification of preserveDrawingBuffer
         return {
-            'style_uris': [self.style_uri],
-            'script_uris': [self.script_uri],
-            'content_html': content_html,
-            'script_texts': script_texts,
-
             'css_uris': [self.css_uri],
             'js_uris': [self.js_uri],
-            'html_txt': html_text,
-            'js_txts': js_texts,
+            'html_text': html_text,
+            'js_texts': js_texts,
         }
 
 
 def render_page_dictionary(
-        request, style_uris, page_type_name, page_text, variable_definitions):
-    style_uris = style_uris.copy()
-    script_uris, script_texts, variable_ids = [], [], []
+        request, css_uris, page_type_name, page_text, variable_definitions):
+    css_uris = css_uris.copy()
+    js_uris, js_texts, variable_ids = [], [], []
 
     def render_html(match):
         matching_text = match.group(0)
@@ -408,24 +407,18 @@ def render_page_dictionary(
         variable_view = get_variable_view_class(definition)()
         d = variable_view.render(
             page_type_name, variable_index, variable_id, variable_data,
-            variable_path, request.path)
-        for _ in d['style_uris']:
-            if _ not in style_uris:
-                style_uris.append(_)
-        for _ in d['script_uris']:
-            if _ not in script_uris:
-                script_uris.append(_)
-        for _ in d['script_texts']:
-            if _ not in script_texts:
-                script_texts.append(_)
-        return d['content_html']
+            variable_path, variable_settings, request.path)
+        extend_uniquely(css_uris, d['css_uris'])
+        extend_uniquely(js_uris, d['js_uris'])
+        extend_uniquely(js_texts, d['js_texts'])
+        return d['html_text']
 
-    content_html = markdown(VARIABLE_ID_PATTERN.sub(render_html, page_text))
+    html_text = markdown(VARIABLE_ID_PATTERN.sub(render_html, page_text))
     return {
-        'style_uris': style_uris,
-        'script_uris': script_uris,
-        'content_html': content_html,
-        'script_text': '\n'.join(script_texts),
+        'css_uris': css_uris,
+        'js_uris': js_uris,
+        'html_text': html_text,
+        'js_text': '\n'.join(js_texts),
     }
 
 
