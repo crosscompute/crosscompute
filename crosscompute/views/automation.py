@@ -38,8 +38,8 @@ MAP_MAPBOX_SCRIPT_TEXT_TEMPLATE = Template('''\
 const $element_id = new mapboxgl.Map({
     container: '$element_id',
     style: '$style_uri',
-    center: [-74.5, 40],
-    zoom: 5,
+    center: [0, 0],
+    zoom: 0,
 })
 $element_id.on('load', () => {
     $element_id.addSource('$element_id', {
@@ -49,7 +49,6 @@ $element_id.on('load', () => {
         'id': '$element_id',
         'type': 'fill',
         'source': '$element_id'})
-    console.log($element_id.getSource('$element_id').tileBounds.bounds)
 })''')
 
 
