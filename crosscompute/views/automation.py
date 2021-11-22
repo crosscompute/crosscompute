@@ -26,7 +26,6 @@ from ..constants import (
     STYLE_ROUTE,
     VARIABLE_ID_PATTERN)
 from ..macros import (
-    append_once,
     find_item,
     get_slug_from_name,
     is_path_in_folder)
@@ -259,44 +258,68 @@ class AutomationViews():
 
 class VariableView(ABC):
 
-    def __init__(self, style_uris, script_uris, script_texts):
-        self.style_uris = style_uris
-        self.script_uris = script_uris
-        self.script_texts = script_texts
-
     @abstractmethod
-    def render_html(
+    def render(
             self, type_name, variable_index, variable_id,
             variable_data=None, variable_path=None, request_path=None):
-        pass
+        return {
+            'style_uris': [],
+            'script_uris': [],
+            'content_html': '',
+            'script_text': '',
+        }
 
 
 class NullView(VariableView):
 
-    def render_html(
+    def render(
             self, type_name, variable_index, variable_id,
             variable_data=None, variable_path=None, request_path=None):
-        return ''
+        return {
+            'style_uris': [],
+            'script_uris': [],
+            'content_html': '',
+            'script_text': '',
+        }
 
 
 class NumberView(VariableView):
 
-    def render_html(
+    def render(
             self, type_name, variable_index, variable_id,
             variable_data=None, variable_path=None, request_path=None):
-        return (
-            f'<input type="number" class="{type_name} {variable_id}" '
-            f'value="{variable_data}">')
+        element_id = f'v{variable_index}'
+        content_html = (
+            f'<input id="{element_id}" '
+            f'class="{type_name} number {variable_id}" '
+            f'value="{variable_data}" type="number">')
+        return {
+            'style_uris': [],
+            'script_uris': [],
+            'content_html': content_html,
+            'script_text': '',
+        }
 
 
 class ImageView(VariableView):
 
-    def render_html(
+    def render(
             self, type_name, variable_index, variable_id,
             variable_data=None, variable_path=None, request_path=None):
         # TODO: Support type_name == 'input'
-        image_uri = request_path + '/' + variable_path
-        return f'<img class="{type_name} {variable_id}" src="{image_uri}">'
+        element_id = f'v{variable_index}'
+        data_uri = request_path + '/' + variable_path
+        content_html = (
+            f'<img id="{element_id}" '
+            f'class="{type_name} image {variable_id}" '
+            f'src="{data_uri}">'
+        )
+        return {
+            'style_uris': [],
+            'script_uris': [],
+            'content_html': content_html,
+            'script_text': '',
+        }
 
 
 class MapMapboxView(VariableView):
@@ -304,44 +327,47 @@ class MapMapboxView(VariableView):
     style_uri = 'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.css'
     script_uri = 'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.js'
 
-    def __init__(self, style_uris, script_uris, script_texts):
-        append_once(self.style_uri, style_uris)
-        append_once(self.script_uri, script_uris)
-        mapbox_token = getenv('MAPBOX_TOKEN')
-        if not mapbox_token:
-            logging.error('MAPBOX_TOKEN is not defined in the environment')
-        append_once(
-            f"mapboxgl.accessToken = '{mapbox_token}'",
-            script_texts)
-        super().__init__(style_uris, script_uris, script_texts)
-
-    def render_html(
+    def render(
             self, type_name, variable_index, variable_id, variable_data=None,
             variable_path=None, request_path=None):
         element_id = f'v{variable_index}'
-        # TODO: Allow override of style
-        # TODO: Allow override of center
-        # TODO: Allow override of zoom
-        # TODO: Allow specification of preserveDrawingBuffer
-        append_once((
-            "new mapboxgl.Map({"
+        content_html = (
+            f'<div id="{element_id}" '
+            f'class="{type_name} map-mapbox {variable_id}"></div>')
+        data_uri = request_path + '/' + variable_path
+
+        mapbox_token = getenv('MAPBOX_TOKEN')
+        if not mapbox_token:
+            logging.error('MAPBOX_TOKEN is not defined in the environment')
+
+        script_texts = [f"mapboxgl.accessToken = '{mapbox_token}'", (
+            f"const {element_id} = new mapboxgl.Map({"
             f"container: '{element_id}', "
             "style: 'mapbox://styles/mapbox/streets-v11', "
             "center: [-74.5, 40], "
             "zoom: 5, "
             # "preserveDrawingBuffer: true})"
-        ), self.script_texts)
-        return (
-            f'<div id="{element_id}" class="{type_name} {variable_id}">'
-            '</div>')
+        ), (
+            element_id + ".on('load'"
+            f"{element_id}.on('load', () => " + '{ ' +
+            f"{element_id}.addSource('{element_id}', {'type': 'geojson', 'data': '{data_uri}'}); {element_id}.addLayer({'type': 'fill', 'source': '{element_id}'})"
+        )]
+        # TODO: Allow override of style
+        # TODO: Allow override of center
+        # TODO: Allow override of zoom
+        # TODO: Allow specification of preserveDrawingBuffer
+        return {
+            'style_uris': [self.style_uri],
+            'script_uris': [self.script_uri],
+            'content_html': content_html,
+            'script_texts': script_texts,
+        }
 
 
 def render_page_dictionary(
         request, style_uris, page_type_name, page_text, variable_definitions):
     style_uris = style_uris.copy()
-    script_uris = []
-    script_texts = []
-    variable_ids = []
+    script_uris, script_texts, variable_ids = [], [], []
 
     def render_html(match):
         matching_text = match.group(0)
@@ -355,23 +381,30 @@ def render_page_dictionary(
             return matching_text
         # TODO: Load data from batch folder
         variable_ids.append(variable_id)
+        variable_index = len(variable_ids) - 1
         variable_data = definition.get('data', '')
         variable_path = definition.get('path', '')
-        variable_view_class = get_variable_view_class(definition)
-        variable_view = variable_view_class(
-            style_uris, script_uris, script_texts)
-        return variable_view.render_html(
-            page_type_name, len(variable_ids) - 1, variable_id, variable_data,
+        variable_view = get_variable_view_class(definition)()
+        d = variable_view.render(
+            page_type_name, variable_index, variable_id, variable_data,
             variable_path, request.path)
+        for _ in d['style_uris']:
+            if _ not in style_uris:
+                style_uris.append(_)
+        for _ in d['script_uris']:
+            if _ not in script_uris:
+                script_uris.append(_)
+        for _ in d['script_texts']:
+            if _ not in script_texts:
+                script_texts.append(_)
+        return d['content_html']
 
-    content_markdown = VARIABLE_ID_PATTERN.sub(render_html, page_text)
-    content_html = markdown(content_markdown)
-    script_text = '\n'.join(script_texts)
+    content_html = markdown(VARIABLE_ID_PATTERN.sub(render_html, page_text))
     return {
         'style_uris': style_uris,
         'script_uris': script_uris,
         'content_html': content_html,
-        'script_text': script_text,
+        'script_text': '\n'.join(script_texts),
     }
 
 
