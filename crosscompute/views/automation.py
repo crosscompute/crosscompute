@@ -7,6 +7,7 @@
 # TODO: Log error if automation requires view that is not installed
 
 
+import json
 import logging
 from abc import ABC, abstractmethod
 from markdown import markdown
@@ -38,8 +39,8 @@ MAP_MAPBOX_SCRIPT_TEXT_TEMPLATE = Template('''\
 const $element_id = new mapboxgl.Map({
     container: '$element_id',
     style: '$style_uri',
-    center: [0, 0],
-    zoom: 0,
+    center: $center_coordinates,
+    zoom: $zoom_level,
 })
 $element_id.on('load', () => {
     $element_id.addSource('$element_id', {
@@ -170,13 +171,19 @@ class AutomationViews():
 
     def see_automation_batch_page(self, request):
         page_type_name = self.get_page_type_name_from(request)
+        automation_definition = self.get_automation_definition_from(request)
+        batch_definition = self.get_batch_definition_from(
+            request, automation_definition)
+        batch_folder = batch_definition['folder']
+        variable_folder = join(batch_folder, page_type_name)
+        folder = join(self.configuration_folder, variable_folder)
         variable_definitions = self.get_variable_definitions(
             page_type_name)
         template_texts = self.get_template_texts(page_type_name)
         page_text = '\n'.join(template_texts)
         return render_page_dictionary(
             request, self.css_uris, page_type_name, page_text,
-            variable_definitions)
+            variable_definitions, folder)
 
     def see_automation_batch_page_file(self, request):
         matchdict = request.matchdict
@@ -368,11 +375,10 @@ class MapMapboxView(VariableView):
                 'element_id': element_id,
                 'data_uri': data_uri,
                 'style_uri': style_uri,
+                'center_coordinates': variable_settings.get('center', [0, 0]),
+                'zoom_level': variable_settings.get('zoom', 0),
             }),
         ]
-        # "preserveDrawingBuffer: true})"
-        # TODO: Allow override of center
-        # TODO: Allow override of zoom
         # TODO: Allow specification of preserveDrawingBuffer
         return {
             'css_uris': [self.css_uri],
@@ -382,8 +388,17 @@ class MapMapboxView(VariableView):
         }
 
 
+class MapPyDeckScreenGridLayer(VariableView):
+
+    def render(
+            self, type_name, variable_index, variable_id, variable_data=None,
+            variable_path=None, variable_settings=None, request_path=None):
+        return {}
+
+
 def render_page_dictionary(
-        request, css_uris, page_type_name, page_text, variable_definitions):
+        request, css_uris, page_type_name, page_text, variable_definitions,
+        folder):
     css_uris = css_uris.copy()
     js_uris, js_texts, variable_ids = [], [], []
 
@@ -400,10 +415,10 @@ def render_page_dictionary(
         # TODO: Load data from batch folder
         variable_ids.append(variable_id)
         variable_index = len(variable_ids) - 1
-        variable_data = definition.get('data', '')
-        variable_path = definition.get('path', '')
-        variable_settings = definition.get('settings', {})
         variable_view = get_variable_view_class(definition)()
+        variable_path = definition.get('path', '')
+        variable_data = definition.get('data', '')
+        variable_settings = get_variable_settings(definition, folder)
         d = variable_view.render(
             page_type_name, variable_index, variable_id, variable_data,
             variable_path, variable_settings, request.path)
@@ -439,3 +454,16 @@ def get_variable_view_class(variable_definition):
         logging.error(f'{view_name} view not installed')
         return NullView
     return VariableView
+
+
+def get_variable_settings(variable_definition, folder):
+    variable_settings = variable_definition.get('settings', {})
+    settings_path = variable_settings.get('path')
+    if settings_path:
+        try:
+            settings = json.load(open(join(folder, settings_path), 'rt'))
+        except OSError:
+            logging.error(f'{settings_path} not found')
+        else:
+            variable_settings.update(settings)
+    return variable_settings
