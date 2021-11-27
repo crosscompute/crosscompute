@@ -1,10 +1,9 @@
+# TODO: List links for all automations
 # TODO: Let user set automation slug in configuration file
 # TODO: Let user set batch name and slug
-# TODO: List links for all automations
 # TODO: Let user customize homepage title
 # TODO: Add tests
 # TODO: Validate variable definitions for id and view
-# TODO: Log error if automation requires view that is not installed
 
 
 import json
