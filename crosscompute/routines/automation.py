@@ -150,6 +150,40 @@ class Automation():
         return config.make_wsgi_app()
 
 
+def get_automation_definitions(configuration, configuration_folder):
+    automation_definitions = []
+    automation_name = configuration.get(
+        'name', AUTOMATION_NAME.format(automation_index=0))
+    automation_slug = get_slug_from_name(automation_name)
+    automation_uri = AUTOMATION_ROUTE.format(
+        automation_slug=automation_slug)
+
+    batch_definitions = []
+    for batch_definition in configuration.get('batches', []):
+        try:
+            batch_folder = batch_definition['folder']
+        except KeyError:
+            logging.error('folder required for each batch')
+            continue
+        batch_name = batch_definition.get('name', basename(batch_folder))
+        batch_slug = get_slug_from_name(batch_name)
+        batch_uri = BATCH_ROUTE.format(batch_slug=batch_slug)
+        batch_definitions.append({
+            'name': batch_name,
+            'slug': batch_slug,
+            'uri': batch_uri,
+            'folder': batch_folder,
+        })
+
+    automation_definitions.append({
+        'name': automation_name,
+        'slug': automation_slug,
+        'uri': automation_uri,
+        'batches': batch_definitions,
+    })
+    return automation_definitions
+
+
 def get_css_uris(configuration, configuration_folder):
     display_configuration = configuration.get('display', {})
     css_uris = []
