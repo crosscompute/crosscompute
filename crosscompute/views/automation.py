@@ -11,13 +11,12 @@ import logging
 from abc import ABC, abstractmethod
 from markdown import markdown
 from os import getenv
-from os.path import basename, exists, join
+from os.path import join
 from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
 from pyramid.response import FileResponse
 from string import Template
 
 from ..constants import (
-    AUTOMATION_NAME,
     AUTOMATION_ROUTE,
     BATCH_ROUTE,
     FILE_ROUTE,
@@ -29,11 +28,13 @@ from ..constants import (
 from ..macros import (
     extend_uniquely,
     find_item,
-    get_slug_from_name,
     is_path_in_folder)
-from ..routines import (
+from ..routines.configuration import (
+    get_all_variable_definitions,
     get_automation_definitions,
-    get_css_uris)
+    get_css_uris,
+    get_raw_variable_definitions,
+    get_template_texts)
 
 
 MAP_MAPBOX_STYLE_URI = 'mapbox://styles/mapbox/dark-v10'
@@ -57,12 +58,11 @@ $element_id.on('load', () => {
 
 class AutomationViews():
 
-    def __init__(self, configuration, configuration_folder):
-        self.automation_definitions = get_automation_definitions(
-            configuration, configuration_folder)
-        self.css_uris = get_css_uris(configuration, configuration_folder)
+    def __init__(self, configuration):
+        automation_definitions = get_automation_definitions(
+            configuration)
+        self.automation_definitions = automation_definitions
         self.configuration = configuration
-        self.configuration_folder = configuration_folder
 
     def includeme(self, config):
         config.include(self.configure_styles)
@@ -98,28 +98,36 @@ class AutomationViews():
             route_name='automation batch page file')
 
     def configure_styles(self, config):
-        if self.css_uris:
-            config.add_route('style', STYLE_ROUTE)
-            config.add_view(
-                self.see_style,
-                route_name='style')
+        config.add_route('style', STYLE_ROUTE)
+        config.add_route('automation style', AUTOMATION_ROUTE + STYLE_ROUTE)
+
+        config.add_view(
+            self.see_style,
+            route_name='style')
+        config.add_view(
+            self.see_style,
+            route_name='automation style')
 
         def update_renderer_globals():
             renderer_environment = config.get_jinja2_environment()
             renderer_environment.globals.update({
-                'css_uris': self.css_uris,
                 'HOME_ROUTE': HOME_ROUTE,
             })
 
         config.action(None, update_renderer_globals)
 
     def see_style(self, request):
-        if request.path not in self.css_uris:
+        matchdict = request.matchdict
+        if 'automation_slug' in matchdict:
+            automation_definition = self.get_automation_definition_from(
+                request)
+        else:
+            automation_definition = self.configuration
+        if request.path not in get_css_uris(automation_definition):
             raise HTTPNotFound
 
-        matchdict = request.matchdict
         style_path = matchdict['style_path']
-        folder = self.configuration_folder
+        folder = automation_definition['folder']
         path = join(folder, style_path)
         if not is_path_in_folder(path, folder):
             raise HTTPBadRequest
@@ -131,12 +139,18 @@ class AutomationViews():
         return response
 
     def see_home(self, request):
+        css_uris = get_css_uris(self.configuration)
         return {
             'automations': self.automation_definitions,
+            'css_uris': css_uris,
         }
 
     def see_automation(self, request):
-        return self.get_automation_definition_from(request)
+        automation_definition = self.get_automation_definition_from(request)
+        css_uris = get_css_uris(automation_definition)
+        return automation_definition | {
+            'css_uris': css_uris,
+        }
 
     def see_automation_batch(self, request):
         return {}
@@ -144,27 +158,31 @@ class AutomationViews():
     def see_automation_batch_page(self, request):
         page_type_name = self.get_page_type_name_from(request)
         automation_definition = self.get_automation_definition_from(request)
+        automation_folder = automation_definition['folder']
         batch_definition = self.get_batch_definition_from(
             request, automation_definition)
         batch_folder = batch_definition['folder']
         variable_folder = join(batch_folder, page_type_name)
-        folder = join(self.configuration_folder, variable_folder)
-        variable_definitions = self.get_variable_definitions(
-            page_type_name)
-        template_texts = self.get_template_texts(page_type_name)
+        folder = join(automation_folder, variable_folder)
+        variable_definitions = get_all_variable_definitions(
+            automation_definition, page_type_name)
+        template_texts = get_template_texts(
+            automation_definition, page_type_name)
+        css_uris = get_css_uris(automation_definition)
         page_text = '\n'.join(template_texts)
         return render_page_dictionary(
-            request, self.css_uris, page_type_name, page_text,
+            request, css_uris, page_type_name, page_text,
             variable_definitions, folder)
 
     def see_automation_batch_page_file(self, request):
         matchdict = request.matchdict
         automation_definition = self.get_automation_definition_from(request)
+        automation_folder = automation_definition['folder']
         batch_definition = self.get_batch_definition_from(
             request, automation_definition)
         page_type_name = self.get_page_type_name_from(request)
-        variable_definitions = self.get_variable_definitions(
-            page_type_name)
+        variable_definitions = get_raw_variable_definitions(
+            automation_definition, page_type_name)
         variable_path = matchdict['variable_path']
         try:
             variable_definition = find_item(
@@ -175,7 +193,7 @@ class AutomationViews():
         logging.debug(variable_definition)
         batch_folder = batch_definition['folder']
         variable_folder = join(batch_folder, page_type_name)
-        folder = join(self.configuration_folder, variable_folder)
+        folder = join(automation_folder, variable_folder)
         path = join(folder, variable_path)
         if not is_path_in_folder(path, folder):
             raise HTTPBadRequest
@@ -212,30 +230,6 @@ class AutomationViews():
         except KeyError:
             raise HTTPBadRequest
         return page_type_name
-
-    def get_variable_definitions(self, variable_type_name):
-        return self.configuration.get(
-            variable_type_name, {}).get('variables', [])
-
-    def get_template_definitions(self, variable_type_name):
-        return self.configuration.get(
-            variable_type_name, {}).get('templates', [])
-
-    def get_template_texts(self, variable_type_name):
-        template_definitions = self.get_template_definitions(
-            variable_type_name)
-        template_paths = [
-            _['path'] for _ in template_definitions if 'path' in _]
-        if template_paths:
-            template_texts = [open(join(
-                self.configuration_folder, _,
-            ), 'rt').read() for _ in template_paths]
-        else:
-            variable_definitions = self.get_variable_definitions(
-                variable_type_name)
-            variable_ids = [_['id'] for _ in variable_definitions if 'id' in _]
-            template_texts = [' '.join('{' + _ + '}' for _ in variable_ids)]
-        return template_texts
 
 
 class VariableView(ABC):

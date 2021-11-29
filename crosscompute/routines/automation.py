@@ -1,16 +1,13 @@
 # TODO: Send refresh without server restart for template changes
 import logging
 import subprocess
-import yaml
 from os import getenv
-from os.path import (
-    dirname, join, relpath,
-    # splitext,
-)
+from os.path import join, relpath
 from pyramid.config import Configurator
 from waitress import serve
 from watchgod import watch
 
+from .configuration import load_configuration
 from ..constants import (
     # CONFIGURATION_EXTENSIONS,
     HOST, PORT,
@@ -23,21 +20,19 @@ from ..views import AutomationViews, EchoViews
 class Automation():
 
     def initialize_from_path(self, configuration_path):
-        configuration = yaml.safe_load(open(configuration_path, 'rt'))
-        configuration_folder = dirname(configuration_path)
+        configuration = load_configuration(configuration_path)
+        configuration_folder = configuration['folder']
         script_definition = configuration.get('script', {})
         script_folder = script_definition.get('folder', '')
         command_string = script_definition.get('command', '')
 
         self.configuration_path = configuration_path
-        self.configuration_folder = configuration_folder
         self.configuration = configuration
+        self.configuration_folder = configuration_folder
         self.script_folder = script_folder
         self.command_string = command_string
-        self.automation_views = AutomationViews(
-            configuration, configuration_folder)
-        self.echo_views = EchoViews(
-            configuration_folder)
+        self.automation_views = AutomationViews(configuration)
+        self.echo_views = EchoViews(configuration_folder)
 
         logging.debug('configuration_path = %s', configuration_path)
         logging.debug('configuration_folder = %s', configuration_folder)
@@ -134,8 +129,6 @@ class Automation():
                 server_process.start()
                 '''
                 elif changed_extension in TEMPLATE_EXTENSIONS:
-                    print(changed_extension, TEMPLATE_EXTENSIONS)
-                    # print(self.echo_views.queues)
                     self.echo_views.reset_time()
                     # for queue in self.echo_views.queues:
                     # queue.put(changed_path)
@@ -148,56 +141,3 @@ class Automation():
             if not is_static:
                 config.include(self.echo_views.includeme)
         return config.make_wsgi_app()
-
-
-def get_automation_definitions(configuration, configuration_folder):
-    automation_definitions = []
-    automation_name = configuration.get(
-        'name', AUTOMATION_NAME.format(automation_index=0))
-    automation_slug = get_slug_from_name(automation_name)
-    automation_uri = AUTOMATION_ROUTE.format(
-        automation_slug=automation_slug)
-
-    batch_definitions = []
-    for batch_definition in configuration.get('batches', []):
-        try:
-            batch_folder = batch_definition['folder']
-        except KeyError:
-            logging.error('folder required for each batch')
-            continue
-        batch_name = batch_definition.get('name', basename(batch_folder))
-        batch_slug = get_slug_from_name(batch_name)
-        batch_uri = BATCH_ROUTE.format(batch_slug=batch_slug)
-        batch_definitions.append({
-            'name': batch_name,
-            'slug': batch_slug,
-            'uri': batch_uri,
-            'folder': batch_folder,
-        })
-
-    automation_definitions.append({
-        'name': automation_name,
-        'slug': automation_slug,
-        'uri': automation_uri,
-        'batches': batch_definitions,
-    })
-    return automation_definitions
-
-
-def get_css_uris(configuration, configuration_folder):
-    display_configuration = configuration.get('display', {})
-    css_uris = []
-
-    for style_definition in display_configuration.get('styles', []):
-        uri = style_definition.get('uri', '').strip()
-        path = style_definition.get('path', '').strip()
-        if not uri and not path:
-            logging.error('uri or path required for each style')
-            continue
-        if path:
-            if not exists(join(configuration_folder, path)):
-                logging.error('style not found at path %s', path)
-            uri = STYLE_ROUTE.format(style_path=path)
-        css_uris.append(uri)
-
-    return css_uris

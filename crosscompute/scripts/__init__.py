@@ -12,8 +12,6 @@ from waitress import serve
 
 
 def launch():
-    print(DEFAULT_CONFIGURATION)
-    print(argv)
     configuration_paths_by_format = get_configuration_paths_by_format()
     for (
         configuration_format,
@@ -21,11 +19,7 @@ def launch():
     ) in configuration_paths_by_format.items():
         if configuration_format != 'yaml':
             continue
-        for configuration_path in configuration_paths:
-            print(configuration_format, configuration_path)
-
         configuration = yaml.safe_load(open(configuration_path, 'rt'))
-        print(configuration)
         if 'crosscompute' not in configuration:
             continue
         # TODO: Assert version
@@ -38,7 +32,6 @@ def launch():
         # TODO: Check if path is md or ipynb
         template_text = open(template_path, 'rt').read()
         template_html = markdown(template_text)
-        print(template_html)
 
     def see_root(request):
         return Response(template_html)
@@ -64,7 +57,6 @@ def launch():
     # check if configuration file exists
     # if not, create one
     # if it does exist, launch server
-    print('whee!')
     # make default configuration
     # render default configuration to yaml, ini, toml
 
@@ -83,10 +75,6 @@ def get_configuration_paths_by_format(configuration_folder='.'):
             continue
         configuration_paths_by_format[configuration_format].append(path)
     return dict(configuration_paths_by_format)
-
-
-def load_configuration(configuration_path, configuration_format):
-    pass
 
 
 # TODO: Draft function that loads configuration file

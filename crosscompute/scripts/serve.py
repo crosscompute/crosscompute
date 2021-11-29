@@ -1,8 +1,8 @@
 from argparse import ArgumentParser
 
-from crosscompute import Automation
 from crosscompute.constants import HOST, PORT
-from crosscompute.routines import (
+from crosscompute.routines.automation import Automation
+from crosscompute.routines.log import (
     configure_argument_parser_for_logging,
     configure_logging_from)
 
