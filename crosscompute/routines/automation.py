@@ -148,3 +148,22 @@ class Automation():
             if not is_static:
                 config.include(self.echo_views.includeme)
         return config.make_wsgi_app()
+
+
+def get_css_uris(configuration, configuration_folder):
+    display_configuration = configuration.get('display', {})
+    css_uris = []
+
+    for style_definition in display_configuration.get('styles', []):
+        uri = style_definition.get('uri', '').strip()
+        path = style_definition.get('path', '').strip()
+        if not uri and not path:
+            logging.error('uri or path required for each style')
+            continue
+        if path:
+            if not exists(join(configuration_folder, path)):
+                logging.error('style not found at path %s', path)
+            uri = STYLE_ROUTE.format(style_path=path)
+        css_uris.append(uri)
+
+    return css_uris

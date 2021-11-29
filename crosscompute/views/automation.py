@@ -31,6 +31,9 @@ from ..macros import (
     find_item,
     get_slug_from_name,
     is_path_in_folder)
+from ..routines import (
+    get_automation_definitions,
+    get_css_uris)
 
 
 MAP_MAPBOX_STYLE_URI = 'mapbox://styles/mapbox/dark-v10'
@@ -55,41 +58,11 @@ $element_id.on('load', () => {
 class AutomationViews():
 
     def __init__(self, configuration, configuration_folder):
+        self.automation_definitions = get_automation_definitions(
+            configuration, configuration_folder)
+        self.css_uris = get_css_uris(configuration, configuration_folder)
         self.configuration = configuration
         self.configuration_folder = configuration_folder
-        # TODO: Consider moving rest to a separate function
-        automation_definitions = []
-        automation_name = configuration.get(
-            'name', AUTOMATION_NAME.format(automation_index=0))
-        automation_slug = get_slug_from_name(automation_name)
-        automation_uri = AUTOMATION_ROUTE.format(
-            automation_slug=automation_slug)
-
-        batch_definitions = []
-        for batch_definition in configuration.get('batches', []):
-            try:
-                batch_folder = batch_definition['folder']
-            except KeyError:
-                logging.error('folder required for each batch')
-                continue
-            batch_name = batch_definition.get('name', basename(batch_folder))
-            batch_slug = get_slug_from_name(batch_name)
-            batch_uri = BATCH_ROUTE.format(batch_slug=batch_slug)
-            batch_definitions.append({
-                'name': batch_name,
-                'slug': batch_slug,
-                'uri': batch_uri,
-                'folder': batch_folder,
-            })
-
-        automation_definitions.append({
-            'name': automation_name,
-            'slug': automation_slug,
-            'uri': automation_uri,
-            'batches': batch_definitions,
-        })
-        self.automation_definitions = automation_definitions
-        self.css_uris = self.get_css_uris()
 
     def includeme(self, config):
         config.include(self.configure_styles)
@@ -240,24 +213,6 @@ class AutomationViews():
             raise HTTPBadRequest
         return page_type_name
 
-    def get_css_uris(self):
-        display_configuration = self.configuration.get('display', {})
-        css_uris = []
-
-        for style_definition in display_configuration.get('styles', []):
-            uri = style_definition.get('uri', '').strip()
-            path = style_definition.get('path', '').strip()
-            if not uri and not path:
-                logging.error('uri or path required for each style')
-                continue
-            if path:
-                if not exists(join(self.configuration_folder, path)):
-                    logging.error('style not found at path %s', path)
-                uri = STYLE_ROUTE.format(style_path=path)
-            css_uris.append(uri)
-
-        return css_uris
-
     def get_variable_definitions(self, variable_type_name):
         return self.configuration.get(
             variable_type_name, {}).get('variables', [])
@@ -361,19 +316,16 @@ class MapMapboxView(VariableView):
         html_text = (
             f'<div id="{element_id}" '
             f'class="{type_name} map-mapbox {variable_id}"></div>')
-        data_uri = request_path + '/' + variable_path
-
         mapbox_token = getenv('MAPBOX_TOKEN')
         if not mapbox_token:
             logging.error('MAPBOX_TOKEN is not defined in the environment')
-        style_uri = variable_settings.get('style', MAP_MAPBOX_STYLE_URI)
-
         js_texts = [
             f"mapboxgl.accessToken = '{mapbox_token}'",
             MAP_MAPBOX_SCRIPT_TEXT_TEMPLATE.substitute({
                 'element_id': element_id,
-                'data_uri': data_uri,
-                'style_uri': style_uri,
+                'data_uri': request_path + '/' + variable_path,
+                'style_uri': variable_settings.get(
+                    'style', MAP_MAPBOX_STYLE_URI),
                 'center_coordinates': variable_settings.get('center', [0, 0]),
                 'zoom_level': variable_settings.get('zoom', 0),
             }),
