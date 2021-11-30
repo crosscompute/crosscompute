@@ -4,13 +4,13 @@
 # TODO: Let user customize homepage title
 # TODO: Add tests
 # TODO: Validate variable definitions for id and view
+# TODO: Let creator override mapbox js
 
 
 import json
 import logging
 from abc import ABC, abstractmethod
 from markdown import markdown
-from os import getenv
 from os.path import join
 from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
 from pyramid.response import FileResponse
@@ -28,6 +28,7 @@ from ..constants import (
 from ..macros import (
     extend_uniquely,
     find_item,
+    get_environment_value,
     is_path_in_folder)
 from ..routines.configuration import (
     get_all_variable_definitions,
@@ -37,23 +38,46 @@ from ..routines.configuration import (
     get_template_texts)
 
 
-MAP_MAPBOX_STYLE_URI = 'mapbox://styles/mapbox/dark-v10'
-MAP_MAPBOX_SCRIPT_TEXT_TEMPLATE = Template('''\
+MAP_MAPBOX_CSS_URI = 'mapbox://styles/mapbox/dark-v10'
+MAP_MAPBOX_JS_TEMPLATE = Template('''\
 const $element_id = new mapboxgl.Map({
-    container: '$element_id',
-    style: '$style_uri',
-    center: $center_coordinates,
-    zoom: $zoom_level,
+  container: '$element_id',
+  style: '$style_uri',
+  center: [$longitude, $latitude],
+  zoom: $zoom,
 })
 $element_id.on('load', () => {
-    $element_id.addSource('$element_id', {
-        'type': 'geojson',
-        'data': '$data_uri'})
-    $element_id.addLayer({
-        'id': '$element_id',
-        'type': 'fill',
-        'source': '$element_id'})
+  $element_id.addSource('$element_id', {
+    type: 'geojson',
+    data: '$data_uri'})
+  $element_id.addLayer({
+    id: '$element_id',
+    type: 'fill',
+    source: '$element_id'})
 })''')
+MAP_PYDECK_SCREENGRID_JS_TEMPLATE = Template('''\
+const layers = []
+layers.push(new ScreenGridLayer({
+  data: '$data_uri',
+  getPosition: d => [d.longitude, d.latitude],
+  getWeight: d => d.weight,
+  opacity: $opacity,
+}))
+new deck.DeckGL({
+  container: '$element_id',
+  mapboxApiAccessToken: '$mapbox_token',
+  mapStyle: '$style_uri',
+  initialViewState: {
+    longitude: $longitude,
+    latitude: $latitude,
+    zoom: $zoom,
+  },
+  controller: true,
+  layers,
+})
+''')
+MARKDOWN_BODY_TEMPLATE = Template('''\
+''')
 
 
 class AutomationViews():
@@ -241,7 +265,7 @@ class VariableView(ABC):
         return {
             'css_uris': [],
             'js_uris': [],
-            'html_text': '',
+            'body_text': '',
             'js_texts': [],
         }
 
@@ -254,7 +278,7 @@ class NullView(VariableView):
         return {
             'css_uris': [],
             'js_uris': [],
-            'html_text': '',
+            'body_text': '',
             'js_texts': [],
         }
 
@@ -265,14 +289,14 @@ class NumberView(VariableView):
             self, type_name, variable_index, variable_id, variable_data=None,
             variable_path=None, variable_settings=None, request_path=None):
         element_id = f'v{variable_index}'
-        html_text = (
+        body_text = (
             f'<input id="{element_id}" '
             f'class="{type_name} number {variable_id}" '
             f'value="{variable_data}" type="number">')
         return {
             'css_uris': [],
             'js_uris': [],
-            'html_text': html_text,
+            'body_text': body_text,
             'js_texts': [],
         }
 
@@ -285,7 +309,7 @@ class ImageView(VariableView):
         # TODO: Support type_name == 'input'
         element_id = f'v{variable_index}'
         data_uri = request_path + '/' + variable_path
-        html_text = (
+        body_text = (
             f'<img id="{element_id}" '
             f'class="{type_name} image {variable_id}" '
             f'src="{data_uri}">'
@@ -293,56 +317,85 @@ class ImageView(VariableView):
         return {
             'css_uris': [],
             'js_uris': [],
-            'html_text': html_text,
+            'body_text': body_text,
             'js_texts': [],
         }
 
 
 class MapMapboxView(VariableView):
 
-    css_uri = 'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.css'
-    js_uri = 'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.js'
+    css_uris = [
+        'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.css',
+    ]
+    js_uris = [
+        'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.js',
+    ]
 
     def render(
             self, type_name, variable_index, variable_id, variable_data=None,
             variable_path=None, variable_settings=None, request_path=None):
         element_id = f'v{variable_index}'
-        html_text = (
+        body_text = (
             f'<div id="{element_id}" '
             f'class="{type_name} map-mapbox {variable_id}"></div>')
-        mapbox_token = getenv('MAPBOX_TOKEN')
-        if not mapbox_token:
-            logging.error('MAPBOX_TOKEN is not defined in the environment')
+        mapbox_token = get_environment_value('MAPBOX_TOKEN', '')
         js_texts = [
             f"mapboxgl.accessToken = '{mapbox_token}'",
-            MAP_MAPBOX_SCRIPT_TEXT_TEMPLATE.substitute({
+            MAP_MAPBOX_JS_TEMPLATE.substitute({
                 'element_id': element_id,
                 'data_uri': request_path + '/' + variable_path,
                 'style_uri': variable_settings.get(
-                    'style', MAP_MAPBOX_STYLE_URI),
-                'center_coordinates': variable_settings.get('center', [0, 0]),
-                'zoom_level': variable_settings.get('zoom', 0),
+                    'style', MAP_MAPBOX_CSS_URI),
+                'longitude': variable_settings.get('longitude', 0),
+                'latitude': variable_settings.get('latitude', 0),
+                'zoom': variable_settings.get('zoom', 0),
             }),
         ]
         # TODO: Allow specification of preserveDrawingBuffer
         return {
-            'css_uris': [self.css_uri],
-            'js_uris': [self.js_uri],
-            'html_text': html_text,
+            'css_uris': self.css_uris,
+            'js_uris': self.js_uris,
+            'body_text': body_text,
             'js_texts': js_texts,
         }
 
 
 class MapPyDeckScreenGridView(VariableView):
 
+    css_uris = [
+        'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.css',
+    ]
+    js_uris = [
+        'https://unpkg.com/deck.gl@^8.0.0/dist.min.js',
+        'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.js',
+    ]
+
     def render(
             self, type_name, variable_index, variable_id, variable_data=None,
             variable_path=None, variable_settings=None, request_path=None):
+        element_id = f'v{variable_index}'
+        body_text = (
+            f'<div id="{element_id}" '
+            f'class="{type_name} map-pydeck-screengrid {variable_id}"></div>')
+        mapbox_token = get_environment_value('MAPBOX_TOKEN', '')
+        js_texts = [
+            MAP_PYDECK_SCREENGRID_JS_TEMPLATE.substitute({
+                'data_uri': request_path + '/' + variable_path,
+                'opacity': variable_settings.get('opacity', 0.5),
+                'element_id': element_id,
+                'mapbox_token': mapbox_token,
+                'style_uri': variable_settings.get(
+                    'style', MAP_MAPBOX_CSS_URI),
+                'longitude': variable_settings.get('longitude', 0),
+                'latitude': variable_settings.get('latitude', 0),
+                'zoom': variable_settings.get('zoom', 0),
+            }),
+        ]
         return {
-            'css_uris': [],
-            'js_uris': [],
-            'html_text': '',
-            'js_texts': [],
+            'css_uris': self.css_uris,
+            'js_uris': self.js_uris,
+            'body_text': body_text,
+            'js_texts': js_texts,
         }
 
 
@@ -351,10 +404,18 @@ class MarkdownView(VariableView):
     def render(
             self, type_name, variable_index, variable_id, variable_data=None,
             variable_path=None, variable_settings=None, request_path=None):
+        '''
+        element_id = f'v{variable_index}'
+        body_text = (
+            f'<span id="{element_id}" '
+            f'class="{type_name} number {variable_id}" '
+            f'value="{variable_data}" type="number">{variable_data}</span>')
+        '''
+        body_text = variable_data
         return {
             'css_uris': [],
             'js_uris': [],
-            'html_text': '',
+            'body_text': body_text,
             'js_texts': [],
         }
 
@@ -388,13 +449,13 @@ def render_page_dictionary(
         extend_uniquely(css_uris, d['css_uris'])
         extend_uniquely(js_uris, d['js_uris'])
         extend_uniquely(js_texts, d['js_texts'])
-        return d['html_text']
+        return d['body_text']
 
-    html_text = markdown(VARIABLE_ID_PATTERN.sub(render_html, page_text))
+    body_text = markdown(VARIABLE_ID_PATTERN.sub(render_html, page_text))
     return {
         'css_uris': css_uris,
         'js_uris': js_uris,
-        'html_text': html_text,
+        'body_text': body_text,
         'js_text': '\n'.join(js_texts),
     }
 

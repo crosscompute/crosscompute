@@ -9,7 +9,7 @@
 </head>
 <body>
 {%- block body_html %}
-{{ html_text | safe }}
+{{ body_text | safe }}
 {% endblock -%}
 {%- for js_uri in js_uris %}
 <script src="{{ js_uri }}"></script>

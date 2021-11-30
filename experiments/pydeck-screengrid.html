@@ -1,0 +1,90 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.css" rel="stylesheet" />
+  <style>
+/*
+    body {
+      width: 100vw;
+      height: 100vh;
+      margin: 0;
+    }
+*/
+    body {
+      margin: 0;
+      width: 100vw;
+      height: 100vh;
+    }
+    #x {
+      width: 50vw;
+      height: 50vh;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  Hey
+  <div id=x></div>
+  There
+  <script src="https://unpkg.com/deck.gl@^8.0.0/dist.min.js"></script>
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.js"></script>
+  <script>
+    const { DeckGL, ScreenGridLayer } = deck;
+
+    // mapboxgl.accessToken = 'pk.eyJ1IjoiY3Jvc3Njb21wdXRlIiwiYSI6ImNqcnk5YTJqdDBkYXk0NG42Nmg0OGVidHAifQ.EBpVevNHUrVyEqUYT_rkCQ'
+    new DeckGL({
+      // parent: document.getElementById('x'),
+      container: 'x',
+      mapboxApiAccessToken: 'pk.eyJ1IjoiY3Jvc3Njb21wdXRlIiwiYSI6ImNqcnk5YTJqdDBkYXk0NG42Nmg0OGVidHAifQ.EBpVevNHUrVyEqUYT_rkCQ',
+      // mapStyle: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+      mapStyle: 'mapbox://styles/mapbox/dark-v10',
+      initialViewState: {
+        longitude: -122.4,
+        latitude: 37.74,
+        zoom: 11,
+        // maxZoom: 20,
+        // pitch: 30,
+        // bearing: 0,
+      },
+      controller: true,
+      layers: [
+        new ScreenGridLayer({
+          // id: 'ScreenGridLayer',
+          data: 'https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/sf-bike-parking.json',
+
+          /* props from ScreenGridLayer class */
+          // aggregation: 'SUM',
+          // cellMarginPixels: 2,
+          // cellSizePixels: 50,
+          // colorDomain: null,
+          /*
+          colorRange: [
+            [0, 25, 0, 75],
+            [0, 85, 0, 75],
+            [0, 127, 0, 75],
+            [0, 170, 0, 75],
+            [0, 190, 0, 75],
+            [0, 255, 0, 75]
+          ],
+          */
+          getPosition: d => d.COORDINATES,
+          getWeight: d => d.SPACES,
+          // gpuAggregation: true,
+
+          /* props inherited from Layer class */
+          // autoHighlight: false,
+          // coordinateOrigin: [0, 0, 0],
+          // coordinateSystem: COORDINATE_SYSTEM.LNGLAT,
+          // highlightColor: [0, 0, 128, 128],
+          // modelMatrix: null,
+          opacity: 0.5,
+          // pickable: false,
+          // visible: true,
+          // wrapLongitude: false,
+        }),
+      ]
+    });
+  </script>
+</body>
+</html>
