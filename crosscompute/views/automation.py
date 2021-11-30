@@ -333,12 +333,30 @@ class MapMapboxView(VariableView):
         }
 
 
-class MapPyDeckScreenGridLayer(VariableView):
+class MapPyDeckScreenGridView(VariableView):
 
     def render(
             self, type_name, variable_index, variable_id, variable_data=None,
             variable_path=None, variable_settings=None, request_path=None):
-        return {}
+        return {
+            'css_uris': [],
+            'js_uris': [],
+            'html_text': '',
+            'js_texts': [],
+        }
+
+
+class MarkdownView(VariableView):
+
+    def render(
+            self, type_name, variable_index, variable_id, variable_data=None,
+            variable_path=None, variable_settings=None, request_path=None):
+        return {
+            'css_uris': [],
+            'js_uris': [],
+            'html_text': '',
+            'js_texts': [],
+        }
 
 
 def render_page_dictionary(
