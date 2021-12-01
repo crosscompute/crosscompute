@@ -33,7 +33,7 @@ def load_configuration(configuration_path):
         'yaml': load_raw_configuration_yaml,
     }[configuration_format]
     configuration = load_raw_configuration(configuration_path)
-    configuration['folder'] = dirname(configuration_path)
+    configuration['folder'] = dirname(configuration_path) or '.'
     return configuration
 
 
