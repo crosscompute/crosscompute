@@ -29,7 +29,7 @@ def normalize_key(
     if separate_letter_digit:
         key = LETTER_DIGIT_PATTERN.sub(r'\1 \2', key)
         key = DIGIT_LETTER_PATTERN.sub(r'\1 \2', key)
-    word_separators = ['-', '_', ' ']
+    word_separators = [r'\W']
     if word_separator not in word_separators:
         word_separators.append(word_separator)
     word_separator_expression = '[' + ''.join(word_separators) + ']'

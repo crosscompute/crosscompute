@@ -170,7 +170,7 @@ def get_css_uris(configuration):
     css_uris = []
     for style_definition in display_configuration.get('styles', []):
         style_uri = style_definition['uri']
-        is_relative = r'\\' not in style_uri
+        is_relative = r'//' not in style_uri
         if has_parent and is_relative:
             style_uri = configuration['uri'] + style_uri
         css_uris.append(style_uri)
