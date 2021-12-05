@@ -433,7 +433,7 @@ def render_page_dictionary(
             definition = find_item(variable_definitions, 'id', variable_id)
         except StopIteration:
             logging.warning(
-                '%s specified in template but missing in configuration',
+                '%s in template but missing in automation configuration',
                 variable_id)
             return matching_text
         # TODO: Load data from batch folder

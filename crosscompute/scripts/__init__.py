@@ -1,4 +1,3 @@
-# TODO: Render output variables
 import webbrowser
 import yaml
 from collections import defaultdict
@@ -33,27 +32,12 @@ def launch():
         template_text = open(template_path, 'rt').read()
         template_html = markdown(template_text)
 
-    def see_root(request):
-        return Response(template_html)
-
-    with Configurator() as config:
-        config.add_route('root', '/')
-        config.add_view(see_root, route_name='root')
-        app = config.make_wsgi_app()
-
-    # /resources/show-maps/batches/usa-maine
-    # /resources/show-maps/tests/points
-    # /~/show-maps/tests/points
-    # /show-maps/tests/points
-
     webbrowser.open('http://localhost:8000')
 
     # server = make_server('0.0.0.0', 6543, app)
     # server.serve_forever()
     serve(app, host='0.0.0.0', port=8000)
 
-    # configuration = load_configuration()
-    # if not configuration:
     # check if configuration file exists
     # if not, create one
     # if it does exist, launch server
@@ -75,11 +59,6 @@ def get_configuration_paths_by_format(configuration_folder='.'):
             continue
         configuration_paths_by_format[configuration_format].append(path)
     return dict(configuration_paths_by_format)
-
-
-# TODO: Draft function that loads configuration file
-# TODO: Render input markdown
-# TODO: Implement rough crosscompute-image plugin
 
 
 DEFAULT_CONFIGURATION = {

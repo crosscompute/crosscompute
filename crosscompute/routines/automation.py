@@ -7,7 +7,10 @@ from pyramid.config import Configurator
 from waitress import serve
 from watchgod import watch
 
-from .configuration import load_configuration
+from .configuration import (
+    get_batch_definitions,
+    load_configuration,
+    prepare_batch_folder)
 from ..constants import (
     # CONFIGURATION_EXTENSIONS,
     HOST, PORT,
@@ -49,8 +52,8 @@ class Automation():
                 'command not defined in script configuration')
             return
         # TODO: Load base custom environment from configuration
-        for batch_definition in self.configuration['batches']:
-            batch_folder = batch_definition['folder']
+        for batch_definition in get_batch_definitions(self.configuration):
+            batch_folder = prepare_batch_folder(batch_definition)
             self.run_batch(batch_folder, custom_environment)
 
     def run_batch(self, batch_folder, custom_environment=None):

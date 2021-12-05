@@ -11,7 +11,7 @@ from ..constants import (
     PAGE_TYPE_NAMES,
     STYLE_ROUTE)
 from ..exceptions import CrossComputeConfigurationError
-from ..macros import get_slug_from_name
+from ..macros import format_slug
 
 
 def load_configuration(configuration_path):
@@ -67,7 +67,7 @@ def get_automation_definitions(configuration):
         automation_name = automation_configuration.get(
             'name', AUTOMATION_NAME.format(automation_index=0))
         automation_slug = automation_configuration.get(
-            'slug', get_slug_from_name(automation_name))
+            'slug', format_slug(automation_name))
         automation_uri = AUTOMATION_ROUTE.format(
             automation_slug=automation_slug)
         automation_configuration.update({
@@ -104,7 +104,10 @@ def get_automation_configurations(configuration):
 
 def get_batch_definitions(configuration):
     batch_definitions = []
-    for batch_configuration in configuration.get('batches', []):
+
+
+
+    for batch_definition in yield_batch_definitions(configuration):
         try:
             batch_folder = get_scalar_text(batch_configuration, 'folder')
         except KeyError:
@@ -113,7 +116,7 @@ def get_batch_definitions(configuration):
         batch_name = get_scalar_text(
             batch_configuration, 'name', basename(batch_folder))
         batch_slug = batch_configuration.get(
-            'slug', get_slug_from_name(batch_name))
+            'slug', format_slug(batch_name))
         batch_uri = BATCH_ROUTE.format(batch_slug=batch_slug)
         batch_configuration.update({
             'name': batch_name,
@@ -208,3 +211,7 @@ def get_scalar_text(configuration, key, default=None):
         variable_id = list(value.keys())[0]
         value = '{%s}' % variable_id
     return value
+
+
+def prepare_batch_folder(batch_definition):
+    pass
