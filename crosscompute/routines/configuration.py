@@ -51,7 +51,10 @@ def load_raw_configuration_toml(configuration_path):
 
 def load_raw_configuration_yaml(configuration_path):
     with open(configuration_path, 'rt') as configuration_file:
-        configuration = yaml.safe_load(configuration_file)
+        try:
+            configuration = yaml.safe_load(configuration_file)
+        except yaml.parser.ParserError as e:
+            raise CrossComputeConfigurationError(e)
     return configuration
 
 
@@ -103,12 +106,12 @@ def get_batch_definitions(configuration):
     batch_definitions = []
     for batch_configuration in configuration.get('batches', []):
         try:
-            batch_folder = batch_configuration['folder']
+            batch_folder = get_scalar_text(batch_configuration, 'folder')
         except KeyError:
             logging.error('folder required for each batch')
             continue
-        batch_name = batch_configuration.get(
-            'name', basename(batch_folder))
+        batch_name = get_scalar_text(
+            batch_configuration, 'name', basename(batch_folder))
         batch_slug = batch_configuration.get(
             'slug', get_slug_from_name(batch_name))
         batch_uri = BATCH_ROUTE.format(batch_slug=batch_slug)
@@ -192,3 +195,16 @@ def get_display_configuration(configuration):
             style_definition['uri'] = STYLE_ROUTE.format(
                 style_path=path)
     return display_configuration
+
+
+def get_scalar_text(configuration, key, default=None):
+    value = configuration.get(key, default)
+    if value is None:
+        raise KeyError
+    if isinstance(value, dict):
+        logging.error(
+            'quotes should surround text that begins '
+            'with a variable id')
+        variable_id = list(value.keys())[0]
+        value = '{%s}' % variable_id
+    return value
