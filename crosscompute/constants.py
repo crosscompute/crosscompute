@@ -2,6 +2,8 @@ import re
 from os import getenv
 from os.path import expanduser
 
+from .macros import format_slug
+
 
 FOLDER = getenv(
     'CROSSCOMPUTE_FOLDER', expanduser('~/.crosscompute'))
@@ -28,3 +30,4 @@ AUTOMATION_NAME = 'Automation {automation_index}'
 PAGE_TYPE_NAMES = 'input', 'output', 'log', 'debug'
 PAGE_TYPE_NAME_BY_LETTER = {_[0]: _ for _ in PAGE_TYPE_NAMES}
 VARIABLE_ID_PATTERN = re.compile(r'{\s*([^}]+?)\s*}')
+FUNCTION_BY_NAME = {'slug': format_slug}

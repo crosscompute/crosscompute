@@ -1,6 +1,3 @@
-# TODO: List links for all automations
-# TODO: Let user set automation slug in configuration file
-# TODO: Let user set batch name and slug
 # TODO: Let user customize homepage title
 # TODO: Add tests
 # TODO: Validate variable definitions for id and view
@@ -9,12 +6,9 @@
 
 import json
 import logging
-from abc import ABC, abstractmethod
-from markdown import markdown
 from os.path import join
 from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
 from pyramid.response import FileResponse
-from string import Template
 
 from ..constants import (
     AUTOMATION_ROUTE,
@@ -28,65 +22,20 @@ from ..constants import (
 from ..macros import (
     extend_uniquely,
     find_item,
-    get_environment_value,
     is_path_in_folder)
 from ..routines.configuration import (
     get_all_variable_definitions,
-    get_automation_definitions,
     get_css_uris,
     get_raw_variable_definitions,
-    get_template_texts)
-
-
-MAP_MAPBOX_CSS_URI = 'mapbox://styles/mapbox/dark-v10'
-MAP_MAPBOX_JS_TEMPLATE = Template('''\
-const $element_id = new mapboxgl.Map({
-  container: '$element_id',
-  style: '$style_uri',
-  center: [$longitude, $latitude],
-  zoom: $zoom,
-})
-$element_id.on('load', () => {
-  $element_id.addSource('$element_id', {
-    type: 'geojson',
-    data: '$data_uri'})
-  $element_id.addLayer({
-    id: '$element_id',
-    type: 'fill',
-    source: '$element_id'})
-})''')
-MAP_PYDECK_SCREENGRID_JS_TEMPLATE = Template('''\
-const layers = []
-layers.push(new ScreenGridLayer({
-  data: '$data_uri',
-  getPosition: d => [d.longitude, d.latitude],
-  getWeight: d => d.weight,
-  opacity: $opacity,
-}))
-new deck.DeckGL({
-  container: '$element_id',
-  mapboxApiAccessToken: '$mapbox_token',
-  mapStyle: '$style_uri',
-  initialViewState: {
-    longitude: $longitude,
-    latitude: $latitude,
-    zoom: $zoom,
-  },
-  controller: true,
-  layers,
-})
-''')
-MARKDOWN_BODY_TEMPLATE = Template('''\
-''')
+    get_template_texts,
+    get_variable_view_class)
+from ..routines.web import get_html_from_markdown
 
 
 class AutomationViews():
 
-    def __init__(self, configuration):
-        automation_definitions = get_automation_definitions(
-            configuration)
+    def __init__(self, automation_definitions):
         self.automation_definitions = automation_definitions
-        self.configuration = configuration
 
     def includeme(self, config):
         config.include(self.configure_styles)
@@ -146,7 +95,7 @@ class AutomationViews():
             automation_definition = self.get_automation_definition_from(
                 request)
         else:
-            automation_definition = self.configuration
+            automation_definition = self.automation_definitions[0]
         if request.path not in get_css_uris(automation_definition):
             raise HTTPNotFound
 
@@ -163,7 +112,8 @@ class AutomationViews():
         return response
 
     def see_home(self, request):
-        css_uris = get_css_uris(self.configuration)
+        automation_definition = self.automation_definitions[0]
+        css_uris = get_css_uris(automation_definition)
         return {
             'automations': self.automation_definitions,
             'css_uris': css_uris,
@@ -196,7 +146,7 @@ class AutomationViews():
         page_text = '\n'.join(template_texts)
         return render_page_dictionary(
             request, css_uris, page_type_name, page_text,
-            variable_definitions, folder)
+            variable_definitions, batch_definition, folder)
 
     def see_automation_batch_page_file(self, request):
         matchdict = request.matchdict
@@ -256,175 +206,35 @@ class AutomationViews():
         return page_type_name
 
 
-class VariableView(ABC):
-
-    @abstractmethod
-    def render(
-            self, type_name, variable_index, variable_id, variable_data=None,
-            variable_path=None, variable_settings=None, request_path=None):
-        return {
-            'css_uris': [],
-            'js_uris': [],
-            'body_text': '',
-            'js_texts': [],
-        }
-
-
-class NullView(VariableView):
-
-    def render(
-            self, type_name, variable_index, variable_id, variable_data=None,
-            variable_path=None, variable_settings=None, request_path=None):
-        return {
-            'css_uris': [],
-            'js_uris': [],
-            'body_text': '',
-            'js_texts': [],
-        }
-
-
-class NumberView(VariableView):
-
-    def render(
-            self, type_name, variable_index, variable_id, variable_data=None,
-            variable_path=None, variable_settings=None, request_path=None):
-        element_id = f'v{variable_index}'
-        body_text = (
-            f'<input id="{element_id}" '
-            f'class="{type_name} number {variable_id}" '
-            f'value="{variable_data}" type="number">')
-        return {
-            'css_uris': [],
-            'js_uris': [],
-            'body_text': body_text,
-            'js_texts': [],
-        }
-
-
-class ImageView(VariableView):
-
-    def render(
-            self, type_name, variable_index, variable_id, variable_data=None,
-            variable_path=None, variable_settings=None, request_path=None):
-        # TODO: Support type_name == 'input'
-        element_id = f'v{variable_index}'
-        data_uri = request_path + '/' + variable_path
-        body_text = (
-            f'<img id="{element_id}" '
-            f'class="{type_name} image {variable_id}" '
-            f'src="{data_uri}">'
-        )
-        return {
-            'css_uris': [],
-            'js_uris': [],
-            'body_text': body_text,
-            'js_texts': [],
-        }
-
-
-class MapMapboxView(VariableView):
-
-    css_uris = [
-        'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.css',
-    ]
-    js_uris = [
-        'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.js',
-    ]
-
-    def render(
-            self, type_name, variable_index, variable_id, variable_data=None,
-            variable_path=None, variable_settings=None, request_path=None):
-        element_id = f'v{variable_index}'
-        body_text = (
-            f'<div id="{element_id}" '
-            f'class="{type_name} map-mapbox {variable_id}"></div>')
-        mapbox_token = get_environment_value('MAPBOX_TOKEN', '')
-        js_texts = [
-            f"mapboxgl.accessToken = '{mapbox_token}'",
-            MAP_MAPBOX_JS_TEMPLATE.substitute({
-                'element_id': element_id,
-                'data_uri': request_path + '/' + variable_path,
-                'style_uri': variable_settings.get(
-                    'style', MAP_MAPBOX_CSS_URI),
-                'longitude': variable_settings.get('longitude', 0),
-                'latitude': variable_settings.get('latitude', 0),
-                'zoom': variable_settings.get('zoom', 0),
-            }),
-        ]
-        # TODO: Allow specification of preserveDrawingBuffer
-        return {
-            'css_uris': self.css_uris,
-            'js_uris': self.js_uris,
-            'body_text': body_text,
-            'js_texts': js_texts,
-        }
-
-
-class MapPyDeckScreenGridView(VariableView):
-
-    css_uris = [
-        'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.css',
-    ]
-    js_uris = [
-        'https://unpkg.com/deck.gl@^8.0.0/dist.min.js',
-        'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.js',
-    ]
-
-    def render(
-            self, type_name, variable_index, variable_id, variable_data=None,
-            variable_path=None, variable_settings=None, request_path=None):
-        element_id = f'v{variable_index}'
-        body_text = (
-            f'<div id="{element_id}" '
-            f'class="{type_name} map-pydeck-screengrid {variable_id}"></div>')
-        mapbox_token = get_environment_value('MAPBOX_TOKEN', '')
-        js_texts = [
-            MAP_PYDECK_SCREENGRID_JS_TEMPLATE.substitute({
-                'data_uri': request_path + '/' + variable_path,
-                'opacity': variable_settings.get('opacity', 0.5),
-                'element_id': element_id,
-                'mapbox_token': mapbox_token,
-                'style_uri': variable_settings.get(
-                    'style', MAP_MAPBOX_CSS_URI),
-                'longitude': variable_settings.get('longitude', 0),
-                'latitude': variable_settings.get('latitude', 0),
-                'zoom': variable_settings.get('zoom', 0),
-            }),
-        ]
-        return {
-            'css_uris': self.css_uris,
-            'js_uris': self.js_uris,
-            'body_text': body_text,
-            'js_texts': js_texts,
-        }
-
-
-class MarkdownView(VariableView):
-
-    def render(
-            self, type_name, variable_index, variable_id, variable_data=None,
-            variable_path=None, variable_settings=None, request_path=None):
-        '''
-        element_id = f'v{variable_index}'
-        body_text = (
-            f'<span id="{element_id}" '
-            f'class="{type_name} number {variable_id}" '
-            f'value="{variable_data}" type="number">{variable_data}</span>')
-        '''
-        body_text = variable_data
-        return {
-            'css_uris': [],
-            'js_uris': [],
-            'body_text': body_text,
-            'js_texts': [],
-        }
-
-
 def render_page_dictionary(
         request, css_uris, page_type_name, page_text, variable_definitions,
-        folder):
+        batch_definition, folder):
     css_uris = css_uris.copy()
     js_uris, js_texts, variable_ids = [], [], []
+
+    # populate variable definitions with data adhoc
+    def load_variable_data(variable_path, variable_id, variable_view):
+        if variable_view.is_asynchronous:
+            return ''
+
+    if page_type_name = 'input':
+        data_by_id = batch_definition.get('data_by_id', {})
+        def get_variable_data(variable_id, variable_view, variable_path):
+            return data_by_id.get(variable_id, '')
+    else:
+        data_by_id = {}
+        for variable_definition in variable_definitions:
+
+        def get_variable_data(variable_id, variable_view, variable_path):
+            path = join(folder, variable_path)
+            file_extension = splitext(path)[1]
+            if file_extension == '.json':
+                variable_data = json.load(open(path, 'rt'))
+            elif file_extension == '.csv':
+                pass
+            else:
+                variable_data = open(path, 'rt').read()
+            return variable_data
 
     def render_html(match):
         matching_text = match.group(0)
@@ -436,22 +246,23 @@ def render_page_dictionary(
                 '%s in template but missing in automation configuration',
                 variable_id)
             return matching_text
-        # TODO: Load data from batch folder
         variable_ids.append(variable_id)
         variable_index = len(variable_ids) - 1
         variable_view = get_variable_view_class(definition)()
         variable_path = definition.get('path', '')
-        variable_data = definition.get('data', '')
-        variable_settings = get_variable_settings(definition, folder)
+        variable_data = definition.get('data', load_variable_data(
+            variable_path, variable_id, variable_view))
+        variable_configuration = get_variable_configuration(definition, folder)
         d = variable_view.render(
             page_type_name, variable_index, variable_id, variable_data,
-            variable_path, variable_settings, request.path)
+            variable_path, variable_configuration, request.path)
         extend_uniquely(css_uris, d['css_uris'])
         extend_uniquely(js_uris, d['js_uris'])
         extend_uniquely(js_texts, d['js_texts'])
         return d['body_text']
 
-    body_text = markdown(VARIABLE_ID_PATTERN.sub(render_html, page_text))
+    body_text = get_html_from_markdown(VARIABLE_ID_PATTERN.sub(
+        render_html, page_text))
     return {
         'css_uris': css_uris,
         'js_uris': js_uris,
@@ -460,34 +271,15 @@ def render_page_dictionary(
     }
 
 
-def get_variable_view_class(variable_definition):
-    # TODO: Validate views early
-    try:
-        view_name = variable_definition['view']
-    except KeyError:
-        logging.error('view required for each variable')
-        return NullView
-    try:
-        # TODO: Load using importlib.metadata
-        VariableView = {
-            'number': NumberView,
-            'image': ImageView,
-            'map-mapbox': MapMapboxView,
-        }[view_name]
-    except KeyError:
-        logging.error(f'{view_name} view not installed')
-        return NullView
-    return VariableView
-
-
-def get_variable_settings(variable_definition, folder):
-    variable_settings = variable_definition.get('settings', {})
-    settings_path = variable_settings.get('path')
-    if settings_path:
+def get_variable_configuration(variable_definition, folder):
+    variable_configuration = variable_definition.get('configuration', {})
+    configuration_path = variable_configuration.get('path')
+    if configuration_path:
         try:
-            settings = json.load(open(join(folder, settings_path), 'rt'))
+            configuration = json.load(open(join(
+                folder, configuration_path), 'rt'))
         except OSError:
-            logging.error(f'{settings_path} not found')
+            logging.error(f'{configuration_path} not found')
         else:
-            variable_settings.update(settings)
-    return variable_settings
+            variable_configuration.update(configuration)
+    return variable_configuration

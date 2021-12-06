@@ -1,4 +1,5 @@
 import operator
+from collections import defaultdict
 
 
 def append_uniquely(items, item):
@@ -24,3 +25,10 @@ def find_item(items, key, value, normalize=lambda _: _, compare=operator.eq):
         return is_match
 
     return next(filter(is_match, items))
+
+
+def group_by(items, key):
+    items_by_key = defaultdict(list)
+    for item in items:
+        items_by_key[item[key]].append(item)
+    return dict(items_by_key)

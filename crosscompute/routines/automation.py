@@ -8,7 +8,8 @@ from waitress import serve
 from watchgod import watch
 
 from .configuration import (
-    get_batch_definitions,
+    get_automation_definitions,
+    get_raw_variable_definitions,
     load_configuration,
     prepare_batch_folder)
 from ..constants import (
@@ -28,13 +29,16 @@ class Automation():
         script_definition = configuration.get('script', {})
         script_folder = script_definition.get('folder', '')
         command_string = script_definition.get('command', '')
+        automation_definitions = get_automation_definitions(
+            configuration)
 
         self.configuration_path = configuration_path
         self.configuration = configuration
         self.configuration_folder = configuration_folder
         self.script_folder = script_folder
         self.command_string = command_string
-        self.automation_views = AutomationViews(configuration)
+        self.automation_definitions = automation_definitions
+        self.automation_views = AutomationViews(automation_definitions)
         self.echo_views = EchoViews(configuration_folder)
 
         logging.debug('configuration_path = %s', configuration_path)
@@ -48,12 +52,16 @@ class Automation():
 
     def run(self, custom_environment=None):
         if not self.command_string:
-            logging.warning(
-                'command not defined in script configuration')
+            logging.warning('command not defined in script configuration')
             return
+        automation_definition = self.automation_definitions[0]
+        variable_definitions = get_raw_variable_definitions(
+            automation_definition, 'input')
         # TODO: Load base custom environment from configuration
-        for batch_definition in get_batch_definitions(self.configuration):
-            batch_folder = prepare_batch_folder(batch_definition)
+        for batch_definition in automation_definition.get('batches', []):
+            batch_folder = prepare_batch_folder(
+                batch_definition, variable_definitions,
+                self.configuration_folder)
             self.run_batch(batch_folder, custom_environment)
 
     def run_batch(self, batch_folder, custom_environment=None):
