@@ -10,14 +10,14 @@
 <body>
 {%- block body_html %}
 {{ body_text | safe }}
-{% endblock -%}
+{%- endblock %}
 {%- for js_uri in js_uris %}
 <script src="{{ js_uri }}"></script>
-{% endfor -%}
+{%- endfor %}
 <script>
 {%- block body_js %}
 {{ js_text | safe }}
-{%- endblock %}
+{%- endblock -%}
 </script>
 </body>
 </html>

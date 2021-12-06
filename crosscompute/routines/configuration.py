@@ -1,4 +1,5 @@
 # TODO: Support csv for pydeck screengrid view
+# TODO: Remove pandas dependency
 
 import json
 import logging
@@ -10,6 +11,7 @@ from configparser import ConfigParser
 from os.path import basename, dirname, exists, getmtime, join, splitext
 from pandas import Series, read_csv
 from string import Template
+from time import time
 
 from ..constants import (
     AUTOMATION_ROUTE,
@@ -47,7 +49,7 @@ MAP_PYDECK_SCREENGRID_JS_TEMPLATE = Template('''\
 const layers = []
 layers.push(new deck.ScreenGridLayer({
   data: '$data_uri',
-  getPosition: d => [d.longitude, d.latitude],
+  getPosition: d => d,
   opacity: $opacity,
 }))
 new deck.DeckGL({
@@ -186,6 +188,11 @@ def get_batch_definitions(configuration):
                     raise CrossComputeConfigurationError(
                         'path expected for each batch configuration')
             else:
+                batch_slug = batch_definition['slug'] or format_slug(
+                    batch_definition['name'])
+                batch_definition['slug'] = batch_slug
+                batch_definition['uri'] = BATCH_ROUTE.format(
+                    batch_slug=batch_slug)
                 definitions = [batch_definition]
         except CrossComputeConfigurationError as e:
             logging.error(e)
@@ -238,8 +245,8 @@ def get_batch_definitions_from_path(
 def get_raw_variable_definitions(configuration, page_type_name):
     page_configuration = configuration.get(page_type_name, {})
     variable_definitions = page_configuration.get('variables', [])
-    # for variable_definition in variable_definitions:
-    #    variable_definition['type'] = page_type_name
+    for variable_definition in variable_definitions:
+        variable_definition['type'] = page_type_name
     return variable_definitions
 
 
@@ -308,7 +315,7 @@ def get_display_configuration(configuration):
             if not exists(join(folder, path)):
                 logging.error('style not found at path %s', path)
             style_definition['uri'] = STYLE_ROUTE.format(
-                style_path=path)
+                style_path=path) + '?v=' + str(int(time()))
     return display_configuration
 
 
@@ -340,7 +347,7 @@ def prepare_batch_folder(
         variable_data_by_id = get_variable_data_by_id(
             variable_definitions, data_by_id)
         if file_extension == '.json':
-            json.dump(open(input_path, 'wt'), variable_data_by_id)
+            json.dump(variable_data_by_id, open(input_path, 'wt'))
         elif file_extension == '.csv':
             Series(variable_data_by_id).to_csv(input_path, header=False)
         elif len(variable_data_by_id) > 1:
@@ -377,23 +384,16 @@ def format_text(text, data_by_id):
         def f(match):
             matching_text = match.group(0)
             expression_text = match.group(1)
-            if expression_text in data_by_id:
-                text = data_by_id[expression_text]
-            elif '|' in expression_text:
-                expression_terms = expression_text.split('|')
-                variable_id = expression_terms[0].strip()
-                try:
-                    text = data_by_id[variable_id]
-                except KeyError:
-                    logging.warning(
-                        '%s missing in batch configuration', variable_id)
-                    return matching_text
-                text = apply_functions(
-                    text, expression_terms[1:], FUNCTION_BY_NAME)
-            else:
+            expression_terms = expression_text.split('|')
+            variable_id = expression_terms[0].strip()
+            try:
+                text = data_by_id[variable_id]
+            except KeyError:
                 logging.warning(
-                    '%s missing in batch configuration', expression_text)
+                    '%s missing in batch configuration', variable_id)
                 return matching_text
+            text = apply_functions(
+                text, expression_terms[1:], FUNCTION_BY_NAME)
             return str(text)
     return VARIABLE_ID_PATTERN.sub(f, text)
 
@@ -444,6 +444,7 @@ def get_variable_view_class(variable_definition):
     try:
         # TODO: Load using importlib.metadata
         VariableView = {
+            'string': StringView,
             'number': NumberView,
             'image': ImageView,
             'map-mapbox': MapMapboxView,
@@ -483,6 +484,25 @@ class NullView(VariableView):
             'css_uris': [],
             'js_uris': [],
             'body_text': '',
+            'js_texts': [],
+        }
+
+
+class StringView(VariableView):
+
+    def render(
+            self, type_name, variable_index, variable_id, variable_data=None,
+            variable_path=None, variable_configuration=None,
+            request_path=None):
+        element_id = f'v{variable_index}'
+        body_text = (
+            f'<span id="{element_id}" '
+            f'class="{type_name} string {variable_id}">'
+            f'{variable_data}</span>')
+        return {
+            'css_uris': [],
+            'js_uris': [],
+            'body_text': body_text,
             'js_texts': [],
         }
 
@@ -631,7 +651,10 @@ class MarkdownView(VariableView):
 
 
 def load_data(path, variable_id):
-    new_time = getmtime(path)
+    try:
+        new_time = getmtime(path)
+    except OSError:
+        new_time = None
     key = path, variable_id
     if key in VARIABLE_CACHE:
         old_time, variable_value = VARIABLE_CACHE[key]

@@ -14,6 +14,7 @@ from ..constants import (
     AUTOMATION_ROUTE,
     BATCH_ROUTE,
     FILE_ROUTE,
+    FUNCTION_BY_NAME,
     HOME_ROUTE,
     PAGE_ROUTE,
     PAGE_TYPE_NAME_BY_LETTER,
@@ -24,6 +25,7 @@ from ..macros import (
     find_item,
     is_path_in_folder)
 from ..routines.configuration import (
+    apply_functions,
     get_all_variable_definitions,
     get_css_uris,
     get_raw_variable_definitions,
@@ -97,7 +99,10 @@ class AutomationViews():
                 request)
         else:
             automation_definition = self.automation_definitions[0]
-        if request.path not in get_css_uris(automation_definition):
+
+        expected_paths = [_.split('?')[0] for _ in get_css_uris(
+            automation_definition)]
+        if request.path not in expected_paths:
             raise HTTPNotFound
 
         style_path = matchdict['style_path']
@@ -137,8 +142,7 @@ class AutomationViews():
         batch_definition = self.get_batch_definition_from(
             request, automation_definition)
         batch_folder = batch_definition['folder']
-        variable_folder = join(batch_folder, page_type_name)
-        folder = join(automation_folder, variable_folder)
+        folder = join(automation_folder, batch_folder)
         variable_definitions = get_all_variable_definitions(
             automation_definition, page_type_name)
         template_texts = get_template_texts(
@@ -215,7 +219,9 @@ def render_page_dictionary(
 
     def render_html(match):
         matching_text = match.group(0)
-        variable_id = match.group(1)
+        expression_text = match.group(1)
+        expression_terms = expression_text.split('|')
+        variable_id = expression_terms[0].strip()
         try:
             definition = find_item(variable_definitions, 'id', variable_id)
         except StopIteration:
@@ -223,13 +229,17 @@ def render_page_dictionary(
                 '%s in template but missing in automation configuration',
                 variable_id)
             return matching_text
+        page_folder = join(folder, definition['type'])
         variable_ids.append(variable_id)
         variable_index = len(variable_ids) - 1
         variable_view = get_variable_view_class(definition)()
         variable_path = definition.get('path', '')
         variable_data = '' if variable_view.is_asynchronous else load_data(
-            join(folder, variable_path), variable_id)
-        variable_configuration = get_variable_configuration(definition, folder)
+            join(page_folder, variable_path), variable_id)
+        variable_data = apply_functions(
+            variable_data, expression_terms[1:], FUNCTION_BY_NAME)
+        variable_configuration = get_variable_configuration(
+            definition, page_folder)
         d = variable_view.render(
             page_type_name, variable_index, variable_id, variable_data,
             variable_path, variable_configuration, request.path)
@@ -238,12 +248,11 @@ def render_page_dictionary(
         extend_uniquely(js_texts, d['js_texts'])
         return d['body_text']
 
-    body_text = get_html_from_markdown(VARIABLE_ID_PATTERN.sub(
-        render_html, page_text))
     return {
         'css_uris': css_uris,
         'js_uris': js_uris,
-        'body_text': body_text,
+        'body_text': get_html_from_markdown(VARIABLE_ID_PATTERN.sub(
+            render_html, page_text)),
         'js_text': '\n'.join(js_texts),
     }
 
