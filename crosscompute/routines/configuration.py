@@ -35,6 +35,7 @@ const $element_id = new mapboxgl.Map({
   style: '$style_uri',
   center: [$longitude, $latitude],
   zoom: $zoom,
+  // preserveDrawingBuffer: true,
 })
 $element_id.on('load', () => {
   $element_id.addSource('$element_id', {
@@ -63,6 +64,12 @@ new deck.DeckGL({
   },
   controller: true,
   layers,
+  /*
+  preserveDrawingBuffer: true,
+  glOptions: {
+    preserveDrawingBuffer: true,
+  },
+  */
 })
 ''')
 
