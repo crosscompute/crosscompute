@@ -28,7 +28,8 @@ from ..routines.configuration import (
     get_css_uris,
     get_raw_variable_definitions,
     get_template_texts,
-    get_variable_view_class)
+    get_variable_view_class,
+    load_data)
 from ..routines.web import get_html_from_markdown
 
 
@@ -146,7 +147,7 @@ class AutomationViews():
         page_text = '\n'.join(template_texts)
         return render_page_dictionary(
             request, css_uris, page_type_name, page_text,
-            variable_definitions, batch_definition, folder)
+            variable_definitions, folder)
 
     def see_automation_batch_page_file(self, request):
         matchdict = request.matchdict
@@ -208,33 +209,9 @@ class AutomationViews():
 
 def render_page_dictionary(
         request, css_uris, page_type_name, page_text, variable_definitions,
-        batch_definition, folder):
+        folder):
     css_uris = css_uris.copy()
     js_uris, js_texts, variable_ids = [], [], []
-
-    # populate variable definitions with data adhoc
-    def load_variable_data(variable_path, variable_id, variable_view):
-        if variable_view.is_asynchronous:
-            return ''
-
-    if page_type_name = 'input':
-        data_by_id = batch_definition.get('data_by_id', {})
-        def get_variable_data(variable_id, variable_view, variable_path):
-            return data_by_id.get(variable_id, '')
-    else:
-        data_by_id = {}
-        for variable_definition in variable_definitions:
-
-        def get_variable_data(variable_id, variable_view, variable_path):
-            path = join(folder, variable_path)
-            file_extension = splitext(path)[1]
-            if file_extension == '.json':
-                variable_data = json.load(open(path, 'rt'))
-            elif file_extension == '.csv':
-                pass
-            else:
-                variable_data = open(path, 'rt').read()
-            return variable_data
 
     def render_html(match):
         matching_text = match.group(0)
@@ -250,8 +227,8 @@ def render_page_dictionary(
         variable_index = len(variable_ids) - 1
         variable_view = get_variable_view_class(definition)()
         variable_path = definition.get('path', '')
-        variable_data = definition.get('data', load_variable_data(
-            variable_path, variable_id, variable_view))
+        variable_data = '' if variable_view.is_asynchronous else load_data(
+            join(folder, variable_path), variable_id)
         variable_configuration = get_variable_configuration(definition, folder)
         d = variable_view.render(
             page_type_name, variable_index, variable_id, variable_data,

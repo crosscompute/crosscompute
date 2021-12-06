@@ -1,10 +1,11 @@
 import json
 import logging
+import pandas as pd
 import tomli
 import yaml
 from abc import ABC, abstractmethod
 from configparser import ConfigParser
-from os.path import basename, dirname, exists, join, splitext
+from os.path import basename, dirname, exists, getmtime, join, splitext
 from pandas import Series, read_csv
 from string import Template
 
@@ -15,6 +16,7 @@ from ..constants import (
     FUNCTION_BY_NAME,
     PAGE_TYPE_NAMES,
     STYLE_ROUTE,
+    VARIABLE_CACHE,
     VARIABLE_ID_PATTERN)
 from ..exceptions import CrossComputeConfigurationError
 from ..macros import (
@@ -233,7 +235,11 @@ def get_batch_definitions_from_path(
 
 
 def get_raw_variable_definitions(configuration, page_type_name):
-    return configuration.get(page_type_name, {}).get('variables', [])
+    page_configuration = configuration.get(page_type_name, {})
+    variable_definitions = page_configuration.get('variables', [])
+    # for variable_definition in variable_definitions:
+    #    variable_definition['type'] = page_type_name
+    return variable_definitions
 
 
 def get_all_variable_definitions(configuration, page_type_name):
@@ -621,3 +627,30 @@ class MarkdownView(VariableView):
             'body_text': body_text,
             'js_texts': [],
         }
+
+
+def load_data(path, variable_id):
+    new_time = getmtime(path)
+    key = path, variable_id
+    if key in VARIABLE_CACHE:
+        old_time, variable_value = VARIABLE_CACHE[key]
+        if old_time == new_time:
+            return variable_value
+    file_extension = splitext(path)[1]
+    try:
+        with open(path, 'rt') as file:
+            if file_extension in ['.json', '.csv']:
+                if file_extension == '.json':
+                    value_by_id = json.load(file)
+                elif file_extension == '.csv':
+                    value_by_id = pd.read_csv(
+                        file, header=None, index_col=0, squeeze=True)
+                for i, v in value_by_id.items():
+                    VARIABLE_CACHE[(path, i)] = new_time, v
+                value = value_by_id[variable_id]
+            else:
+                value = file.read()
+    except (OSError, KeyError, json.JSONDecodeError, pd.errors.ParserError):
+        value = ''
+    VARIABLE_CACHE[(path, variable_id)] = new_time, value
+    return value
