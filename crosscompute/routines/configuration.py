@@ -1,3 +1,5 @@
+# TODO: Support csv for pydeck screengrid view
+
 import json
 import logging
 import pandas as pd
@@ -43,10 +45,9 @@ $element_id.on('load', () => {
 })''')
 MAP_PYDECK_SCREENGRID_JS_TEMPLATE = Template('''\
 const layers = []
-layers.push(new ScreenGridLayer({
+layers.push(new deck.ScreenGridLayer({
   data: '$data_uri',
   getPosition: d => [d.longitude, d.latitude],
-  getWeight: d => d.weight,
   opacity: $opacity,
 }))
 new deck.DeckGL({
