@@ -1,6 +1,7 @@
 # TODO: Validate configuration
 # TODO: Support case when user does not specify configuration file
 # TODO: Improve output when running batches
+# TODO: Support multiple configuration paths
 
 
 from argparse import ArgumentParser
@@ -11,7 +12,7 @@ from crosscompute.routines.log import (
     configure_logging_from)
 
 
-if __name__ == '__main__':
+def do():
     a = ArgumentParser()
     a.add_argument('configuration_path')
     configure_argument_parser_for_logging(a)
@@ -21,3 +22,7 @@ if __name__ == '__main__':
 
     automation = Automation.load(args.configuration_path)
     automation.run()
+
+
+if __name__ == '__main__':
+    do()

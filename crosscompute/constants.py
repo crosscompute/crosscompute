@@ -2,6 +2,7 @@ import re
 from os import getenv
 from os.path import expanduser
 
+from . import __version__
 from .macros import format_slug
 
 
@@ -11,6 +12,8 @@ FOLDER = getenv(
 
 HOST = '127.0.0.1'
 PORT = 7000
+DISK_POLL_IN_MILLISECONDS = 1000
+DISK_DEBOUNCE_IN_MILLISECONDS = 1000
 
 
 HOME_ROUTE = '/'
@@ -26,7 +29,8 @@ CONFIGURATION_EXTENSIONS = '.yaml', '.yml', '.toml', '.ini', '.cfg'
 TEMPLATE_EXTENSIONS = '.md', '.ipynb'
 
 
-AUTOMATION_NAME = 'Automation {automation_index}'
+AUTOMATION_NAME = 'Automation X'
+AUTOMATION_VERSION = '0.0.0'
 PAGE_TYPE_NAMES = 'input', 'output', 'log', 'debug'
 PAGE_TYPE_NAME_BY_LETTER = {_[0]: _ for _ in PAGE_TYPE_NAMES}
 VARIABLE_ID_PATTERN = re.compile(r'{\s*([^}]+?)\s*}')
@@ -34,3 +38,10 @@ FUNCTION_BY_NAME = {'slug': format_slug, 'title': str.title}
 
 
 VARIABLE_CACHE = {}
+
+
+CONFIGURATION = {
+    'crosscompute': __version__,
+    'name': 'name of your automation',
+    'version': '0.0.0',
+}

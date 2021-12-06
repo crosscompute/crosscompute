@@ -13,6 +13,8 @@ from .configuration import (
     load_configuration,
     prepare_batch_folder)
 from ..constants import (
+    DISK_DEBOUNCE_IN_MILLISECONDS,
+    DISK_POLL_IN_MILLISECONDS,
     # CONFIGURATION_EXTENSIONS,
     HOST, PORT,
     # TEMPLATE_EXTENSIONS,
@@ -110,7 +112,13 @@ class Automation():
             env=environment)
 
     def serve(
-            self, host=HOST, port=PORT, is_production=False, is_static=False):
+            self,
+            host=HOST,
+            port=PORT,
+            is_production=False,
+            is_static=False,
+            disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
+            disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS):
 
         def run_server():
             app = self.get_app(is_static)
@@ -122,12 +130,15 @@ class Automation():
 
         server_process = StoppableProcess(target=run_server)
         server_process.start()
-        for changes in watch(self.configuration_folder):
+        for changes in watch(
+                self.configuration_folder,
+                min_sleep=disk_poll_in_milliseconds,
+                debounce=disk_debounce_in_milliseconds):
             for changed_type, changed_path in changes:
                 logging.debug('%s %s', changed_type, changed_path)
-                # changed_extension = splitext(changed_path)[1]
                 '''
-                # if changed_extension in CONFIGURATION_EXTENSIONS:
+                changed_extension = splitext(changed_path)[1]
+                if changed_extension in CONFIGURATION_EXTENSIONS:
                 if changed_extension in sum([
                     CONFIGURATION_EXTENSIONS,
                     TEMPLATE_EXTENSIONS,

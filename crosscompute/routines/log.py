@@ -3,9 +3,11 @@ import logging
 
 def configure_argument_parser_for_logging(argument_parser):
     argument_parser.add_argument(
-        '--quiet', '-q', dest='quietness', action='count', default=0)
+        '--quiet', '-q', dest='quietness', action='count', default=0,
+        help='decrease logging level; stack as -qq')
     argument_parser.add_argument(
-        '--verbose', '-v', dest='verbosity', action='count', default=0)
+        '--verbose', '-v', dest='verbosity', action='count', default=0,
+        help='increase logging level; stack as -vv')
 
 
 def configure_logging_from(args):

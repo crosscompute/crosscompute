@@ -134,12 +134,12 @@ def load_raw_configuration_yaml(configuration_path):
 
 def get_automation_definitions(configuration):
     automation_definitions = []
-    for automation_configuration in get_automation_configurations(
-            configuration):
+    for automation_index, automation_configuration in enumerate(
+            get_automation_configurations(configuration)):
         if 'output' not in automation_configuration:
             continue
         automation_name = automation_configuration.get(
-            'name', AUTOMATION_NAME.format(automation_index=0))
+            'name', AUTOMATION_NAME.replace('X', str(automation_index)))
         automation_slug = automation_configuration.get(
             'slug', format_slug(automation_name))
         automation_uri = AUTOMATION_ROUTE.format(
