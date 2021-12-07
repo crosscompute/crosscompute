@@ -1,5 +1,8 @@
-import logging
+from logging import getLogger
 from multiprocessing import Process
+
+
+L = getLogger(__name__)
 
 
 class StoppableProcess(Process):
@@ -12,10 +15,10 @@ class StoppableProcess(Process):
         Stop the process using SIGTERM and, if necessary, SIGKILL.
         See watchgod/main.py for original code.
         '''
-        logging.debug('sending sigterm to process %s', self.ident)
+        L.debug('sending sigterm to process %s', self.ident)
         self.terminate()
         self.join(sigterm_timeout_in_seconds)
         if self.exitcode is None:
-            logging.debug('ending sigkill to process %s', self.ident)
+            L.debug('ending sigkill to process %s', self.ident)
             self.kill()
             self.join(sigkill_timeout_in_seconds)

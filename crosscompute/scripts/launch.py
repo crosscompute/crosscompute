@@ -1,5 +1,5 @@
-import logging
 from argparse import ArgumentParser
+from logging import getLogger
 from multiprocessing import Process
 
 from crosscompute.exceptions import (
@@ -16,6 +16,9 @@ from crosscompute.scripts.run import (
     configure_argument_parser_for_running, run_with)
 from crosscompute.scripts.serve import (
     configure_argument_parser_for_serving, serve_with)
+
+
+L = getLogger(__name__)
 
 
 def configure_argument_parser_for_launching(a):
@@ -37,12 +40,13 @@ def get_launch_mode_from(args):
     launch_mode = 'all'
     if args.is_configure_only:
         launch_mode = 'configure'
-    elif args.is_serve_only:
-        launch_mode = 'serve'
     elif args.is_run_only:
         launch_mode = 'run'
+    elif args.is_serve_only:
+        launch_mode = 'serve'
     elif args.is_debug_only:
         launch_mode = 'debug'
+    L.debug(f'launch_mode = {launch_mode}')
     return launch_mode
 
 
@@ -51,8 +55,8 @@ def do():
     configure_argument_parser_for_launching(a)
     configure_argument_parser_for_configuring(a)
     configure_argument_parser_for_logging(a)
-    configure_argument_parser_for_serving(a)
     configure_argument_parser_for_running(a)
+    configure_argument_parser_for_serving(a)
     args = a.parse_args()
     configure_logging_from(args)
     launch_mode = get_launch_mode_from(args)
@@ -64,23 +68,23 @@ def do():
     try:
         automation = Automation.load(path_or_folder or '.')
     except CrossComputeConfigurationError as e:
-        logging.error(e)
+        L.error(e)
         exit()
     except CrossComputeError:
-        logging.info(
-            'existing configuration not found; configuring new automation')
+        L.info('existing configuration not found; configuring new automation')
         print()
         path = configure_with(args)
         automation = Automation.load(path)
 
     processes = []
+    if launch_mode in ['run', 'all']:
+        worker_process = Process(target=run_with, args=(automation, args))
+        worker_process.start()
+        processes.append(worker_process)
     if launch_mode in ['serve', 'all']:
         server_process = Process(target=serve_with, args=(automation, args))
         server_process.start()
         processes.append(server_process)
-    if launch_mode in ['run', 'all']:
-        worker_process = Process(target=run_with, args=(automation, args))
-        worker_process.start()
     try:
         for process in processes:
             process.join()

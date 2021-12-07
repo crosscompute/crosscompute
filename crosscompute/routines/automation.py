@@ -1,6 +1,7 @@
 # TODO: Send refresh without server restart for template changes
 import logging
 import subprocess
+from logging import getLogger
 from os import getenv, listdir
 from os.path import isdir, join, relpath
 from pyramid.config import Configurator
@@ -20,6 +21,9 @@ from ..constants import (
 from ..exceptions import CrossComputeError, CrossComputeConfigurationError
 from ..macros import StoppableProcess, format_path, make_folder
 from ..views import AutomationViews, EchoViews
+
+
+L = getLogger(__name__)
 
 
 class Automation():
@@ -42,8 +46,8 @@ class Automation():
         self.automation_views = AutomationViews(automation_definitions)
         self.echo_views = EchoViews(configuration_folder)
 
-        logging.debug('configuration_path = %s', configuration_path)
-        logging.debug('configuration_folder = %s', configuration_folder)
+        L.debug('configuration_path = %s', configuration_path)
+        L.debug('configuration_folder = %s', configuration_folder)
 
     @classmethod
     def load(Class, path_or_folder=None):
@@ -65,7 +69,7 @@ class Automation():
 
     def run(self, custom_environment=None):
         if not self.command_string:
-            logging.warning('command not defined in script configuration')
+            L.warning('command not defined in script configuration')
             return
         automation_definition = self.automation_definitions[0]
         variable_definitions = get_raw_variable_definitions(
@@ -75,6 +79,7 @@ class Automation():
             batch_folder = prepare_batch_folder(
                 batch_definition, variable_definitions,
                 self.configuration_folder)
+            L.info(f'running {batch_folder}')
             self.run_batch(batch_folder, custom_environment)
 
     def run_batch(self, batch_folder, custom_environment=None):
@@ -102,7 +107,7 @@ class Automation():
             'PATH': getenv('PATH', ''),
         }
         environment = default_environment | (custom_environment or {})
-        logging.debug('environment = %s', environment)
+        L.debug('environment = %s', environment)
 
         for folder_label, relative_folder in {
             'input': input_folder,
@@ -112,7 +117,7 @@ class Automation():
         }.items():
             folder = make_folder(join(
                 self.configuration_folder, relative_folder))
-            logging.info(f'{folder_label}_folder = {format_path(folder)}')
+            L.info(f'{folder_label}_folder = {format_path(folder)}')
 
         # TODO: Capture stdout and stderr for live output
         subprocess.run(
@@ -140,12 +145,14 @@ class Automation():
 
         server_process = StoppableProcess(target=run_server)
         server_process.start()
+        if getLogger().level > logging.DEBUG:
+            getLogger('watchgod.watcher').setLevel(logging.ERROR)
         for changes in watch(
                 self.configuration_folder,
                 min_sleep=disk_poll_in_milliseconds,
                 debounce=disk_debounce_in_milliseconds):
             for changed_type, changed_path in changes:
-                logging.debug('%s %s', changed_type, changed_path)
+                L.debug('%s %s', changed_type, changed_path)
                 '''
                 changed_extension = splitext(changed_path)[1]
                 if changed_extension in CONFIGURATION_EXTENSIONS:

@@ -46,7 +46,7 @@ class EchoViews():
         '''
         while True:
             # x = queue.get()
-            # logging.debug('sending refresh after change in %s', x)
+            # L.debug('sending refresh after change in %s', x)
             import time; time.sleep(1)
             yield f'data: {self.time}\n\n'.encode()
         '''

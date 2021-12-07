@@ -26,6 +26,6 @@ def configure_logging(intensity):
     elif intensity > +1:
         logging_level = logging.DEBUG
     logging.basicConfig(
-        format='%(asctime)s %(levelname)s %(message)s',
+        format='%(asctime)s %(name)s %(levelname)s %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S',
         level=logging_level)

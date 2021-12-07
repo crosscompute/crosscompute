@@ -2,12 +2,12 @@
 # TODO: Remove pandas dependency
 
 import json
-import logging
 import pandas as pd
 import tomli
 import yaml
 from abc import ABC, abstractmethod
 from configparser import ConfigParser
+from logging import getLogger
 from os.path import basename, dirname, exists, getmtime, join, splitext
 from pandas import Series, read_csv
 from string import Template
@@ -31,6 +31,7 @@ from ..macros import (
 from .web import get_html_from_markdown
 
 
+L = getLogger(__name__)
 MAP_MAPBOX_CSS_URI = 'mapbox://styles/mapbox/dark-v10'
 MAP_MAPBOX_JS_TEMPLATE = Template('''\
 const $element_id = new mapboxgl.Map({
@@ -87,7 +88,7 @@ def load_configuration(configuration_path):
     configuration = load_raw_configuration(configuration_path)
     configuration['folder'] = dirname(configuration_path) or '.'
     configuration = validate_configuration(configuration)
-    logging.info(f'{configuration_path} loaded')
+    L.info(f'{configuration_path} loaded')
     return configuration
 
 
@@ -184,7 +185,7 @@ def get_automation_configurations(configuration):
                 automation_configuration = load_configuration(join(
                     folder, path))
             else:
-                logging.error(
+                L.error(
                     'path or folder or uri or name required for each import')
                 continue
             automation_configuration['parent'] = c
@@ -219,7 +220,7 @@ def get_batch_definitions(configuration):
                     batch_slug=batch_slug)
                 definitions = [batch_definition]
         except CrossComputeConfigurationError as e:
-            logging.error(e)
+            L.error(e)
         batch_definitions.extend(definitions)
     return batch_definitions
 
@@ -293,13 +294,13 @@ def get_template_texts(configuration, page_type_name):
         try:
             template_path = template_definition['path']
         except KeyError:
-            logging.error('path required for each template')
+            L.error('path required for each template')
             continue
         try:
             path = join(folder, template_path)
             template_file = open(path, 'rt')
         except OSError:
-            logging.error(f'{path} does not exist or is not accessible')
+            L.error(f'{path} does not exist or is not accessible')
             continue
         template_text = template_file.read().strip()
         if not template_text:
@@ -333,11 +334,11 @@ def get_display_configuration(configuration):
         uri = style_definition.get('uri', '').strip()
         path = style_definition.get('path', '').strip()
         if not uri and not path:
-            logging.error('uri or path required for each style')
+            L.error('uri or path required for each style')
             continue
         if path:
             if not exists(join(folder, path)):
-                logging.error('style not found at path %s', path)
+                L.error('style not found at path %s', path)
             style_definition['uri'] = STYLE_ROUTE.format(
                 style_path=path) + '?v=' + str(int(time()))
     return display_configuration
@@ -348,7 +349,7 @@ def get_scalar_text(configuration, key, default=None):
     if value is None:
         raise KeyError
     if isinstance(value, dict):
-        logging.error(
+        L.error(
             'quotes should surround text that begins '
             'with a variable id')
         variable_id = list(value.keys())[0]
@@ -413,8 +414,7 @@ def format_text(text, data_by_id):
             try:
                 text = data_by_id[variable_id]
             except KeyError:
-                logging.warning(
-                    '%s missing in batch configuration', variable_id)
+                L.warning('%s missing in batch configuration', variable_id)
                 return matching_text
             text = apply_functions(
                 text, expression_terms[1:], FUNCTION_BY_NAME)
@@ -430,7 +430,7 @@ def apply_functions(value, function_names, function_by_name):
         try:
             f = function_by_name[function_name]
         except KeyError:
-            logging.error('%s not supported', function_name)
+            L.error('%s not supported', function_name)
             continue
         value = f(value)
     return value
@@ -476,7 +476,7 @@ def get_variable_view_class(variable_definition):
             'markdown': MarkdownView,
         }[view_name]
     except KeyError:
-        logging.error(f'{view_name} view not installed')
+        L.error(f'{view_name} view not installed')
         return NullView
     return VariableView
 

@@ -5,7 +5,7 @@
 
 
 import json
-import logging
+from logging import getLogger
 from os.path import join
 from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
 from pyramid.response import FileResponse
@@ -33,6 +33,9 @@ from ..routines.configuration import (
     get_variable_view_class,
     load_data)
 from ..routines.web import get_html_from_markdown
+
+
+L = getLogger(__name__)
 
 
 class AutomationViews():
@@ -173,7 +176,7 @@ class AutomationViews():
                 normalize=str.casefold)
         except StopIteration:
             raise HTTPNotFound
-        logging.debug(variable_definition)
+        L.debug(variable_definition)
         batch_folder = batch_definition['folder']
         variable_folder = join(batch_folder, page_type_name)
         folder = join(automation_folder, variable_folder)
@@ -229,7 +232,7 @@ def render_page_dictionary(
         try:
             definition = find_item(variable_definitions, 'id', variable_id)
         except StopIteration:
-            logging.warning(
+            L.warning(
                 '%s in template but missing in automation configuration',
                 variable_id)
             return matching_text
@@ -269,7 +272,7 @@ def get_variable_configuration(variable_definition, folder):
             configuration = json.load(open(join(
                 folder, configuration_path), 'rt'))
         except OSError:
-            logging.error(f'{configuration_path} not found')
+            L.error(f'{configuration_path} not found')
         else:
             variable_configuration.update(configuration)
     return variable_configuration

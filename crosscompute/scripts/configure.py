@@ -1,6 +1,6 @@
-import logging
 import yaml
 from argparse import ArgumentParser
+from logging import getLogger
 from os.path import exists, isdir, join
 
 from crosscompute.constants import (
@@ -14,6 +14,9 @@ from crosscompute.routines.configuration import (
 from crosscompute.routines.log import (
     configure_argument_parser_for_logging,
     configure_logging_from)
+
+
+L = getLogger()
 
 
 def configure_argument_parser_for_configuring(a):
@@ -51,28 +54,28 @@ def configure_with(args):
     print()
 
     if exists(configuration_path):
-        logging.warning(f'{configuration_path} already exists')
+        L.warning(f'{configuration_path} already exists')
         should_overwrite = input(
             '\033[1moverwrite? yes or [no]:\033[0m ').lower() == 'yes'
         print()
         if not should_overwrite:
-            logging.warning(f'{configuration_path} not overwritten')
+            L.warning(f'{configuration_path} not overwritten')
             exit()
     else:
         should_save = input('save? yes or [no]: ').lower() == 'yes'
         print()
         if not should_save:
-            logging.warning(f'{configuration_path} not saved')
+            L.warning(f'{configuration_path} not saved')
             exit()
 
     try:
         configuration_format = get_configuration_format(configuration_path)
     except CrossComputeError as e:
-        logging.error(e)
+        L.error(e)
         exit()
     if configuration_format == 'yaml':
         yaml.dump(configuration, open(configuration_path, 'wt'))
-    logging.info(f'{configuration_path} saved')
+    L.info(f'{configuration_path} saved')
 
     return configuration_path
 

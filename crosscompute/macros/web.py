@@ -1,11 +1,14 @@
-import logging
 import webbrowser
+from logging import getLogger
 from multiprocessing import Process
 from time import sleep
 from urllib.error import HTTPError, URLError
 from urllib.request import urlopen as open_uri
 
 from .text import normalize_key
+
+
+L = getLogger(__name__)
 
 
 def format_slug(text):
@@ -20,7 +23,7 @@ def open_browser(uri, check_interval_in_seconds=1):
                 try:
                     open_uri(uri)
                 except HTTPError as e:
-                    logging.error(e)
+                    L.error(e)
                     return
                 except URLError:
                     sleep(check_interval_in_seconds)
