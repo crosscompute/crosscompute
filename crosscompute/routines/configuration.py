@@ -86,9 +86,8 @@ def load_configuration(configuration_path):
     }[configuration_format]
     configuration = load_raw_configuration(configuration_path)
     configuration['folder'] = dirname(configuration_path) or '.'
-    logging.info(f'{configuration_path} loaded')
     configuration = validate_configuration(configuration)
-    # logging.info(f'{configuration_path} validated')
+    logging.info(f'{configuration_path} loaded')
     return configuration
 
 
@@ -132,7 +131,7 @@ def validate_configuration(configuration):
 def load_raw_configuration_ini(configuration_path):
     configuration = ConfigParser()
     configuration.read(configuration_path)
-    return configuration
+    return dict(configuration)
 
 
 def load_raw_configuration_toml(configuration_path):

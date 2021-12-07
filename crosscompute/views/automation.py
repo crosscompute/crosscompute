@@ -118,8 +118,12 @@ class AutomationViews():
         return response
 
     def see_home(self, request):
-        automation_definition = self.automation_definitions[0]
-        css_uris = get_css_uris(automation_definition)
+        try:
+            automation_definition = self.automation_definitions[0]
+        except IndexError:
+            css_uris = []
+        else:
+            css_uris = get_css_uris(automation_definition)
         return {
             'automations': self.automation_definitions,
             'css_uris': css_uris,
