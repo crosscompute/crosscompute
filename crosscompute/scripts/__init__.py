@@ -1,29 +1,12 @@
 '''
-import webbrowser
-import yaml
-from collections import defaultdict
-from markdown import markdown
 from os import listdir
-from os.path import splitext
-from waitress import serve
 
 
-    configuration_paths_by_format = get_configuration_paths_by_format()
-    for (
-        configuration_format,
-        configuration_paths,
-    ) in configuration_paths_by_format.items():
-        if configuration_format != 'yaml':
-            continue
-        configuration = yaml.safe_load(open(configuration_path, 'rt'))
-        if 'crosscompute' not in configuration:
-            continue
-        # TODO: Assert version
-        break
+    if 'crosscompute' not in configuration:
+        continue
+    # TODO: Assert version
 
     display_layout = configuration['display']['layout']
-
-    webbrowser.open('http://localhost:8000')
 
     # check if configuration file exists
     # if not, create one
