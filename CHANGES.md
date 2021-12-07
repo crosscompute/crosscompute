@@ -1,3 +1,6 @@
+# 0.9
+- Start from scratch
+
 # 0.8
 - Start from scratch
 - Define AddProjectScript, ChangeProjectScript, SeeProjectScript

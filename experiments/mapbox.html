@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang='en'>
+  <head>
+    <meta charset='utf-8' />
+    <title>Points on a map</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v2.5.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v2.5.0/mapbox-gl.css' rel='stylesheet' />
+    <style>
+      body { 
+        margin: 0; 
+        padding: 0; 
+      }
+      #map { 
+        position: absolute; 
+        top: 0; 
+        bottom: 0; 
+        width: 100%; 
+      }
+    </style>
+  </head>
+  <body>
+    <div id='map'></div>
+    <script>
+    // The value for 'accessToken' begins with 'pk...'
+    mapboxgl.accessToken = 'pk.eyJ1IjoiY3Jvc3Njb21wdXRlIiwiYSI6ImNqcnk5YTJqdDBkYXk0NG42Nmg0OGVidHAifQ.EBpVevNHUrVyEqUYT_rkCQ'; 
+    new mapboxgl.Map({
+      container: 'map',
+      // Replace YOUR_STYLE_URL with your style URL.
+      style: 'mapbox://styles/mapbox/streets-v11', 
+      center: [-87.661557, 41.893748],
+      zoom: 10.7,
+      preserveDrawingBuffer: true
+    });
+
+    // Code from the next step will go here.
+
+    </script>
+  </body>
+</html>

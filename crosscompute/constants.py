@@ -1,57 +1,48 @@
-from invisibleroads_macros_log import get_log
+import re
+from os import getenv
 from os.path import expanduser
 
-
-CLIENT_URL = 'https://crosscompute.com'
-SERVER_URL = 'https://services.crosscompute.com'
-BASH_CONFIGURATION_TEXT = '''
-export CROSSCOMPUTE_CLIENT={client_url}
-export CROSSCOMPUTE_SERVER={server_url}
-export CROSSCOMPUTE_TOKEN={token}
-'''.strip()
+from . import __version__
+from .macros import format_slug
 
 
-AUTOMATION_FILE_NAME = 'automation.yml'
-TOOL_FILE_NAME = 'tool.yml'
-RESULT_FILE_NAME = 'result.yml'
-PROJECT_FILE_NAME = 'project.yml'
+FOLDER = getenv(
+    'CROSSCOMPUTE_FOLDER', expanduser('~/.crosscompute'))
 
 
-# TODO: Load supported views from server
-VIEW_NAMES = [
-    'text',
-    'number',
-    'markdown',
-    'table',
-    'image',
-    'map',
-    'electricity-network',
-    'file',
-]
-DEFAULT_VIEW_NAME = 'text'
+HOST = '127.0.0.1'
+PORT = 7000
+DISK_POLL_IN_MILLISECONDS = 1000
+DISK_DEBOUNCE_IN_MILLISECONDS = 1000
 
 
-PRINT_FORMAT_NAMES = [
-    'pdf'
-]
+HOME_ROUTE = '/'
+STYLE_ROUTE = HOME_ROUTE + 's/{style_path}'
+ECHOES_ROUTE = HOME_ROUTE + 'echoes'
+AUTOMATION_ROUTE = HOME_ROUTE + 'a/{automation_slug}'
+BATCH_ROUTE = '/b/{batch_slug}'
+PAGE_ROUTE = '/{page_type}'
+FILE_ROUTE = '/{variable_path}'
 
 
-DEBUG_VARIABLE_DEFINITIONS = [{
-    'id': 'stdout',
-    'name': 'Standard Output',
-    'view': 'text',
-    'path': 'stdout.txt',
-}, {
-    'id': 'stderr',
-    'name': 'Standard Error',
-    'view': 'text',
-    'path': 'stderr.txt',
-}]
+CONFIGURATION_EXTENSIONS = '.yaml', '.yml', '.toml', '.ini', '.cfg'
+TEMPLATE_EXTENSIONS = '.md', '.ipynb'
 
 
-S = {
-    'folder': expanduser('~/.crosscompute'),
-    'draft.id.length': 16,
-    'maximum_variable_value_length': 1024,
+PAGE_TYPE_NAMES = 'input', 'output', 'log', 'debug'
+PAGE_TYPE_NAME_BY_LETTER = {_[0]: _ for _ in PAGE_TYPE_NAMES}
+VARIABLE_ID_PATTERN = re.compile(r'{\s*([^}]+?)\s*}')
+FUNCTION_BY_NAME = {'slug': format_slug, 'title': str.title}
+
+
+VARIABLE_CACHE = {}
+
+
+AUTOMATION_NAME = 'Automation X'
+AUTOMATION_VERSION = '0.0.0'
+CONFIGURATION_PATH = 'automate.yml'
+CONFIGURATION = {
+    'crosscompute': __version__,
+    'name': 'name of your automation',
+    'version': '0.0.0',
 }
-L = get_log('crosscompute')

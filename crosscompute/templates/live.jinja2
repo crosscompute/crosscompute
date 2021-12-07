@@ -1,0 +1,36 @@
+{% extends 'base.jinja2' %}
+
+{% block body_js %}
+let echoSource, serverTime, reconnectionId
+
+function connect() {
+  echoSource = new EventSource('{{ ECHOES_ROUTE }}')
+
+  echoSource.onopen = function() {
+    console.log('connected')
+    clearTimeout(reconnectionId)
+  }
+
+  echoSource.onmessage = function(message) {
+    const messageData = message.data
+    console.log(messageData, serverTime)
+    if (messageData != serverTime) {
+      if (serverTime) {
+        console.log('RELOAD!')
+        location.reload()
+      }
+      serverTime = messageData
+    }
+  }
+
+  echoSource.onerror = function() {
+    console.log('disconnected')
+    echoSource.close()
+    clearTimeout(reconnectionId)
+    reconnectionId = setTimeout(connect, 1000)
+  }
+}
+
+connect()
+{{ super() }}
+{%- endblock %}

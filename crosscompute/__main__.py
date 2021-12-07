@@ -1,5 +1,4 @@
-import sys
-from .scripts import launch
+from .scripts.launch import do
 
 
-launch()
+do()

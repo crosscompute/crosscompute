@@ -1,43 +1,32 @@
-import inspect
-import sys
-from argparse import RawDescriptionHelpFormatter
-from invisibleroads.scripts import LoggingScript, launch_script
-
-from .. import __description__
-from ..exceptions import CrossComputeError
-from ..routines import (
-    get_bash_configuration_text,
-    render_object)
+'''
+from os import listdir
 
 
-class OutputtingScript(LoggingScript):
+    if 'crosscompute' not in configuration:
+        continue
+    # TODO: Assert version
 
-    def configure(self, argument_subparser):
-        super().configure(argument_subparser)
-        argument_subparser.add_argument(
-            '--json', action='store_true', dest='as_json',
-            help='render output as json')
+    display_layout = configuration['display']['layout']
 
-
-def launch(argv=sys.argv):
-    launch_script(
-        'crosscompute',
-        argv,
-        description=__description__,
-        epilogue=get_bash_configuration_text(),
-        formatter_class=RawDescriptionHelpFormatter)
+    # check if configuration file exists
+    # if not, create one
+    # if it does exist, launch server
+    # make default configuration
+    # render default configuration to yaml, ini, toml
 
 
-def run_safely(function, value_by_key, is_quiet=False, as_json=False):
-    function_parameters = inspect.signature(function).parameters
-    for key in ['is_quiet', 'as_json']:
-        if key not in function_parameters:
+def get_configuration_paths_by_format(configuration_folder='.'):
+    configuration_paths_by_format = defaultdict(list)
+    for path in listdir(configuration_folder):
+        root, extension = splitext(path)
+        if extension in ['.cfg', '.ini']:
+            configuration_format = 'ini'
+        elif extension == '.toml':
+            configuration_format = 'toml'
+        elif extension in ['.yaml', '.yml']:
+            configuration_format = 'yaml'
+        else:
             continue
-        value_by_key[key] = locals()[key]
-    try:
-        d = function(**value_by_key)
-    except CrossComputeError as e:
-        sys.exit(1 if is_quiet else render_object(e.args[0], as_json))
-    if not is_quiet:
-        print(render_object(d, as_json))
-    return d
+        configuration_paths_by_format[configuration_format].append(path)
+    return dict(configuration_paths_by_format)
+'''

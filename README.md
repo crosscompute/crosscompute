@@ -1,91 +1,59 @@
 # CrossCompute
 
-Automate your work by writing a configuration file.
+Automate your Jupyter notebooks and scripts as web-based reports, tools, widgets, dashboards, forms.
 
-Please see https://crosscompute.com for examples and tutorials.
+- Reports are documents that update when the data changes.
+- Forms are step-by-step questions that generate a specific web-based report.
+- Tools are forms that transform input variables into output variables.
+- Widgets are interactive visualizations that update when the data changes.
+- Dashboards are widgets in a layout.
 
-```bash
-pip install -U crosscompute
-```
+[See examples and tutorials](https://crosscompute.com).
 
 ## Usage
 
 ```bash
-# export CROSSCOMPUTE_CLIENT=https://crosscompute.com
-# export CROSSCOMPUTE_ECHOES=https://services.crosscompute.com
-# export CROSSCOMPUTE_SERVER=https://services.crosscompute.com
-export CROSSCOMPUTE_TOKEN=YOUR-TOKEN
+# Update package
+pip install crosscompute --upgrade
+
+# Initialize configuration
 crosscompute
+
+# Serve analytics
+crosscompute serve.yml
 ```
 
-### Run Automation
-
-```bash
-crosscompute automations run
-crosscompute automations run automation.yml
-```
-
-### Add Tool
-
-```bash
-git clone git@github.com:crosscompute/crosscompute-examples
-cd crosscompute-examples/add-numbers
-
-# Mock
-crosscompute tools add tool.yml --mock
-
-# Real
-crosscompute tools add tool.yml
-```
-
-### See Tool
-
-```
-crosscompute tools see
-crosscompute tools see | jq
-crosscompute tools see | jq .[].id
-crosscompute tools see TOOL-ID
-```
-
-### Run Worker
-
-```bash
-crosscompute workers run
-```
-
-### See Project
-
-```
-crosscompute projects see
-crosscompute projects see | jq
-crosscompute projects see | jq '.[] | {id:.id, name:.name}'
-crosscompute projects see PROJECT-ID
-```
-
-### Set Project
-
-```
-crosscompute projects set project.yml
-```
-
-### Add Result
-
-```
-crosscompute results add result.yml
-```
+[See documentation](https://github.com/crosscompute/crosscompute-docs).
 
 ## Development
 
 ```bash
+# Clone repository
 git clone https://github.com/crosscompute/crosscompute
+
+# Install with dependencies for tests
 cd crosscompute
 pip install -e .[test]
-pytest --cov=crosscompute --cov-report term-missing:skip-covered --cov-config=tox.ini tests
+
+# Run tests
+pytest \
+    --cov=crosscompute \
+    --cov-config=tox.ini \
+    --cov-report term-missing:skip-covered \
+    tests
+
+# Build package for PyPI
+pip install build
+python -m build --sdist --wheel
+
+# Publish package on PyPI
+pip install twine --upgrade
+python -m twine upload dist/*
 ```
 
 ## Acknowledgments
 
-- Olga Creutzburg
+- [Olga Creutzburg](https://www.linkedin.com/in/olga-creutzburg)
 - Salah Ahmed
 - Rodrigo Guarachi
 - Polina Chernomaz
@@ -93,6 +61,7 @@ pytest --cov=crosscompute --cov-report term-missing:skip-covered --cov-config=to
 - Noé Domínguez Porras
 - Marta Moreno
 - Ning Wei
+- Kashfi Fahim
 - Elaine Chan
 - Aida Shoydokova
 - Jennifer Ruda
