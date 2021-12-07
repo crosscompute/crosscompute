@@ -60,7 +60,6 @@ def do():
     if launch_mode == 'configure':
         configure_with(args)
         exit()
-
     path_or_folder = args.path_or_folder
     try:
         automation = Automation.load(path_or_folder or '.')
