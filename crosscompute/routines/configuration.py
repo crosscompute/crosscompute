@@ -13,6 +13,7 @@ from pandas import Series, read_csv
 from string import Template
 from time import time
 
+from .. import __version__
 from ..constants import (
     AUTOMATION_ROUTE,
     AUTOMATION_NAME,
@@ -22,7 +23,9 @@ from ..constants import (
     STYLE_ROUTE,
     VARIABLE_CACHE,
     VARIABLE_ID_PATTERN)
-from ..exceptions import CrossComputeConfigurationError
+from ..exceptions import (
+    CrossComputeConfigurationError,
+    CrossComputeError)
 from ..macros import (
     format_slug, get_environment_value, group_by, make_folder)
 from .web import get_html_from_markdown
@@ -75,7 +78,22 @@ new deck.DeckGL({
 
 
 def load_configuration(configuration_path):
-    file_extension = splitext(configuration_path)[1]
+    configuration_format = get_configuration_format(configuration_path)
+    load_raw_configuration = {
+        'ini': load_raw_configuration_ini,
+        'toml': load_raw_configuration_toml,
+        'yaml': load_raw_configuration_yaml,
+    }[configuration_format]
+    configuration = load_raw_configuration(configuration_path)
+    configuration['folder'] = dirname(configuration_path) or '.'
+    logging.info(f'{configuration_path} loaded')
+    configuration = validate_configuration(configuration)
+    # logging.info(f'{configuration_path} validated')
+    return configuration
+
+
+def get_configuration_format(path):
+    file_extension = splitext(path)[1]
     try:
         configuration_format = {
             '.cfg': 'ini',
@@ -85,19 +103,19 @@ def load_configuration(configuration_path):
             '.yml': 'yaml',
         }[file_extension]
     except KeyError:
-        raise CrossComputeConfigurationError(
-            f'{file_extension} configuration not supported')
-    load_raw_configuration = {
-        'ini': load_raw_configuration_ini,
-        'toml': load_raw_configuration_toml,
-        'yaml': load_raw_configuration_yaml,
-    }[configuration_format]
-    configuration = load_raw_configuration(configuration_path)
-    configuration['folder'] = dirname(configuration_path) or '.'
-    return validate_configuration(configuration)
+        raise CrossComputeError(
+            f'{file_extension} configuration format not supported'.strip())
+    return configuration_format
 
 
 def validate_configuration(configuration):
+    if 'crosscompute' not in configuration:
+        raise CrossComputeError('crosscompute expected')
+    protocol_version = configuration['crosscompute']
+    if protocol_version != __version__:
+        raise CrossComputeConfigurationError(
+            f'crosscompute {protocol_version} != {__version__}; '
+            f'pip install crosscompute=={protocol_version}')
     for page_type_name in PAGE_TYPE_NAMES:
         page_configuration = configuration.get(page_type_name, {})
         for variable_definition in page_configuration.get('variables', []):
@@ -124,11 +142,11 @@ def load_raw_configuration_toml(configuration_path):
 
 
 def load_raw_configuration_yaml(configuration_path):
-    with open(configuration_path, 'rt') as configuration_file:
-        try:
+    try:
+        with open(configuration_path, 'rt') as configuration_file:
             configuration = yaml.safe_load(configuration_file)
-        except yaml.parser.ParserError as e:
-            raise CrossComputeConfigurationError(e)
+    except (OSError, yaml.parser.ParserError) as e:
+        raise CrossComputeConfigurationError(e)
     return configuration
 
 

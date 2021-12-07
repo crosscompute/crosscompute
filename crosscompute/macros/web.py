@@ -21,11 +21,14 @@ def run_when_ready(check, run, check_interval_in_seconds=1):
 
 
 def wait_then_run(check, run, check_interval_in_seconds=1):
-    while True:
-        try:
-            check()
-        except Exception:
-            sleep(check_interval_in_seconds)
-        else:
-            break
-    run()
+    try:
+        while True:
+            try:
+                check()
+            except Exception:
+                sleep(check_interval_in_seconds)
+            else:
+                break
+        run()
+    except KeyboardInterrupt:
+        pass

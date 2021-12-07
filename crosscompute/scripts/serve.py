@@ -11,6 +11,9 @@ from crosscompute.routines.log import (
     configure_argument_parser_for_logging,
     configure_logging_from)
 
+from crosscompute.scripts.configure import (
+    configure_argument_parser_for_configuring)
+
 
 def configure_argument_parser_for_serving(a):
     a.add_argument(
@@ -50,13 +53,13 @@ def serve_with(automation, args):
 
 def do():
     a = ArgumentParser()
-    a.add_argument('configuration_path')
+    configure_argument_parser_for_configuring(a)
     configure_argument_parser_for_logging(a)
     configure_argument_parser_for_serving(a)
     args = a.parse_args()
     configure_logging_from(args)
 
-    automation = Automation.load(args.configuration_path)
+    automation = Automation.load(args.path_or_folder)
     serve_with(automation, args)
 
 

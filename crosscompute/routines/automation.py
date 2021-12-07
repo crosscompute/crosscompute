@@ -1,8 +1,8 @@
 # TODO: Send refresh without server restart for template changes
 import logging
 import subprocess
-from os import getenv
-from os.path import join, relpath
+from os import getenv, listdir
+from os.path import isdir, join, relpath
 from pyramid.config import Configurator
 from waitress import serve
 from watchgod import watch
@@ -15,10 +15,9 @@ from .configuration import (
 from ..constants import (
     DISK_DEBOUNCE_IN_MILLISECONDS,
     DISK_POLL_IN_MILLISECONDS,
-    # CONFIGURATION_EXTENSIONS,
-    HOST, PORT,
-    # TEMPLATE_EXTENSIONS,
-)
+    HOST,
+    PORT)
+from ..exceptions import CrossComputeError, CrossComputeConfigurationError
 from ..macros import StoppableProcess, format_path, make_folder
 from ..views import AutomationViews, EchoViews
 
@@ -47,9 +46,21 @@ class Automation():
         logging.debug('configuration_folder = %s', configuration_folder)
 
     @classmethod
-    def load(Class, configuration_path):
+    def load(Class, path_or_folder=None):
         instance = Class()
-        instance.initialize_from_path(configuration_path)
+        if isdir(path_or_folder):
+            for path in listdir(path_or_folder):
+                try:
+                    instance.initialize_from_path(path)
+                except CrossComputeConfigurationError:
+                    raise
+                except CrossComputeError:
+                    continue
+                break
+            else:
+                raise CrossComputeError('could not find configuration')
+        else:
+            instance.initialize_from_path(path_or_folder)
         return instance
 
     def run(self, custom_environment=None):
@@ -67,7 +78,6 @@ class Automation():
             self.run_batch(batch_folder, custom_environment)
 
     def run_batch(self, batch_folder, custom_environment=None):
-        # TODO: Consider accepting batch_name
         input_folder = join(batch_folder, 'input')
         output_folder = join(batch_folder, 'output')
         log_folder = join(batch_folder, 'log')
