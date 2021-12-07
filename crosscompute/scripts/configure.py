@@ -53,10 +53,16 @@ def configure_with(args):
     if exists(configuration_path):
         logging.warning(f'{configuration_path} already exists')
         should_overwrite = input(
-            '\033[1moverwrite? yes or [no]\033[0m ').lower() == 'yes'
+            '\033[1moverwrite? yes or [no]:\033[0m ').lower() == 'yes'
         print()
         if not should_overwrite:
             logging.warning(f'{configuration_path} not overwritten')
+            exit()
+    else:
+        should_save = input('save? yes or [no]: ').lower() == 'yes'
+        print()
+        if not should_save:
+            logging.warning(f'{configuration_path} not saved')
             exit()
 
     try:
