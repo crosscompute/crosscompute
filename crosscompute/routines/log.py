@@ -15,16 +15,16 @@ def configure_logging_from(args):
 
 
 def configure_logging(intensity):
-    if intensity == 0:
+    if intensity > 1:
+        logging_level = logging.DEBUG
+    elif intensity == 1:
         logging_level = logging.INFO
-    elif intensity < -1:
-        logging_level = logging.CRITICAL
+    elif intensity == 0:
+        logging_level = logging.WARNING
     elif intensity == -1:
         logging_level = logging.ERROR
-    elif intensity == +1:
-        logging_level = logging.WARNING
-    elif intensity > +1:
-        logging_level = logging.DEBUG
+    elif intensity < -1:
+        logging_level = logging.CRITICAL
     logging.basicConfig(
         format='%(asctime)s %(name)s %(levelname)s %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S',
