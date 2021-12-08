@@ -71,7 +71,7 @@ class AutomationViews():
         config.add_view(
             self.see_automation_batch_page,
             route_name='automation batch page',
-            renderer='crosscompute:templates/live.jinja2')
+            renderer='crosscompute:templates/page.jinja2')
         config.add_view(
             self.see_automation_batch_page_file,
             route_name='automation batch page file')
@@ -156,7 +156,12 @@ class AutomationViews():
             automation_definition, page_type_name)
         css_uris = get_css_uris(automation_definition)
         page_text = '\n'.join(template_texts)
-        return render_page_dictionary(
+        return {
+            'automation_definition': automation_definition,
+            'batch_definition': batch_definition,
+            'uri': request.path,
+            'page_type_name': page_type_name,
+        } | render_page_dictionary(
             request, css_uris, page_type_name, page_text,
             variable_definitions, folder)
 

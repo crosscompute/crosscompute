@@ -88,7 +88,7 @@ def load_configuration(configuration_path):
     configuration = load_raw_configuration(configuration_path)
     configuration['folder'] = dirname(configuration_path) or '.'
     configuration = validate_configuration(configuration)
-    L.info(f'{configuration_path} loaded')
+    L.debug(f'{configuration_path} loaded')
     return configuration
 
 
@@ -157,7 +157,7 @@ def get_automation_definitions(configuration):
         if 'output' not in automation_configuration:
             continue
         automation_name = automation_configuration.get(
-            'name', AUTOMATION_NAME.replace('X', str(automation_index)))
+            'name', make_automation_name(automation_index))
         automation_slug = automation_configuration.get(
             'slug', format_slug(automation_name))
         automation_uri = AUTOMATION_ROUTE.format(
@@ -702,3 +702,7 @@ def load_data(path, variable_id):
         value = ''
     VARIABLE_CACHE[(path, variable_id)] = new_time, value
     return value
+
+
+def make_automation_name(automation_index):
+    return AUTOMATION_NAME.replace('X', str(automation_index))

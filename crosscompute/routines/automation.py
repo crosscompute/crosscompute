@@ -12,6 +12,7 @@ from .configuration import (
     get_automation_definitions,
     get_raw_variable_definitions,
     load_configuration,
+    make_automation_name,
     prepare_batch_folder)
 from ..constants import (
     DISK_DEBOUNCE_IN_MILLISECONDS,
@@ -63,21 +64,25 @@ class Automation():
         return instance
 
     def run(self, custom_environment=None):
-        for automation_definition in self.automation_definitions:
+        for automation_index, automation_definition in enumerate(
+                self.automation_definitions):
+            automation_name = automation_definition.get(
+                'name', make_automation_name(automation_index))
             script_definition = automation_definition.get('script', {})
             command_string = script_definition.get('command')
             if not command_string:
-                L.warning('command not defined in script configuration')
-                return
+                L.warning(f'{automation_name} script command not defined')
+                continue
             automation_folder = automation_definition['folder']
             script_folder = script_definition.get('folder', '.')
-            variable_definitions = get_raw_variable_definitions(
+            input_variable_definitions = get_raw_variable_definitions(
                 automation_definition, 'input')
             # TODO: Load base custom environment from configuration
             for batch_definition in automation_definition.get('batches', []):
                 batch_folder = prepare_batch_folder(
-                    batch_definition, variable_definitions, automation_folder)
-                L.info(f'running {batch_folder}')
+                    batch_definition, input_variable_definitions,
+                    automation_folder)
+                L.info(f'{automation_name} running {batch_folder}')
                 run_batch(
                     batch_folder, command_string, script_folder,
                     automation_folder, custom_environment)
@@ -102,6 +107,7 @@ class Automation():
         server_process = StoppableProcess(target=run_server)
         server_process.start()
         if getLogger().level > logging.DEBUG:
+            getLogger('waitress').setLevel(logging.ERROR)
             getLogger('watchgod.watcher').setLevel(logging.ERROR)
         for changes in watch(
                 self.configuration_folder,
@@ -118,7 +124,6 @@ class Automation():
                 ], ()):
                 '''
                 server_process.stop()
-                # TODO: Search for configuration if the file is gone
                 self.initialize_from_path(self.configuration_path)
                 server_process = StoppableProcess(target=run_server)
                 server_process.start()
@@ -177,7 +182,7 @@ def run_script(
         'debug': debug_folder,
     }.items():
         folder = make_folder(join(configuration_folder, relative_folder))
-        L.info(f'{folder_label}_folder = {format_path(folder)}')
+        L.debug(f'{folder_label}_folder = {format_path(folder)}')
 
     # TODO: Capture stdout and stderr for live output
     subprocess.run(

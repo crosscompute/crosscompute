@@ -1,0 +1,10 @@
+{% extends 'live.jinja2' %}
+
+{% block header_html %}
+<div class="breadcrumbs">
+<a href="{{ HOME_ROUTE }}">Home</a> &gt;
+<a href="{{ automation_definition['uri'] }}">{{ automation_definition['name'] }}</a> &gt;
+<a href="{{ batch_definition['uri'] }}">{{ batch_definition['name'] }}</a> &gt;
+<a href="{{ uri }}">{{ page_type_name }}</a>
+</div>
+{% endblock %}

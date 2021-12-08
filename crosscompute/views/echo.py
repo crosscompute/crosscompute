@@ -1,8 +1,8 @@
 # from multiprocessing import Queue
 from pyramid.response import Response
-from time import time
+from time import sleep, time
 
-from ..constants import ECHOES_ROUTE
+from ..constants import ECHOES_ROUTE, PING_INTERVAL_IN_SECONDS
 
 
 class EchoViews():
@@ -42,11 +42,21 @@ class EchoViews():
         return response
 
     def yield_echoes(self):
-        yield f'data: {self.time}\n\n'.encode()
+        yield self.make_ping()
         '''
         while True:
             # x = queue.get()
-            # L.debug('sending refresh after change in %s', x)
-            import time; time.sleep(1)
-            yield f'data: {self.time}\n\n'.encode()
         '''
+        sleep_count = 0
+        while True:
+            sleep(1)
+            sleep_count += 1
+            if sleep_count > PING_INTERVAL_IN_SECONDS:
+                yield self.make_ping()
+                sleep_count = 0
+
+    def make_message(self, data):
+        return f'data: {data}\n\n'.encode()
+
+    def make_ping(self):
+        return self.make_message(self.time)

@@ -8,9 +8,22 @@
 {%- endfor %}
 </head>
 <body>
+<header>
+{%- block header_html %}
+{{ header_text | safe }}
+{%- endblock %}
+</header>
+
 {%- block body_html %}
 {{ body_text | safe }}
 {%- endblock %}
+
+<footer>
+{%- block footer_html %}
+{{ footer_text | safe }}
+{%- endblock %}
+</footer>
+
 {%- for js_uri in js_uris %}
 <script src="{{ js_uri }}"></script>
 {%- endfor %}
