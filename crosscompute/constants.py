@@ -14,7 +14,7 @@ HOST = '127.0.0.1'
 PORT = 7000
 DISK_POLL_IN_MILLISECONDS = 1000
 DISK_DEBOUNCE_IN_MILLISECONDS = 1000
-# PING_INTERVAL_IN_SECONDS = 20
+PING_INTERVAL_IN_SECONDS = 1
 
 
 HOME_ROUTE = '/'
@@ -27,9 +27,7 @@ FILE_ROUTE = '/{variable_path}'
 
 
 CONFIGURATION_EXTENSIONS = '.yaml', '.yml', '.toml', '.ini', '.cfg'
-TEMPLATE_EXTENSIONS = '.md', '.ipynb'
-
-
+TEMPLATE_EXTENSIONS = '.css', '.md', '.ipynb'
 PAGE_TYPE_NAMES = 'input', 'output', 'log', 'debug'
 PAGE_TYPE_NAME_BY_LETTER = {_[0]: _ for _ in PAGE_TYPE_NAMES}
 VARIABLE_ID_PATTERN = re.compile(r'{\s*([^}]+?)\s*}')

@@ -1,3 +1,4 @@
+import socket
 import webbrowser
 from logging import getLogger
 from multiprocessing import Process
@@ -35,3 +36,9 @@ def open_browser(uri, check_interval_in_seconds=1):
 
     p = Process(target=wait_then_run)
     p.start()
+
+
+def is_port_in_use(port):
+    # https://stackoverflow.com/a/52872579
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(('127.0.0.1', port)) == 0

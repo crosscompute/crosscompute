@@ -1,11 +1,12 @@
 from argparse import ArgumentParser
+from logging import getLogger
 
 from crosscompute.constants import (
     DISK_DEBOUNCE_IN_MILLISECONDS,
     DISK_POLL_IN_MILLISECONDS,
     HOST,
     PORT)
-from crosscompute.macros import open_browser
+from crosscompute.macros import (is_port_in_use, open_browser)
 from crosscompute.routines.automation import Automation
 from crosscompute.routines.log import (
     configure_argument_parser_for_logging,
@@ -13,6 +14,9 @@ from crosscompute.routines.log import (
 
 from crosscompute.scripts.configure import (
     configure_argument_parser_for_configuring)
+
+
+L = getLogger(__name__)
 
 
 def configure_argument_parser_for_serving(a):
@@ -40,6 +44,13 @@ def configure_argument_parser_for_serving(a):
         help='interval in milliseconds to wait until the disk stops changing')
 
 
+def check_port(port):
+    if is_port_in_use(port):
+        L.error(f'http://127.0.0.1:{port} is in use; cannot start server')
+        raise SystemExit
+    return port
+
+
 def serve_with(automation, args):
     open_browser(f'http://localhost:{args.port}')
     automation.serve(
@@ -59,6 +70,7 @@ def do():
     args = a.parse_args()
     configure_logging_from(args)
 
+    check_port(args.port)
     automation = Automation.load(args.path_or_folder)
     serve_with(automation, args)
 

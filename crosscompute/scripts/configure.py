@@ -43,7 +43,7 @@ def configure_with(args):
             'configuration_path [%s]: ' % automation_path)
     except KeyboardInterrupt:
         print()
-        exit()
+        raise SystemExit
 
     configuration['name'] = automation_name or AUTOMATION_NAME
     configuration['version'] = automation_version or AUTOMATION_VERSION
@@ -60,19 +60,19 @@ def configure_with(args):
         print()
         if not should_overwrite:
             L.warning(f'{configuration_path} not overwritten')
-            exit()
+            raise SystemExit
     else:
         should_save = input('save? yes or [no]: ').lower() == 'yes'
         print()
         if not should_save:
             L.warning(f'{configuration_path} not saved')
-            exit()
+            raise SystemExit
 
     try:
         configuration_format = get_configuration_format(configuration_path)
     except CrossComputeError as e:
         L.error(e)
-        exit()
+        raise SystemExit
     if configuration_format == 'yaml':
         yaml.dump(configuration, open(configuration_path, 'wt'))
     L.info(f'{configuration_path} saved')

@@ -2,9 +2,11 @@
 import logging
 import subprocess
 from logging import getLogger
+from multiprocessing import Value
 from os import getenv, listdir
-from os.path import isdir, join, relpath
+from os.path import isdir, join, relpath, splitext
 from pyramid.config import Configurator
+from time import time
 from waitress import serve
 from watchgod import watch
 
@@ -15,10 +17,12 @@ from .configuration import (
     make_automation_name,
     prepare_batch_folder)
 from ..constants import (
+    CONFIGURATION_EXTENSIONS,
     DISK_DEBOUNCE_IN_MILLISECONDS,
     DISK_POLL_IN_MILLISECONDS,
     HOST,
-    PORT)
+    PORT,
+    TEMPLATE_EXTENSIONS)
 from ..exceptions import CrossComputeError, CrossComputeConfigurationError
 from ..macros import StoppableProcess, format_path, make_folder
 from ..views import AutomationViews, EchoViews
@@ -39,8 +43,7 @@ class Automation():
         self.configuration = configuration
         self.configuration_folder = configuration_folder
         self.automation_definitions = automation_definitions
-        self.automation_views = AutomationViews(automation_definitions)
-        self.echo_views = EchoViews(configuration_folder)
+        self.timestamp_object = Value('d', time())
 
         L.debug('configuration_path = %s', configuration_path)
         L.debug('configuration_folder = %s', configuration_folder)
@@ -95,10 +98,16 @@ class Automation():
             is_static=False,
             disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
             disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS):
+        if getLogger().level > logging.DEBUG:
+            getLogger('waitress').setLevel(logging.ERROR)
+            getLogger('watchgod.watcher').setLevel(logging.ERROR)
 
         def run_server():
             app = self.get_app(is_static)
-            serve(app, host=host, port=port)
+            try:
+                serve(app, host=host, port=port)
+            except OSError as e:
+                L.error(e)
 
         if is_production and is_static:
             run_server()
@@ -106,40 +115,30 @@ class Automation():
 
         server_process = StoppableProcess(target=run_server)
         server_process.start()
-        if getLogger().level > logging.DEBUG:
-            getLogger('waitress').setLevel(logging.ERROR)
-            getLogger('watchgod.watcher').setLevel(logging.ERROR)
         for changes in watch(
                 self.configuration_folder,
                 min_sleep=disk_poll_in_milliseconds,
                 debounce=disk_debounce_in_milliseconds):
             for changed_type, changed_path in changes:
                 L.debug('%s %s', changed_type, changed_path)
-                '''
                 changed_extension = splitext(changed_path)[1]
                 if changed_extension in CONFIGURATION_EXTENSIONS:
-                if changed_extension in sum([
-                    CONFIGURATION_EXTENSIONS,
-                    TEMPLATE_EXTENSIONS,
-                ], ()):
-                '''
-                server_process.stop()
-                self.initialize_from_path(self.configuration_path)
-                server_process = StoppableProcess(target=run_server)
-                server_process.start()
-                '''
+                    server_process.stop()
+                    self.initialize_from_path(self.configuration_path)
+                    server_process = StoppableProcess(target=run_server)
+                    server_process.start()
                 elif changed_extension in TEMPLATE_EXTENSIONS:
-                    self.echo_views.reset_time()
-                    # for queue in self.echo_views.queues:
-                    # queue.put(changed_path)
-                '''
+                    self.timestamp_object.value = time()
 
     def get_app(self, is_static=False):
+        automation_views = AutomationViews(self.automation_definitions)
+        echo_views = EchoViews(
+            self.configuration_folder, self.timestamp_object)
         with Configurator() as config:
             config.include('pyramid_jinja2')
-            config.include(self.automation_views.includeme)
+            config.include(automation_views.includeme)
             if not is_static:
-                config.include(self.echo_views.includeme)
+                config.include(echo_views.includeme)
         return config.make_wsgi_app()
 
 
