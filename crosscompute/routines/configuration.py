@@ -395,7 +395,7 @@ def get_variable_data_by_id(variable_definitions, data_by_id):
                 variable_data = data_by_id[variable_id]
             except KeyError:
                 raise CrossComputeConfigurationError(
-                    '%s not defined in batch configuration', variable_id)
+                    f'{variable_id} not defined in batch configuration')
         variable_data_by_id[variable_id] = variable_data
     return variable_data_by_id
 

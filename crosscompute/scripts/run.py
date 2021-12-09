@@ -6,7 +6,9 @@
 
 
 from argparse import ArgumentParser
+from logging import getLogger
 
+from crosscompute.exceptions import CrossComputeError
 from crosscompute.routines.automation import Automation
 from crosscompute.routines.log import (
     configure_argument_parser_for_logging,
@@ -16,6 +18,9 @@ from crosscompute.scripts.configure import (
     configure_argument_parser_for_configuring)
 
 
+L = getLogger(__name__)
+
+
 def configure_argument_parser_for_running(a):
     a.add_argument(
         '--clean', dest='with_clean', action='store_true',
@@ -23,7 +28,10 @@ def configure_argument_parser_for_running(a):
 
 
 def run_with(automation, args):
-    automation.run()
+    try:
+        automation.run()
+    except CrossComputeError as e:
+        L.error(e)
 
 
 def do():
