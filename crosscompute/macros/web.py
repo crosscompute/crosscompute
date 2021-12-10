@@ -41,4 +41,4 @@ def open_browser(uri, check_interval_in_seconds=1):
 def is_port_in_use(port):
     # https://stackoverflow.com/a/52872579
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        return s.connect_ex(('127.0.0.1', port)) == 0
+        return s.connect_ex(('127.0.0.1', int(port))) == 0
