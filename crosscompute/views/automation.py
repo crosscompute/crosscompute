@@ -15,7 +15,6 @@ from ..constants import (
     BATCH_ROUTE,
     FILE_ROUTE,
     FUNCTION_BY_NAME,
-    HOME_ROUTE,
     PAGE_ROUTE,
     PAGE_TYPE_NAME_BY_LETTER,
     STYLE_ROUTE,
@@ -40,26 +39,25 @@ L = getLogger(__name__)
 
 class AutomationViews():
 
-    def __init__(self, automation_definitions, base_uri):
+    def __init__(self, automation_definitions):
         self.automation_definitions = automation_definitions
-        self.base_uri = base_uri
 
     def includeme(self, config):
         config.include(self.configure_styles)
 
+        config.add_route('home', '/')
         config.add_route(
-            'home',
-            self.base_uri)
+            'automation',
+            AUTOMATION_ROUTE)
         config.add_route(
-            'automation', self.base_uri + AUTOMATION_ROUTE)
+            'automation batch',
+            AUTOMATION_ROUTE + BATCH_ROUTE)
         config.add_route(
-            'automation batch', self.base_uri + AUTOMATION_ROUTE + BATCH_ROUTE)
+            'automation batch page',
+            AUTOMATION_ROUTE + BATCH_ROUTE + PAGE_ROUTE)
         config.add_route(
-            'automation batch page', self.base_uri + AUTOMATION_ROUTE
-            + BATCH_ROUTE + PAGE_ROUTE)
-        config.add_route(
-            'automation batch page file', self.base_uri + AUTOMATION_ROUTE
-            + BATCH_ROUTE + PAGE_ROUTE + FILE_ROUTE)
+            'automation batch page file',
+            AUTOMATION_ROUTE + BATCH_ROUTE + PAGE_ROUTE + FILE_ROUTE)
 
         config.add_view(
             self.see_home,
@@ -83,9 +81,9 @@ class AutomationViews():
 
     def configure_styles(self, config):
         config.add_route(
-            'style', self.base_uri + STYLE_ROUTE)
+            'style', STYLE_ROUTE)
         config.add_route(
-            'automation style', self.base_uri + AUTOMATION_ROUTE + STYLE_ROUTE)
+            'automation style', AUTOMATION_ROUTE + STYLE_ROUTE)
 
         config.add_view(
             self.see_style,
@@ -93,14 +91,6 @@ class AutomationViews():
         config.add_view(
             self.see_style,
             route_name='automation style')
-
-        def update_renderer_globals():
-            renderer_environment = config.get_jinja2_environment()
-            renderer_environment.globals.update({
-                'HOME_ROUTE': HOME_ROUTE,
-            })
-
-        config.action(None, update_renderer_globals)
 
     def see_style(self, request):
         matchdict = request.matchdict
@@ -111,8 +101,8 @@ class AutomationViews():
             automation_definition = self.automation_definitions[0]
 
         expected_paths = [_.split('?')[0] for _ in get_css_uris(
-            automation_definition)]
-        if request.path not in expected_paths:
+            automation_definition) if '//' not in _]
+        if request.environ['PATH_INFO'] not in expected_paths:
             raise HTTPNotFound
 
         style_path = matchdict['style_path']
@@ -128,6 +118,7 @@ class AutomationViews():
         return response
 
     def see_home(self, request):
+        'Render home with list of available automations'
         try:
             automation_definition = self.automation_definitions[0]
         except IndexError:
@@ -284,7 +275,7 @@ def get_variable_configuration(variable_definition, folder):
             configuration = json.load(open(join(
                 folder, configuration_path), 'rt'))
         except OSError:
-            L.error(f'{configuration_path} not found')
+            L.error('%s not found', configuration_path)
         else:
             variable_configuration.update(configuration)
     return variable_configuration

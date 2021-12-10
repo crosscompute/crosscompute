@@ -1,10 +1,10 @@
-{% extends 'live.jinja2' %}
+{% extends 'base.jinja2' if IS_STATIC else 'live.jinja2' %}
 
 {#
 {% block header_html %}
-<a href="{{ HOME_ROUTE }}">Home</a> &gt;
-<a href="{{ automation_definition['uri'] }}">{{ automation_definition['name'] }}</a> &gt;
+<a href="{{ BASE_URI if BASE_URI else '/' }}">Home</a> &gt;
+<a href="{{ BASE_URI }}{{ automation_definition['uri'] }}">{{ automation_definition['name'] }}</a> &gt;
 <a>{{ batch_definition['name'] }}</a> &gt;
-<a href="{{ uri }}">{{ page_type_name }}</a>
+<a href="{{ BASE_URI }}{{ uri }}">{{ page_type_name }}</a>
 {% endblock %}
 #}

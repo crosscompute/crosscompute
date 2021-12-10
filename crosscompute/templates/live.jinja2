@@ -4,7 +4,7 @@
 let echoSource, serverTime, reconnectionId
 
 function connect() {
-  echoSource = new EventSource('{{ ECHOES_ROUTE }}')
+  echoSource = new EventSource('{{ BASE_URI }}{{ ECHOES_ROUTE }}')
 
   echoSource.onopen = function() {
     console.log('connected')

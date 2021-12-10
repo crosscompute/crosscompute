@@ -94,7 +94,7 @@ class Automation():
             self,
             host=HOST,
             port=PORT,
-            base_uri='/',
+            base_uri='',
             is_production=False,
             is_static=False,
             disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
@@ -104,9 +104,10 @@ class Automation():
             getLogger('watchgod.watcher').setLevel(logging.ERROR)
 
         def run_server():
+            L.info(f'serving at http://{host}:{port}{base_uri}')
             app = self.get_app(is_static, base_uri)
             try:
-                serve(app, host=host, port=port)
+                serve(app, host=host, port=port, url_prefix=base_uri)
             except OSError as e:
                 L.error(e)
 
@@ -131,16 +132,26 @@ class Automation():
                 elif changed_extension in TEMPLATE_EXTENSIONS:
                     self.timestamp_object.value = time()
 
-    def get_app(self, is_static=False, base_uri='/'):
+    def get_app(self, is_static=False, base_uri=''):
+        # TODO: Decouple from pyramid
         automation_views = AutomationViews(
-            self.automation_definitions, base_uri)
+            self.automation_definitions)
         echo_views = EchoViews(
-            self.configuration_folder, self.timestamp_object, base_uri)
+            self.configuration_folder, self.timestamp_object)
         with Configurator() as config:
             config.include('pyramid_jinja2')
             config.include(automation_views.includeme)
             if not is_static:
                 config.include(echo_views.includeme)
+
+            def update_renderer_globals():
+                renderer_environment = config.get_jinja2_environment()
+                renderer_environment.globals.update({
+                    'BASE_URI': base_uri,
+                    'IS_STATIC': is_static,
+                })
+
+            config.action(None, update_renderer_globals)
         return config.make_wsgi_app()
 
 

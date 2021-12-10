@@ -299,7 +299,7 @@ def get_template_texts(configuration, page_type_name):
             path = join(folder, template_path)
             template_file = open(path, 'rt')
         except OSError:
-            L.error(f'{path} does not exist or is not accessible')
+            L.error('%s does not exist or is not accessible', path)
             continue
         template_text = template_file.read().strip()
         if not template_text:
@@ -319,7 +319,7 @@ def get_css_uris(configuration):
     css_uris = []
     for style_definition in display_configuration.get('styles', []):
         style_uri = style_definition['uri']
-        is_relative = r'//' not in style_uri
+        is_relative = '//' not in style_uri
         if has_parent and is_relative:
             style_uri = configuration['uri'] + style_uri
         css_uris.append(style_uri)
@@ -481,7 +481,7 @@ def get_variable_view_class(variable_definition):
             'markdown': MarkdownView,
         }[view_name]
     except KeyError:
-        L.error(f'{view_name} view not installed')
+        L.error('%s view not installed', view_name)
         return NullView
     return VariableView
 

@@ -29,8 +29,13 @@ def configure_argument_parser_for_serving(a):
         default=PORT,
         help='specify port to listen to for requests')
     a.add_argument(
+        '--no-browser',
+        dest='with_browser',
+        action='store_false',
+        help='do not open browser')
+    a.add_argument(
         '--base-uri', metavar='X',
-        default='/',
+        default='',
         help='specify base uri for all routes')
     a.add_argument(
         '--production', dest='is_production', action='store_true',
@@ -50,13 +55,14 @@ def configure_argument_parser_for_serving(a):
 
 def check_port(port):
     if is_port_in_use(port):
-        L.error(f'http://127.0.0.1:{port} is in use; cannot start server')
+        L.error('port=%s is in use; cannot start server', port)
         raise SystemExit
     return port
 
 
 def serve_with(automation, args):
-    open_browser(f'http://localhost:{args.port}')
+    if args.with_browser:
+        open_browser(f'http://localhost:{args.port}{args.base_uri}')
     automation.serve(
         host=args.host,
         port=args.port,

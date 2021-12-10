@@ -1,13 +1,10 @@
-{% extends 'live.jinja2' %}
+{% extends 'base.jinja2' if IS_STATIC else 'live.jinja2' %}
 
 {% block body_html %}
 <h1>Automations</h1>
-
 <ul>
 {%- for automation in automations %}
-  <li>
-    <a href="{{ automation['uri'] }}">{{ automation['name'] }}</a>
-  </li>
-{% endfor -%}
+<li><a href="{{ BASE_URI }}{{ automation['uri'] }}">{{ automation['name'] }}</a></li>
+{%- endfor %}
 </ul>
 {% endblock %}

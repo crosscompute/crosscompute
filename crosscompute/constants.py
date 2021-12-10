@@ -17,9 +17,9 @@ DISK_DEBOUNCE_IN_MILLISECONDS = 1000
 PING_INTERVAL_IN_SECONDS = 1
 
 
-STYLE_ROUTE = 's/{style_path}'
-ECHOES_ROUTE = 'echoes'
-AUTOMATION_ROUTE = 'a/{automation_slug}'
+STYLE_ROUTE = '/s/{style_path}'
+ECHOES_ROUTE = '/echoes'
+AUTOMATION_ROUTE = '/a/{automation_slug}'
 BATCH_ROUTE = '/b/{batch_slug}'
 PAGE_ROUTE = '/{page_type}'
 FILE_ROUTE = '/{variable_path}'

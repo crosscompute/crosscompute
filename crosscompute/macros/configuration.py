@@ -9,7 +9,7 @@ def get_environment_value(key, default=None):
     try:
         value = environ[key]
     except KeyError:
-        L.error(f'{key} is not defined in the environment')
+        L.error('%s is not defined in the environment', key)
         if default is None:
             raise
         value = default

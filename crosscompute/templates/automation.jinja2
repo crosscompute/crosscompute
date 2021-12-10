@@ -1,18 +1,15 @@
-{% extends 'live.jinja2' %}
+{% extends 'base.jinja2' if IS_STATIC else 'live.jinja2' %}
 
 {% block header_html %}
-<a href="{{ HOME_ROUTE }}">Home</a> &gt;
-<a href="{{ uri }}">{{ name }}</a>
+<a href="{{ BASE_URI if BASE_URI else '/' }}">Home</a> &gt;
+<a href="{{ BASE_URI }}{{ uri }}">{{ name }}</a>
 {% endblock %}
 
 {% block body_html %}
 <h1>{{ name }}</h1>
 <ul>
-{% for batch in batches %}
-  <li>
-    {{ batch['name'] }}
-    <a href="{{ uri }}{{ batch['uri'] }}/o">[output]</a>
-  </li>
-{% endfor %}
+{%- for batch in batches %}
+<li>{{ batch['name'] }} <a href="{{ BASE_URI }}{{ uri }}{{ batch['uri'] }}/o">[output]</a></li>
+{%- endfor %}
 </ul>
 {% endblock %}

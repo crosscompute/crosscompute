@@ -1,4 +1,4 @@
-{% extends 'live.jinja2' %}
+{% extends 'base.jinja2' if IS_STATIC else 'live.jinja2' %}
 
 {% block header_html %}
 {% endblock %}
