@@ -29,6 +29,10 @@ def configure_argument_parser_for_serving(a):
         default=PORT,
         help='specify port to listen to for requests')
     a.add_argument(
+        '--base-uri', metavar='X',
+        default='/',
+        help='specify base uri for all routes')
+    a.add_argument(
         '--production', dest='is_production', action='store_true',
         help='disable server restart on file change')
     a.add_argument(
@@ -56,6 +60,7 @@ def serve_with(automation, args):
     automation.serve(
         host=args.host,
         port=args.port,
+        base_uri=args.base_uri,
         is_production=args.is_production,
         is_static=args.is_static,
         disk_poll_in_milliseconds=args.disk_poll,

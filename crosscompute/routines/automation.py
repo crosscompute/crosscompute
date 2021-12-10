@@ -94,6 +94,7 @@ class Automation():
             self,
             host=HOST,
             port=PORT,
+            base_uri='/',
             is_production=False,
             is_static=False,
             disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
@@ -103,7 +104,7 @@ class Automation():
             getLogger('watchgod.watcher').setLevel(logging.ERROR)
 
         def run_server():
-            app = self.get_app(is_static)
+            app = self.get_app(is_static, base_uri)
             try:
                 serve(app, host=host, port=port)
             except OSError as e:
@@ -130,10 +131,11 @@ class Automation():
                 elif changed_extension in TEMPLATE_EXTENSIONS:
                     self.timestamp_object.value = time()
 
-    def get_app(self, is_static=False):
-        automation_views = AutomationViews(self.automation_definitions)
+    def get_app(self, is_static=False, base_uri='/'):
+        automation_views = AutomationViews(
+            self.automation_definitions, base_uri)
         echo_views = EchoViews(
-            self.configuration_folder, self.timestamp_object)
+            self.configuration_folder, self.timestamp_object, base_uri)
         with Configurator() as config:
             config.include('pyramid_jinja2')
             config.include(automation_views.includeme)

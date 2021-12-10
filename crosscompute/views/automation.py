@@ -40,21 +40,26 @@ L = getLogger(__name__)
 
 class AutomationViews():
 
-    def __init__(self, automation_definitions):
+    def __init__(self, automation_definitions, base_uri):
         self.automation_definitions = automation_definitions
+        self.base_uri = base_uri
 
     def includeme(self, config):
         config.include(self.configure_styles)
 
-        config.add_route('home', HOME_ROUTE)
-        config.add_route('automation', AUTOMATION_ROUTE)
-        config.add_route('automation batch', AUTOMATION_ROUTE + BATCH_ROUTE)
         config.add_route(
-            'automation batch page',
-            AUTOMATION_ROUTE + BATCH_ROUTE + PAGE_ROUTE)
+            'home',
+            self.base_uri)
         config.add_route(
-            'automation batch page file',
-            AUTOMATION_ROUTE + BATCH_ROUTE + PAGE_ROUTE + FILE_ROUTE)
+            'automation', self.base_uri + AUTOMATION_ROUTE)
+        config.add_route(
+            'automation batch', self.base_uri + AUTOMATION_ROUTE + BATCH_ROUTE)
+        config.add_route(
+            'automation batch page', self.base_uri + AUTOMATION_ROUTE
+            + BATCH_ROUTE + PAGE_ROUTE)
+        config.add_route(
+            'automation batch page file', self.base_uri + AUTOMATION_ROUTE
+            + BATCH_ROUTE + PAGE_ROUTE + FILE_ROUTE)
 
         config.add_view(
             self.see_home,
@@ -77,8 +82,10 @@ class AutomationViews():
             route_name='automation batch page file')
 
     def configure_styles(self, config):
-        config.add_route('style', STYLE_ROUTE)
-        config.add_route('automation style', AUTOMATION_ROUTE + STYLE_ROUTE)
+        config.add_route(
+            'style', self.base_uri + STYLE_ROUTE)
+        config.add_route(
+            'automation style', self.base_uri + AUTOMATION_ROUTE + STYLE_ROUTE)
 
         config.add_view(
             self.see_style,
