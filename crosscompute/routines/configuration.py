@@ -219,6 +219,7 @@ def get_batch_definitions(configuration):
                 definitions = [batch_definition]
         except CrossComputeConfigurationError as e:
             L.error(e)
+            continue
         batch_definitions.extend(definitions)
     return batch_definitions
 
@@ -456,7 +457,7 @@ def yield_data_by_id_from_txt(path, variable_definitions):
                     continue
                 yield {variable_id: line}
     except OSError:
-        raise CrossComputeConfigurationError('%s path not found', path)
+        raise CrossComputeConfigurationError(f'{path} path not found')
 
 
 def yield_data_by_id_from_csv(path, variable_definitions):
