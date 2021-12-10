@@ -1,15 +1,13 @@
 # TODO: Support csv for pydeck screengrid view
-# TODO: Remove pandas dependency
 
+import csv
 import json
-import pandas as pd
 import tomli
 import yaml
 from abc import ABC, abstractmethod
 from configparser import ConfigParser
 from logging import getLogger
 from os.path import basename, dirname, exists, getmtime, join, splitext
-from pandas import Series, read_csv
 from string import Template
 from time import time
 
@@ -372,9 +370,13 @@ def prepare_batch_folder(
         variable_data_by_id = get_variable_data_by_id(
             variable_definitions, data_by_id)
         if file_extension == '.json':
-            json.dump(variable_data_by_id, open(input_path, 'wt'))
+            with open(input_path, 'wt') as input_file:
+                json.dump(variable_data_by_id, input_file)
         elif file_extension == '.csv':
-            Series(variable_data_by_id).to_csv(input_path, header=False)
+            with open(input_path, 'wt') as input_file:
+                csv_writer = csv.writer(input_file)
+                for k, v in variable_data_by_id.items():
+                    csv_writer.writerow([k, v])
         elif len(variable_data_by_id) > 1:
             raise CrossComputeConfigurationError(
                 f'{file_extension} does not support multiple variables')
@@ -458,9 +460,11 @@ def yield_data_by_id_from_txt(path, variable_definitions):
 
 
 def yield_data_by_id_from_csv(path, variable_definitions):
-    table = read_csv(path)
-    for index, row in table.iterrows():
-        yield dict(row)
+    with open(path, 'rt') as file:
+        csv_reader = csv.reader(file)
+        keys = next(csv_reader)
+        for values in csv_reader:
+            yield dict(zip(keys, values))
 
 
 def get_variable_view_class(variable_definition):
@@ -691,14 +695,15 @@ def load_data(path, variable_id):
                 if file_extension == '.json':
                     value_by_id = json.load(file)
                 elif file_extension == '.csv':
-                    value_by_id = pd.read_csv(
-                        file, header=None, index_col=0, squeeze=True)
+                    csv_reader = csv.reader(file)
+                    value_by_id = dict(csv_reader)
                 for i, v in value_by_id.items():
                     VARIABLE_CACHE[(path, i)] = new_time, v
                 value = value_by_id[variable_id]
             else:
                 value = file.read()
-    except (OSError, KeyError, json.JSONDecodeError, pd.errors.ParserError):
+    except (OSError, KeyError, json.JSONDecodeError, UnicodeDecodeError) as e:
+        L.error(e)
         value = ''
     VARIABLE_CACHE[(path, variable_id)] = new_time, value
     return value
