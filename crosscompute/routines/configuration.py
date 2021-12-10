@@ -145,7 +145,7 @@ def load_raw_configuration_yaml(configuration_path):
             configuration = yaml.safe_load(configuration_file)
     except (OSError, yaml.parser.ParserError) as e:
         raise CrossComputeConfigurationError(e)
-    return configuration
+    return configuration or {}
 
 
 def get_automation_definitions(configuration):
