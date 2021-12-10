@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 from logging import getLogger
+from os import environ
 
 from crosscompute.constants import (
     DISK_DEBOUNCE_IN_MILLISECONDS,
@@ -61,7 +62,8 @@ def check_port(port):
 
 
 def serve_with(automation, args):
-    if args.with_browser:
+    if args.with_browser and 'DISPLAY' in environ:
+        L.info('opening browser; set --no-browser to disable')
         open_browser(f'http://localhost:{args.port}{args.base_uri}')
     automation.serve(
         host=args.host,
