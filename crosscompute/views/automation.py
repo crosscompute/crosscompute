@@ -1,4 +1,4 @@
-# TODO: Let user customize homepage title
+# TODO: Let user customize root title
 # TODO: Add tests
 # TODO: Validate variable definitions for id and view
 # TODO: Let creator override mapbox js
@@ -45,7 +45,7 @@ class AutomationViews():
     def includeme(self, config):
         config.include(self.configure_styles)
 
-        config.add_route('home', '/')
+        config.add_route('root', '/')
         config.add_route(
             'automation',
             AUTOMATION_ROUTE)
@@ -60,9 +60,9 @@ class AutomationViews():
             AUTOMATION_ROUTE + BATCH_ROUTE + PAGE_ROUTE + FILE_ROUTE)
 
         config.add_view(
-            self.see_home,
-            route_name='home',
-            renderer='crosscompute:templates/home.jinja2')
+            self.see_root,
+            route_name='root',
+            renderer='crosscompute:templates/root.jinja2')
         config.add_view(
             self.see_automation,
             route_name='automation',
@@ -117,8 +117,8 @@ class AutomationViews():
             raise HTTPNotFound
         return response
 
-    def see_home(self, request):
-        'Render home with list of available automations'
+    def see_root(self, request):
+        'Render root with list of available automations'
         try:
             automation_definition = self.automation_definitions[0]
         except IndexError:

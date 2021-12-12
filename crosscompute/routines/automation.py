@@ -122,6 +122,7 @@ class Automation():
                 min_sleep=disk_poll_in_milliseconds,
                 debounce=disk_debounce_in_milliseconds):
             for changed_type, changed_path in changes:
+                # TODO: Continue only if path is in configuration
                 L.debug('%s %s', changed_type, changed_path)
                 changed_extension = splitext(changed_path)[1]
                 if changed_extension in CONFIGURATION_EXTENSIONS:
