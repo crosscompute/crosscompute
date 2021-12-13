@@ -1,2 +1,3 @@
 Consider moving crosscompute-map-mapbox to separate repository
-Use getLogger
+Add client cache control headers
+Cache bust using content hash

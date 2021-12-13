@@ -338,6 +338,7 @@ def get_display_configuration(configuration):
         if path:
             if not exists(join(folder, path)):
                 L.error('style not found at path %s', path)
+            # TODO: Consider using modification time or content hash
             style_definition['uri'] = STYLE_ROUTE.format(
                 style_path=path) + '?v=' + str(int(time()))
     return display_configuration
