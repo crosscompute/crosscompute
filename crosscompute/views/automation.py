@@ -39,8 +39,9 @@ L = getLogger(__name__)
 
 class AutomationViews():
 
-    def __init__(self, automation_definitions):
+    def __init__(self, automation_definitions, automation_queue):
         self.automation_definitions = automation_definitions
+        self.automation_queue = automation_queue
 
     def includeme(self, config):
         config.include(self.configure_styles)
@@ -49,6 +50,9 @@ class AutomationViews():
         config.add_route(
             'automation',
             AUTOMATION_ROUTE)
+        config.add_route(
+            'automation.json',
+            AUTOMATION_ROUTE + '.json')
         config.add_route(
             'automation batch',
             AUTOMATION_ROUTE + BATCH_ROUTE)
@@ -67,6 +71,11 @@ class AutomationViews():
             self.see_automation,
             route_name='automation',
             renderer='crosscompute:templates/automation.jinja2')
+        config.add_view(
+            self.run_automation,
+            route_name='automation.json',
+            renderer='json',
+            request_method='POST')
         config.add_view(
             self.see_automation_batch,
             route_name='automation batch',
@@ -136,6 +145,9 @@ class AutomationViews():
         return automation_definition | {
             'css_uris': css_uris,
         }
+
+    def run_automation(self, request):
+        return {}
 
     def see_automation_batch(self, request):
         return {}
