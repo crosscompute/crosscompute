@@ -97,19 +97,19 @@ class AutomationViews():
         if 'automation_slug' in matchdict:
             automation_definition = self.get_automation_definition_from(
                 request)
+        elif not self.automation_definitions:
+            raise HTTPNotFound
         else:
             automation_definition = self.automation_definitions[0]
+        style_definitions = automation_definition.get('display', {}).get(
+            'styles', [])
 
-        expected_paths = [_.split('?')[0] for _ in get_css_uris(
-            automation_definition) if '//' not in _]
-        if request.environ['PATH_INFO'] not in expected_paths:
+        try:
+            style_definition = find_item(
+                style_definitions, 'uri', request.path)
+        except StopIteration:
             raise HTTPNotFound
-
-        style_path = matchdict['style_path']
-        folder = automation_definition['folder']
-        path = join(folder, style_path)
-        if not is_path_in_folder(path, folder):
-            raise HTTPBadRequest
+        path = join(automation_definition['folder'], style_definition['path'])
 
         try:
             response = FileResponse(path, request)

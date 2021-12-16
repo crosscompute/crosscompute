@@ -9,7 +9,6 @@ from configparser import ConfigParser
 from logging import getLogger
 from os.path import basename, dirname, exists, getmtime, join, splitext
 from string import Template
-from time import time
 
 from .. import __version__
 from ..constants import (
@@ -25,7 +24,7 @@ from ..exceptions import (
     CrossComputeConfigurationError,
     CrossComputeError)
 from ..macros import (
-    format_slug, get_environment_value, group_by, make_folder)
+    format_slug, get_environment_value, group_by, make_file_hash, make_folder)
 from .web import get_html_from_markdown
 
 
@@ -330,17 +329,18 @@ def get_display_configuration(configuration):
     folder = configuration['folder']
     display_configuration = configuration.get('display', {})
     for style_definition in display_configuration.get('styles', []):
-        uri = style_definition.get('uri', '').strip()
-        path = style_definition.get('path', '').strip()
-        if not uri and not path:
+        style_uri = style_definition.get('uri', '').strip()
+        style_path = style_definition.get('path', '').strip()
+        if not style_uri and not style_path:
             L.error('uri or path required for each style')
             continue
-        if path:
-            if not exists(join(folder, path)):
+        if style_path:
+            path = join(folder, style_path)
+            if not exists(path):
                 L.error('style not found at path %s', path)
-            # TODO: Consider using modification time or content hash
+            style_hash = make_file_hash(path)
             style_definition['uri'] = STYLE_ROUTE.format(
-                style_path=path) + '?v=' + str(int(time()))
+                style_hash=style_hash) + '.css'
     return display_configuration
 
 

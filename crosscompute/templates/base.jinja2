@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
+{%- block head_html -%}
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+{%- endblock -%}
 {%- for css_uri in css_uris %}
 <link href="{{ css_uri if '//' in css_uri else BASE_URI + css_uri }}" rel="stylesheet">
 {%- endfor %}
