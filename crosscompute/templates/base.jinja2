@@ -15,9 +15,9 @@
 {{ header_text | safe }}
 {%- endblock -%}
 </header>
-{%- block body_html -%}
+{% block body_html -%}
 {{ body_text | safe }}
-{%- endblock -%}
+{%- endblock %}
 <footer>
 {%- block footer_html -%}
 {{ footer_text | safe }}

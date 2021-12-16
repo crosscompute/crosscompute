@@ -26,7 +26,8 @@ FILE_ROUTE = '/{variable_path}'
 
 
 CONFIGURATION_EXTENSIONS = '.yaml', '.yml', '.toml', '.ini', '.cfg'
-TEMPLATE_EXTENSIONS = '.css', '.md', '.ipynb'
+STYLE_EXTENSIONS = '.css',
+TEMPLATE_EXTENSIONS = '.md', '.ipynb'
 PAGE_TYPE_NAMES = 'input', 'output', 'log', 'debug'
 PAGE_TYPE_NAME_BY_LETTER = {_[0]: _ for _ in PAGE_TYPE_NAMES}
 VARIABLE_ID_PATTERN = re.compile(r'{\s*([^}]+?)\s*}')

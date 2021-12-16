@@ -12,6 +12,7 @@ from watchgod import watch
 
 from .configuration import (
     get_automation_definitions,
+    get_display_configuration,
     get_raw_variable_definitions,
     load_configuration,
     make_automation_name,
@@ -22,6 +23,7 @@ from ..constants import (
     DISK_POLL_IN_MILLISECONDS,
     HOST,
     PORT,
+    STYLE_EXTENSIONS,
     TEMPLATE_EXTENSIONS)
 from ..exceptions import CrossComputeError, CrossComputeConfigurationError
 from ..macros import StoppableProcess, format_path, make_folder
@@ -130,6 +132,10 @@ class Automation():
                     self.initialize_from_path(self.configuration_path)
                     server_process = StoppableProcess(target=run_server)
                     server_process.start()
+                elif changed_extension in STYLE_EXTENSIONS:
+                    for d in self.automation_definitions:
+                        d['display'] = get_display_configuration(d)
+                    self.timestamp_object.value = time()
                 elif changed_extension in TEMPLATE_EXTENSIONS:
                     self.timestamp_object.value = time()
 
