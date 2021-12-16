@@ -462,11 +462,14 @@ def yield_data_by_id_from_txt(path, variable_definitions):
 
 
 def yield_data_by_id_from_csv(path, variable_definitions):
-    with open(path, 'rt') as file:
-        csv_reader = csv.reader(file)
-        keys = next(csv_reader)
-        for values in csv_reader:
-            yield dict(zip(keys, values))
+    try:
+        with open(path, 'rt') as file:
+            csv_reader = csv.reader(file)
+            keys = [_.strip() for _ in next(csv_reader)]
+            for values in csv_reader:
+                yield dict(zip(keys, values))
+    except OSError:
+        raise CrossComputeConfigurationError(f'{path} path not found')
 
 
 def get_variable_view_class(variable_definition):
