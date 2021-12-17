@@ -115,7 +115,7 @@ class AutomationViews():
 
         try:
             style_definition = find_item(
-                style_definitions, 'uri', request.path)
+                style_definitions, 'uri', request.environ['PATH_INFO'])
         except StopIteration:
             raise HTTPNotFound
         path = join(automation_definition['folder'], style_definition['path'])
@@ -128,12 +128,12 @@ class AutomationViews():
 
     def see_root(self, request):
         'Render root with list of available automations'
-        try:
-            automation_definition = self.automation_definitions[0]
-        except IndexError:
-            css_uris = []
+        for automation_definition in self.automation_definitions:
+            if 'parent' not in automation_definition:
+                css_uris = get_css_uris(automation_definition)
+                break
         else:
-            css_uris = get_css_uris(automation_definition)
+            css_uris = []
         return {
             'automations': self.automation_definitions,
             'css_uris': css_uris,

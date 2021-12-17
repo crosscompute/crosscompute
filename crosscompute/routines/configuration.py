@@ -9,6 +9,7 @@ from configparser import ConfigParser
 from logging import getLogger
 from os.path import basename, dirname, exists, getmtime, join, splitext
 from string import Template
+from time import time
 
 from .. import __version__
 from ..constants import (
@@ -24,7 +25,7 @@ from ..exceptions import (
     CrossComputeConfigurationError,
     CrossComputeError)
 from ..macros import (
-    format_slug, get_environment_value, group_by, make_file_hash, make_folder)
+    format_slug, get_environment_value, group_by, make_folder)
 from .web import get_html_from_markdown
 
 
@@ -159,10 +160,10 @@ def get_automation_definitions(configuration):
             'slug', format_slug(automation_name))
         automation_uri = AUTOMATION_ROUTE.format(
             automation_slug=automation_slug)
+        automation_configuration['name'] = automation_name
+        automation_configuration['slug'] = automation_slug
+        automation_configuration['uri'] = automation_uri
         automation_configuration.update({
-            'name': automation_name,
-            'slug': automation_slug,
-            'uri': automation_uri,
             'batches': get_batch_definitions(automation_configuration),
             'display': get_display_configuration(automation_configuration),
         })
@@ -313,34 +314,32 @@ def get_template_texts(configuration, page_type_name):
 
 
 def get_css_uris(configuration):
-    has_parent = 'parent' in configuration
-    display_configuration = configuration.get('display', {})
-    css_uris = []
-    for style_definition in display_configuration.get('styles', []):
-        style_uri = style_definition['uri']
-        is_relative = '//' not in style_uri
-        if has_parent and is_relative:
-            style_uri = configuration['uri'] + style_uri
-        css_uris.append(style_uri)
-    return css_uris
+    style_definitions = configuration.get('display', {}).get('styles', [])
+    return [_['uri'] for _ in style_definitions]
 
 
 def get_display_configuration(configuration):
     folder = configuration['folder']
     display_configuration = configuration.get('display', {})
+    has_parent = 'parent' in configuration
+    automation_uri = configuration['uri']
     for style_definition in display_configuration.get('styles', []):
         style_uri = style_definition.get('uri', '').strip()
         style_path = style_definition.get('path', '').strip()
+        if '//' in style_uri:
+            continue
         if not style_uri and not style_path:
             L.error('uri or path required for each style')
             continue
-        if style_path:
-            path = join(folder, style_path)
-            if not exists(path):
-                L.error('style not found at path %s', path)
-            style_hash = make_file_hash(path)
-            style_definition['uri'] = STYLE_ROUTE.format(
-                style_hash=style_hash) + '.css'
+        path = join(folder, style_path)
+        if not exists(path):
+            L.error('style not found at path %s', path)
+            continue
+        style_hash = f'{splitext(style_path)[0]}-{time()}.css'
+        style_uri = STYLE_ROUTE.format(style_hash=style_hash)
+        if has_parent:
+            style_uri = automation_uri + style_uri
+        style_definition['uri'] = style_uri
     return display_configuration
 
 
