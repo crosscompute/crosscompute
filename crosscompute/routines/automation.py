@@ -11,6 +11,7 @@ from waitress import serve
 from watchgod import watch
 
 from .configuration import (
+    format_text,
     get_automation_definitions,
     get_display_configuration,
     get_raw_variable_definitions,
@@ -106,6 +107,7 @@ class Automation():
             getLogger('watchgod.watcher').setLevel(logging.ERROR)
 
         def run_server():
+            # TODO: Start process for processing queue here
             L.info(f'serving at http://{host}:{port}{base_uri}')
             app = self.get_app(is_static, base_uri)
             try:
@@ -117,27 +119,9 @@ class Automation():
             run_server()
             return
 
-        server_process = StoppableProcess(target=run_server)
-        server_process.start()
-        for changes in watch(
-                self.configuration_folder,
-                min_sleep=disk_poll_in_milliseconds,
-                debounce=disk_debounce_in_milliseconds):
-            for changed_type, changed_path in changes:
-                # TODO: Continue only if path is in configuration
-                L.debug('%s %s', changed_type, changed_path)
-                changed_extension = splitext(changed_path)[1]
-                if changed_extension in CONFIGURATION_EXTENSIONS:
-                    server_process.stop()
-                    self.initialize_from_path(self.configuration_path)
-                    server_process = StoppableProcess(target=run_server)
-                    server_process.start()
-                elif changed_extension in STYLE_EXTENSIONS:
-                    for d in self.automation_definitions:
-                        d['display'] = get_display_configuration(d)
-                    self.timestamp_object.value = time()
-                elif changed_extension in TEMPLATE_EXTENSIONS:
-                    self.timestamp_object.value = time()
+        self.watch(
+            run_server, disk_poll_in_milliseconds,
+            disk_debounce_in_milliseconds)
 
     def get_app(self, is_static=False, base_uri=''):
         # TODO: Decouple from pyramid
@@ -160,6 +144,32 @@ class Automation():
 
             config.action(None, update_renderer_globals)
         return config.make_wsgi_app()
+
+    def watch(
+            self, run_server, disk_poll_in_milliseconds,
+            disk_debounce_in_milliseconds):
+        server_process = StoppableProcess(target=run_server)
+        server_process.start()
+        for changes in watch(
+                self.configuration_folder,
+                min_sleep=disk_poll_in_milliseconds,
+                debounce=disk_debounce_in_milliseconds):
+            for changed_type, changed_path in changes:
+                # TODO: Continue only if path is in the configuration
+                # TODO: Continue only if the file hash has changed
+                L.debug('%s %s', changed_type, changed_path)
+                changed_extension = splitext(changed_path)[1]
+                if changed_extension in CONFIGURATION_EXTENSIONS:
+                    server_process.stop()
+                    self.initialize_from_path(self.configuration_path)
+                    server_process = StoppableProcess(target=run_server)
+                    server_process.start()
+                elif changed_extension in STYLE_EXTENSIONS:
+                    for d in self.automation_definitions:
+                        d['display'] = get_display_configuration(d)
+                    self.timestamp_object.value = time()
+                elif changed_extension in TEMPLATE_EXTENSIONS:
+                    self.timestamp_object.value = time()
 
 
 def run_batch(
@@ -194,18 +204,19 @@ def run_script(
     environment = default_environment | (custom_environment or {})
     L.debug('environment = %s', environment)
 
-    for folder_label, relative_folder in {
-        'input': input_folder,
-        'output': output_folder,
-        'log': log_folder,
-        'debug': debug_folder,
-    }.items():
+    relative_folder_by_name = {
+        'input_folder': input_folder,
+        'output_folder': output_folder,
+        'log_folder': log_folder,
+        'debug_folder': debug_folder,
+    }
+    for folder_name, relative_folder in relative_folder_by_name.items():
         folder = make_folder(join(configuration_folder, relative_folder))
-        L.debug(f'{folder_label}_folder = {format_path(folder)}')
+        L.debug(f'{folder_name} = {format_path(folder)}')
 
     # TODO: Capture stdout and stderr for live output
     subprocess.run(
-        command_string,
+        format_text(command_string, relative_folder_by_name),
         shell=True,
         cwd=join(configuration_folder, script_folder),
         env=environment)
