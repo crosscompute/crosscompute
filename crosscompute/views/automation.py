@@ -6,7 +6,7 @@
 
 import json
 from logging import getLogger
-from os.path import join
+from os.path import basename, join
 from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
 from pyramid.response import FileResponse
 
@@ -15,6 +15,7 @@ from ..constants import (
     BATCH_ROUTE,
     FILE_ROUTE,
     FUNCTION_BY_NAME,
+    ID_LENGTH,
     PAGE_ROUTE,
     PAGE_TYPE_NAME_BY_LETTER,
     STYLE_ROUTE,
@@ -22,7 +23,8 @@ from ..constants import (
 from ..macros import (
     extend_uniquely,
     find_item,
-    is_path_in_folder)
+    is_path_in_folder,
+    make_unique_folder)
 from ..routines.configuration import (
     apply_functions,
     get_all_variable_definitions,
@@ -48,11 +50,11 @@ class AutomationViews():
 
         config.add_route('root', '/')
         config.add_route(
-            'automation',
-            AUTOMATION_ROUTE)
-        config.add_route(
             'automation.json',
             AUTOMATION_ROUTE + '.json')
+        config.add_route(
+            'automation',
+            AUTOMATION_ROUTE)
         config.add_route(
             'automation batch',
             AUTOMATION_ROUTE + BATCH_ROUTE)
@@ -74,8 +76,7 @@ class AutomationViews():
         config.add_view(
             self.run_automation,
             route_name='automation.json',
-            renderer='json',
-            request_method='POST')
+            renderer='json')
         config.add_view(
             self.see_automation_batch,
             route_name='automation batch',
@@ -147,7 +148,33 @@ class AutomationViews():
         }
 
     def run_automation(self, request):
-        return {}
+        automation_definition = self.get_automation_definition_from(request)
+        data_by_id = dict(request.params)
+        variable_definitions = get_raw_variable_definitions(
+            automation_definition, 'input')
+        for variable_definition in variable_definitions:
+            variable_id = variable_definition['id']
+            try:
+                variable_data = data_by_id[variable_id]
+            except KeyError:
+                raise HTTPBadRequest({variable_id: 'required'})
+            variable_view = variable_definition['view']
+            if variable_view == 'number':
+                try:
+                    variable_data = float(variable_data)
+                except ValueError:
+                    raise HTTPBadRequest({variable_id: 'expected number'})
+                if variable_data.is_integer():
+                    variable_data = int(variable_data)
+            data_by_id[variable_id] = variable_data
+        runs_folder = join(automation_definition['folder'], 'runs')
+        folder = make_unique_folder(runs_folder, ID_LENGTH)
+        run_id = basename(folder)
+        self.automation_queue.put((automation_definition, {
+            'folder': folder,
+            'data_by_id': data_by_id,
+        }))
+        return {'id': run_id}
 
     def see_automation_batch(self, request):
         return {}

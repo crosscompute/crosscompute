@@ -8,13 +8,12 @@ from .macros import format_slug
 
 FOLDER = getenv(
     'CROSSCOMPUTE_FOLDER', expanduser('~/.crosscompute'))
-
-
 HOST = '127.0.0.1'
 PORT = 7000
 DISK_POLL_IN_MILLISECONDS = 1000
 DISK_DEBOUNCE_IN_MILLISECONDS = 1000
 PING_INTERVAL_IN_SECONDS = 1
+ID_LENGTH = 16
 
 
 STYLE_ROUTE = '/s/{style_hash}'

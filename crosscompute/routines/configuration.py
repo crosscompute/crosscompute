@@ -365,8 +365,6 @@ def prepare_batch_folder(
     data_by_id = batch_definition.get('data_by_id', {})
     for path, variable_definitions in variable_definitions_by_path.items():
         input_path = join(input_folder, path)
-        if exists(input_path):
-            continue
         file_extension = splitext(path)[1]
         variable_data_by_id = get_variable_data_by_id(
             variable_definitions, data_by_id)

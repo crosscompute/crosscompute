@@ -1,8 +1,7 @@
-# TODO: Send refresh without server restart for template changes
 import logging
 import subprocess
 from logging import getLogger
-from multiprocessing import Value
+from multiprocessing import Process, Queue, Value
 from os import getenv, listdir
 from os.path import isdir, join, relpath, splitext
 from pyramid.config import Configurator
@@ -101,15 +100,22 @@ class Automation():
             is_production=False,
             is_static=False,
             disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
-            disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS):
+            disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS,
+            automation_queue=None):
+        if automation_queue is None:
+            automation_queue = Queue()
         if getLogger().level > logging.DEBUG:
             getLogger('waitress').setLevel(logging.ERROR)
             getLogger('watchgod.watcher').setLevel(logging.ERROR)
 
         def run_server():
+            L.info('starting worker')
+            worker_process = Process(target=self.work, args=(
+                automation_queue,))
+            worker_process.start()
             # TODO: Start process for processing queue here
             L.info(f'serving at http://{host}:{port}{base_uri}')
-            app = self.get_app(is_static, base_uri)
+            app = self.get_app(automation_queue, is_static, base_uri)
             try:
                 serve(app, host=host, port=port, url_prefix=base_uri)
             except OSError as e:
@@ -123,10 +129,10 @@ class Automation():
             run_server, disk_poll_in_milliseconds,
             disk_debounce_in_milliseconds)
 
-    def get_app(self, is_static=False, base_uri=''):
+    def get_app(self, automation_queue, is_static=False, base_uri=''):
         # TODO: Decouple from pyramid
         automation_views = AutomationViews(
-            self.automation_definitions)
+            self.automation_definitions, automation_queue)
         echo_views = EchoViews(
             self.configuration_folder, self.timestamp_object)
         with Configurator() as config:
@@ -144,6 +150,14 @@ class Automation():
 
             config.action(None, update_renderer_globals)
         return config.make_wsgi_app()
+
+    def work(self, automation_queue):
+        while automation_pack := automation_queue.get():
+            automation_definition, batch_definition = automation_pack
+            automation_name = automation_definition['name']
+            batch_folder = batch_definition['folder']
+            L.info(f'running {automation_name} in {batch_folder}')
+            run_automation(automation_definition, batch_definition)
 
     def watch(
             self, run_server, disk_poll_in_milliseconds,
@@ -170,6 +184,21 @@ class Automation():
                     self.timestamp_object.value = time()
                 elif changed_extension in TEMPLATE_EXTENSIONS:
                     self.timestamp_object.value = time()
+
+
+def run_automation(automation_definition, batch_definition):
+    variable_definitions = get_raw_variable_definitions(
+        automation_definition, 'input')
+    automation_folder = automation_definition['folder']
+    # TODO: Consider batch_folder location override
+    batch_folder = prepare_batch_folder(
+        batch_definition, variable_definitions, automation_folder)
+    script_definition = automation_definition.get('script', {})
+    command_string = script_definition.get('command')
+    script_folder = script_definition.get('folder', '.')
+    run_batch(
+        batch_folder, command_string, script_folder, automation_folder,
+        custom_environment=None)
 
 
 def run_batch(
