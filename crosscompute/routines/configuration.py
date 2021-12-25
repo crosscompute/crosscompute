@@ -492,8 +492,21 @@ class VariableView(ABC):
     is_asynchronous = False
 
     @abstractmethod
-    def render(
-            self, type_name, variable_index, variable_id, variable_data=None,
+    def render_input(
+            self, variable_index, variable_id, variable_data=None,
+            variable_path=None, variable_configuration=None,
+            request_path=None):
+        # TODO: Change variable_index to element_id
+        return {
+            'css_uris': [],
+            'js_uris': [],
+            'body_text': '',
+            'js_texts': [],
+        }
+
+    @abstractmethod
+    def render_output(
+            self, variable_index, variable_id, variable_data=None,
             variable_path=None, variable_configuration=None,
             request_path=None):
         return {

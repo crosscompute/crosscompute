@@ -263,23 +263,20 @@ class AutomationViews():
 def render_page_dictionary(
         request, css_uris, page_type_name, page_text, variable_definitions,
         folder):
-    css_uris = css_uris.copy()
-    js_uris, js_texts, variable_ids = [], [], []
+    css_uris, js_uris, js_texts, variable_count = css_uris.copy(), [], [], 0
 
     def render_html(match):
         matching_text = match.group(0)
-        expression_text = match.group(1)
-        expression_terms = expression_text.split('|')
+        expression_terms = match.group(1).split('|')
         variable_id = expression_terms[0].strip()
         try:
             definition = find_item(variable_definitions, 'id', variable_id)
         except StopIteration:
-            L.warning(
-                '%s in template but missing in automation configuration',
-                variable_id)
+            L.warning('%s in template but not in configuration', variable_id)
             return matching_text
         page_folder = join(folder, definition['type'])
-        variable_ids.append(variable_id)
+        nonlocal variable_count
+        # TODO
         variable_index = len(variable_ids) - 1
         variable_view = get_variable_view_class(definition)()
         variable_path = definition.get('path', '')
