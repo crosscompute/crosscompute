@@ -152,12 +152,15 @@ class Automation():
         return config.make_wsgi_app()
 
     def work(self, automation_queue):
-        while automation_pack := automation_queue.get():
-            automation_definition, batch_definition = automation_pack
-            automation_name = automation_definition['name']
-            batch_folder = batch_definition['folder']
-            L.info(f'running {automation_name} in {batch_folder}')
-            run_automation(automation_definition, batch_definition)
+        try:
+            while automation_pack := automation_queue.get():
+                automation_definition, batch_definition = automation_pack
+                automation_name = automation_definition['name']
+                batch_folder = batch_definition['folder']
+                L.info(f'running {automation_name} in {batch_folder}')
+                run_automation(automation_definition, batch_definition)
+        except KeyboardInterrupt:
+            pass
 
     def watch(
             self, run_server, disk_poll_in_milliseconds,
