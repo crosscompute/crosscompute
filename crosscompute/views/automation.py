@@ -158,8 +158,9 @@ class AutomationViews():
                 variable_data = data_by_id[variable_id]
             except KeyError:
                 raise HTTPBadRequest({variable_id: 'required'})
-            variable_view = variable_definition['view']
-            if variable_view == 'number':
+            variable_view_name = variable_definition['view']
+            # TODO: Use variable_view.parse
+            if variable_view_name == 'number':
                 try:
                     variable_data = float(variable_data)
                 except ValueError:
@@ -199,8 +200,7 @@ class AutomationViews():
             'uri': request.path,
             'page_type_name': page_type_name,
         } | render_page_dictionary(
-            request, css_uris, page_type_name, page_text,
-            variable_definitions, folder)
+            request, css_uris, page_text, variable_definitions, folder)
 
     def see_automation_batch_page_file(self, request):
         matchdict = request.matchdict
@@ -261,9 +261,8 @@ class AutomationViews():
 
 
 def render_page_dictionary(
-        request, css_uris, page_type_name, page_text, variable_definitions,
-        folder):
-    css_uris, js_uris, js_texts, variable_count = css_uris.copy(), [], [], 0
+        request, css_uris, page_text, variable_definitions, folder):
+    css_uris, js_uris, js_texts, variable_index = css_uris.copy(), [], [], 0
 
     def render_html(match):
         matching_text = match.group(0)
@@ -274,21 +273,21 @@ def render_page_dictionary(
         except StopIteration:
             L.warning('%s in template but not in configuration', variable_id)
             return matching_text
-        page_folder = join(folder, definition['type'])
-        nonlocal variable_count
-        # TODO
-        variable_index = len(variable_ids) - 1
         variable_view = get_variable_view_class(definition)()
-        variable_path = definition.get('path', '')
+        variable_path = definition['path']
+        variable_type_name = definition['type']
+        page_folder = join(folder, variable_type_name)
         variable_data = '' if variable_view.is_asynchronous else load_data(
             join(page_folder, variable_path), variable_id)
         variable_data = apply_functions(
             variable_data, expression_terms[1:], FUNCTION_BY_NAME)
         variable_configuration = get_variable_configuration(
             definition, page_folder)
+        nonlocal variable_index
         d = variable_view.render(
-            page_type_name, variable_index, variable_id, variable_data,
-            variable_path, variable_configuration, request.path)
+            variable_type_name, f'v{variable_index}', variable_id,
+            variable_data, variable_path, variable_configuration, request.path)
+        variable_index += 1
         extend_uniquely(css_uris, d['css_uris'])
         extend_uniquely(js_uris, d['js_uris'])
         extend_uniquely(js_texts, d['js_texts'])

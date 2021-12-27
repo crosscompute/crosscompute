@@ -65,14 +65,17 @@ def serve_with(automation, args):
     if args.with_browser and 'DISPLAY' in environ:
         L.info('opening browser; set --no-browser to disable')
         open_browser(f'http://localhost:{args.port}{args.base_uri}')
-    automation.serve(
-        host=args.host,
-        port=args.port,
-        base_uri=args.base_uri,
-        is_production=args.is_production,
-        is_static=args.is_static,
-        disk_poll_in_milliseconds=args.disk_poll,
-        disk_debounce_in_milliseconds=args.disk_debounce)
+    try:
+        automation.serve(
+            host=args.host,
+            port=args.port,
+            base_uri=args.base_uri,
+            is_production=args.is_production,
+            is_static=args.is_static,
+            disk_poll_in_milliseconds=args.disk_poll,
+            disk_debounce_in_milliseconds=args.disk_debounce)
+    except KeyboardInterrupt:
+        pass
 
 
 def do():

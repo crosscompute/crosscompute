@@ -1,5 +1,3 @@
-# TODO: Support csv for pydeck screengrid view
-
 import csv
 import json
 import tomli
@@ -255,6 +253,7 @@ def get_batch_definitions_from_path(
     batch_slug = batch_definition['slug']
     batch_definitions = []
     for data_by_id in yield_data_by_id(path, variable_definitions):
+        # TODO: parse data_by_id
         folder = format_text(batch_folder, data_by_id)
         name = format_text(batch_name, data_by_id)
         slug = format_text(
@@ -491,12 +490,23 @@ class VariableView(ABC):
 
     is_asynchronous = False
 
-    @abstractmethod
-    def render_input(
-            self, variable_index, variable_id, variable_data=None,
+    def render(
+            self, type_name, element_id, variable_id, variable_data=None,
             variable_path=None, variable_configuration=None,
             request_path=None):
-        # TODO: Change variable_index to element_id
+        if type_name == 'input':
+            render = self.render_input
+        else:
+            render = self.render_output
+        return render(
+            element_id, variable_id, variable_data, variable_path,
+            variable_configuration, request_path)
+
+    @abstractmethod
+    def render_input(
+            self, element_id, variable_id, variable_data=None,
+            variable_path=None, variable_configuration=None,
+            request_path=None):
         return {
             'css_uris': [],
             'js_uris': [],
@@ -506,7 +516,7 @@ class VariableView(ABC):
 
     @abstractmethod
     def render_output(
-            self, variable_index, variable_id, variable_data=None,
+            self, element_id, variable_id, variable_data=None,
             variable_path=None, variable_configuration=None,
             request_path=None):
         return {
@@ -520,7 +530,7 @@ class VariableView(ABC):
 class NullView(VariableView):
 
     def render(
-            self, type_name, variable_index, variable_id, variable_data=None,
+            self, type_name, element_id, variable_id, variable_data=None,
             variable_path=None, variable_configuration=None,
             request_path=None):
         return {
@@ -533,14 +543,26 @@ class NullView(VariableView):
 
 class StringView(VariableView):
 
-    def render(
-            self, type_name, variable_index, variable_id, variable_data=None,
+    def render_input(
+            self, element_id, variable_id, variable_data=None,
             variable_path=None, variable_configuration=None,
             request_path=None):
-        element_id = f'v{variable_index}'
         body_text = (
-            f'<span id="{element_id}" '
-            f'class="{type_name} string {variable_id}">'
+            f'<input id="{element_id}" class="input string {variable_id}" '
+            f'value="{variable_data}">')
+        return {
+            'css_uris': [],
+            'js_uris': [],
+            'body_text': body_text,
+            'js_texts': [],
+        }
+
+    def render_output(
+            self, element_id, variable_id, variable_data=None,
+            variable_path=None, variable_configuration=None,
+            request_path=None):
+        body_text = (
+            f'<span id="{element_id}" class="output string {variable_id}">'
             f'{variable_data}</span>')
         return {
             'css_uris': [],
@@ -552,15 +574,27 @@ class StringView(VariableView):
 
 class NumberView(VariableView):
 
-    def render(
-            self, type_name, variable_index, variable_id, variable_data=None,
+    def render_input(
+            self, element_id, variable_id, variable_data=None,
             variable_path=None, variable_configuration=None,
             request_path=None):
-        element_id = f'v{variable_index}'
         body_text = (
-            f'<input id="{element_id}" '
-            f'class="{type_name} number {variable_id}" '
+            f'<input id="{element_id}" class="input number {variable_id}" '
             f'value="{variable_data}" type="number">')
+        return {
+            'css_uris': [],
+            'js_uris': [],
+            'body_text': body_text,
+            'js_texts': [],
+        }
+
+    def render_output(
+            self, element_id, variable_id, variable_data=None,
+            variable_path=None, variable_configuration=None,
+            request_path=None):
+        body_text = (
+            f'<span id="{element_id}" class="output number {variable_id}">'
+            f'{variable_data}</span>')
         return {
             'css_uris': [],
             'js_uris': [],
