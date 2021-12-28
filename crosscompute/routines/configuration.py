@@ -21,6 +21,7 @@ from ..constants import (
     VARIABLE_ID_PATTERN)
 from ..exceptions import (
     CrossComputeConfigurationError,
+    CrossComputeDataError,
     CrossComputeError)
 from ..macros import (
     format_slug, get_environment_value, group_by, make_folder)
@@ -452,7 +453,8 @@ def yield_data_by_id_from_txt(path, variable_definitions):
                 line = line.strip()
                 if not line or line.startswith('#'):
                     continue
-                yield {variable_id: line}
+                yield parse_data_by_id({
+                    variable_id: line}, variable_definitions)
     except OSError:
         raise CrossComputeConfigurationError(f'{path} path not found')
 
@@ -463,15 +465,32 @@ def yield_data_by_id_from_csv(path, variable_definitions):
             csv_reader = csv.reader(file)
             keys = [_.strip() for _ in next(csv_reader)]
             for values in csv_reader:
-                yield dict(zip(keys, values))
+                yield parse_data_by_id(dict(zip(
+                    keys, values)), variable_definitions)
     except OSError:
         raise CrossComputeConfigurationError(f'{path} path not found')
+
+
+def parse_data_by_id(data_by_id, variable_definitions):
+    for variable_definition in variable_definitions:
+        variable_id = variable_definition['id']
+        try:
+            variable_data = data_by_id[variable_id]
+        except KeyError:
+            raise CrossComputeDataError({variable_id: 'required'})
+        variable_view = get_variable_view_class(variable_definition)()
+        try:
+            variable_data = variable_view.parse(variable_data)
+        except CrossComputeDataError as e:
+            raise CrossComputeDataError({variable_id: e})
+        data_by_id[variable_id] = variable_data
+    return data_by_id
 
 
 def get_variable_view_class(variable_definition):
     view_name = variable_definition['view']
     try:
-        # TODO: Load using importlib.metadata
+        # TODO: Initialize lookup dictionary using importlib.metadata
         VariableView = {
             'string': StringView,
             'number': NumberView,
@@ -489,6 +508,9 @@ def get_variable_view_class(variable_definition):
 class VariableView(ABC):
 
     is_asynchronous = False
+
+    def parse(self, data):
+        return data
 
     def render(
             self, type_name, element_id, variable_id, variable_data=None,
@@ -548,7 +570,8 @@ class StringView(VariableView):
             variable_path=None, variable_configuration=None,
             request_path=None):
         body_text = (
-            f'<input id="{element_id}" class="input string {variable_id}" '
+            f'<input id="{element_id}" '
+            f'class="input string {variable_id}" '
             f'value="{variable_data}">')
         return {
             'css_uris': [],
@@ -562,7 +585,8 @@ class StringView(VariableView):
             variable_path=None, variable_configuration=None,
             request_path=None):
         body_text = (
-            f'<span id="{element_id}" class="output string {variable_id}">'
+            f'<span id="{element_id}" '
+            f'class="output string {variable_id}">'
             f'{variable_data}</span>')
         return {
             'css_uris': [],
@@ -574,12 +598,22 @@ class StringView(VariableView):
 
 class NumberView(VariableView):
 
+    def parse(self, data):
+        try:
+            data = float(data)
+        except ValueError:
+            raise CrossComputeDataError(f'{data} is not a number')
+        if data.is_integer():
+            data = int(data)
+        return data
+
     def render_input(
             self, element_id, variable_id, variable_data=None,
             variable_path=None, variable_configuration=None,
             request_path=None):
         body_text = (
-            f'<input id="{element_id}" class="input number {variable_id}" '
+            f'<input id="{element_id}" '
+            f'class="input number {variable_id}" '
             f'value="{variable_data}" type="number">')
         return {
             'css_uris': [],
@@ -593,7 +627,8 @@ class NumberView(VariableView):
             variable_path=None, variable_configuration=None,
             request_path=None):
         body_text = (
-            f'<span id="{element_id}" class="output number {variable_id}">'
+            f'<span id="{element_id}" '
+            f'class="output number {variable_id}">'
             f'{variable_data}</span>')
         return {
             'css_uris': [],
@@ -607,16 +642,14 @@ class ImageView(VariableView):
 
     is_asynchronous = True
 
-    def render(
-            self, type_name, variable_index, variable_id, variable_data=None,
+    def render_output(
+            self, element_id, variable_id, variable_data=None,
             variable_path=None, variable_configuration=None,
             request_path=None):
-        # TODO: Support type_name == 'input'
-        element_id = f'v{variable_index}'
         data_uri = request_path + '/' + variable_path
         body_text = (
             f'<img id="{element_id}" '
-            f'class="{type_name} image {variable_id}" '
+            f'class="output image {variable_id}" '
             f'src="{data_uri}">'
         )
         return {
@@ -637,14 +670,13 @@ class MapMapboxView(VariableView):
         'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.js',
     ]
 
-    def render(
-            self, type_name, variable_index, variable_id, variable_data=None,
+    def render_output(
+            self, element_id, variable_id, variable_data=None,
             variable_path=None, variable_configuration=None,
             request_path=None):
-        element_id = f'v{variable_index}'
         body_text = (
             f'<div id="{element_id}" '
-            f'class="{type_name} map-mapbox {variable_id}"></div>')
+            f'class="output map-mapbox {variable_id}"></div>')
         mapbox_token = get_environment_value('MAPBOX_TOKEN', '')
         js_texts = [
             f"mapboxgl.accessToken = '{mapbox_token}'",
@@ -678,14 +710,13 @@ class MapPyDeckScreenGridView(VariableView):
         'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.js',
     ]
 
-    def render(
-            self, type_name, variable_index, variable_id, variable_data=None,
+    def render_output(
+            self, element_id, variable_id, variable_data=None,
             variable_path=None, variable_configuration=None,
             request_path=None):
-        element_id = f'v{variable_index}'
         body_text = (
             f'<div id="{element_id}" '
-            f'class="{type_name} map-pydeck-screengrid {variable_id}"></div>')
+            f'class="output map-pydeck-screengrid {variable_id}"></div>')
         mapbox_token = get_environment_value('MAPBOX_TOKEN', '')
         js_texts = [
             MAP_PYDECK_SCREENGRID_JS_TEMPLATE.substitute({
@@ -710,14 +741,13 @@ class MapPyDeckScreenGridView(VariableView):
 
 class MarkdownView(VariableView):
 
-    def render(
-            self, type_name, variable_index, variable_id, variable_data=None,
+    def render_output(
+            self, element_id, variable_id, variable_data=None,
             variable_path=None, variable_configuration=None,
             request_path=None):
-        element_id = f'v{variable_index}'
         body_text = (
             f'<span id="{element_id}" '
-            f'class="{type_name} markdown {variable_id}">'
+            f'class="output markdown {variable_id}">'
             f'{get_html_from_markdown(variable_data)}</span>')
         return {
             'css_uris': [],

@@ -20,6 +20,7 @@ from ..constants import (
     PAGE_TYPE_NAME_BY_LETTER,
     STYLE_ROUTE,
     VARIABLE_ID_PATTERN)
+from ..exceptions import CrossComputeDataError
 from ..macros import (
     extend_uniquely,
     find_item,
@@ -32,7 +33,8 @@ from ..routines.configuration import (
     get_raw_variable_definitions,
     get_template_texts,
     get_variable_view_class,
-    load_data)
+    load_data,
+    parse_data_by_id)
 from ..routines.web import get_html_from_markdown
 
 
@@ -149,25 +151,12 @@ class AutomationViews():
 
     def run_automation(self, request):
         automation_definition = self.get_automation_definition_from(request)
-        data_by_id = dict(request.params)
         variable_definitions = get_raw_variable_definitions(
             automation_definition, 'input')
-        for variable_definition in variable_definitions:
-            variable_id = variable_definition['id']
-            try:
-                variable_data = data_by_id[variable_id]
-            except KeyError:
-                raise HTTPBadRequest({variable_id: 'required'})
-            variable_view_name = variable_definition['view']
-            # TODO: Use variable_view.parse
-            if variable_view_name == 'number':
-                try:
-                    variable_data = float(variable_data)
-                except ValueError:
-                    raise HTTPBadRequest({variable_id: 'expected number'})
-                if variable_data.is_integer():
-                    variable_data = int(variable_data)
-            data_by_id[variable_id] = variable_data
+        try:
+            data_by_id = parse_data_by_id(request.params, variable_definitions)
+        except CrossComputeDataError as e:
+            raise HTTPBadRequest(e)
         runs_folder = join(automation_definition['folder'], 'runs')
         folder = make_unique_folder(runs_folder, ID_LENGTH)
         run_id = basename(folder)

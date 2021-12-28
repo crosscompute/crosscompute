@@ -9,7 +9,11 @@
 <h1>{{ name }}</h1>
 <ul>
 {%- for batch in batches %}
-<li>{{ batch['name'] }} <a href="{{ BASE_URI }}{{ uri }}{{ batch['uri'] }}/o">[output]</a></li>
+<li>
+{{ batch['name'] }}
+<a href="{{ BASE_URI }}{{ uri }}{{ batch['uri'] }}/i">[input]</a>
+<a href="{{ BASE_URI }}{{ uri }}{{ batch['uri'] }}/o">[output]</a>
+</li>
 {%- endfor %}
 </ul>
 {% endblock %}

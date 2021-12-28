@@ -4,3 +4,7 @@ class CrossComputeError(Exception):
 
 class CrossComputeConfigurationError(CrossComputeError):
     pass
+
+
+class CrossComputeDataError(CrossComputeError):
+    pass
