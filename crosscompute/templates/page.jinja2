@@ -8,3 +8,33 @@
 <a href="{{ BASE_URI }}{{ uri }}">{{ page_type_name }}</a>
 {% endblock %}
 #}
+
+{% block body_html -%}
+{{ super() }}
+{% if page_type_name == 'input' %}
+<button id="run">Run</button>
+{% endif %}
+{%- endblock %}
+
+{%- block body_js -%}
+{{ super() }}
+{% if page_type_name == 'input' %}
+document.getElementById('run').onclick = async () => {
+  for (const e of document.getElementsByClassName('input')) {
+    const viewName = e.classList[1];
+    console.log(viewName)
+  }
+  const response = await fetch('https://google.com', {
+    /*
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+    */
+  })
+  console.log(response.content)
+  // console.log(response.json())
+}
+{% endif %}
+{%- endblock -%}

@@ -7,16 +7,13 @@ function connect() {
   echoSource = new EventSource('{{ BASE_URI }}{{ ECHOES_ROUTE }}')
 
   echoSource.onopen = function() {
-    console.log('connected')
     clearTimeout(reconnectionId)
   }
 
   echoSource.onmessage = function(message) {
     const messageData = message.data
-    console.log(messageData, serverTime)
     if (messageData != serverTime) {
       if (serverTime) {
-        console.log('RELOAD!')
         location.reload()
       }
       serverTime = messageData
@@ -24,7 +21,6 @@ function connect() {
   }
 
   echoSource.onerror = function() {
-    console.log('disconnected')
     echoSource.close()
     clearTimeout(reconnectionId)
     reconnectionId = setTimeout(connect, 1000)
