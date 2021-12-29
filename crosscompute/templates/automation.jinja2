@@ -16,4 +16,13 @@
 </li>
 {%- endfor %}
 </ul>
+<ul>
+{%- for run in runs %}
+<li>
+{{ run['name'] }}
+<a href="{{ BASE_URI }}{{ uri }}{{ run['uri'] }}/i">[input]</a>
+<a href="{{ BASE_URI }}{{ uri }}{{ run['uri'] }}/o">[output]</a>
+</li>
+{%- endfor %}
+</ul>
 {% endblock %}

@@ -4,7 +4,7 @@
 {% block header_html %}
 <a href="{{ BASE_URI if BASE_URI else '/' }}">Root</a> &gt;
 <a href="{{ BASE_URI }}{{ automation_definition['uri'] }}">{{ automation_definition['name'] }}</a> &gt;
-<a>{{ batch_definition['name'] }}</a> &gt;
+<a>{{ page_definition['name'] }}</a> &gt;
 <a href="{{ BASE_URI }}{{ uri }}">{{ page_type_name }}</a>
 {% endblock %}
 #}
@@ -19,22 +19,26 @@
 {%- block body_js -%}
 {{ super() }}
 {% if page_type_name == 'input' %}
+const GET_DATA_BY_VIEW_NAME = {
+  number: e => e.value,
+}
 document.getElementById('run').onclick = async () => {
+  const dataById = {}
   for (const e of document.getElementsByClassName('input')) {
-    const viewName = e.classList[1];
-    console.log(viewName)
+    const classNames = e.classList
+    const viewName = classNames[1]
+    const variableId = classNames[2]
+    const variableData = GET_DATA_BY_VIEW_NAME[viewName](e)
+    dataById[variableId] = variableData
   }
-  const response = await fetch('https://google.com', {
-    /*
+  const response = await fetch('{{ BASE_URI }}{{ automation_definition['uri'] }}.json', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(data),
-    */
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(dataById),
   })
-  console.log(response.content)
-  // console.log(response.json())
+  const responseJSON = await response.json()
+  console.log(responseJSON)
+  window.location = '{{ BASE_URI }}{{ automation_definition['uri'] }}/r/' + responseJSON['id'] + '/o'
 }
 {% endif %}
 {%- endblock -%}

@@ -18,6 +18,7 @@ from ..constants import (
     ID_LENGTH,
     PAGE_ROUTE,
     PAGE_TYPE_NAME_BY_LETTER,
+    RUN_ROUTE,
     STYLE_ROUTE,
     VARIABLE_ID_PATTERN)
 from ..exceptions import CrossComputeDataError
@@ -32,6 +33,7 @@ from ..routines.configuration import (
     get_css_uris,
     get_raw_variable_definitions,
     get_template_texts,
+    get_variable_configuration,
     get_variable_view_class,
     load_data,
     parse_data_by_id)
@@ -66,6 +68,15 @@ class AutomationViews():
         config.add_route(
             'automation batch page file',
             AUTOMATION_ROUTE + BATCH_ROUTE + PAGE_ROUTE + FILE_ROUTE)
+        config.add_route(
+            'automation run',
+            AUTOMATION_ROUTE + RUN_ROUTE)
+        config.add_route(
+            'automation run page',
+            AUTOMATION_ROUTE + RUN_ROUTE + PAGE_ROUTE)
+        config.add_route(
+            'automation run page file',
+            AUTOMATION_ROUTE + RUN_ROUTE + PAGE_ROUTE + FILE_ROUTE)
 
         config.add_view(
             self.see_root,
@@ -79,17 +90,32 @@ class AutomationViews():
             self.run_automation,
             route_name='automation.json',
             renderer='json')
+        '''
         config.add_view(
             self.see_automation_batch,
             route_name='automation batch',
             renderer='crosscompute:templates/batch.jinja2')
+        '''
         config.add_view(
-            self.see_automation_batch_page,
+            self.see_automation_page,
             route_name='automation batch page',
             renderer='crosscompute:templates/page.jinja2')
         config.add_view(
-            self.see_automation_batch_page_file,
+            self.see_automation_page_file,
             route_name='automation batch page file')
+        '''
+        config.add_view(
+            self.see_automation_run,
+            route_name='automation run',
+            renderer='crosscompute:templates/run.jinja2')
+        '''
+        config.add_view(
+            self.see_automation_page,
+            route_name='automation run page',
+            renderer='crosscompute:templates/page.jinja2')
+        config.add_view(
+            self.see_automation_page_file,
+            route_name='automation run page file')
 
     def configure_styles(self, config):
         config.add_route(
@@ -154,7 +180,11 @@ class AutomationViews():
         variable_definitions = get_raw_variable_definitions(
             automation_definition, 'input')
         try:
-            data_by_id = parse_data_by_id(request.params, variable_definitions)
+            data_by_id = dict(request.params) or request.json_body
+        except json.JSONDecodeError:
+            data_by_id = {}
+        try:
+            data_by_id = parse_data_by_id(data_by_id, variable_definitions)
         except CrossComputeDataError as e:
             raise HTTPBadRequest(e)
         runs_folder = join(automation_definition['folder'], 'runs')
@@ -164,19 +194,29 @@ class AutomationViews():
             'folder': folder,
             'data_by_id': data_by_id,
         }))
+        if 'runs' not in automation_definition:
+            automation_definition['runs'] = []
+        run_uri = RUN_ROUTE.format(run_slug=run_id)
+        automation_definition['runs'].append({
+            'name': run_id,
+            'slug': run_id,
+            'folder': folder,
+            'uri': run_uri,
+        })
+        # TODO: Charge target page depending on definition
         return {'id': run_id}
 
     def see_automation_batch(self, request):
         return {}
 
-    def see_automation_batch_page(self, request):
+    def see_automation_page(self, request):
         page_type_name = self.get_page_type_name_from(request)
         automation_definition = self.get_automation_definition_from(request)
         automation_folder = automation_definition['folder']
-        batch_definition = self.get_batch_definition_from(
+        page_definition = self.get_page_definition_from(
             request, automation_definition)
-        batch_folder = batch_definition['folder']
-        folder = join(automation_folder, batch_folder)
+        page_folder = page_definition['folder']
+        folder = join(automation_folder, page_folder)
         variable_definitions = get_all_variable_definitions(
             automation_definition, page_type_name)
         template_texts = get_template_texts(
@@ -185,17 +225,17 @@ class AutomationViews():
         page_text = '\n'.join(template_texts)
         return {
             'automation_definition': automation_definition,
-            'batch_definition': batch_definition,
+            'page_definition': page_definition,
             'uri': request.path,
             'page_type_name': page_type_name,
         } | render_page_dictionary(
             request, css_uris, page_text, variable_definitions, folder)
 
-    def see_automation_batch_page_file(self, request):
+    def see_automation_page_file(self, request):
         matchdict = request.matchdict
         automation_definition = self.get_automation_definition_from(request)
         automation_folder = automation_definition['folder']
-        batch_definition = self.get_batch_definition_from(
+        page_definition = self.get_page_definition_from(
             request, automation_definition)
         page_type_name = self.get_page_type_name_from(request)
         variable_definitions = get_raw_variable_definitions(
@@ -208,8 +248,8 @@ class AutomationViews():
         except StopIteration:
             raise HTTPNotFound
         L.debug(variable_definition)
-        batch_folder = batch_definition['folder']
-        variable_folder = join(batch_folder, page_type_name)
+        page_folder = page_definition['folder']
+        variable_folder = join(page_folder, page_type_name)
         folder = join(automation_folder, variable_folder)
         path = join(folder, variable_path)
         if not is_path_in_folder(path, folder):
@@ -227,16 +267,20 @@ class AutomationViews():
             raise HTTPNotFound
         return automation_definition
 
-    def get_batch_definition_from(self, request, automation_definition):
+    def get_page_definition_from(self, request, automation_definition):
         matchdict = request.matchdict
-        batch_slug = matchdict['batch_slug']
+        if 'run_slug' in matchdict:
+            slug = matchdict['run_slug']
+            key = 'runs'
+        else:
+            slug = matchdict['batch_slug']
+            key = 'batches'
         try:
-            batch_definition = find_item(
-                automation_definition['batches'], 'slug',
-                batch_slug, normalize=str.casefold)
+            page_definition = find_item(
+                automation_definition[key], 'slug', slug)
         except StopIteration:
             raise HTTPNotFound
-        return batch_definition
+        return page_definition
 
     def get_page_type_name_from(self, request):
         matchdict = request.matchdict
@@ -289,17 +333,3 @@ def render_page_dictionary(
             render_html, page_text)),
         'js_text': '\n'.join(js_texts),
     }
-
-
-def get_variable_configuration(variable_definition, folder):
-    variable_configuration = variable_definition.get('configuration', {})
-    configuration_path = variable_configuration.get('path')
-    if configuration_path:
-        try:
-            configuration = json.load(open(join(
-                folder, configuration_path), 'rt'))
-        except OSError:
-            L.error('%s not found', configuration_path)
-        else:
-            variable_configuration.update(configuration)
-    return variable_configuration

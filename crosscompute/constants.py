@@ -20,6 +20,7 @@ STYLE_ROUTE = '/s/{style_hash}'
 ECHOES_ROUTE = '/echoes'
 AUTOMATION_ROUTE = '/a/{automation_slug}'
 BATCH_ROUTE = '/b/{batch_slug}'
+RUN_ROUTE = '/r/{run_slug}'
 PAGE_ROUTE = '/{page_type}'
 FILE_ROUTE = '/{variable_path}'
 

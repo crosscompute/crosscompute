@@ -505,6 +505,20 @@ def get_variable_view_class(variable_definition):
     return VariableView
 
 
+def get_variable_configuration(variable_definition, folder):
+    variable_configuration = variable_definition.get('configuration', {})
+    configuration_path = variable_configuration.get('path')
+    if configuration_path:
+        try:
+            configuration = json.load(open(join(
+                folder, configuration_path), 'rt'))
+        except OSError:
+            L.error('%s not found', configuration_path)
+        else:
+            variable_configuration.update(configuration)
+    return variable_configuration
+
+
 class VariableView(ABC):
 
     is_asynchronous = False
