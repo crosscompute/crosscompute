@@ -24,7 +24,8 @@ from ..constants import (
     HOST,
     PORT,
     STYLE_EXTENSIONS,
-    TEMPLATE_EXTENSIONS)
+    # TEMPLATE_EXTENSIONS,
+)
 from ..exceptions import CrossComputeError, CrossComputeConfigurationError
 from ..macros import StoppableProcess, format_path, make_folder
 from ..views import AutomationViews, EchoViews
@@ -132,9 +133,12 @@ class Automation():
     def get_app(self, automation_queue, is_static=False, base_uri=''):
         # TODO: Decouple from pyramid
         automation_views = AutomationViews(
-            self.automation_definitions, automation_queue)
+            self.automation_definitions,
+            automation_queue,
+            self.timestamp_object)
         echo_views = EchoViews(
-            self.configuration_folder, self.timestamp_object)
+            self.configuration_folder,
+            self.timestamp_object)
         with Configurator() as config:
             config.include('pyramid_jinja2')
             config.include(automation_views.includeme)
@@ -185,7 +189,10 @@ class Automation():
                     for d in self.automation_definitions:
                         d['display'] = get_display_configuration(d)
                     self.timestamp_object.value = time()
-                elif changed_extension in TEMPLATE_EXTENSIONS:
+                # elif changed_extension in TEMPLATE_EXTENSIONS:
+                    # self.timestamp_object.value = time()
+                else:
+                    # TODO: Consider sending partial updates
                     self.timestamp_object.value = time()
 
 

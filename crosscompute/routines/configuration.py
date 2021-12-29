@@ -584,8 +584,8 @@ class StringView(VariableView):
             variable_path=None, variable_configuration=None,
             request_path=None):
         body_text = (
-            f'<input id="{element_id}" '
-            f'class="input string {variable_id}" '
+            f'<input id="{element_id}" name="{variable_id}" '
+            f'class="string {variable_id}" '
             f'value="{variable_data}">')
         return {
             'css_uris': [],
@@ -600,7 +600,7 @@ class StringView(VariableView):
             request_path=None):
         body_text = (
             f'<span id="{element_id}" '
-            f'class="output string {variable_id}">'
+            f'class="string {variable_id}">'
             f'{variable_data}</span>')
         return {
             'css_uris': [],
@@ -626,8 +626,8 @@ class NumberView(VariableView):
             variable_path=None, variable_configuration=None,
             request_path=None):
         body_text = (
-            f'<input id="{element_id}" '
-            f'class="input number {variable_id}" '
+            f'<input id="{element_id}" name="{variable_id}" '
+            f'class="number {variable_id}" '
             f'value="{variable_data}" type="number">')
         return {
             'css_uris': [],
@@ -642,7 +642,7 @@ class NumberView(VariableView):
             request_path=None):
         body_text = (
             f'<span id="{element_id}" '
-            f'class="output number {variable_id}">'
+            f'class="number {variable_id}">'
             f'{variable_data}</span>')
         return {
             'css_uris': [],
@@ -663,7 +663,7 @@ class ImageView(VariableView):
         data_uri = request_path + '/' + variable_path
         body_text = (
             f'<img id="{element_id}" '
-            f'class="output image {variable_id}" '
+            f'class="image {variable_id}" '
             f'src="{data_uri}">'
         )
         return {
@@ -690,7 +690,7 @@ class MapMapboxView(VariableView):
             request_path=None):
         body_text = (
             f'<div id="{element_id}" '
-            f'class="output map-mapbox {variable_id}"></div>')
+            f'class="map-mapbox {variable_id}"></div>')
         mapbox_token = get_environment_value('MAPBOX_TOKEN', '')
         js_texts = [
             f"mapboxgl.accessToken = '{mapbox_token}'",
@@ -730,7 +730,7 @@ class MapPyDeckScreenGridView(VariableView):
             request_path=None):
         body_text = (
             f'<div id="{element_id}" '
-            f'class="output map-pydeck-screengrid {variable_id}"></div>')
+            f'class="map-pydeck-screengrid {variable_id}"></div>')
         mapbox_token = get_environment_value('MAPBOX_TOKEN', '')
         js_texts = [
             MAP_PYDECK_SCREENGRID_JS_TEMPLATE.substitute({
@@ -761,7 +761,7 @@ class MarkdownView(VariableView):
             request_path=None):
         body_text = (
             f'<span id="{element_id}" '
-            f'class="output markdown {variable_id}">'
+            f'class="markdown {variable_id}">'
             f'{get_html_from_markdown(variable_data)}</span>')
         return {
             'css_uris': [],

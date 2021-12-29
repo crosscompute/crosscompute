@@ -45,9 +45,11 @@ L = getLogger(__name__)
 
 class AutomationViews():
 
-    def __init__(self, automation_definitions, automation_queue):
+    def __init__(
+            self, automation_definitions, automation_queue, timestamp_object):
         self.automation_definitions = automation_definitions
         self.automation_queue = automation_queue
+        self.timestamp_object = timestamp_object
 
     def includeme(self, config):
         config.include(self.configure_styles)
@@ -166,6 +168,7 @@ class AutomationViews():
         return {
             'automations': self.automation_definitions,
             'css_uris': css_uris,
+            'timestamp_value': self.timestamp_object.value,
         }
 
     def see_automation(self, request):
@@ -173,6 +176,7 @@ class AutomationViews():
         css_uris = get_css_uris(automation_definition)
         return automation_definition | {
             'css_uris': css_uris,
+            'timestamp_value': self.timestamp_object.value,
         }
 
     def run_automation(self, request):
@@ -203,7 +207,7 @@ class AutomationViews():
             'folder': folder,
             'uri': run_uri,
         })
-        # TODO: Charge target page depending on definition
+        # TODO: Change target page depending on definition
         return {'id': run_id}
 
     def see_automation_batch(self, request):
@@ -228,6 +232,7 @@ class AutomationViews():
             'page_definition': page_definition,
             'uri': request.path,
             'page_type_name': page_type_name,
+            'timestamp_value': self.timestamp_object.value,
         } | render_page_dictionary(
             request, css_uris, page_text, variable_definitions, folder)
 
@@ -276,8 +281,8 @@ class AutomationViews():
             slug = matchdict['batch_slug']
             key = 'batches'
         try:
-            page_definition = find_item(
-                automation_definition[key], 'slug', slug)
+            page_definition = find_item(automation_definition.get(
+                key, []), 'slug', slug)
         except StopIteration:
             raise HTTPNotFound
         return page_definition

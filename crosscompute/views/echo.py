@@ -30,10 +30,11 @@ class EchoViews():
             ('Content-Type', 'text/event-stream'),
             ('Cache-Control', 'no-cache'),
         ])
-        response.app_iter = self.yield_echoes()
+        response.app_iter = self.yield_echo()
         return response
 
-    def yield_echoes(self):
+    def yield_echo(self):
+        # TODO: Send queued changes
         while True:
             sleep(PING_INTERVAL_IN_SECONDS)
             yield self.make_ping()

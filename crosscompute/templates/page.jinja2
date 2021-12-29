@@ -10,35 +10,28 @@
 #}
 
 {% block body_html -%}
+{%- if page_type_name == 'input' -%}
+<form id="automation">
+{%- endif %}
 {{ super() }}
-{% if page_type_name == 'input' %}
-<button id="run">Run</button>
-{% endif %}
+{% if page_type_name == 'input' -%}
+<button>Run</button>
+</form>
+{%- endif -%}
 {%- endblock %}
 
 {%- block body_js -%}
 {{ super() }}
-{% if page_type_name == 'input' %}
-const GET_DATA_BY_VIEW_NAME = {
-  number: e => e.value,
-}
-document.getElementById('run').onclick = async () => {
-  const dataById = {}
-  for (const e of document.getElementsByClassName('input')) {
-    const classNames = e.classList
-    const viewName = classNames[1]
-    const variableId = classNames[2]
-    const variableData = GET_DATA_BY_VIEW_NAME[viewName](e)
-    dataById[variableId] = variableData
-  }
-  const response = await fetch('{{ BASE_URI }}{{ automation_definition['uri'] }}.json', {
+{% if page_type_name == 'input' -%}
+document.getElementById('automation').onsubmit = async (e) => {
+  e.preventDefault()
+  const url = '{{ BASE_URI }}{{ automation_definition['uri'] }}.json'
+  const response = await fetch(url, {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(dataById),
+    body: new FormData(e.target)
   })
-  const responseJSON = await response.json()
-  console.log(responseJSON)
-  window.location = '{{ BASE_URI }}{{ automation_definition['uri'] }}/r/' + responseJSON['id'] + '/o'
+  const d = await response.json()
+  window.location = '{{ BASE_URI }}{{ automation_definition['uri'] }}/r/' + d['id'] + '/o'
 }
-{% endif %}
+{% endif -%}
 {%- endblock -%}
