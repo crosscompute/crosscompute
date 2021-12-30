@@ -2,7 +2,6 @@ import csv
 import json
 import tomli
 import yaml
-from abc import ABC, abstractmethod
 from configparser import ConfigParser
 from logging import getLogger
 from os.path import basename, dirname, exists, getmtime, join, splitext
@@ -491,8 +490,9 @@ def get_variable_view_class(variable_definition):
     view_name = variable_definition['view']
     try:
         # TODO: Initialize lookup dictionary using importlib.metadata
-        VariableView = {
+        View = {
             'string': StringView,
+            'text': TextView,
             'number': NumberView,
             'image': ImageView,
             'map-mapbox': MapMapboxView,
@@ -501,8 +501,8 @@ def get_variable_view_class(variable_definition):
         }[view_name]
     except KeyError:
         L.error('%s view not installed', view_name)
-        return NullView
-    return VariableView
+        View = VariableView
+    return View
 
 
 def get_variable_configuration(variable_definition, folder):
@@ -519,7 +519,7 @@ def get_variable_configuration(variable_definition, folder):
     return variable_configuration
 
 
-class VariableView(ABC):
+class VariableView():
 
     is_asynchronous = False
 
@@ -538,7 +538,6 @@ class VariableView(ABC):
             element_id, variable_id, variable_data, variable_path,
             variable_configuration, request_path)
 
-    @abstractmethod
     def render_input(
             self, element_id, variable_id, variable_data=None,
             variable_path=None, variable_configuration=None,
@@ -550,23 +549,8 @@ class VariableView(ABC):
             'js_texts': [],
         }
 
-    @abstractmethod
     def render_output(
             self, element_id, variable_id, variable_data=None,
-            variable_path=None, variable_configuration=None,
-            request_path=None):
-        return {
-            'css_uris': [],
-            'js_uris': [],
-            'body_text': '',
-            'js_texts': [],
-        }
-
-
-class NullView(VariableView):
-
-    def render(
-            self, type_name, element_id, variable_id, variable_data=None,
             variable_path=None, variable_configuration=None,
             request_path=None):
         return {
@@ -601,6 +585,38 @@ class StringView(VariableView):
         body_text = (
             f'<span id="{element_id}" '
             f'class="string {variable_id}">'
+            f'{variable_data}</span>')
+        return {
+            'css_uris': [],
+            'js_uris': [],
+            'body_text': body_text,
+            'js_texts': [],
+        }
+
+
+class TextView(VariableView):
+
+    def render_input(
+            self, element_id, variable_id, variable_data=None,
+            variable_path=None, variable_configuration=None,
+            request_path=None):
+        body_text = (
+            f'<textarea id="{element_id}" name="{variable_id}" '
+            f'class="text {variable_id}">\n{variable_data}\n</textarea>')
+        return {
+            'css_uris': [],
+            'js_uris': [],
+            'body_text': body_text,
+            'js_texts': [],
+        }
+
+    def render_output(
+            self, element_id, variable_id, variable_data=None,
+            variable_path=None, variable_configuration=None,
+            request_path=None):
+        body_text = (
+            f'<span id="{element_id}" '
+            f'class="text {variable_id}">'
             f'{variable_data}</span>')
         return {
             'css_uris': [],
