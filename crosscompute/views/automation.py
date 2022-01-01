@@ -315,8 +315,9 @@ def render_page_dictionary(
         variable_path = definition['path']
         variable_type_name = definition['type']
         page_folder = join(folder, variable_type_name)
-        variable_data = '' if variable_view.is_asynchronous else load_data(
-            join(page_folder, variable_path), variable_id)
+        variable_data = '' if (
+            variable_view.is_asynchronous or variable_path == 'ENVIRONMENT'
+        ) else load_data(join(page_folder, variable_path), variable_id)
         variable_data = apply_functions(
             variable_data, expression_terms[1:], FUNCTION_BY_NAME)
         variable_configuration = get_variable_configuration(

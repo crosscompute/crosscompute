@@ -4,6 +4,7 @@ import tomli
 import yaml
 from configparser import ConfigParser
 from logging import getLogger
+from os import environ
 from os.path import basename, dirname, exists, getmtime, join, splitext
 from string import Template
 from time import time
@@ -253,7 +254,6 @@ def get_batch_definitions_from_path(
     batch_slug = batch_definition['slug']
     batch_definitions = []
     for data_by_id in yield_data_by_id(path, variable_definitions):
-        # TODO: parse data_by_id
         folder = format_text(batch_folder, data_by_id)
         name = format_text(batch_name, data_by_id)
         slug = format_text(
@@ -355,33 +355,63 @@ def get_scalar_text(configuration, key, default=None):
     return value
 
 
-def prepare_batch_folder(
-        batch_definition, variable_definitions, configuration_folder):
+def prepare_batch(automation_definition, batch_definition):
+    variable_definitions = get_raw_variable_definitions(
+        automation_definition, 'input')
     batch_folder = batch_definition['folder']
-    input_folder = make_folder(join(
-        configuration_folder, batch_folder, 'input'))
     variable_definitions_by_path = group_by(variable_definitions, 'path')
     data_by_id = batch_definition.get('data_by_id', {})
+    custom_environment = prepare_environment(
+        automation_definition,
+        variable_definitions_by_path.pop('ENVIRONMENT', []),
+        data_by_id)
+    if not data_by_id:
+        return batch_folder, custom_environment
+    automation_folder = automation_definition['folder']
+    input_folder = make_folder(join(automation_folder, batch_folder, 'input'))
     for path, variable_definitions in variable_definitions_by_path.items():
         input_path = join(input_folder, path)
-        file_extension = splitext(path)[1]
-        variable_data_by_id = get_variable_data_by_id(
-            variable_definitions, data_by_id)
-        if file_extension == '.json':
-            with open(input_path, 'wt') as input_file:
-                json.dump(variable_data_by_id, input_file)
-        elif file_extension == '.csv':
-            with open(input_path, 'wt') as input_file:
-                csv_writer = csv.writer(input_file)
-                for k, v in variable_data_by_id.items():
-                    csv_writer.writerow([k, v])
-        elif len(variable_data_by_id) > 1:
-            raise CrossComputeConfigurationError(
-                f'{file_extension} does not support multiple variables')
-        else:
-            variable_data = list(variable_data_by_id.values())[0]
-            open(input_path, 'wt').write(variable_data)
-    return batch_folder
+        save_variable_data(input_path, variable_definitions, data_by_id)
+    return batch_folder, custom_environment
+
+
+def prepare_environment(
+        automation_definition, variable_definitions, data_by_id):
+    custom_environment = {}
+    data_by_id = data_by_id.copy()
+    try:
+        for variable_id in (_['id'] for _ in automation_definition.get(
+                'environment', {}).get('variables', [])):
+            custom_environment[variable_id] = environ[variable_id]
+        for variable_id in (_['id'] for _ in variable_definitions):
+            if variable_id in data_by_id:
+                continue
+            data_by_id[variable_id] = environ[variable_id]
+    except KeyError:
+        raise CrossComputeConfigurationError(
+            f'{variable_id} is missing in the environment')
+    return custom_environment | get_variable_data_by_id(
+        variable_definitions, data_by_id)
+
+
+def save_variable_data(target_path, variable_definitions, data_by_id):
+    file_extension = splitext(target_path)[1]
+    variable_data_by_id = get_variable_data_by_id(
+        variable_definitions, data_by_id)
+    if file_extension == '.json':
+        with open(target_path, 'wt') as input_file:
+            json.dump(variable_data_by_id, input_file)
+    elif file_extension == '.csv':
+        with open(target_path, 'wt') as input_file:
+            csv_writer = csv.writer(input_file)
+            for k, v in variable_data_by_id.items():
+                csv_writer.writerow([k, v])
+    elif len(variable_data_by_id) > 1:
+        raise CrossComputeConfigurationError(
+            f'{file_extension} does not support multiple variables')
+    else:
+        variable_data = list(variable_data_by_id.values())[0]
+        open(target_path, 'wt').write(variable_data)
 
 
 def get_variable_data_by_id(variable_definitions, data_by_id):
@@ -492,8 +522,10 @@ def get_variable_view_class(variable_definition):
         # TODO: Initialize lookup dictionary using importlib.metadata
         View = {
             'string': StringView,
-            'text': TextView,
+            'password': PasswordView,
+            'email': EmailView,
             'number': NumberView,
+            'text': TextView,
             'image': ImageView,
             'map-mapbox': MapMapboxView,
             'map-pydeck-screengrid': MapPyDeckScreenGridView,
@@ -563,14 +595,17 @@ class VariableView():
 
 class StringView(VariableView):
 
+    class_name = 'string'
+    input_type = 'text'
+
     def render_input(
             self, element_id, variable_id, variable_data=None,
             variable_path=None, variable_configuration=None,
             request_path=None):
         body_text = (
             f'<input id="{element_id}" name="{variable_id}" '
-            f'class="string {variable_id}" '
-            f'value="{variable_data}">')
+            f'class="{self.class_name} {variable_id}" '
+            f'value="{variable_data}" type="{self.input_type}">')
         return {
             'css_uris': [],
             'js_uris': [],
@@ -584,7 +619,7 @@ class StringView(VariableView):
             request_path=None):
         body_text = (
             f'<span id="{element_id}" '
-            f'class="string {variable_id}">'
+            f'class="{self.class_name} {variable_id}">'
             f'{variable_data}</span>')
         return {
             'css_uris': [],
@@ -594,39 +629,22 @@ class StringView(VariableView):
         }
 
 
-class TextView(VariableView):
+class PasswordView(StringView):
 
-    def render_input(
-            self, element_id, variable_id, variable_data=None,
-            variable_path=None, variable_configuration=None,
-            request_path=None):
-        body_text = (
-            f'<textarea id="{element_id}" name="{variable_id}" '
-            f'class="text {variable_id}">\n{variable_data}\n</textarea>')
-        return {
-            'css_uris': [],
-            'js_uris': [],
-            'body_text': body_text,
-            'js_texts': [],
-        }
-
-    def render_output(
-            self, element_id, variable_id, variable_data=None,
-            variable_path=None, variable_configuration=None,
-            request_path=None):
-        body_text = (
-            f'<span id="{element_id}" '
-            f'class="text {variable_id}">'
-            f'{variable_data}</span>')
-        return {
-            'css_uris': [],
-            'js_uris': [],
-            'body_text': body_text,
-            'js_texts': [],
-        }
+    class_name = 'password'
+    input_type = 'password'
 
 
-class NumberView(VariableView):
+class EmailView(StringView):
+
+    class_name = 'email'
+    input_type = 'email'
+
+
+class NumberView(StringView):
+
+    class_name = 'number'
+    input_type = 'number'
 
     def parse(self, data):
         try:
@@ -637,29 +655,19 @@ class NumberView(VariableView):
             data = int(data)
         return data
 
+
+class TextView(StringView):
+
+    class_name = 'text'
+
     def render_input(
             self, element_id, variable_id, variable_data=None,
             variable_path=None, variable_configuration=None,
             request_path=None):
         body_text = (
-            f'<input id="{element_id}" name="{variable_id}" '
-            f'class="number {variable_id}" '
-            f'value="{variable_data}" type="number">')
-        return {
-            'css_uris': [],
-            'js_uris': [],
-            'body_text': body_text,
-            'js_texts': [],
-        }
-
-    def render_output(
-            self, element_id, variable_id, variable_data=None,
-            variable_path=None, variable_configuration=None,
-            request_path=None):
-        body_text = (
-            f'<span id="{element_id}" '
-            f'class="number {variable_id}">'
-            f'{variable_data}</span>')
+            f'<textarea id="{element_id}" name="{variable_id}" '
+            f'class="{self.class_name} {variable_id}">'
+            f'{variable_data}</textarea>')
         return {
             'css_uris': [],
             'js_uris': [],
@@ -671,6 +679,7 @@ class NumberView(VariableView):
 class ImageView(VariableView):
 
     is_asynchronous = True
+    class_name = 'image'
 
     def render_output(
             self, element_id, variable_id, variable_data=None,
@@ -679,7 +688,7 @@ class ImageView(VariableView):
         data_uri = request_path + '/' + variable_path
         body_text = (
             f'<img id="{element_id}" '
-            f'class="image {variable_id}" '
+            f'class="{self.class_name} {variable_id}" '
             f'src="{data_uri}">'
         )
         return {
@@ -693,6 +702,7 @@ class ImageView(VariableView):
 class MapMapboxView(VariableView):
 
     is_asynchronous = True
+    class_name = 'map-mapbox'
     css_uris = [
         'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.css',
     ]
@@ -706,7 +716,7 @@ class MapMapboxView(VariableView):
             request_path=None):
         body_text = (
             f'<div id="{element_id}" '
-            f'class="map-mapbox {variable_id}"></div>')
+            f'class="{self.class_name} {variable_id}"></div>')
         mapbox_token = get_environment_value('MAPBOX_TOKEN', '')
         js_texts = [
             f"mapboxgl.accessToken = '{mapbox_token}'",
@@ -732,6 +742,7 @@ class MapMapboxView(VariableView):
 class MapPyDeckScreenGridView(VariableView):
 
     is_asynchronous = True
+    class_name = 'map-pydeck-screengrid'
     css_uris = [
         'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.css',
     ]
@@ -746,7 +757,7 @@ class MapPyDeckScreenGridView(VariableView):
             request_path=None):
         body_text = (
             f'<div id="{element_id}" '
-            f'class="map-pydeck-screengrid {variable_id}"></div>')
+            f'class="{self.class_name} {variable_id}"></div>')
         mapbox_token = get_environment_value('MAPBOX_TOKEN', '')
         js_texts = [
             MAP_PYDECK_SCREENGRID_JS_TEMPLATE.substitute({
@@ -771,13 +782,15 @@ class MapPyDeckScreenGridView(VariableView):
 
 class MarkdownView(VariableView):
 
+    class_name = 'markdown'
+
     def render_output(
             self, element_id, variable_id, variable_data=None,
             variable_path=None, variable_configuration=None,
             request_path=None):
         body_text = (
             f'<span id="{element_id}" '
-            f'class="markdown {variable_id}">'
+            f'class="{self.class_name} {variable_id}">'
             f'{get_html_from_markdown(variable_data)}</span>')
         return {
             'css_uris': [],
@@ -805,14 +818,18 @@ def load_data(path, variable_id):
                     value_by_id = json.load(file)
                 elif file_extension == '.csv':
                     csv_reader = csv.reader(file)
-                    value_by_id = dict(csv_reader)
+                    try:
+                        value_by_id = dict(csv_reader)
+                    except ValueError:
+                        L.warning(f'could not load {path} as dictionary')
+                        value_by_id = {variable_id: file.read()}
                 for i, v in value_by_id.items():
                     VARIABLE_CACHE[(path, i)] = new_time, v
                 value = value_by_id[variable_id]
             else:
                 value = file.read()
-    except (OSError, KeyError, json.JSONDecodeError, UnicodeDecodeError) as e:
-        L.error(e)
+    except Exception as e:
+        L.warning(e)
         value = ''
     VARIABLE_CACHE[(path, variable_id)] = new_time, value
     return value

@@ -13,10 +13,9 @@ from .configuration import (
     format_text,
     get_automation_definitions,
     get_display_configuration,
-    get_raw_variable_definitions,
     load_configuration,
     make_automation_name,
-    prepare_batch_folder)
+    prepare_batch)
 from ..constants import (
     CONFIGURATION_EXTENSIONS,
     DISK_DEBOUNCE_IN_MILLISECONDS,
@@ -81,13 +80,9 @@ class Automation():
                 continue
             automation_folder = automation_definition['folder']
             script_folder = script_definition.get('folder', '.')
-            input_variable_definitions = get_raw_variable_definitions(
-                automation_definition, 'input')
-            # TODO: Load base custom environment from configuration
             for batch_definition in automation_definition.get('batches', []):
-                batch_folder = prepare_batch_folder(
-                    batch_definition, input_variable_definitions,
-                    automation_folder)
+                batch_folder, custom_environment = prepare_batch(
+                    automation_definition, batch_definition)
                 L.info(f'{automation_name} running {batch_folder}')
                 run_batch(
                     batch_folder, command_string, script_folder,
@@ -114,7 +109,6 @@ class Automation():
             worker_process = Process(target=self.work, args=(
                 automation_queue,))
             worker_process.start()
-            # TODO: Start process for processing queue here
             L.info(f'serving at http://{host}:{port}{base_uri}')
             app = self.get_app(automation_queue, is_static, base_uri)
             try:
@@ -197,18 +191,15 @@ class Automation():
 
 
 def run_automation(automation_definition, batch_definition):
-    variable_definitions = get_raw_variable_definitions(
-        automation_definition, 'input')
-    automation_folder = automation_definition['folder']
-    # TODO: Consider batch_folder location override
-    batch_folder = prepare_batch_folder(
-        batch_definition, variable_definitions, automation_folder)
+    batch_folder, custom_environment = prepare_batch(
+        automation_definition, batch_definition)
     script_definition = automation_definition.get('script', {})
     command_string = script_definition.get('command')
     script_folder = script_definition.get('folder', '.')
+    automation_folder = automation_definition['folder']
     run_batch(
         batch_folder, command_string, script_folder, automation_folder,
-        custom_environment=None)
+        custom_environment)
 
 
 def run_batch(
