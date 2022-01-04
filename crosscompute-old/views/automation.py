@@ -1,6 +1,5 @@
 # TODO: Let user customize root title
 # TODO: Add unit tests
-# TODO: Validate variable definitions for id and view
 # TODO: Let creator override mapbox js
 
 

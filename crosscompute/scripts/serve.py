@@ -7,6 +7,8 @@ from crosscompute.constants import (
     DISK_POLL_IN_MILLISECONDS,
     HOST,
     PORT)
+from crosscompute.exceptions import (
+    CrossComputeError)
 from crosscompute.macros.web import is_port_in_use, open_browser
 from crosscompute.routines.automation import Automation
 from crosscompute.routines.log import (
@@ -25,8 +27,11 @@ def do():
     configure_logging_from(args)
 
     check_port(args.port)
-    automation = Automation.load(args.path_or_folder)
-    serve_with(automation, args)
+    try:
+        automation = Automation.load(args.path_or_folder)
+        serve_with(automation, args)
+    except CrossComputeError as e:
+        L.error(e)
 
 
 def configure_argument_parser_for_serving(a):

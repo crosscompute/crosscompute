@@ -1,13 +1,18 @@
+import csv
 import json
 from importlib.metadata import entry_points
 from logging import getLogger
 from os.path import getmtime, join, splitext
 
-from ..constants import FUNCTION_BY_NAME, VARIABLE_CACHE
-from ..exceptions import CrossComputeDataError
+from ..constants import (
+    FUNCTION_BY_NAME,
+    VARIABLE_CACHE,
+    VARIABLE_ID_PATTERN)
+from ..exceptions import (
+    CrossComputeConfigurationError,
+    CrossComputeDataError)
 from ..macros.package import import_attribute
 from ..macros.web import get_html_from_markdown
-from .configuration import apply_functions
 
 
 class VariableView():
@@ -208,6 +213,21 @@ class ImageView(VariableView):
         }
 
 
+def save_variable_data(target_path, variable_definitions, data_by_id):
+    file_extension = splitext(target_path)[1]
+    variable_data_by_id = get_variable_data_by_id(
+        variable_definitions, data_by_id)
+    if file_extension == '.dictionary':
+        with open(target_path, 'wt') as input_file:
+            json.dump(variable_data_by_id, input_file)
+    elif len(variable_data_by_id) > 1:
+        raise CrossComputeConfigurationError(
+            f'{file_extension} does not support multiple variables')
+    else:
+        variable_data = list(variable_data_by_id.values())[0]
+        open(target_path, 'wt').write(variable_data)
+
+
 def load_variable_data(path, variable_id):
     try:
         new_time = getmtime(path)
@@ -232,6 +252,113 @@ def load_variable_data(path, variable_id):
         L.warning(f'could not load {variable_id} from {path}')
         value = ''
     VARIABLE_CACHE[(path, variable_id)] = new_time, value
+    return value
+
+
+def get_variable_data_by_id(variable_definitions, data_by_id):
+    variable_data_by_id = {}
+    for variable_definition in variable_definitions:
+        variable_id = variable_definition['id']
+        if None in data_by_id:
+            variable_data = data_by_id[None]
+        else:
+            try:
+                variable_data = data_by_id[variable_id]
+            except KeyError:
+                raise CrossComputeConfigurationError(
+                    f'{variable_id} not defined in batch configuration')
+        variable_data_by_id[variable_id] = variable_data
+    return variable_data_by_id
+
+
+def yield_data_by_id_from_csv(path, variable_definitions):
+    try:
+        with open(path, 'rt') as file:
+            csv_reader = csv.reader(file)
+            keys = [_.strip() for _ in next(csv_reader)]
+            for values in csv_reader:
+                data_by_id = parse_data_by_id(dict(zip(
+                    keys, values)), variable_definitions)
+                if data_by_id.get('#') == '#':
+                    continue
+                yield data_by_id
+    except OSError:
+        raise CrossComputeConfigurationError(f'{path} path not found')
+
+
+def yield_data_by_id_from_txt(path, variable_definitions):
+    if len(variable_definitions) > 1:
+        raise CrossComputeConfigurationError(
+            'use .csv to configure multiple variables')
+
+    try:
+        variable_id = variable_definitions[0]['id']
+    except IndexError:
+        variable_id = None
+
+    try:
+        with open(path, 'rt') as batch_configuration_file:
+            for line in batch_configuration_file:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                yield parse_data_by_id({
+                    variable_id: line}, variable_definitions)
+    except OSError:
+        raise CrossComputeConfigurationError(f'{path} path not found')
+
+
+def parse_data_by_id(data_by_id, variable_definitions):
+    for variable_definition in variable_definitions:
+        variable_id = variable_definition['id']
+        try:
+            variable_data = data_by_id[variable_id]
+        except KeyError:
+            raise CrossComputeDataError(f'{variable_id} required')
+        variable_view = VariableView.get_from(variable_definition)
+        try:
+            variable_data = variable_view.parse(variable_data)
+        except CrossComputeDataError as e:
+            raise CrossComputeDataError(f'{e} for variable {variable_id}')
+        data_by_id[variable_id] = variable_data
+    return data_by_id
+
+
+def format_text(text, data_by_id):
+    if not data_by_id:
+        return text
+    if None in data_by_id:
+        f = data_by_id[None]
+    else:
+        def f(match):
+            matching_text = match.group(0)
+            expression_text = match.group(1)
+            expression_terms = expression_text.split('|')
+            variable_id = expression_terms[0].strip()
+            try:
+                text = data_by_id[variable_id]
+            except KeyError:
+                L.warning('%s missing in batch configuration', variable_id)
+                return matching_text
+            try:
+                text = apply_functions(
+                    text, expression_terms[1:], FUNCTION_BY_NAME)
+            except KeyError as e:
+                L.error('%s function not supported for string', e)
+            return str(text)
+    return VARIABLE_ID_PATTERN.sub(f, text)
+
+
+def apply_functions(value, function_names, function_by_name):
+    for function_name in function_names:
+        function_name = function_name.strip()
+        if not function_name:
+            continue
+        try:
+            f = function_by_name[function_name]
+        except KeyError:
+            raise
+        value = f(value)
     return value
 
 

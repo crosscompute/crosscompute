@@ -2,6 +2,7 @@ from argparse import ArgumentParser
 from logging import getLogger
 from os.path import exists, isdir, join
 
+from crosscompute import __version__
 from crosscompute.constants import (
     AUTOMATION_NAME,
     AUTOMATION_PATH,
@@ -30,8 +31,8 @@ def do():
 
 def configure_argument_parser_for_configuring(a):
     a.add_argument(
-        'path_or_folder',
-        nargs='?',
+        'path_or_folder', nargs='?',
+        default='.',
         help='configuration path or folder')
 
 
@@ -56,6 +57,7 @@ def input_configuration_with(args):
         raise SystemExit
     configuration = load_raw_configuration_yaml(join(
         TEMPLATES_FOLDER, 'configuration.yaml'), with_comments=True)
+    configuration['crosscompute'] = __version__
     configuration['name'] = automation_name or AUTOMATION_NAME
     configuration['version'] = automation_version or AUTOMATION_VERSION
     return configuration, configuration_path or automation_path
@@ -74,13 +76,13 @@ def save_configuration(configuration_path, configuration):
         raise SystemExit
     try:
         configuration_format = get_configuration_format(configuration_path)
+        save_raw_configuration = {
+            'yaml': save_raw_configuration_yaml,
+        }[configuration_format]
+        save_raw_configuration(configuration_path, configuration)
     except CrossComputeError as e:
         L.error(e)
         raise SystemExit
-    save_raw_configuration = {
-        'yaml': save_raw_configuration_yaml,
-    }[configuration_format]
-    save_raw_configuration(configuration_path, configuration)
     L.info(f'{configuration_path} {participle}')
 
 

@@ -1,2 +1,0 @@
-class CrossComputeDataError(CrossComputeError):
-    pass
