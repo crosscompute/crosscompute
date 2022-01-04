@@ -2,7 +2,6 @@
 # TODO: Precompile notebook scripts
 import logging
 import subprocess
-from logging import getLogger
 from multiprocessing import Process, Queue, Value
 from os import getenv, listdir
 from os.path import isdir, join, relpath, splitext
@@ -27,48 +26,9 @@ from ..constants import (
     STYLE_EXTENSIONS,
     # TEMPLATE_EXTENSIONS,
 )
-from ..exceptions import CrossComputeError, CrossComputeConfigurationError
 from ..macros import StoppableProcess, format_path, make_folder
 from ..views import AutomationViews, EchoViews
 
-
-L = getLogger(__name__)
-
-
-class Automation():
-
-    def initialize_from_path(self, configuration_path):
-        configuration = load_configuration(configuration_path)
-        automation_folder = configuration['folder']
-        automation_definitions = get_automation_definitions(
-            configuration)
-
-        self.configuration_path = configuration_path
-        self.configuration = configuration
-        self.automation_folder = automation_folder
-        self.automation_definitions = automation_definitions
-        self.timestamp_object = Value('d', time())
-
-        L.debug('configuration_path = %s', configuration_path)
-        L.debug('automation_folder = %s', automation_folder)
-
-    @classmethod
-    def load(Class, path_or_folder=None):
-        instance = Class()
-        if isdir(path_or_folder):
-            for path in listdir(path_or_folder):
-                try:
-                    instance.initialize_from_path(path)
-                except CrossComputeConfigurationError:
-                    raise
-                except CrossComputeError:
-                    continue
-                break
-            else:
-                raise CrossComputeError('could not find configuration')
-        else:
-            instance.initialize_from_path(path_or_folder)
-        return instance
 
     def run(self, custom_environment=None):
         for automation_index, automation_definition in enumerate(
@@ -174,6 +134,7 @@ class Automation():
                 changed_extension = splitext(changed_path)[1]
                 if changed_extension in CONFIGURATION_EXTENSIONS:
                     server_process.stop()
+                    # TODO: Try path then folder
                     self.initialize_from_path(self.configuration_path)
                     server_process = StoppableProcess(target=run_server)
                     server_process.start()
@@ -240,7 +201,7 @@ def run_script(
     environment = default_environment | custom_environment
     L.debug('environment = %s', environment)
 
-    part_folder_by_name = kkkkkkkkk{
+    part_folder_by_name = {
     {k: relpath(v, script_folder) for k, v in part_folder_by_name.items()}
     for folder_name, part_folder in part_folder_by_name.items():
         make_folder(join(automation_folder, part_folder))
