@@ -1,5 +1,5 @@
 # TODO: Let user customize root title
-# TODO: Add tests
+# TODO: Add unit tests
 # TODO: Validate variable definitions for id and view
 # TODO: Let creator override mapbox js
 
@@ -28,14 +28,14 @@ from ..macros import (
     is_path_in_folder,
     make_unique_folder)
 from ..routines.configuration import (
+    VariableView,
     apply_functions,
     get_all_variable_definitions,
     get_css_uris,
     get_raw_variable_definitions,
     get_template_texts,
     get_variable_configuration,
-    get_variable_view_class,
-    load_data,
+    load_variable_data,
     parse_data_by_id)
 from ..routines.web import get_html_from_markdown
 
@@ -65,7 +65,7 @@ class AutomationViews():
             'automation batch',
             AUTOMATION_ROUTE + BATCH_ROUTE)
         config.add_route(
-            'automation batch page',
+            'automation batch part',
             AUTOMATION_ROUTE + BATCH_ROUTE + PAGE_ROUTE)
         config.add_route(
             'automation batch page file',
@@ -94,20 +94,20 @@ class AutomationViews():
             renderer='json')
         '''
         config.add_view(
-            self.see_automation_batch,
+            self.see_automation_result,
             route_name='automation batch',
             renderer='crosscompute:templates/batch.jinja2')
         '''
         config.add_view(
-            self.see_automation_page,
-            route_name='automation batch page',
+            self.see_automation_result_section,
+            route_name='automation batch section',
             renderer='crosscompute:templates/page.jinja2')
         config.add_view(
-            self.see_automation_page_file,
-            route_name='automation batch page file')
+            self.see_automation_result_section_file,
+            route_name='automation batch section file')
         '''
         config.add_view(
-            self.see_automation_run,
+            self.see_automation_result,
             route_name='automation run',
             renderer='crosscompute:templates/run.jinja2')
         '''
@@ -213,14 +213,14 @@ class AutomationViews():
     def see_automation_batch(self, request):
         return {}
 
+    # def see_automation_result_page(self, request):
     def see_automation_page(self, request):
         page_type_name = self.get_page_type_name_from(request)
         automation_definition = self.get_automation_definition_from(request)
         automation_folder = automation_definition['folder']
-        page_definition = self.get_page_definition_from(
+        result_definition = self.get_result_definition_from(
             request, automation_definition)
-        page_folder = page_definition['folder']
-        folder = join(automation_folder, page_folder)
+        result_folder = join(automation_folder, result_definition['folder'])
         variable_definitions = get_all_variable_definitions(
             automation_definition, page_type_name)
         template_texts = get_template_texts(
@@ -229,18 +229,18 @@ class AutomationViews():
         page_text = '\n'.join(template_texts)
         return {
             'automation_definition': automation_definition,
-            'page_definition': page_definition,
+            'result_definition': result_definition,
             'uri': request.path,
             'page_type_name': page_type_name,
             'timestamp_value': self.timestamp_object.value,
         } | render_page_dictionary(
-            request, css_uris, page_text, variable_definitions, folder)
+            request, css_uris, page_text, variable_definitions, result_folder)
 
     def see_automation_page_file(self, request):
         matchdict = request.matchdict
         automation_definition = self.get_automation_definition_from(request)
         automation_folder = automation_definition['folder']
-        page_definition = self.get_page_definition_from(
+        result_definition = self.get_result_definition_from(
             request, automation_definition)
         page_type_name = self.get_page_type_name_from(request)
         variable_definitions = get_raw_variable_definitions(
@@ -253,9 +253,8 @@ class AutomationViews():
         except StopIteration:
             raise HTTPNotFound
         L.debug(variable_definition)
-        page_folder = page_definition['folder']
-        variable_folder = join(page_folder, page_type_name)
-        folder = join(automation_folder, variable_folder)
+        folder = join(automation_folder, result_definition[
+            'folder'], page_type_name)
         path = join(folder, variable_path)
         if not is_path_in_folder(path, folder):
             raise HTTPBadRequest
@@ -272,7 +271,7 @@ class AutomationViews():
             raise HTTPNotFound
         return automation_definition
 
-    def get_page_definition_from(self, request, automation_definition):
+    def get_result_definition_from(self, request, automation_definition):
         matchdict = request.matchdict
         if 'run_slug' in matchdict:
             slug = matchdict['run_slug']
@@ -299,7 +298,8 @@ class AutomationViews():
 
 
 def render_page_dictionary(
-        request, css_uris, page_text, variable_definitions, folder):
+        request, css_uris, page_text, variable_definitions,
+        absolute_folder):
     css_uris, js_uris, js_texts, variable_index = css_uris.copy(), [], [], 0
 
     def render_html(match):
@@ -307,30 +307,31 @@ def render_page_dictionary(
         expression_terms = match.group(1).split('|')
         variable_id = expression_terms[0].strip()
         try:
-            definition = find_item(variable_definitions, 'id', variable_id)
+            d = find_item(variable_definitions, 'id', variable_id)
         except StopIteration:
             L.warning('%s in template but not in configuration', variable_id)
             return matching_text
-        variable_view = get_variable_view_class(definition)()
-        variable_path = definition['path']
-        variable_type_name = definition['type']
+        variable_view = VariableView.load_from(d)
+        variable_path, variable_type_name = d['path'], d['type']
         page_folder = join(folder, variable_type_name)
-        variable_data = '' if (
-            variable_view.is_asynchronous or variable_path == 'ENVIRONMENT'
-        ) else load_data(join(page_folder, variable_path), variable_id)
-        variable_data = apply_functions(
-            variable_data, expression_terms[1:], FUNCTION_BY_NAME)
-        variable_configuration = get_variable_configuration(
-            definition, page_folder)
+
+        if variable_view.is_asynchronous or variable_path == 'ENVIRONMENT':
+            variable_data = ''
+        else:
+            variable_data = apply_functions(load_variable_data(join(
+                page_folder, variable_path,
+            ), variable_id), expression_terms[1:], FUNCTION_BY_NAME)
+
+        variable_configuration = get_variable_configuration(d, page_folder)
         nonlocal variable_index
-        d = variable_view.render(
-            variable_type_name, f'v{variable_index}', variable_id,
-            variable_data, variable_path, variable_configuration, request.path)
+        variable_element = variable_view.render(
+            f'v{variable_index}',
+            variable_data, variable_configuration, request.path)
         variable_index += 1
-        extend_uniquely(css_uris, d['css_uris'])
-        extend_uniquely(js_uris, d['js_uris'])
-        extend_uniquely(js_texts, d['js_texts'])
-        return d['body_text']
+        extend_uniquely(css_uris, variable_element['css_uris'])
+        extend_uniquely(js_uris, variable_element['js_uris'])
+        extend_uniquely(js_texts, variable_element['js_texts'])
+        return variable_element['body_text']
 
     return {
         'css_uris': css_uris,

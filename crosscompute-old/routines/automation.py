@@ -1,3 +1,5 @@
+# TODO: Be explicit about relative vs absolute folders
+# TODO: Precompile notebook scripts
 import logging
 import subprocess
 from logging import getLogger
@@ -37,18 +39,18 @@ class Automation():
 
     def initialize_from_path(self, configuration_path):
         configuration = load_configuration(configuration_path)
-        configuration_folder = configuration['folder']
+        automation_folder = configuration['folder']
         automation_definitions = get_automation_definitions(
             configuration)
 
         self.configuration_path = configuration_path
         self.configuration = configuration
-        self.configuration_folder = configuration_folder
+        self.automation_folder = automation_folder
         self.automation_definitions = automation_definitions
         self.timestamp_object = Value('d', time())
 
         L.debug('configuration_path = %s', configuration_path)
-        L.debug('configuration_folder = %s', configuration_folder)
+        L.debug('automation_folder = %s', automation_folder)
 
     @classmethod
     def load(Class, path_or_folder=None):
@@ -83,7 +85,6 @@ class Automation():
             for batch_definition in automation_definition.get('batches', []):
                 batch_folder, custom_environment = prepare_batch(
                     automation_definition, batch_definition)
-                L.info(f'{automation_name} running {batch_folder}')
                 run_batch(
                     batch_folder, command_string, script_folder,
                     automation_folder, custom_environment)
@@ -93,8 +94,8 @@ class Automation():
             host=HOST,
             port=PORT,
             base_uri='',
-            is_production=False,
             is_static=False,
+            is_production=False,
             disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
             disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS,
             automation_queue=None):
@@ -116,7 +117,7 @@ class Automation():
             except OSError as e:
                 L.error(e)
 
-        if is_production and is_static:
+        if is_static and is_production:
             run_server()
             return
 
@@ -131,7 +132,7 @@ class Automation():
             automation_queue,
             self.timestamp_object)
         echo_views = EchoViews(
-            self.configuration_folder,
+            self.automation_folder,
             self.timestamp_object)
         with Configurator() as config:
             config.include('pyramid_jinja2')
@@ -153,9 +154,6 @@ class Automation():
         try:
             while automation_pack := automation_queue.get():
                 automation_definition, batch_definition = automation_pack
-                automation_name = automation_definition['name']
-                batch_folder = batch_definition['folder']
-                L.info(f'running {automation_name} in {batch_folder}')
                 run_automation(automation_definition, batch_definition)
         except KeyboardInterrupt:
             pass
@@ -166,7 +164,7 @@ class Automation():
         server_process = StoppableProcess(target=run_server)
         server_process.start()
         for changes in watch(
-                self.configuration_folder,
+                self.automation_folder,
                 min_sleep=disk_poll_in_milliseconds,
                 debounce=disk_debounce_in_milliseconds):
             for changed_type, changed_path in changes:
@@ -186,7 +184,7 @@ class Automation():
                 # elif changed_extension in TEMPLATE_EXTENSIONS:
                     # self.timestamp_object.value = time()
                 else:
-                    # TODO: Consider sending partial updates
+                    # TODO: Send partial updates
                     self.timestamp_object.value = time()
 
 
@@ -203,23 +201,31 @@ def run_automation(automation_definition, batch_definition):
 
 
 def run_batch(
-        batch_folder, command_string, script_folder, configuration_folder,
-        custom_environment=None):
-    input_folder = join(batch_folder, 'input')
-    output_folder = join(batch_folder, 'output')
-    log_folder = join(batch_folder, 'log')
-    debug_folder = join(batch_folder, 'debug')
+        batch_folder, command_string, script_folder, automation_folder,
+        custom_environment):
+    L.info(f'running {format_path(join(automation_folder, batch_folder))}')
     run_script(
-        command_string, script_folder, input_folder, output_folder,
-        log_folder, debug_folder, configuration_folder,
+        command_string,
+        script_folder,
+        join(batch_folder, 'input'),
+        join(batch_folder, 'output'),
+        join(batch_folder, 'log'),
+        join(batch_folder, 'debug'),
+        automation_folder,
         custom_environment)
+    part_folder_by_name = { for part_name in PART_TYPE_NAMES}
 
 
 def run_script(
-        command_string, script_folder, input_folder, output_folder,
-        log_folder, debug_folder, configuration_folder,
-        custom_environment=None):
-    # TODO: Make each folder optional
+        command_string, script_folder, input_folder, output_folder, log_folder,
+        debug_folder, automation_folder, custom_environment):
+    part_folder_by_name = {k: join(automation_folder, v) for k, v in {
+        'input_folder': input_folder,
+        'output_folder': output_folder,
+        'log_folder': log_folder,
+        'debug_folder': debug_folder,
+    }.items()}
+
     default_environment = {
         'CROSSCOMPUTE_INPUT_FOLDER': relpath(
             input_folder, script_folder),
@@ -231,22 +237,17 @@ def run_script(
             debug_folder, script_folder),
         'PATH': getenv('PATH', ''),
     }
-    environment = default_environment | (custom_environment or {})
+    environment = default_environment | custom_environment
     L.debug('environment = %s', environment)
 
-    relative_folder_by_name = {
-        'input_folder': input_folder,
-        'output_folder': output_folder,
-        'log_folder': log_folder,
-        'debug_folder': debug_folder,
-    }
-    for folder_name, relative_folder in relative_folder_by_name.items():
-        folder = make_folder(join(configuration_folder, relative_folder))
-        L.debug(f'{folder_name} = {format_path(folder)}')
+    part_folder_by_name = kkkkkkkkk{
+    {k: relpath(v, script_folder) for k, v in part_folder_by_name.items()}
+    for folder_name, part_folder in part_folder_by_name.items():
+        make_folder(join(automation_folder, part_folder))
 
-    # TODO: Capture stdout and stderr for live output
+    # TODO: Capture stdout and stderr in debug_folder
     subprocess.run(
-        format_text(command_string, relative_folder_by_name),
+        format_text(command_string, part_folder_by_name),
         shell=True,
-        cwd=join(configuration_folder, script_folder),
+        cwd=join(automation_folder, script_folder),
         env=environment)

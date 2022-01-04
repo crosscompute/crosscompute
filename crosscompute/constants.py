@@ -1,47 +1,25 @@
-import re
-from os import getenv
-from os.path import expanduser
+from os.path import dirname, join
 
-from . import __version__
-from .macros import format_slug
+from .macros.web import format_slug
 
 
-FOLDER = getenv(
-    'CROSSCOMPUTE_FOLDER', expanduser('~/.crosscompute'))
-HOST = '127.0.0.1'
-PORT = 7000
-DISK_POLL_IN_MILLISECONDS = 1000
-DISK_DEBOUNCE_IN_MILLISECONDS = 1000
-PING_INTERVAL_IN_SECONDS = 1
-ID_LENGTH = 16
-
-
-STYLE_ROUTE = '/s/{style_hash}'
-ECHOES_ROUTE = '/echoes'
-AUTOMATION_ROUTE = '/a/{automation_slug}'
-BATCH_ROUTE = '/b/{batch_slug}'
-RUN_ROUTE = '/r/{run_slug}'
-PAGE_ROUTE = '/{page_type}'
-FILE_ROUTE = '/{variable_path}'
-
-
-CONFIGURATION_EXTENSIONS = '.yaml', '.yml', '.toml', '.ini', '.cfg'
-STYLE_EXTENSIONS = '.css',
-TEMPLATE_EXTENSIONS = '.md', '.ipynb'
-PAGE_TYPE_NAMES = 'input', 'output', 'log', 'debug'
-PAGE_TYPE_NAME_BY_LETTER = {_[0]: _ for _ in PAGE_TYPE_NAMES}
-VARIABLE_ID_PATTERN = re.compile(r'{\s*([^}]+?)\s*}')
-FUNCTION_BY_NAME = {'slug': format_slug, 'title': str.title}
-
-
-VARIABLE_CACHE = {}
+PACKAGE_FOLDER = dirname(__file__)
+TEMPLATES_FOLDER = join(PACKAGE_FOLDER, 'templates')
 
 
 AUTOMATION_NAME = 'Automation X'
 AUTOMATION_VERSION = '0.0.0'
-CONFIGURATION_PATH = 'automate.yml'
-CONFIGURATION = {
-    'crosscompute': __version__,
-    'name': 'name of your automation',
-    'version': '0.0.0',
+AUTOMATION_PATH = 'automate.yml'
+
+
+HOST = '127.0.0.1'
+PORT = 7000
+DISK_POLL_IN_MILLISECONDS = 1000
+DISK_DEBOUNCE_IN_MILLISECONDS = 1000
+
+
+FUNCTION_BY_NAME = {
+    'slug': format_slug,
+    'title': str.title,
 }
+VARIABLE_CACHE = {}

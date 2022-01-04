@@ -7,43 +7,46 @@ from crosscompute.constants import (
     DISK_POLL_IN_MILLISECONDS,
     HOST,
     PORT)
-from crosscompute.macros import (is_port_in_use, open_browser)
+from crosscompute.macros.web import is_port_in_use, open_browser
 from crosscompute.routines.automation import Automation
 from crosscompute.routines.log import (
     configure_argument_parser_for_logging,
     configure_logging_from)
-
 from crosscompute.scripts.configure import (
     configure_argument_parser_for_configuring)
 
 
-L = getLogger(__name__)
+def do():
+    a = ArgumentParser()
+    configure_argument_parser_for_logging(a)
+    configure_argument_parser_for_configuring(a)
+    configure_argument_parser_for_serving(a)
+    args = a.parse_args()
+    configure_logging_from(args)
+
+    check_port(args.port)
+    automation = Automation.load(args.path_or_folder)
+    serve_with(automation, args)
 
 
 def configure_argument_parser_for_serving(a):
     a.add_argument(
         '--host', metavar='X',
         default=HOST,
-        help='specify 0.0.0.0 to listen for requests on all ip addresses')
+        help='specify 0.0.0.0 to listen for requests from all ip addresses')
     a.add_argument(
         '--port', metavar='X',
         default=PORT,
         help='specify port to listen to for requests')
     a.add_argument(
-        '--no-browser',
-        dest='with_browser',
-        action='store_false',
+        '--no-browser', dest='with_browser', action='store_false',
         help='do not open browser')
-    a.add_argument(
-        '--base-uri', metavar='X',
-        default='',
-        help='specify base uri for all routes')
-    a.add_argument(
-        '--production', dest='is_production', action='store_true',
-        help='disable server restart on file change')
     a.add_argument(
         '--static', dest='is_static', action='store_true',
         help='disable page update on file change')
+    a.add_argument(
+        '--production', dest='is_production', action='store_true',
+        help='disable server restart on file change')
     a.add_argument(
         '--disk-poll', metavar='X', type=int,
         default=DISK_POLL_IN_MILLISECONDS,
@@ -52,6 +55,10 @@ def configure_argument_parser_for_serving(a):
         '--disk-debounce', metavar='X', type=int,
         default=DISK_DEBOUNCE_IN_MILLISECONDS,
         help='interval in milliseconds to wait until the disk stops changing')
+    a.add_argument(
+        '--base-uri', metavar='X',
+        default='',
+        help='specify base uri for all routes')
 
 
 def check_port(port):
@@ -70,25 +77,15 @@ def serve_with(automation, args):
             host=args.host,
             port=args.port,
             base_uri=args.base_uri,
-            is_production=args.is_production,
             is_static=args.is_static,
+            is_production=args.is_production,
             disk_poll_in_milliseconds=args.disk_poll,
             disk_debounce_in_milliseconds=args.disk_debounce)
     except KeyboardInterrupt:
         pass
 
 
-def do():
-    a = ArgumentParser()
-    configure_argument_parser_for_configuring(a)
-    configure_argument_parser_for_logging(a)
-    configure_argument_parser_for_serving(a)
-    args = a.parse_args()
-    configure_logging_from(args)
-
-    check_port(args.port)
-    automation = Automation.load(args.path_or_folder)
-    serve_with(automation, args)
+L = getLogger(__name__)
 
 
 if __name__ == '__main__':

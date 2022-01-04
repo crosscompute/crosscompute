@@ -1,0 +1,9 @@
+---
+# version of crosscompute
+crosscompute: 0.9.0
+
+# name of your automation
+name: Automation X
+
+# version of your automation
+version: 0.0.0
