@@ -1,7 +1,4 @@
 # TODO: Validate configuration
-# TODO: Support case when user does not specify configuration file
-# TODO: Improve output when running batches
-# TODO: Support multiple configuration paths
 # TODO: Implement clean
 
 
@@ -44,7 +41,3 @@ def do():
 
     automation = Automation.load(args.path_or_folder)
     run_with(automation, args)
-
-
-if __name__ == '__main__':
-    do()
