@@ -1,4 +1,6 @@
+# TODO: Load existing configuration
 from argparse import ArgumentParser
+from invisibleroads_macros_log import format_path
 from logging import getLogger
 from os.path import exists, isdir, join
 
@@ -10,6 +12,7 @@ from crosscompute.constants import (
     TEMPLATES_FOLDER)
 from crosscompute.exceptions import (
     CrossComputeError)
+from crosscompute.routines.automation import Automation
 from crosscompute.routines.configuration import (
     get_configuration_format,
     load_raw_configuration_yaml,
@@ -37,42 +40,54 @@ def configure_argument_parser_for_configuring(a):
 
 
 def configure_with(args):
-    configuration, configuration_path = input_configuration_with(args)
+    path_or_folder = args.path_or_folder
+    if exists(path_or_folder):
+        try:
+            automation = Automation.load(path_or_folder)
+            configuration = automation.configuration
+        except CrossComputeError:
+            configuration = {}
+    configuration, configuration_path = input_configuration_with(
+        configuration, args)
+    del configuration['folder']
     print(dict(configuration))
     save_configuration(configuration_path, configuration)
     return configuration_path
 
 
-def input_configuration_with(args):
-    automation_path = get_automation_path(args.path_or_folder)
+def input_configuration_with(configuration, args):
+    if not configuration:
+        configuration = load_raw_configuration_yaml(join(
+            TEMPLATES_FOLDER, 'configuration.yaml'), with_comments=True)
+    old_automation_name = configuration.get('name', AUTOMATION_NAME)
+    old_automation_version = configuration.get('version', AUTOMATION_VERSION)
+    old_configuration_path = get_configuration_path(args.path_or_folder)
     try:
-        automation_name = input(
-            'automation_name [%s]: ' % AUTOMATION_NAME)
-        automation_version = input(
-            'automation_version [%s]: ' % AUTOMATION_VERSION)
-        configuration_path = input(
-            'configuration_path [%s]: ' % automation_path)
+        new_automation_name = input(
+            'automation name [%s]: ' % old_automation_name)
+        new_automation_version = input(
+            'automation version [%s]: ' % old_automation_version)
+        new_configuration_path = input(
+            'configuration path [%s]: ' % format_path(old_configuration_path))
     except KeyboardInterrupt:
         print()
         raise SystemExit
-    configuration = load_raw_configuration_yaml(join(
-        TEMPLATES_FOLDER, 'configuration.yaml'), with_comments=True)
     configuration['crosscompute'] = __version__
-    configuration['name'] = automation_name or AUTOMATION_NAME
-    configuration['version'] = automation_version or AUTOMATION_VERSION
-    return configuration, configuration_path or automation_path
+    configuration['name'] = new_automation_name or old_automation_name
+    configuration['version'] = new_automation_version or old_automation_version
+    return configuration, new_configuration_path or old_configuration_path
 
 
 def save_configuration(configuration_path, configuration):
     if exists(configuration_path):
-        L.warning(f'{configuration_path} already exists')
+        L.warning(f'{format_path(configuration_path)} already exists')
         question = '\033[1moverwrite? yes or [no]:\033[0m '
         participle = 'overwritten'
     else:
         question = 'save? yes or [no]: '
         participle = 'saved'
     if not input(question).lower() == 'yes':
-        L.warning(f'{configuration_path} not {participle}')
+        L.warning(f'{format_path(configuration_path)} not {participle}')
         raise SystemExit
     try:
         configuration_format = get_configuration_format(configuration_path)
@@ -83,15 +98,15 @@ def save_configuration(configuration_path, configuration):
     except CrossComputeError as e:
         L.error(e)
         raise SystemExit
-    L.info(f'{configuration_path} {participle}')
+    L.info(f'{format_path(configuration_path)} {participle}')
 
 
-def get_automation_path(path_or_folder):
+def get_configuration_path(path_or_folder):
     if path_or_folder and isdir(path_or_folder):
-        automation_path = join(path_or_folder, AUTOMATION_PATH)
+        configuration_path = join(path_or_folder, AUTOMATION_PATH)
     else:
-        automation_path = path_or_folder or AUTOMATION_PATH
-    return automation_path
+        configuration_path = path_or_folder or AUTOMATION_PATH
+    return configuration_path
 
 
 L = getLogger(__name__)
