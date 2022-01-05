@@ -26,25 +26,6 @@ from ..macros import StoppableProcess, format_path, make_folder
 from ..views import AutomationViews, EchoViews
 
 
-    def run(self, custom_environment=None):
-        for automation_index, automation_definition in enumerate(
-                self.automation_definitions):
-            automation_name = automation_definition.get(
-                'name', make_automation_name(automation_index))
-            script_definition = automation_definition.get('script', {})
-            command_string = script_definition.get('command')
-            if not command_string:
-                L.warning(f'{automation_name} script command not defined')
-                continue
-            automation_folder = automation_definition['folder']
-            script_folder = script_definition.get('folder', '.')
-            for batch_definition in automation_definition.get('batches', []):
-                batch_folder, custom_environment = prepare_batch(
-                    automation_definition, batch_definition)
-                run_batch(
-                    batch_folder, command_string, script_folder,
-                    automation_folder, custom_environment)
-
     def get_app(self, automation_queue, is_static=False, base_uri=''):
         # TODO: Decouple from pyramid
         automation_views = AutomationViews(

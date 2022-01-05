@@ -110,6 +110,11 @@ class Automation():
             run_server, disk_poll_in_milliseconds,
             disk_debounce_in_milliseconds)
 
+    def run(self):
+        for automation_definition in self.automation_definitions:
+            for batch_definition in automation_definition.get('batches', []):
+                run_automation(automation_definition, batch_definition)
+
     def work(self, automation_queue):
         try:
             while automation_pack := automation_queue.get():
@@ -133,11 +138,11 @@ def run_automation(automation_definition, batch_definition):
     script_folder = script_definition.get('folder', '.')
     mode_folder_by_name = {_ + '_folder': make_folder(join(
         automation_folder, batch_folder, _)) for _ in MODE_NAMES}
-    debug_folder = mode_folder_by_name['debug']
     script_environment = {
         'CROSSCOMPUTE_' + k.upper(): v for k, v in mode_folder_by_name.items()
     } | {'PATH': getenv('PATH', '')} | custom_environment
     L.debug('environment = %s', script_environment)
+    debug_folder = mode_folder_by_name['debug_folder']
     with open(join(
         debug_folder, 'stdout.txt',
     ), 'wt') as stdout_file, open(join(

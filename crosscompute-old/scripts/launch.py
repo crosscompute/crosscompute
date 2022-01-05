@@ -29,7 +29,6 @@ def do():
 
     processes = []
     if launch_mode in ['serve', 'all']:
-        check_port(args.port)
         processes.append(Process(target=serve_with, args=(automation, args)))
     if launch_mode in ['run', 'all']:
         processes.append(Process(target=run_with, args=(automation, args)))

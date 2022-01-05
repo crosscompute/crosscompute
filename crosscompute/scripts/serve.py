@@ -25,13 +25,12 @@ def do():
     configure_argument_parser_for_serving(a)
     args = a.parse_args()
     configure_logging_from(args)
-
-    check_port(args.port)
     try:
         automation = Automation.load(args.path_or_folder)
-        serve_with(automation, args)
     except CrossComputeError as e:
         L.error(e)
+        return
+    serve_with(automation, args)
 
 
 def configure_argument_parser_for_serving(a):
@@ -66,26 +65,25 @@ def configure_argument_parser_for_serving(a):
         help='specify base uri for all routes')
 
 
-def check_port(port):
-    if is_port_in_use(port):
-        L.error('port=%s is in use; cannot start server', port)
-        raise SystemExit
-    return port
-
-
 def serve_with(automation, args):
-    if args.with_browser and 'DISPLAY' in environ:
-        L.info('opening browser; set --no-browser to disable')
-        open_browser(f'http://localhost:{args.port}{args.base_uri}')
+    host, port, base_uri = args.host, args.port, args.base_uri
     try:
+        if is_port_in_use(port):
+            raise CrossComputeError(
+                'port=%s is in use; cannot start server', port)
+        if args.with_browser and 'DISPLAY' in environ:
+            L.info('opening browser; set --no-browser to disable')
+            open_browser(f'http://localhost:{port}{base_uri}')
         automation.serve(
-            host=args.host,
-            port=args.port,
-            base_uri=args.base_uri,
+            host=host,
+            port=port,
             is_static=args.is_static,
             is_production=args.is_production,
             disk_poll_in_milliseconds=args.disk_poll,
-            disk_debounce_in_milliseconds=args.disk_debounce)
+            disk_debounce_in_milliseconds=args.disk_debounce,
+            base_uri=base_uri)
+    except CrossComputeError as e:
+        L.error(e)
     except KeyboardInterrupt:
         pass
 
