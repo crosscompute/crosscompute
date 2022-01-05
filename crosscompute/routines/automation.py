@@ -1,29 +1,35 @@
+# TODO: Watch multiple folders if not all under parent folder
 import logging
 import subprocess
-from invisibleroads_macros_disk import make_folder
+from invisibleroads_macros_disk import has_changed, make_folder
 from invisibleroads_macros_log import format_path
 from logging import getLogger
 from multiprocessing import Process, Queue, Value
 from os import environ, getenv, listdir
-from os.path import isdir, join
+from os.path import exists, isdir, join, splitext
 from time import time
 from waitress import serve
+from watchgod import watch
 
 from ..constants import (
     AUTOMATION_PATH,
+    CONFIGURATION_EXTENSIONS,
     DISK_DEBOUNCE_IN_MILLISECONDS,
     DISK_POLL_IN_MILLISECONDS,
     HOST,
     MODE_NAMES,
-    PORT)
+    PORT,
+    STYLE_EXTENSIONS)
 from ..exceptions import (
     CrossComputeConfigurationError,
     CrossComputeError)
 from ..macros.iterable import group_by
 from .configuration import (
     get_automation_definitions,
+    get_display_configuration,
     get_raw_variable_definitions,
     load_configuration)
+from .disk import get_hash_by_path
 from .variable import (
     format_text,
     get_variable_data_by_id,
@@ -40,6 +46,16 @@ class Automation():
         else:
             instance.initialize_from_path(path_or_folder)
         return instance
+
+    def reload(self):
+        configuration_path = self.configuration_path
+        if exists(configuration_path):
+            self.initialize_from_path(configuration_path)
+        else:
+            self.initialize_from_folder(self.automation_folder)
+
+    def reload_display_configuration(self):
+        pass
 
     def initialize_from_folder(self, configuration_folder):
         paths = listdir(configuration_folder)
@@ -71,6 +87,7 @@ class Automation():
         self.automation_folder = automation_folder
         self.automation_definitions = automation_definitions
         self.timestamp_object = Value('d', time())
+        self.watched_paths = set([configuration_path])
 
         L.debug('configuration_path = %s', configuration_path)
         L.debug('automation_folder = %s', automation_folder)
@@ -95,6 +112,7 @@ class Automation():
             L.info('starting worker')
             worker_process = Process(target=self.work, args=(
                 automation_queue,))
+            worker_process.daemon = True
             worker_process.start()
             L.info('serving at http://%s:%s%s', host, port, base_uri)
             app = self.get_app(automation_queue, is_static, base_uri)
@@ -123,8 +141,83 @@ class Automation():
         except KeyboardInterrupt:
             pass
 
+    def watch(
+            self, run_server, disk_poll_in_milliseconds,
+            disk_debounce_in_milliseconds):
+        # server_process = StoppableProcess(target=run_server)
+        # server_process.start()
+        # TODO: !!! think about watched_paths and if this complication is needed
+        hash_by_path = get_hash_by_path(self.watched_paths)
+        for changes in watch(
+                self.automation_folder, min_sleep=disk_poll_in_milliseconds,
+                debounce=disk_debounce_in_milliseconds):
+            for changed_type, changed_path in changes:
+                L.debug('%s %s', changed_type, changed_path)
+                if not has_changed(changed_path, hash_by_path):
+                    continue
+                changed_extension = splitext(changed_path)[1]
+                if changed_extension in CONFIGURATION_EXTENSIONS:
+                    try:
+                        self.reload()
+                    except CrossComputeError as e:
+                        L.error(e)
+                        continue
+                    hash_by_path = get_hash_by_path(self.get_paths())
+                    # server_process.stop()
+                    # server_process = StoppableProcess(target=run_server)
+                    # server_process.start()
+                elif changed_extension in STYLE_EXTENSIONS:
+                    for d in self.automation_definitions:
+                        d['display'] = get_display_configuration(d)
+                    self.timestamp_object.value = time()
+                # elif changed_extension in TEMPLATE_EXTENSIONS:
+                    # self.timestamp_object.value = time()
+                else:
+                    # TODO: Send partial updates
+                    self.timestamp_object.value = time()
+
+    def get_paths(self):
+        paths = set([self.configuration_path])
+        '''
+        for automation_definition in self.automation_definitions:
+            automation_folder = automation_definition['folder']
+            configuration = load_configuration(automation_definition['path'])
+            for mode_name in MODE_NAMES:
+                mode_configuration = automation_definition.get(mode_name, {})
+                template_definitions = mode_configuration.get('templates', [])
+                for template_definition in template_definitions:
+                    if 'path' not in template_definition:
+                        continue
+                    paths.add(join(
+                        automation_folder, template_definition['path']))
+
+            # TODO: Watch only on view
+            for batch_definition in automation_definition.get('batches', []):
+                paths.update(get_paths_from_folder(join(
+                    automation_folder, batch_definition['folder'])))
+
+            for batch_definition in configuration.get('batches', []):
+                batch_configuration = batch_definition.get('configuration', {})
+                if 'path' not in batch_configuration:
+                    continue
+                paths.add(join(
+                    automation_folder, batch_configuration['path']))
+            display_configuration = automation_definition.get('display', {})
+            for style_definition in display_configuration.get('styles', []):
+                if 'path' not in style_definition:
+                    continue
+                paths.add(join(automation_folder, style_definition['path']))
+
+            paths.add(automation_definition['path'])
+        '''
+        return paths
+
 
 def run_automation(automation_definition, batch_definition):
+    script_definition = automation_definition.get('script', {})
+    command_string = script_definition.get('command')
+    if not command_string:
+        return
     automation_folder = automation_definition['folder']
     batch_folder, custom_environment = prepare_batch(
         automation_definition, batch_definition)
@@ -134,8 +227,6 @@ def run_automation(automation_definition, batch_definition):
         automation_definition['version'],
         batch_definition['name'],
         format_path(join(automation_folder, batch_folder)))
-    script_definition = automation_definition.get('script', {})
-    command_string = script_definition.get('command')
     script_folder = script_definition.get('folder', '.')
     mode_folder_by_name = {_ + '_folder': make_folder(join(
         automation_folder, batch_folder, _)) for _ in MODE_NAMES}

@@ -45,8 +45,9 @@ def open_browser(uri, check_interval_in_seconds=1):
         except KeyboardInterrupt:
             pass
 
-    p = Process(target=wait_then_run)
-    p.start()
+    browser_process = Process(target=wait_then_run)
+    browser_process.daemon = True
+    browser_process.start()
 
 
 L = getLogger(__name__)

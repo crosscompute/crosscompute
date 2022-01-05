@@ -50,6 +50,7 @@ def configure_with(args):
     configuration, configuration_path = input_configuration_with(
         configuration, args)
     del configuration['folder']
+    del configuration['path']
     print(dict(configuration))
     save_configuration(configuration_path, configuration)
     return configuration_path

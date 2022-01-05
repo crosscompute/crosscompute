@@ -1,6 +1,7 @@
 # TODO: Save to yaml, ini, toml
 import tomli
 from configparser import ConfigParser
+from invisibleroads_macros_log import format_path
 from logging import getLogger
 from os.path import abspath, basename, dirname, exists, join, splitext
 from ruamel.yaml import YAML
@@ -25,6 +26,7 @@ from .variable import (
 
 
 def load_configuration(configuration_path):
+    configuration_path = abspath(configuration_path)
     configuration_format = get_configuration_format(configuration_path)
     load_raw_configuration = {
         'ini': load_raw_configuration_ini,
@@ -32,9 +34,10 @@ def load_configuration(configuration_path):
         'yaml': load_raw_configuration_yaml,
     }[configuration_format]
     configuration = load_raw_configuration(configuration_path)
-    configuration['folder'] = abspath(dirname(configuration_path) or '.')
+    configuration['folder'] = dirname(configuration_path)
+    configuration['path'] = configuration_path
     configuration = validate_configuration(configuration)
-    L.debug(f'{configuration_path} loaded')
+    L.debug(f'{format_path(configuration_path)} loaded')
     return configuration
 
 

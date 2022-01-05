@@ -1,3 +1,5 @@
+# TODO: Include request.path in stream view url
+# TODO: Trigger reload intelligently only if relevant
 from pyramid.response import Response
 from time import sleep
 

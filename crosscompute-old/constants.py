@@ -12,8 +12,3 @@ RUN_ROUTE = '/r/{run_slug}'
 MODE_ROUTE = '/{mode_name}'
 MODE_NAME_BY_LETTER = {_[0]: _ for _ in MODE_NAMES}
 FILE_ROUTE = '/{variable_path}'
-
-
-CONFIGURATION_EXTENSIONS = '.yaml', '.yml', '.toml', '.ini', '.cfg'
-STYLE_EXTENSIONS = '.css',
-TEMPLATE_EXTENSIONS = '.md', '.ipynb'
