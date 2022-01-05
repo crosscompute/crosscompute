@@ -46,11 +46,12 @@ class Automation():
         if AUTOMATION_PATH in paths:
             paths.remove(AUTOMATION_PATH)
             paths.insert(0, AUTOMATION_PATH)
-        for path in paths:
-            if isdir(path):
+        for relative_path in paths:
+            absolute_path = join(configuration_folder, relative_path)
+            if isdir(absolute_path):
                 continue
             try:
-                self.initialize_from_path(path)
+                self.initialize_from_path(absolute_path)
             except CrossComputeConfigurationError:
                 raise
             except CrossComputeError:
