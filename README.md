@@ -1,6 +1,6 @@
-# CrossCompute
+# CrossCompute Analytics Automation Framework
 
-Automate your Jupyter notebooks and scripts as web-based reports, tools, widgets, dashboards, forms.
+Automate your Jupyter notebooks and scripts as web-based reports, tools, widgets, dashboards, forms. [See examples and tutorials](https://crosscompute.com).
 
 - Reports are documents that update when the data changes.
 - Forms are step-by-step questions that generate a specific web-based report.
@@ -8,7 +8,22 @@ Automate your Jupyter notebooks and scripts as web-based reports, tools, widgets
 - Widgets are interactive visualizations that update when the data changes.
 - Dashboards are widgets in a layout.
 
-[See examples and tutorials](https://crosscompute.com).
+Here are some available extensions:
+
+- jupyterlab-crosscompute
+- crosscompute-views-map
+
+Here are some available views:
+
+- string
+- number
+- password
+- email
+- text
+- markdown
+- image
+- map-mapbox
+- map-pydeck-screengrid
 
 ## Usage
 

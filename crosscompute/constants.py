@@ -22,7 +22,7 @@ DISK_DEBOUNCE_IN_MILLISECONDS = 1000
 
 AUTOMATION_ROUTE = '/a/{automation_slug}'
 BATCH_ROUTE = '/b/{batch_slug}'
-FILE_ROUTE = '/{file_path}'
+VARIABLE_ROUTE = '/{variable_id}'
 MODE_ROUTE = '/{mode_code}'
 RUN_ROUTE = '/r/{run_slug}'
 STYLE_ROUTE = '/s/{style_name}'

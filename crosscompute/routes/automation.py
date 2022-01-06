@@ -4,20 +4,20 @@
 import json
 from invisibleroads_macros_disk import is_path_in_folder, make_random_folder
 from logging import getLogger
-from os.path import basename, exists, join
+from os.path import basename, exists, join, splitext
 from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
-from pyramid.response import FileResponse
+from pyramid.response import FileResponse, Response
 
 from ..constants import (
     AUTOMATION_ROUTE,
     BATCH_ROUTE,
-    FILE_ROUTE,
     ID_LENGTH,
     MODE_NAME_BY_CODE,
     MODE_ROUTE,
     RUN_ROUTE,
     STYLE_ROUTE,
-    VARIABLE_ID_PATTERN)
+    VARIABLE_ID_PATTERN,
+    VARIABLE_ROUTE)
 from ..exceptions import CrossComputeDataError
 from ..macros.iterable import extend_uniquely, find_item
 from ..macros.web import get_html_from_markdown
@@ -27,6 +27,7 @@ from ..routines.configuration import (
     get_variable_definitions)
 from ..routines.variable import (
     VariableView,
+    load_variable_data,
     parse_data_by_id)
 
 
@@ -91,16 +92,16 @@ class AutomationRoutes():
             'automation batch mode',
             AUTOMATION_ROUTE + BATCH_ROUTE + MODE_ROUTE)
         config.add_route(
-            'automation batch mode file',
-            AUTOMATION_ROUTE + BATCH_ROUTE + MODE_ROUTE + FILE_ROUTE)
+            'automation batch mode variable',
+            AUTOMATION_ROUTE + BATCH_ROUTE + MODE_ROUTE + VARIABLE_ROUTE)
 
         config.add_view(
             self.see_automation_batch_mode,
             route_name='automation batch mode',
             renderer='crosscompute:templates/mode.jinja2')
         config.add_view(
-            self.see_automation_batch_mode_file,
-            route_name='automation batch mode file')
+            self.see_automation_batch_mode_variable,
+            route_name='automation batch mode variable')
 
     def configure_runs(self, config):
         config.add_route(
@@ -110,16 +111,16 @@ class AutomationRoutes():
             'automation run mode',
             AUTOMATION_ROUTE + RUN_ROUTE + MODE_ROUTE)
         config.add_route(
-            'automation run mode file',
-            AUTOMATION_ROUTE + RUN_ROUTE + MODE_ROUTE + FILE_ROUTE)
+            'automation run mode variable',
+            AUTOMATION_ROUTE + RUN_ROUTE + MODE_ROUTE + VARIABLE_ROUTE)
 
         config.add_view(
             self.see_automation_batch_mode,
             route_name='automation run mode',
             renderer='crosscompute:templates/mode.jinja2')
         config.add_view(
-            self.see_automation_batch_mode_file,
-            route_name='automation run mode file')
+            self.see_automation_batch_mode_variable,
+            route_name='automation run mode variable')
 
     def see_root(self, request):
         'Render root with a list of available automations'
@@ -224,7 +225,7 @@ class AutomationRoutes():
             request, css_uris, template_text, variable_definitions,
             absolute_batch_folder)
 
-    def see_automation_batch_mode_file(self, request):
+    def see_automation_batch_mode_variable(self, request):
         automation_definition = self.get_automation_definition_from(request)
         automation_folder = automation_definition['folder']
         batch_definition = self.get_batch_definition_from(
@@ -233,21 +234,23 @@ class AutomationRoutes():
         variable_definitions = get_variable_definitions(
             automation_definition, mode_name)
         matchdict = request.matchdict
-        file_path = matchdict['file_path']
+        variable_id = matchdict['variable_id']
         try:
             variable_definition = find_item(
-                variable_definitions, 'path', file_path,
+                variable_definitions, 'id', variable_id,
                 normalize=str.casefold)
         except StopIteration:
             raise HTTPNotFound
         folder = join(automation_folder, batch_definition[
             'folder'], mode_name)
-        path = join(folder, file_path)
+        path = join(folder, variable_definition['path'])
         if not is_path_in_folder(path, folder):
             raise HTTPBadRequest
         if not exists(path):
             raise HTTPNotFound
         L.debug(variable_definition)
+        if splitext(path)[1] == '.dictionary':
+            return Response(load_variable_data(path, variable_id))
         return FileResponse(path, request=request)
 
     def get_automation_definition_from(self, request):

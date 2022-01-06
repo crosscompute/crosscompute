@@ -1,34 +1,34 @@
 {% extends BASE_JINJA2 %}
 
 {% block body_js %}
-let streamSource, reconnectionId, serverTime = {{ timestamp_value }}
+let streamSource, reconnectionId, serverTime = {{ timestamp_value }};
 
 function connect() {
-  streamSource = new EventSource('{{ BASE_URI }}{{ STREAMS_ROUTE }}')
+  streamSource = new EventSource('{{ BASE_URI }}{{ STREAMS_ROUTE }}');
 
   streamSource.onopen = function() {
-    clearTimeout(reconnectionId)
+    clearTimeout(reconnectionId);
   }
 
   streamSource.onmessage = async (message) => {
-    const messageData = message.data
+    const messageData = message.data;
     if (messageData != serverTime) {
-      const response = await fetch(location.href, { method: 'head' })
+      const response = await fetch(location.href, { method: 'head' });
       if (response.ok) {
-        location.reload()
+        location.reload();
       } else {
-        location.href = '/'
+        location.href = '/';
       }
     }
   }
 
   streamSource.onerror = function() {
-    streamSource.close()
-    clearTimeout(reconnectionId)
-    reconnectionId = setTimeout(connect, 1000)
+    streamSource.close();
+    clearTimeout(reconnectionId);
+    reconnectionId = setTimeout(connect, 1000);
   }
 }
 
-connect()
+connect();
 {{ super() }}
 {%- endblock %}

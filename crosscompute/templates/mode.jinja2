@@ -24,14 +24,14 @@
 {{ super() }}
 {% if mode_name == 'input' -%}
 document.getElementById('automation').onsubmit = async (e) => {
-  e.preventDefault()
-  const url = '{{ BASE_URI }}{{ automation_definition['uri'] }}.json'
+  e.preventDefault();
+  const url = '{{ BASE_URI }}{{ automation_definition['uri'] }}.json';
   const response = await fetch(url, {
     method: 'POST',
     body: new FormData(e.target)
-  })
-  const d = await response.json()
-  window.location = '{{ BASE_URI }}{{ automation_definition['uri'] }}/r/' + d['id'] + '/o'
+  });
+  const d = await response.json();
+  window.location = '{{ BASE_URI }}{{ automation_definition['uri'] }}/r/' + d['id'] + '/o';
 }
 {% endif -%}
 {%- endblock -%}
