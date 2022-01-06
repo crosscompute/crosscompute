@@ -174,7 +174,7 @@ def make_automation_name(automation_index):
 def get_batch_definitions(configuration):
     batch_definitions = []
     automation_folder = configuration['folder']
-    variable_definitions = get_raw_variable_definitions(
+    variable_definitions = get_variable_definitions(
         configuration, 'input')
     for raw_batch_definition in configuration.get('batches', []):
         try:
@@ -233,11 +233,18 @@ def get_display_configuration(configuration):
     return display_configuration
 
 
-def get_raw_variable_definitions(configuration, mode_name):
+def get_variable_definitions(configuration, mode_name, with_all=False):
     mode_configuration = configuration.get(mode_name, {})
     variable_definitions = mode_configuration.get('variables', [])
     for variable_definition in variable_definitions:
         variable_definition['mode'] = mode_name
+    if with_all:
+        variable_definitions = variable_definitions.copy()
+        for MODE_NAME in MODE_NAMES:
+            if mode_name == MODE_NAME:
+                continue
+            variable_definitions.extend(get_variable_definitions(
+                configuration, mode_name))
     return variable_definitions
 
 

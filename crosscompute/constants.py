@@ -6,6 +6,7 @@ from .macros.web import format_slug
 
 PACKAGE_FOLDER = dirname(__file__)
 TEMPLATES_FOLDER = join(PACKAGE_FOLDER, 'templates')
+ID_LENGTH = 16
 
 
 AUTOMATION_NAME = 'Automation X'
@@ -21,8 +22,13 @@ DISK_DEBOUNCE_IN_MILLISECONDS = 1000
 
 AUTOMATION_ROUTE = '/a/{automation_slug}'
 BATCH_ROUTE = '/b/{batch_slug}'
+FILE_ROUTE = '/{file_path}'
+MODE_ROUTE = '/{mode_name}'
+RUN_ROUTE = '/r/{run_slug}'
 STYLE_ROUTE = '/s/{style_name}'
 STREAMS_ROUTE = '/streams'
+
+
 MODE_NAMES = 'input', 'output', 'log', 'debug'
 
 

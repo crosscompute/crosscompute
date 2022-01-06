@@ -52,17 +52,6 @@ new deck.DeckGL({
 ''')
 
 
-def get_all_variable_definitions(configuration, part_name):
-    variable_definitions = get_raw_variable_definitions(
-        configuration, part_name).copy()
-    for PART_NAME in PART_NAMES[:2]:
-        if part_name == PART_NAME:
-            continue
-        variable_definitions.extend(get_raw_variable_definitions(
-            configuration, part_name))
-    return variable_definitions
-
-
 def get_template_texts(configuration, page_type_name):
     template_texts = []
     folder = configuration['folder']

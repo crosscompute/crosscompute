@@ -32,7 +32,7 @@ from ..routes.automation import AutomationRoutes
 from .configuration import (
     get_automation_definitions,
     get_display_configuration,
-    get_raw_variable_definitions,
+    get_variable_definitions,
     load_configuration)
 from .variable import (
     format_text,
@@ -285,7 +285,7 @@ def run_automation(automation_definition, batch_definition):
 
 
 def prepare_batch(automation_definition, batch_definition):
-    variable_definitions = get_raw_variable_definitions(
+    variable_definitions = get_variable_definitions(
         automation_definition, 'input')
     batch_folder = batch_definition['folder']
     variable_definitions_by_path = group_by(variable_definitions, 'path')

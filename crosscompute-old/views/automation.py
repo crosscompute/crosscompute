@@ -1,9 +1,6 @@
-# TODO: Let user customize root title
-# TODO: Add unit tests
 # TODO: Let creator override mapbox js
 
 
-from ..exceptions import CrossComputeDataError
 from ..macros import (
     extend_uniquely,
     is_path_in_folder,
@@ -24,45 +21,6 @@ from ..routines.web import get_html_from_markdown
 L = getLogger(__name__)
 
 
-        config.add_route(
-            'automation.json',
-            AUTOMATION_ROUTE + '.json')
-        config.add_route(
-            'automation',
-            AUTOMATION_ROUTE)
-        config.add_route(
-            'automation batch',
-            AUTOMATION_ROUTE + BATCH_ROUTE)
-        config.add_route(
-            'automation batch part',
-            AUTOMATION_ROUTE + BATCH_ROUTE + PAGE_ROUTE)
-        config.add_route(
-            'automation batch page file',
-            AUTOMATION_ROUTE + BATCH_ROUTE + PAGE_ROUTE + FILE_ROUTE)
-        config.add_route(
-            'automation run',
-            AUTOMATION_ROUTE + RUN_ROUTE)
-        config.add_route(
-            'automation run page',
-            AUTOMATION_ROUTE + RUN_ROUTE + PAGE_ROUTE)
-        config.add_route(
-            'automation run page file',
-            AUTOMATION_ROUTE + RUN_ROUTE + PAGE_ROUTE + FILE_ROUTE)
-
-        config.add_view(
-            self.see_automation,
-            route_name='automation',
-            renderer='crosscompute:templates/automation.jinja2')
-        config.add_view(
-            self.run_automation,
-            route_name='automation.json',
-            renderer='json')
-        '''
-        config.add_view(
-            self.see_automation_result,
-            route_name='automation batch',
-            renderer='crosscompute:templates/batch.jinja2')
-        '''
         config.add_view(
             self.see_automation_result_section,
             route_name='automation batch section',
@@ -70,12 +28,6 @@ L = getLogger(__name__)
         config.add_view(
             self.see_automation_result_section_file,
             route_name='automation batch section file')
-        '''
-        config.add_view(
-            self.see_automation_result,
-            route_name='automation run',
-            renderer='crosscompute:templates/run.jinja2')
-        '''
         config.add_view(
             self.see_automation_page,
             route_name='automation run page',
@@ -83,45 +35,6 @@ L = getLogger(__name__)
         config.add_view(
             self.see_automation_page_file,
             route_name='automation run page file')
-
-    def see_automation(self, request):
-        automation_definition = self.get_automation_definition_from(request)
-        css_uris = get_css_uris(automation_definition)
-        return automation_definition | {
-            'css_uris': css_uris,
-            'timestamp_value': self.timestamp_object.value,
-        }
-
-    def run_automation(self, request):
-        automation_definition = self.get_automation_definition_from(request)
-        variable_definitions = get_raw_variable_definitions(
-            automation_definition, 'input')
-        try:
-            data_by_id = dict(request.params) or request.json_body
-        except json.JSONDecodeError:
-            data_by_id = {}
-        try:
-            data_by_id = parse_data_by_id(data_by_id, variable_definitions)
-        except CrossComputeDataError as e:
-            raise HTTPBadRequest(e)
-        runs_folder = join(automation_definition['folder'], 'runs')
-        folder = make_unique_folder(runs_folder, ID_LENGTH)
-        self.automation_queue.put((automation_definition, {
-            'folder': folder,
-            'data_by_id': data_by_id,
-        }))
-        run_id = basename(folder)
-        if 'runs' not in automation_definition:
-            automation_definition['runs'] = []
-        run_uri = RUN_ROUTE.format(run_slug=run_id)
-        automation_definition['runs'].append({
-            'name': run_id,
-            'slug': run_id,
-            'folder': folder,
-            'uri': run_uri,
-        })
-        # TODO: Change target page depending on definition
-        return {'id': run_id}
 
     def see_automation_batch(self, request):
         return {}
@@ -173,17 +86,6 @@ L = getLogger(__name__)
         if not is_path_in_folder(path, folder):
             raise HTTPBadRequest
         return FileResponse(path, request=request)
-
-    def get_automation_definition_from(self, request):
-        matchdict = request.matchdict
-        automation_slug = matchdict['automation_slug']
-        try:
-            automation_definition = find_item(
-                self.automation_definitions, 'slug', automation_slug,
-                normalize=str.casefold)
-        except StopIteration:
-            raise HTTPNotFound
-        return automation_definition
 
     def get_result_definition_from(self, request, automation_definition):
         matchdict = request.matchdict
