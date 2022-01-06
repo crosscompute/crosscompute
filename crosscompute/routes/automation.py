@@ -219,7 +219,7 @@ class AutomationRoutes():
             # 'batch_definition': batch_definition,
             # 'uri': request.path,
             'mode_name': mode_name,
-            'timestamp_value': self.timestamp_object.value,
+            'timestamp_value': self._timestamp_object.value,
         } | render_page_dictionary(
             request, css_uris, template_text, variable_definitions,
             absolute_batch_folder)
