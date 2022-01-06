@@ -1,25 +1,23 @@
 # TODO: Watch multiple folders if not all under parent folder
 import logging
 import subprocess
-from invisibleroads_macros_disk import has_changed, make_folder
+from invisibleroads_macros_disk import is_path_in_folder, make_folder
 from invisibleroads_macros_log import format_path
 from logging import getLogger
 from multiprocessing import Process, Queue, Value
 from os import environ, getenv, listdir
-from os.path import exists, isdir, join, splitext
+from os.path import exists, isdir, join, realpath
 from time import time
 from waitress import serve
 from watchgod import watch
 
 from ..constants import (
     AUTOMATION_PATH,
-    CONFIGURATION_EXTENSIONS,
     DISK_DEBOUNCE_IN_MILLISECONDS,
     DISK_POLL_IN_MILLISECONDS,
     HOST,
     MODE_NAMES,
-    PORT,
-    STYLE_EXTENSIONS)
+    PORT)
 from ..exceptions import (
     CrossComputeConfigurationError,
     CrossComputeError)
@@ -29,7 +27,6 @@ from .configuration import (
     get_display_configuration,
     get_raw_variable_definitions,
     load_configuration)
-from .disk import get_hash_by_path
 from .variable import (
     format_text,
     get_variable_data_by_id,
@@ -48,22 +45,19 @@ class Automation():
         return instance
 
     def reload(self):
-        configuration_path = self.configuration_path
-        if exists(configuration_path):
-            self.initialize_from_path(configuration_path)
+        path = self.path
+        if exists(path):
+            self.initialize_from_path(path)
         else:
-            self.initialize_from_folder(self.automation_folder)
+            self.initialize_from_folder(self.folder)
 
-    def reload_display_configuration(self):
-        pass
-
-    def initialize_from_folder(self, configuration_folder):
-        paths = listdir(configuration_folder)
+    def initialize_from_folder(self, folder):
+        paths = listdir(folder)
         if AUTOMATION_PATH in paths:
             paths.remove(AUTOMATION_PATH)
             paths.insert(0, AUTOMATION_PATH)
         for relative_path in paths:
-            absolute_path = join(configuration_folder, relative_path)
+            absolute_path = join(folder, relative_path)
             if isdir(absolute_path):
                 continue
             try:
@@ -76,21 +70,14 @@ class Automation():
         else:
             raise CrossComputeError('could not find configuration')
 
-    def initialize_from_path(self, configuration_path):
-        configuration = load_configuration(configuration_path)
-        automation_folder = configuration['folder']
-        automation_definitions = get_automation_definitions(
-            configuration)
-
-        self.configuration_path = configuration_path
-        self.configuration = configuration
-        self.automation_folder = automation_folder
-        self.automation_definitions = automation_definitions
-        self.timestamp_object = Value('d', time())
-        self.watched_paths = set([configuration_path])
-
-        L.debug('configuration_path = %s', configuration_path)
-        L.debug('automation_folder = %s', automation_folder)
+    def initialize_from_path(self, path):
+        configuration = load_configuration(path)
+        self.path = path
+        self.folder = configuration['folder']
+        self.definitions = get_automation_definitions(configuration)
+        self._file_type_by_path = self._get_file_type_by_path()
+        self._timestamp_object = Value('d', time())
+        L.debug('configuration_path = %s', path)
 
     def serve(
             self,
@@ -130,7 +117,7 @@ class Automation():
             disk_debounce_in_milliseconds)
 
     def run(self):
-        for automation_definition in self.automation_definitions:
+        for automation_definition in self.definitions:
             for batch_definition in automation_definition.get('batches', []):
                 run_automation(automation_definition, batch_definition)
 
@@ -146,70 +133,86 @@ class Automation():
             disk_debounce_in_milliseconds):
         # server_process = StoppableProcess(target=run_server)
         # server_process.start()
-        # TODO: !!! think about watched_paths and if this complication is needed
-        hash_by_path = get_hash_by_path(self.watched_paths)
         for changes in watch(
-                self.automation_folder, min_sleep=disk_poll_in_milliseconds,
+                self.folder, min_sleep=disk_poll_in_milliseconds,
                 debounce=disk_debounce_in_milliseconds):
             for changed_type, changed_path in changes:
                 L.debug('%s %s', changed_type, changed_path)
-                if not has_changed(changed_path, hash_by_path):
+                try:
+                    file_type = self._get_file_type(changed_path)
+                except KeyError:
                     continue
-                changed_extension = splitext(changed_path)[1]
-                if changed_extension in CONFIGURATION_EXTENSIONS:
+                if file_type == 'c':
                     try:
                         self.reload()
                     except CrossComputeError as e:
                         L.error(e)
                         continue
-                    hash_by_path = get_hash_by_path(self.get_paths())
                     # server_process.stop()
                     # server_process = StoppableProcess(target=run_server)
                     # server_process.start()
-                elif changed_extension in STYLE_EXTENSIONS:
-                    for d in self.automation_definitions:
+                elif file_type == 's':
+                    for d in self.definitions:
                         d['display'] = get_display_configuration(d)
-                    self.timestamp_object.value = time()
-                # elif changed_extension in TEMPLATE_EXTENSIONS:
-                    # self.timestamp_object.value = time()
+                    self._timestamp_object.value = time()
+                # elif file_type == 't':
+                    # self._timestamp_object.value = time()
                 else:
                     # TODO: Send partial updates
-                    self.timestamp_object.value = time()
+                    self._timestamp_object.value = time()
 
-    def get_paths(self):
-        paths = set([self.configuration_path])
-        '''
-        for automation_definition in self.automation_definitions:
-            automation_folder = automation_definition['folder']
+    def _get_file_type(self, path):
+        if is_path_in_folder(path, join(self.folder, 'runs')):
+            return 'v'
+        return self._file_type_by_path[realpath(path)]
+
+    def _get_file_type_by_path(self):
+        'Set c = configuration, s = style, t = template, v = variable'
+        file_type_by_path = {}
+
+        def add(path, file_type):
+            file_type_by_path[realpath(path)] = file_type
+
+        for path in [self.path] + [_['path'] for _ in self.definitions]:
+            add(path, 'c')
+        for automation_definition in self.definitions:
+            folder = automation_definition['folder']
             configuration = load_configuration(automation_definition['path'])
+            for batch_definition in configuration.get('batches', []):
+                batch_configuration = batch_definition.get('configuration', {})
+                if 'path' not in batch_configuration:
+                    continue
+                add(join(folder, batch_configuration['path']), 'c')
             for mode_name in MODE_NAMES:
                 mode_configuration = automation_definition.get(mode_name, {})
                 template_definitions = mode_configuration.get('templates', [])
                 for template_definition in template_definitions:
                     if 'path' not in template_definition:
                         continue
-                    paths.add(join(
-                        automation_folder, template_definition['path']))
-
-            # TODO: Watch only on view
+                    add(join(folder, template_definition['path']), 't')
             for batch_definition in automation_definition.get('batches', []):
-                paths.update(get_paths_from_folder(join(
-                    automation_folder, batch_definition['folder'])))
-
-            for batch_definition in configuration.get('batches', []):
-                batch_configuration = batch_definition.get('configuration', {})
-                if 'path' not in batch_configuration:
-                    continue
-                paths.add(join(
-                    automation_folder, batch_configuration['path']))
+                for path in self._get_paths_from_folder(join(
+                        folder, batch_definition['folder'])):
+                    add(path, 'v')
             display_configuration = automation_definition.get('display', {})
             for style_definition in display_configuration.get('styles', []):
                 if 'path' not in style_definition:
                     continue
-                paths.add(join(automation_folder, style_definition['path']))
+                add(join(folder, style_definition['path']), 's')
+        return file_type_by_path
 
-            paths.add(automation_definition['path'])
-        '''
+    def _get_paths_from_folder(self, folder):
+        paths = set()
+        for automation_definition in self.definitions:
+            for mode_name in MODE_NAMES:
+                mode_configuration = automation_definition.get(mode_name, {})
+                variable_definitions = mode_configuration.get('variables', [])
+                for variable_definition in variable_definitions:
+                    variable_configuration = variable_definition.get(
+                        'configuration', {})
+                    if 'path' in variable_configuration:
+                        paths.add(join(folder, variable_configuration['path']))
+                    paths.add(join(folder, variable_definition['path']))
         return paths
 
 

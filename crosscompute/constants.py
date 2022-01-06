@@ -17,9 +17,6 @@ HOST = '127.0.0.1'
 PORT = 7000
 DISK_POLL_IN_MILLISECONDS = 1000
 DISK_DEBOUNCE_IN_MILLISECONDS = 1000
-CONFIGURATION_EXTENSIONS = '.yaml', '.yml', '.toml', '.ini', '.cfg'
-STYLE_EXTENSIONS = '.css',
-# TEMPLATE_EXTENSIONS = '.md', '.ipynb'
 
 
 AUTOMATION_ROUTE = '/a/{automation_slug}'

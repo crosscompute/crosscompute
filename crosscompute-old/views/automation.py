@@ -192,11 +192,11 @@ class AutomationViews():
             raise HTTPBadRequest(e)
         runs_folder = join(automation_definition['folder'], 'runs')
         folder = make_unique_folder(runs_folder, ID_LENGTH)
-        run_id = basename(folder)
         self.automation_queue.put((automation_definition, {
             'folder': folder,
             'data_by_id': data_by_id,
         }))
+        run_id = basename(folder)
         if 'runs' not in automation_definition:
             automation_definition['runs'] = []
         run_uri = RUN_ROUTE.format(run_slug=run_id)
@@ -213,6 +213,7 @@ class AutomationViews():
         return {}
 
     # def see_automation_result_page(self, request):
+    # def see_automation_batch_mode
     def see_automation_page(self, request):
         page_type_name = self.get_page_type_name_from(request)
         automation_definition = self.get_automation_definition_from(request)

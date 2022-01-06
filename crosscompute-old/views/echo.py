@@ -28,6 +28,7 @@ class EchoViews():
         config.action(None, update_renderer_globals)
 
     def see_echoes(self, request):
+        # TODO: Add url to queue
         response = Response(headerlist=[
             ('Content-Type', 'text/event-stream'),
             ('Cache-Control', 'no-cache'),

@@ -41,6 +41,8 @@ def run_with(automation, args):
         automation.run()
     except CrossComputeError as e:
         L.error(e)
+    except KeyboardInterrupt:
+        pass
 
 
 L = getLogger(__name__)
