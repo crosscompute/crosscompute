@@ -10,10 +10,15 @@ function connect() {
     clearTimeout(reconnectionId)
   }
 
-  streamSource.onmessage = function(message) {
+  streamSource.onmessage = async (message) => {
     const messageData = message.data
     if (messageData != serverTime) {
-      location.reload()
+      const response = await fetch(location.href, { method: 'head' })
+      if (response.ok) {
+        location.reload()
+      } else {
+        location.href = '/'
+      }
     }
   }
 

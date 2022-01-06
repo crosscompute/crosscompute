@@ -1,6 +1,7 @@
 import csv
 import json
 from importlib.metadata import entry_points
+from invisibleroads_macros_log import format_path
 from logging import getLogger
 from os.path import getmtime, join, splitext
 from string import Template
@@ -53,7 +54,7 @@ class VariableView():
             render = self.render_output
         return render(element_id, function_names, request_path)
 
-    def _render_input(self, element_id, function_names, request_path):
+    def render_input(self, element_id, function_names, request_path):
         return {
             'css_uris': [],
             'js_uris': [],
@@ -61,7 +62,7 @@ class VariableView():
             'js_texts': [],
         }
 
-    def _render_output(self, element_id, function_names, request_path):
+    def render_output(self, element_id, function_names, request_path):
         return {
             'css_uris': [],
             'js_uris': [],
@@ -85,15 +86,16 @@ class VariableView():
             'configuration', {})
         configuration_path = variable_configuration.get('path')
         if configuration_path:
+            path = join(
+                absolute_batch_folder, self.variable_mode, configuration_path)
             try:
-                variable_configuration.update(json.load(open(join(
-                    absolute_batch_folder, configuration_path), 'rt')))
+                variable_configuration.update(json.load(open(path, 'rt')))
             except OSError:
-                L.error('%s not found', configuration_path)
+                L.error('path not found %s', format_path(path))
             except json.JSONDecodeError:
-                L.error('%s must be json', configuration_path)
+                L.error('must be json %s', format_path(path))
             except TypeError:
-                L.error('%s must contain a dictionary', configuration_path)
+                L.error('must contain a dictionary %s', format_path(path))
         return variable_configuration
 
 
