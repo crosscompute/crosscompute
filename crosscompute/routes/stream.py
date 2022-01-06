@@ -14,7 +14,7 @@ class StreamRoutes():
         self._timestamp_object = timestamp_object
 
     def includeme(self, config):
-        config.add_route('stream', STREAMS_ROUTE)
+        config.add_route('streams', STREAMS_ROUTE)
 
         config.add_view(
             self.see_streams,

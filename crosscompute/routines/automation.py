@@ -28,7 +28,7 @@ from ..exceptions import (
 from ..macros.iterable import group_by
 from ..macros.process import StoppableProcess
 from ..routes.automation import AutomationRoutes
-# from ..routes.stream import StreamRoutes
+from ..routes.stream import StreamRoutes
 from .configuration import (
     get_automation_definitions,
     get_display_configuration,
@@ -146,11 +146,11 @@ class Automation():
                 self.folder, min_sleep=disk_poll_in_milliseconds,
                 debounce=disk_debounce_in_milliseconds):
             for changed_type, changed_path in changes:
-                L.debug('%s %s', changed_type, changed_path)
                 try:
                     file_type = self._get_file_type(changed_path)
                 except KeyError:
                     continue
+                L.debug('%s %s %s', changed_type, changed_path, file_type)
                 if file_type == 'c':
                     try:
                         self.reload()
@@ -170,14 +170,12 @@ class Automation():
     def _get_app(self, automation_queue, is_static, is_production, base_uri):
         automation_routes = AutomationRoutes(
             self.definitions, automation_queue, self._timestamp_object)
-        # stream_routes = StreamRoutes(self._timestamp_object)
+        stream_routes = StreamRoutes(self._timestamp_object)
         with Configurator() as config:
             config.include('pyramid_jinja2')
             config.include(automation_routes.includeme)
-            '''
             if not is_static:
                 config.include(stream_routes.includeme)
-            '''
 
             def update_renderer_globals():
                 renderer_environment = config.get_jinja2_environment()
@@ -194,8 +192,10 @@ class Automation():
         return config.make_wsgi_app()
 
     def _get_file_type(self, path):
-        if is_path_in_folder(path, join(self.folder, 'runs')):
-            return 'v'
+        for automation_definition in self.definitions:
+            automation_folder = automation_definition['folder']
+            if is_path_in_folder(path, join(automation_folder, 'runs')):
+                return 'v'
         return self._file_type_by_path[realpath(path)]
 
     def _get_file_type_by_path(self):
@@ -257,10 +257,9 @@ def run_automation(automation_definition, batch_definition):
     batch_folder, custom_environment = prepare_batch(
         automation_definition, batch_definition)
     L.info(
-        '%s %s running %s in %s',
+        '%s %s running %s',
         automation_definition['name'],
         automation_definition['version'],
-        batch_definition['name'],
         format_path(join(automation_folder, batch_folder)))
     script_folder = script_definition.get('folder', '.')
     mode_folder_by_name = {_ + '_folder': make_folder(join(

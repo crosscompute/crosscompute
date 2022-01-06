@@ -41,6 +41,7 @@ class VariableView():
     def load(self, absolute_batch_folder):
         self.data = self._get_data(absolute_batch_folder)
         self.configuration = self._get_configuration(absolute_batch_folder)
+        return self
 
     def parse(self, data):
         return data
@@ -75,7 +76,8 @@ class VariableView():
         else:
             absolute_variable_path = join(
                 absolute_batch_folder, self.variable_mode, variable_path)
-            variable_data = load_variable_data(absolute_variable_path, self.id)
+            variable_data = load_variable_data(
+                absolute_variable_path, self.variable_id)
         return variable_data
 
     def _get_configuration(self, absolute_batch_folder):

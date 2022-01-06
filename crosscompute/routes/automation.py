@@ -4,7 +4,7 @@
 import json
 from invisibleroads_macros_disk import is_path_in_folder, make_random_folder
 from logging import getLogger
-from os.path import basename, join
+from os.path import basename, exists, join
 from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
 from pyramid.response import FileResponse
 
@@ -233,18 +233,20 @@ class AutomationRoutes():
         variable_definitions = get_variable_definitions(
             automation_definition, mode_name)
         matchdict = request.matchdict
-        variable_path = matchdict['variable_path']
+        file_path = matchdict['file_path']
         try:
             variable_definition = find_item(
-                variable_definitions, 'path', variable_path,
+                variable_definitions, 'path', file_path,
                 normalize=str.casefold)
         except StopIteration:
             raise HTTPNotFound
         folder = join(automation_folder, batch_definition[
             'folder'], mode_name)
-        path = join(folder, variable_path)
+        path = join(folder, file_path)
         if not is_path_in_folder(path, folder):
             raise HTTPBadRequest
+        if not exists(path):
+            raise HTTPNotFound
         L.debug(variable_definition)
         return FileResponse(path, request=request)
 
@@ -298,7 +300,7 @@ def render_page_dictionary(
         except StopIteration:
             L.warning('%s in template but not in configuration', variable_id)
             return matching_text
-        variable_view = VariableView.get_from(d)
+        variable_view = VariableView.get_from(d).load(absolute_batch_folder)
         nonlocal variable_index
         variable_element = variable_view.render(
             f'v{variable_index}', expression_terms[1:], request.path)
