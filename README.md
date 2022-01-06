@@ -13,14 +13,14 @@ Automate your Jupyter notebooks and scripts as web-based reports, tools, widgets
 ## Usage
 
 ```bash
-# Update package
+# Upgrade package
 pip install crosscompute --upgrade
 
 # Initialize configuration
 crosscompute
 
-# Serve analytics
-crosscompute serve.yml
+# Serve automation
+crosscompute automate.yml
 ```
 
 [See documentation](https://github.com/crosscompute/crosscompute-docs).
@@ -36,11 +36,7 @@ cd crosscompute
 pip install -e .[test]
 
 # Run tests
-pytest \
-    --cov=crosscompute \
-    --cov-config=tox.ini \
-    --cov-report term-missing:skip-covered \
-    tests
+pytest --cov=crosscompute --cov-report term-missing:skip-covered tests
 
 # Build package for PyPI
 pip install build
@@ -54,14 +50,14 @@ python -m twine upload dist/*
 ## Acknowledgments
 
 - [Olga Creutzburg](https://www.linkedin.com/in/olga-creutzburg)
-- Salah Ahmed
-- Rodrigo Guarachi
-- Polina Chernomaz
-- Miguel Ángel Gordián
-- Noé Domínguez Porras
-- Marta Moreno
-- Ning Wei
-- Kashfi Fahim
-- Elaine Chan
-- Aida Shoydokova
-- Jennifer Ruda
+- [Salah Ahmed](https://www.linkedin.com/in/salahspage)
+- [Rodrigo Guarachi](https://www.linkedin.com/in/rmguarachi)
+- [Polina Chernomaz](https://www.linkedin.com/in/polinac)
+- [Miguel Ángel Gordián](https://www.linkedin.com/in/miguelgordian)
+- [Noé Domínguez Porras](https://www.linkedin.com/in/noedominguez)
+- [Marta Moreno](https://www.linkedin.com/in/marta-moreno-07364b82)
+- [Ning Wei](https://www.linkedin.com/in/ning-wei-8152393b)
+- [Kashfi Fahim](https://www.linkedin.com/in/kashfifahim)
+- [Elaine Chan](https://www.linkedin.com/in/chanelaine)
+- [Aida Shoydokova](https://www.linkedin.com/in/ashoydok)
+- [Jennifer Ruda](https://www.linkedin.com/in/jruda)

@@ -4,7 +4,6 @@ from importlib.metadata import entry_points
 from invisibleroads_macros_log import format_path
 from logging import getLogger
 from os.path import getmtime, join, splitext
-from string import Template
 
 from ..constants import (
     FUNCTION_BY_NAME,
@@ -13,7 +12,6 @@ from ..constants import (
 from ..exceptions import (
     CrossComputeConfigurationError,
     CrossComputeDataError)
-from ..macros.configuration import get_environment_value
 from ..macros.package import import_attribute
 from ..macros.web import get_html_from_markdown
 
@@ -219,84 +217,6 @@ class ImageView(VariableView):
         }
 
 
-class MapMapboxView(VariableView):
-    # TODO: Let creator override mapbox css js
-
-    view_name = 'map-mapbox'
-    is_asynchronous = True
-    css_uris = [
-        'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.css',
-    ]
-    js_uris = [
-        'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.js',
-    ]
-
-    def render_output(self, element_id, function_names, request_path):
-        body_text = (
-            f'<div id="{element_id}" '
-            f'class="{self.view_name} {self.variable_id}"></div>')
-        mapbox_token = get_environment_value('MAPBOX_TOKEN', '')
-        variable_configuration = self.configuration
-        js_texts = [
-            f"mapboxgl.accessToken = '{mapbox_token}'",
-            MAP_MAPBOX_JS_TEMPLATE.substitute({
-                'element_id': element_id,
-                'data_uri': request_path + '/' + self.variable_path,
-                'style_uri': variable_configuration.get(
-                    'style', MAP_MAPBOX_CSS_URI),
-                'longitude': variable_configuration.get('longitude', 0),
-                'latitude': variable_configuration.get('latitude', 0),
-                'zoom': variable_configuration.get('zoom', 0),
-            }),
-        ]
-        # TODO: Allow specification of preserveDrawingBuffer
-        return {
-            'css_uris': self.css_uris,
-            'js_uris': self.js_uris,
-            'body_text': body_text,
-            'js_texts': js_texts,
-        }
-
-
-class MapPyDeckScreenGridView(VariableView):
-
-    view_name = 'map-pydeck-screengrid'
-    is_asynchronous = True
-    css_uris = [
-        'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.css',
-    ]
-    js_uris = [
-        'https://unpkg.com/deck.gl@^8.0.0/dist.min.js',
-        'https://api.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.js',
-    ]
-
-    def render_output(self, element_id, request_path=None):
-        body_text = (
-            f'<div id="{element_id}" '
-            f'class="{self.view_name} {self.variable_id}"></div>')
-        mapbox_token = get_environment_value('MAPBOX_TOKEN', '')
-        variable_configuration = self.configuration
-        js_texts = [
-            MAP_PYDECK_SCREENGRID_JS_TEMPLATE.substitute({
-                'data_uri': request_path + '/' + self.variable_path,
-                'opacity': variable_configuration.get('opacity', 0.5),
-                'element_id': element_id,
-                'mapbox_token': mapbox_token,
-                'style_uri': variable_configuration.get(
-                    'style', MAP_MAPBOX_CSS_URI),
-                'longitude': variable_configuration.get('longitude', 0),
-                'latitude': variable_configuration.get('latitude', 0),
-                'zoom': variable_configuration.get('zoom', 0),
-            }),
-        ]
-        return {
-            'css_uris': self.css_uris,
-            'js_uris': self.js_uris,
-            'body_text': body_text,
-            'js_texts': js_texts,
-        }
-
-
 def save_variable_data(target_path, variable_definitions, data_by_id):
     file_extension = splitext(target_path)[1]
     variable_data_by_id = get_variable_data_by_id(
@@ -449,49 +369,3 @@ def apply_functions(value, function_names, function_by_name):
 VIEW_BY_NAME = {_.name: import_attribute(_.value) for _ in entry_points()[
     'crosscompute.views']}
 L = getLogger(__name__)
-
-
-MAP_MAPBOX_JS_TEMPLATE = Template('''\
-const $element_id = new mapboxgl.Map({
-  container: '$element_id',
-  style: '$style_uri',
-  center: [$longitude, $latitude],
-  zoom: $zoom,
-  // preserveDrawingBuffer: true,
-})
-$element_id.on('load', () => {
-  $element_id.addSource('$element_id', {
-    type: 'geojson',
-    data: '$data_uri'})
-  $element_id.addLayer({
-    id: '$element_id',
-    type: 'fill',
-    source: '$element_id'})
-})''')
-MAP_MAPBOX_CSS_URI = 'mapbox://styles/mapbox/dark-v10'
-MAP_PYDECK_SCREENGRID_JS_TEMPLATE = Template('''\
-const layers = []
-layers.push(new deck.ScreenGridLayer({
-  data: '$data_uri',
-  getPosition: d => d,
-  opacity: $opacity,
-}))
-new deck.DeckGL({
-  container: '$element_id',
-  mapboxApiAccessToken: '$mapbox_token',
-  mapStyle: '$style_uri',
-  initialViewState: {
-    longitude: $longitude,
-    latitude: $latitude,
-    zoom: $zoom,
-  },
-  controller: true,
-  layers,
-  /*
-  preserveDrawingBuffer: true,
-  glOptions: {
-    preserveDrawingBuffer: true,
-  },
-  */
-})
-''')

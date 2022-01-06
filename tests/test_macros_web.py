@@ -1,5 +1,10 @@
-from crosscompute.routines.web import (
+from crosscompute.macros.web import (
+    format_slug,
     get_html_from_markdown)
+
+
+def test_format_slug():
+    assert format_slug('a b,c') == 'a-b-c'
 
 
 def test_get_html_from_markdown():
