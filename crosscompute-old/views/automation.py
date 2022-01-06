@@ -3,27 +3,9 @@
 # TODO: Let creator override mapbox js
 
 
-import json
-from logging import getLogger
-from os.path import basename, join
-from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
-from pyramid.response import FileResponse
-
-from ..constants import (
-    AUTOMATION_ROUTE,
-    BATCH_ROUTE,
-    FILE_ROUTE,
-    FUNCTION_BY_NAME,
-    ID_LENGTH,
-    PAGE_ROUTE,
-    PAGE_TYPE_NAME_BY_LETTER,
-    RUN_ROUTE,
-    STYLE_ROUTE,
-    VARIABLE_ID_PATTERN)
 from ..exceptions import CrossComputeDataError
 from ..macros import (
     extend_uniquely,
-    find_item,
     is_path_in_folder,
     make_unique_folder)
 from ..routines.configuration import (
@@ -42,18 +24,6 @@ from ..routines.web import get_html_from_markdown
 L = getLogger(__name__)
 
 
-class AutomationViews():
-
-    def __init__(
-            self, automation_definitions, automation_queue, timestamp_object):
-        self.automation_definitions = automation_definitions
-        self.automation_queue = automation_queue
-        self.timestamp_object = timestamp_object
-
-    def includeme(self, config):
-        config.include(self.configure_styles)
-
-        config.add_route('root', '/')
         config.add_route(
             'automation.json',
             AUTOMATION_ROUTE + '.json')
@@ -79,10 +49,6 @@ class AutomationViews():
             'automation run page file',
             AUTOMATION_ROUTE + RUN_ROUTE + PAGE_ROUTE + FILE_ROUTE)
 
-        config.add_view(
-            self.see_root,
-            route_name='root',
-            renderer='crosscompute:templates/root.jinja2')
         config.add_view(
             self.see_automation,
             route_name='automation',
@@ -117,58 +83,6 @@ class AutomationViews():
         config.add_view(
             self.see_automation_page_file,
             route_name='automation run page file')
-
-    def configure_styles(self, config):
-        config.add_route(
-            'style', STYLE_ROUTE)
-        config.add_route(
-            'automation style', AUTOMATION_ROUTE + STYLE_ROUTE)
-
-        config.add_view(
-            self.see_style,
-            route_name='style')
-        config.add_view(
-            self.see_style,
-            route_name='automation style')
-
-    def see_style(self, request):
-        matchdict = request.matchdict
-        if 'automation_slug' in matchdict:
-            automation_definition = self.get_automation_definition_from(
-                request)
-        elif not self.automation_definitions:
-            raise HTTPNotFound
-        else:
-            automation_definition = self.automation_definitions[0]
-        style_definitions = automation_definition.get('display', {}).get(
-            'styles', [])
-
-        try:
-            style_definition = find_item(
-                style_definitions, 'uri', request.environ['PATH_INFO'])
-        except StopIteration:
-            raise HTTPNotFound
-        path = join(automation_definition['folder'], style_definition['path'])
-
-        try:
-            response = FileResponse(path, request)
-        except TypeError:
-            raise HTTPNotFound
-        return response
-
-    def see_root(self, request):
-        'Render root with list of available automations'
-        for automation_definition in self.automation_definitions:
-            if 'parent' not in automation_definition:
-                css_uris = get_css_uris(automation_definition)
-                break
-        else:
-            css_uris = []
-        return {
-            'automations': self.automation_definitions,
-            'css_uris': css_uris,
-            'timestamp_value': self.timestamp_object.value,
-        }
 
     def see_automation(self, request):
         automation_definition = self.get_automation_definition_from(request)

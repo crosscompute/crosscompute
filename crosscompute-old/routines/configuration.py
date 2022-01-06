@@ -91,11 +91,6 @@ def get_template_texts(configuration, page_type_name):
     return template_texts
 
 
-def get_css_uris(configuration):
-    style_definitions = configuration.get('display', {}).get('styles', [])
-    return [_['uri'] for _ in style_definitions]
-
-
 class MapMapboxView(VariableView):
 
     is_asynchronous = True

@@ -1,0 +1,29 @@
+{% extends BASE_JINJA2 %}
+
+{% block body_js %}
+let streamSource, reconnectionId, serverTime = {{ timestamp_value }}
+
+function connect() {
+  streamSource = new EventSource('{{ BASE_URI }}{{ STREAMS_ROUTE }}')
+
+  streamSource.onopen = function() {
+    clearTimeout(reconnectionId)
+  }
+
+  streamSource.onmessage = function(message) {
+    const messageData = message.data
+    if (messageData != serverTime) {
+      location.reload()
+    }
+  }
+
+  streamSource.onerror = function() {
+    streamSource.close()
+    clearTimeout(reconnectionId)
+    reconnectionId = setTimeout(connect, 1000)
+  }
+}
+
+connect()
+{{ super() }}
+{%- endblock %}

@@ -2,9 +2,6 @@ from logging import getLogger
 from multiprocessing import Process
 
 
-L = getLogger(__name__)
-
-
 class StoppableProcess(Process):
 
     def stop(
@@ -19,6 +16,9 @@ class StoppableProcess(Process):
         self.terminate()
         self.join(sigterm_timeout_in_seconds)
         if self.exitcode is None:
-            L.debug('ending sigkill to process %s', self.ident)
+            L.debug('sending sigkill to process %s', self.ident)
             self.kill()
             self.join(sigkill_timeout_in_seconds)
+
+
+L = getLogger(__name__)

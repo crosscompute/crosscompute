@@ -22,6 +22,7 @@ DISK_DEBOUNCE_IN_MILLISECONDS = 1000
 AUTOMATION_ROUTE = '/a/{automation_slug}'
 BATCH_ROUTE = '/b/{batch_slug}'
 STYLE_ROUTE = '/s/{style_name}'
+STREAMS_ROUTE = '/streams'
 MODE_NAMES = 'input', 'output', 'log', 'debug'
 
 

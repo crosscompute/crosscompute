@@ -1,4 +1,6 @@
 # TODO: Watch multiple folders if not all under parent folder
+# TODO: Consider whether to send partial updates for variables
+# TODO: Precompile notebook scripts
 import logging
 import subprocess
 from invisibleroads_macros_disk import is_path_in_folder, make_folder
@@ -7,6 +9,7 @@ from logging import getLogger
 from multiprocessing import Process, Queue, Value
 from os import environ, getenv, listdir
 from os.path import exists, isdir, join, realpath
+from pyramid.config import Configurator
 from time import time
 from waitress import serve
 from watchgod import watch
@@ -17,11 +20,15 @@ from ..constants import (
     DISK_POLL_IN_MILLISECONDS,
     HOST,
     MODE_NAMES,
-    PORT)
+    PORT,
+    STREAMS_ROUTE)
 from ..exceptions import (
     CrossComputeConfigurationError,
     CrossComputeError)
 from ..macros.iterable import group_by
+from ..macros.process import StoppableProcess
+from ..routes.automation import AutomationRoutes
+# from ..routes.stream import StreamRoutes
 from .configuration import (
     get_automation_definitions,
     get_display_configuration,
@@ -102,7 +109,9 @@ class Automation():
             worker_process.daemon = True
             worker_process.start()
             L.info('serving at http://%s:%s%s', host, port, base_uri)
-            app = self.get_app(automation_queue, is_static, base_uri)
+            # TODO: Decouple from pyramid and waitress
+            app = self._get_app(
+                automation_queue, is_static, is_production, base_uri)
             try:
                 serve(app, host=host, port=port, url_prefix=base_uri)
             except OSError as e:
@@ -131,8 +140,8 @@ class Automation():
     def watch(
             self, run_server, disk_poll_in_milliseconds,
             disk_debounce_in_milliseconds):
-        # server_process = StoppableProcess(target=run_server)
-        # server_process.start()
+        server_process = StoppableProcess(target=run_server)
+        server_process.start()
         for changes in watch(
                 self.folder, min_sleep=disk_poll_in_milliseconds,
                 debounce=disk_debounce_in_milliseconds):
@@ -148,18 +157,41 @@ class Automation():
                     except CrossComputeError as e:
                         L.error(e)
                         continue
-                    # server_process.stop()
-                    # server_process = StoppableProcess(target=run_server)
-                    # server_process.start()
+                    server_process.stop()
+                    server_process = StoppableProcess(target=run_server)
+                    server_process.start()
                 elif file_type == 's':
                     for d in self.definitions:
                         d['display'] = get_display_configuration(d)
                     self._timestamp_object.value = time()
-                # elif file_type == 't':
-                    # self._timestamp_object.value = time()
                 else:
-                    # TODO: Send partial updates
                     self._timestamp_object.value = time()
+
+    def _get_app(self, automation_queue, is_static, is_production, base_uri):
+        automation_routes = AutomationRoutes(
+            self.definitions, automation_queue, self._timestamp_object)
+        # stream_routes = StreamRoutes(self.folder, self._timestamp_object)
+        with Configurator() as config:
+            config.include('pyramid_jinja2')
+            config.include(automation_routes.includeme)
+            '''
+            if not is_static:
+                config.include(stream_routes.includeme)
+            '''
+
+            def update_renderer_globals():
+                renderer_environment = config.get_jinja2_environment()
+                renderer_environment.globals.update({
+                    'BASE_JINJA2': 'base.jinja2',
+                    'LIVE_JINJA2': 'live.jinja2',
+                    'IS_STATIC': is_static,
+                    'IS_PRODUCTION': is_production,
+                    'BASE_URI': base_uri,
+                    'STREAMS_ROUTE': STREAMS_ROUTE,
+                })
+
+            config.action(None, update_renderer_globals)
+        return config.make_wsgi_app()
 
     def _get_file_type(self, path):
         if is_path_in_folder(path, join(self.folder, 'runs')):

@@ -203,6 +203,11 @@ def get_batch_definitions(configuration):
     return batch_definitions
 
 
+def get_css_uris(configuration):
+    style_definitions = configuration.get('display', {}).get('styles', [])
+    return [_['uri'] for _ in style_definitions]
+
+
 def get_display_configuration(configuration):
     folder = configuration['folder']
     display_configuration = configuration.get('display', {})
