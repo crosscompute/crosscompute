@@ -221,8 +221,8 @@ class AutomationRoutes():
             # 'uri': request.path,
             'mode_name': mode_name,
             'timestamp_value': self._timestamp_object.value,
-        } | render_page_dictionary(
-            request, css_uris, template_text, variable_definitions,
+        } | render_mode_dictionary(
+            request, mode_name, css_uris, template_text, variable_definitions,
             absolute_batch_folder)
 
     def see_automation_batch_mode_variable(self, request):
@@ -289,15 +289,15 @@ class AutomationRoutes():
         return mode_name
 
 
-def render_page_dictionary(
-        request, css_uris, template_text, variable_definitions,
+def render_mode_dictionary(
+        request, mode_name, css_uris, template_text, variable_definitions,
         absolute_batch_folder):
     css_uris, js_uris, js_texts, variable_index = css_uris.copy(), [], [], 0
 
     def render_html(match):
         matching_text = match.group(0)
-        expression_terms = match.group(1).split('|')
-        variable_id = expression_terms[0].strip()
+        terms = match.group(1).split('|')
+        variable_id = terms[0].strip()
         try:
             d = find_item(variable_definitions, 'id', variable_id)
         except StopIteration:
@@ -306,7 +306,7 @@ def render_page_dictionary(
         variable_view = VariableView.get_from(d).load(absolute_batch_folder)
         nonlocal variable_index
         variable_element = variable_view.render(
-            f'v{variable_index}', expression_terms[1:], request.path)
+            mode_name, f'v{variable_index}', terms[1:], request.path)
         variable_index += 1
         extend_uniquely(css_uris, variable_element['css_uris'])
         extend_uniquely(js_uris, variable_element['js_uris'])

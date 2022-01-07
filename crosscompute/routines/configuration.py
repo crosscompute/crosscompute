@@ -244,7 +244,7 @@ def get_variable_definitions(configuration, mode_name, with_all=False):
             if mode_name == MODE_NAME:
                 continue
             variable_definitions.extend(get_variable_definitions(
-                configuration, mode_name))
+                configuration, MODE_NAME))
     return variable_definitions
 
 
@@ -272,7 +272,7 @@ def get_template_texts(configuration, mode_name):
         variable_definitions = get_variable_definitions(
             configuration, mode_name)
         variable_ids = [_['id'] for _ in variable_definitions if 'id' in _]
-        template_texts = [''.join('{%s}' % _ for _ in variable_ids)]
+        template_texts = ['\n'.join('{%s}' % _ for _ in variable_ids)]
     return template_texts
 
 

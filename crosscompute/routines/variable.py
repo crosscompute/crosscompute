@@ -4,7 +4,6 @@ from importlib.metadata import entry_points
 from invisibleroads_macros_log import format_path
 from logging import getLogger
 from os.path import getmtime, join, splitext
-from string import Template
 
 from ..constants import (
     FUNCTION_BY_NAME,
@@ -46,8 +45,8 @@ class VariableView():
     def parse(self, data):
         return data
 
-    def render(self, element_id, function_names, request_path):
-        if self.variable_mode == 'input':
+    def render(self, mode_name, element_id, function_names, request_path):
+        if mode_name == 'input':
             render = self.render_input
         else:
             render = self.render_output
@@ -166,24 +165,18 @@ class EmailView(StringView):
 class TextView(StringView):
 
     view_name = 'text'
-    is_asynchronous = True
 
     def render_input(self, element_id, function_names, request_path):
         variable_id = self.variable_id
         body_text = (
             f'<textarea id="{element_id}" name="{variable_id}" '
-            f'class="{self.view_name} {variable_id}"></textarea>')
-        js_texts = [
-            TEXT_JS_TEMPLATE.substitute({
-                'element_id': element_id,
-                'data_uri': request_path + '/' + variable_id,
-            }),
-        ]
+            f'class="{self.view_name} {variable_id}">'
+            f'{self.data}</textarea>')
         return {
             'css_uris': [],
             'js_uris': [],
             'body_text': body_text,
-            'js_texts': js_texts,
+            'js_texts': [],
         }
 
 
@@ -376,10 +369,3 @@ def apply_functions(value, function_names, function_by_name):
 VIEW_BY_NAME = {_.name: import_attribute(_.value) for _ in entry_points()[
     'crosscompute.views']}
 L = getLogger(__name__)
-
-
-TEXT_JS_TEMPLATE = Template('''\
-(async function () {
-  const response = await fetch('$data_uri');
-  document.getElementById('$element_id').value = await response.text();
-})();''')

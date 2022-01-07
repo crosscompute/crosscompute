@@ -12,9 +12,9 @@
 {% block body_html -%}
 {%- if mode_name == 'input' -%}
 <form id="automation">
-{%- endif %}
+{%- endif -%}
 {{ super() }}
-{%- if mode_name == 'input' -%}
+{%- if mode_name == 'input' %}
 <button>Run</button>
 </form>
 {%- endif -%}
@@ -22,8 +22,8 @@
 
 {%- block body_js -%}
 {{ super() }}
-{% if mode_name == 'input' -%}
-document.getElementById('automation').onsubmit = async (e) => {
+{%- if mode_name == 'input' -%}
+document.getElementById('automation').onsubmit = async function(e) {
   e.preventDefault();
   const url = '{{ BASE_URI }}{{ automation_definition['uri'] }}.json';
   const response = await fetch(url, {
