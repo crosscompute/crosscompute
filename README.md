@@ -1,6 +1,6 @@
 # CrossCompute Analytics Automation Framework
 
-Automate your Jupyter notebooks and scripts as web-based reports, tools, widgets, dashboards, forms. [See examples and tutorials](https://crosscompute.com).
+Automate your Jupyter notebooks and scripts as web-based reports, tools, widgets, dashboards, forms. Use this framework to create your own automations, then serve locally or deploy on your own instance of the [CrossCompute Analytics Automation System](https://d.crosscompute.com).
 
 - Reports are documents that update when the data changes.
 - Forms are step-by-step questions that generate a specific web-based report.
@@ -38,7 +38,9 @@ crosscompute
 crosscompute automate.yml
 ```
 
-[See documentation](https://github.com/crosscompute/crosscompute-docs).
+Here are some tutorials and examples:
+- [Examples](https://crosscompute.net) ([source](https://github.com/crosscompute/crosscompute-examples))
+- [Documentation](https://d.crosscompute.com) ([source](https://github.com/crosscompute/crosscompute-docs))
 
 ## Development
 
