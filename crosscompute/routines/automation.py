@@ -253,34 +253,33 @@ def run_automation(automation_definition, batch_definition):
     command_string = script_definition.get('command')
     if not command_string:
         return
-    automation_folder = automation_definition['folder']
+    folder = automation_definition['folder']
     batch_folder, custom_environment = prepare_batch(
         automation_definition, batch_definition)
     L.info(
-        '%s %s running %s',
-        automation_definition['name'],
+        '%s %s running %s', automation_definition['name'],
         automation_definition['version'],
-        format_path(join(automation_folder, batch_folder)))
-    script_folder = script_definition.get('folder', '.')
+        format_path(join(folder, batch_folder)))
     mode_folder_by_name = {_ + '_folder': make_folder(join(
-        automation_folder, batch_folder, _)) for _ in MODE_NAMES}
+        folder, batch_folder, _)) for _ in MODE_NAMES}
     script_environment = {
         'CROSSCOMPUTE_' + k.upper(): v for k, v in mode_folder_by_name.items()
     } | {'PATH': getenv('PATH', '')} | custom_environment
     L.debug('environment = %s', script_environment)
     debug_folder = mode_folder_by_name['debug_folder']
-    with open(join(
-        debug_folder, 'stdout.txt',
-    ), 'wt') as stdout_file, open(join(
-        debug_folder, 'stderr.txt',
-    ), 'wt') as stderr_file:
-        subprocess.run(
-            format_text(command_string, mode_folder_by_name),
-            shell=True,  # Expand $HOME and ~
-            cwd=join(automation_folder, script_folder),
-            env=script_environment,
-            stdout=stdout_file,
-            stderr=stderr_file)
+    o_path = join(debug_folder, 'stdout.txt')
+    e_path = join(debug_folder, 'stderr.txt')
+    try:
+        with open(o_path, 'wt') as o_file, open(e_path, 'wt') as e_file:
+            subprocess.run(
+                format_text(command_string, mode_folder_by_name), check=True,
+                shell=True,  # Expand $HOME and ~
+                cwd=join(folder, script_definition.get('folder', '.')),
+                env=script_environment, stdout=o_file, stderr=e_file)
+    except OSError as e:
+        L.error(e)
+    except subprocess.CalledProcessError:
+        L.error(open(e_path, 'rt').read().rstrip())
 
 
 def prepare_batch(automation_definition, batch_definition):
