@@ -11,7 +11,7 @@ Automate your Jupyter notebooks and scripts as web-based reports, tools, widgets
 Here are some available extensions:
 
 - [crosscompute-views-map](https://github.com/crosscompute/crosscompute-views-map)
-- jupyterlab-crosscompute (being updated)
+- [jupyterlab-crosscompute](https://github.com/crosscompute/jupyterlab-crosscompute) (being updated to support >= 0.9)
 
 Here are some available views:
 
