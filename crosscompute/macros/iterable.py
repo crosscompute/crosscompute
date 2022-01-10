@@ -1,6 +1,4 @@
 import operator
-
-
 from collections import defaultdict
 
 

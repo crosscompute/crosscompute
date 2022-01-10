@@ -10,8 +10,8 @@ Automate your Jupyter notebooks and scripts as web-based reports, tools, widgets
 
 Here are some available extensions:
 
-- jupyterlab-crosscompute
-- crosscompute-views-map
+- [crosscompute-views-map](https://github.com/crosscompute/crosscompute-views-map)
+- jupyterlab-crosscompute (being updated)
 
 Here are some available views:
 
@@ -22,8 +22,8 @@ Here are some available views:
 - text
 - markdown
 - image
-- map-mapbox
-- map-pydeck-screengrid
+- map-mapbox (crosscompute-views-map)
+- map-deck-screengrid (crosscompute-views-map)
 
 ## Usage
 
