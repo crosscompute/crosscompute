@@ -1,3 +1,4 @@
+# TODO: Trigger refresh on variable configuration update
 # TODO: Watch multiple folders if not all under parent folder
 # TODO: Consider whether to send partial updates for variables
 # TODO: Precompile notebook scripts
