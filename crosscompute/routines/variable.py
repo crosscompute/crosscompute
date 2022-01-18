@@ -3,7 +3,7 @@ import json
 from importlib.metadata import entry_points
 from invisibleroads_macros_log import format_path
 from logging import getLogger
-from os.path import getmtime, join, splitext
+from os.path import basename, getmtime, join, splitext
 
 from ..constants import (
     FUNCTION_BY_NAME,
@@ -99,6 +99,29 @@ class VariableView():
             except TypeError:
                 L.error('must contain a dictionary %s', format_path(path))
         return variable_configuration
+
+
+class LinkView(VariableView):
+
+    view_name = 'link'
+    is_asynchronous = True
+
+    def render_output(
+            self, element_id, function_names, request_path, for_print):
+        variable_id = self.variable_id
+        c = self.configuration
+        text = c.get('text', variable_id)
+        name = c.get('download', basename(self.variable_path))
+        body_text = (
+            f'<a id="{element_id}" href="{request_path}/{variable_id}" '
+            f'class="{self.view_name} {variable_id}" download="{name}">'
+            f'{text}</a>')
+        return {
+            'css_uris': [],
+            'js_uris': [],
+            'body_text': body_text,
+            'js_texts': [],
+        }
 
 
 class StringView(VariableView):
