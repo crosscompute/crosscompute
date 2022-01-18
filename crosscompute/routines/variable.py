@@ -110,8 +110,8 @@ class LinkView(VariableView):
             self, element_id, function_names, request_path, for_print):
         variable_id = self.variable_id
         c = self.configuration
-        text = c.get('text', variable_id)
         name = c.get('download', basename(self.variable_path))
+        text = c.get('text', name)
         body_text = (
             f'<a id="{element_id}" href="{request_path}/{variable_id}" '
             f'class="{self.view_name} {variable_id}" download="{name}">'
