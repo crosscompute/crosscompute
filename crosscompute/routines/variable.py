@@ -45,14 +45,17 @@ class VariableView():
     def parse(self, data):
         return data
 
-    def render(self, mode_name, element_id, function_names, request_path):
+    def render(
+            self, mode_name, element_id, function_names, request_path,
+            for_print):
         if mode_name == 'input':
             render = self.render_input
         else:
             render = self.render_output
-        return render(element_id, function_names, request_path)
+        return render(element_id, function_names, request_path, for_print)
 
-    def render_input(self, element_id, function_names, request_path):
+    def render_input(
+            self, element_id, function_names, request_path, for_print):
         return {
             'css_uris': [],
             'js_uris': [],
@@ -60,7 +63,8 @@ class VariableView():
             'js_texts': [],
         }
 
-    def render_output(self, element_id, function_names, request_path):
+    def render_output(
+            self, element_id, function_names, request_path, for_print):
         return {
             'css_uris': [],
             'js_uris': [],
@@ -103,7 +107,8 @@ class StringView(VariableView):
     input_type = 'text'
     function_by_name = FUNCTION_BY_NAME
 
-    def render_input(self, element_id, function_names, request_path):
+    def render_input(
+            self, element_id, function_names, request_path, for_print):
         variable_id = self.variable_id
         body_text = (
             f'<input id="{element_id}" name="{variable_id}" '
@@ -116,7 +121,8 @@ class StringView(VariableView):
             'js_texts': [],
         }
 
-    def render_output(self, element_id, function_names, request_path):
+    def render_output(
+            self, element_id, function_names, request_path, for_print):
         try:
             data = apply_functions(
                 self.data, function_names, self.function_by_name)
@@ -166,7 +172,8 @@ class TextView(StringView):
 
     view_name = 'text'
 
-    def render_input(self, element_id, function_names, request_path):
+    def render_input(
+            self, element_id, function_names, request_path, for_print):
         variable_id = self.variable_id
         body_text = (
             f'<textarea id="{element_id}" name="{variable_id}" '
@@ -184,7 +191,8 @@ class MarkdownView(TextView):
 
     view_name = 'markdown'
 
-    def render_output(self, element_id, function_names, request_path):
+    def render_output(
+            self, element_id, function_names, request_path, for_print):
         data = get_html_from_markdown(self.data)
         body_text = (
             f'<span id="{element_id}" '
@@ -203,7 +211,8 @@ class ImageView(VariableView):
     view_name = 'image'
     is_asynchronous = True
 
-    def render_output(self, element_id, function_names, request_path):
+    def render_output(
+            self, element_id, function_names, request_path, for_print):
         variable_id = self.variable_id
         body_text = (
             f'<img id="{element_id}" '

@@ -3,6 +3,7 @@
 # TODO: Add unit tests
 import json
 from invisibleroads_macros_disk import is_path_in_folder, make_random_folder
+from itertools import count
 from logging import getLogger
 from os.path import basename, exists, join, splitext
 from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
@@ -215,15 +216,17 @@ class AutomationRoutes():
             automation_definition, mode_name))
         variable_definitions = get_variable_definitions(
             automation_definition, mode_name, with_all=True)
+        request_path = request.path
+        for_print = 'p' in request.params
         return {
             'automation_definition': automation_definition,
-            # 'batch_definition': batch_definition,
-            # 'uri': request.path,
+            'batch_definition': batch_definition,
+            'uri': request_path,
             'mode_name': mode_name,
             'timestamp_value': self._timestamp_object.value,
         } | render_mode_dictionary(
-            request, mode_name, css_uris, template_text, variable_definitions,
-            absolute_batch_folder)
+            mode_name, template_text, variable_definitions,
+            absolute_batch_folder, css_uris, request_path, for_print)
 
     def see_automation_batch_mode_variable(self, request):
         automation_definition = self.get_automation_definition_from(request)
@@ -290,35 +293,30 @@ class AutomationRoutes():
 
 
 def render_mode_dictionary(
-        request, mode_name, css_uris, template_text, variable_definitions,
-        absolute_batch_folder):
-    css_uris, js_uris, js_texts, variable_index = css_uris.copy(), [], [], 0
+        mode_name, template_text, variable_definitions, absolute_batch_folder,
+        css_uris, request_path, for_print):
+    m = {'css_uris': css_uris.copy(), 'js_uris': [], 'js_texts': []}
+    i = count()
 
     def render_html(match):
-        matching_text = match.group(0)
-        terms = match.group(1).split('|')
+        matching_text, terms = match.group(0), match.group(1).split('|')
         variable_id = terms[0].strip()
         try:
             d = find_item(variable_definitions, 'id', variable_id)
         except StopIteration:
             L.warning('%s in template but not in configuration', variable_id)
             return matching_text
-        variable_view = VariableView.get_from(d).load(absolute_batch_folder)
-        nonlocal variable_index
-        variable_element = variable_view.render(
-            mode_name, f'v{variable_index}', terms[1:], request.path)
-        variable_index += 1
-        extend_uniquely(css_uris, variable_element['css_uris'])
-        extend_uniquely(js_uris, variable_element['js_uris'])
-        extend_uniquely(js_texts, variable_element['js_texts'])
-        return variable_element['body_text']
+        view = VariableView.get_from(d).load(absolute_batch_folder)
+        element = view.render(
+            mode_name, f'v{next(i)}', terms[1:], request_path, for_print)
+        for k, v in m.items():
+            extend_uniquely(v, element[k])
+        return element['body_text']
 
-    return {
-        'css_uris': css_uris,
-        'js_uris': js_uris,
+    return m | {
         'body_text': get_html_from_markdown(VARIABLE_ID_PATTERN.sub(
             render_html, template_text)),
-        'js_text': '\n'.join(js_texts),
+        'js_text': '\n'.join(m['js_texts']),
     }
 
 
