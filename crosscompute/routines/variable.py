@@ -4,6 +4,7 @@ from importlib.metadata import entry_points
 from invisibleroads_macros_log import format_path
 from logging import getLogger
 from os.path import basename, getmtime, join, splitext
+from string import Template
 
 from ..constants import (
     FUNCTION_BY_NAME,
@@ -249,6 +250,32 @@ class ImageView(VariableView):
         }
 
 
+class TableView(VariableView):
+
+    view_name = 'table'
+    is_asynchronous = True
+
+    def render_output(
+            self, element_id, function_names, request_path, for_print):
+        variable_id = self.variable_id
+        body_text = (
+            f'<table id="{element_id}" '
+            f'class="{self.view_name} {variable_id}">'
+            '</table>')
+        js_texts = [
+            TABLE_JS_TEMPLATE.substitute({
+                'element_id': element_id,
+                'data_uri': request_path + '/' + variable_id,
+            }),
+        ]
+        return {
+            'css_uris': [],
+            'js_uris': [],
+            'body_text': body_text,
+            'js_texts': js_texts,
+        }
+
+
 def save_variable_data(target_path, variable_definitions, data_by_id):
     file_extension = splitext(target_path)[1]
     variable_data_by_id = get_variable_data_by_id(
@@ -401,3 +428,34 @@ def apply_functions(value, function_names, function_by_name):
 VIEW_BY_NAME = {_.name: import_attribute(_.value) for _ in entry_points()[
     'crosscompute.views']}
 L = getLogger(__name__)
+
+
+TABLE_JS_TEMPLATE = Template('''\
+(async function () {
+  const response = await fetch('$data_uri');
+  const d = await response.json();
+  const columns = d['columns'], columnCount = columns.length;
+  const rows = d['data'], rowCount = rows.length;
+  const table = document.getElementById('$element_id');
+  const thead = document.createElement('thead');
+  const tbody = document.createElement('tbody');
+  let tr = document.createElement('tr');
+  for (let i = 0; i < columnCount; i++) {
+    const column = columns[i];
+    const th = document.createElement('th');
+    th.innerText = column;
+    tr.append(th);
+  }
+  thead.append(tr);
+  for (let i = 0; i < rowCount; i++) {
+    const row = rows[i];
+    tr = document.createElement('tr');
+    for (let j = 0; j < columnCount; j++) {
+      const td = document.createElement('td');
+      td.innerText = row[j];
+      tr.append(td);
+    }
+    tbody.append(tr);
+  }
+  table.append(thead, tbody);
+})();''')
