@@ -4,6 +4,7 @@ from multiprocessing import Process
 
 from crosscompute.exceptions import (
     CrossComputeConfigurationError,
+    CrossComputeDataError,
     CrossComputeError)
 from crosscompute.routines.automation import Automation
 from crosscompute.routines.log import (
@@ -85,7 +86,7 @@ def get_automation_from(args):
     path_or_folder = args.path_or_folder
     try:
         automation = Automation.load(path_or_folder or '.')
-    except CrossComputeConfigurationError as e:
+    except (CrossComputeConfigurationError, CrossComputeDataError) as e:
         L.error(e)
         raise SystemExit
     except CrossComputeError:

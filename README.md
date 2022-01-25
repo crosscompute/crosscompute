@@ -15,6 +15,7 @@ Here are some available extensions:
 
 Here are some available views:
 
+- link
 - string
 - number
 - password
@@ -22,6 +23,7 @@ Here are some available views:
 - text
 - markdown
 - image
+- table
 - map-mapbox (crosscompute-views-map)
 - map-deck-screengrid (crosscompute-views-map)
 
@@ -29,7 +31,7 @@ Here are some available views:
 
 ```bash
 # Upgrade package
-pip install crosscompute>=0.9.0 --upgrade
+pip install crosscompute>=0.9.1 --upgrade
 
 # Initialize configuration
 crosscompute
@@ -83,9 +85,11 @@ To solve this issue, create a virtual environment using python >= 3.9.
 ```
 sudo dnf -y install python3.9
 # sudo apt -y install python3.9
+
 python3.9 -m venv ~/.virtualenvs/crosscompute
 source ~/.virtualenvs/crosscompute/bin/activate
-pip install crosscompute>=0.9.0
+
+pip install crosscompute>=0.9.1
 ```
 
 ## Acknowledgments
