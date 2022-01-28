@@ -22,11 +22,11 @@ from crosscompute.routines.log import (
     configure_logging_from)
 
 
-def do():
+def do(arguments=None):
     a = ArgumentParser()
     configure_argument_parser_for_logging(a)
     configure_argument_parser_for_configuring(a)
-    args = a.parse_args()
+    args = a.parse_args(arguments)
     configure_logging_from(args)
 
     configure_with(args)

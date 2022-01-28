@@ -12,12 +12,12 @@ from crosscompute.scripts.configure import (
     configure_argument_parser_for_configuring)
 
 
-def do():
+def do(arguments=None):
     a = ArgumentParser()
     configure_argument_parser_for_logging(a)
     configure_argument_parser_for_configuring(a)
     configure_argument_parser_for_running(a)
-    args = a.parse_args()
+    args = a.parse_args(arguments)
     configure_logging_from(args)
     try:
         automation = Automation.load(args.path_or_folder)
