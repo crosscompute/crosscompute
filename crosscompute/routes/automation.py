@@ -27,6 +27,7 @@ from ..routines.configuration import (
     get_template_texts,
     get_variable_definitions)
 from ..routines.variable import (
+    VariableElement,
     VariableView,
     load_variable_data,
     parse_data_by_id)
@@ -307,11 +308,12 @@ def render_mode_dictionary(
             L.warning('%s in template but not in configuration', variable_id)
             return matching_text
         view = VariableView.get_from(d).load(absolute_batch_folder)
-        element = view.render(
-            mode_name, f'v{next(i)}', terms[1:], request_path, for_print)
+        rendered_element = view.render(VariableElement(
+            f'v{next(i)}', mode_name, terms[1:],
+            f'{request_path}/{variable_id}', for_print))
         for k, v in m.items():
-            extend_uniquely(v, element[k])
-        return element['body_text']
+            extend_uniquely(v, rendered_element[k])
+        return rendered_element['body_text']
 
     return m | {
         'body_text': get_html_from_markdown(VARIABLE_ID_PATTERN.sub(

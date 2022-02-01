@@ -4,14 +4,15 @@
 # TODO: Precompile notebook scripts
 import logging
 import subprocess
-from invisibleroads_macros_disk import is_path_in_folder, make_folder
-from invisibleroads_macros_log import format_path
 from logging import getLogger
 from multiprocessing import Process, Queue, Value
 from os import environ, getenv, listdir
 from os.path import exists, isdir, join, realpath
-from pyramid.config import Configurator
 from time import time
+
+from invisibleroads_macros_disk import is_path_in_folder, make_folder
+from invisibleroads_macros_log import format_path
+from pyramid.config import Configurator
 from waitress import serve
 from watchgod import watch
 

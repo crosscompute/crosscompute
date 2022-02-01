@@ -1,5 +1,6 @@
 import csv
 import json
+from dataclasses import dataclass
 from importlib.metadata import entry_points
 from invisibleroads_macros_log import format_path
 from logging import getLogger
@@ -15,6 +16,16 @@ from ..exceptions import (
     CrossComputeDataError)
 from ..macros.package import import_attribute
 from ..macros.web import get_html_from_markdown
+
+
+@dataclass(repr=False, eq=False, order=False, frozen=True)
+class VariableElement():
+
+    id: str
+    mode_name: str
+    function_names: list[str]
+    uri: str
+    for_print: bool
 
 
 class VariableView():
@@ -46,17 +57,14 @@ class VariableView():
     def parse(self, data):
         return data
 
-    def render(
-            self, mode_name, element_id, function_names, request_path,
-            for_print):
-        if mode_name == 'input':
+    def render(self, x: VariableElement):
+        if x.mode_name == 'input':
             render = self.render_input
         else:
             render = self.render_output
-        return render(element_id, function_names, request_path, for_print)
+        return render(x)
 
-    def render_input(
-            self, element_id, function_names, request_path, for_print):
+    def render_input(self, x: VariableElement):
         return {
             'css_uris': [],
             'js_uris': [],
@@ -64,8 +72,7 @@ class VariableView():
             'js_texts': [],
         }
 
-    def render_output(
-            self, element_id, function_names, request_path, for_print):
+    def render_output(self, x: VariableElement):
         return {
             'css_uris': [],
             'js_uris': [],
@@ -107,14 +114,13 @@ class LinkView(VariableView):
     view_name = 'link'
     is_asynchronous = True
 
-    def render_output(
-            self, element_id, function_names, request_path, for_print):
+    def render_output(self, x: VariableElement):
         variable_id = self.variable_id
         c = self.configuration
         name = c.get('name', basename(self.variable_path))
         text = c.get('text', name)
         body_text = (
-            f'<a id="{element_id}" href="{request_path}/{variable_id}" '
+            f'<a id="{x.id}" href="{x.uri}" '
             f'class="{self.view_name} {variable_id}" download="{name}">'
             f'{text}</a>')
         return {
@@ -131,11 +137,10 @@ class StringView(VariableView):
     input_type = 'text'
     function_by_name = FUNCTION_BY_NAME
 
-    def render_input(
-            self, element_id, function_names, request_path, for_print):
+    def render_input(self, x: VariableElement):
         variable_id = self.variable_id
         body_text = (
-            f'<input id="{element_id}" name="{variable_id}" '
+            f'<input id="{x.id}" name="{variable_id}" '
             f'class="{self.view_name} {variable_id}" '
             f'value="{self.data}" type="{self.input_type}">')
         return {
@@ -145,16 +150,15 @@ class StringView(VariableView):
             'js_texts': [],
         }
 
-    def render_output(
-            self, element_id, function_names, request_path, for_print):
+    def render_output(self, x: VariableElement):
         try:
             data = apply_functions(
-                self.data, function_names, self.function_by_name)
+                self.data, x.function_names, self.function_by_name)
         except KeyError as e:
             L.error('%s function not supported for string', e)
             data = self.data
         body_text = (
-            f'<span id="{element_id}" '
+            f'<span id="{x.id}" '
             f'class="{self.view_name} {self.variable_id}">'
             f'{data}</span>')
         return {
@@ -196,11 +200,10 @@ class TextView(StringView):
 
     view_name = 'text'
 
-    def render_input(
-            self, element_id, function_names, request_path, for_print):
+    def render_input(self, x: VariableElement):
         variable_id = self.variable_id
         body_text = (
-            f'<textarea id="{element_id}" name="{variable_id}" '
+            f'<textarea id="{x.id}" name="{variable_id}" '
             f'class="{self.view_name} {variable_id}">'
             f'{self.data}</textarea>')
         return {
@@ -215,11 +218,10 @@ class MarkdownView(TextView):
 
     view_name = 'markdown'
 
-    def render_output(
-            self, element_id, function_names, request_path, for_print):
+    def render_output(self, x: VariableElement):
         data = get_html_from_markdown(self.data)
         body_text = (
-            f'<span id="{element_id}" '
+            f'<span id="{x.id}" '
             f'class="{self.view_name} {self.variable_id}">'
             f'{data}</span>')
         return {
@@ -235,13 +237,12 @@ class ImageView(VariableView):
     view_name = 'image'
     is_asynchronous = True
 
-    def render_output(
-            self, element_id, function_names, request_path, for_print):
+    def render_output(self, x: VariableElement):
         variable_id = self.variable_id
         body_text = (
-            f'<img id="{element_id}" '
+            f'<img id="{x.id}" '
             f'class="{self.view_name} {variable_id}" '
-            f'src="{request_path}/{variable_id}">')
+            f'src="{x.uri}">')
         return {
             'css_uris': [],
             'js_uris': [],
@@ -255,17 +256,16 @@ class TableView(VariableView):
     view_name = 'table'
     is_asynchronous = True
 
-    def render_output(
-            self, element_id, function_names, request_path, for_print):
+    def render_output(self, x: VariableElement):
         variable_id = self.variable_id
         body_text = (
-            f'<table id="{element_id}" '
+            f'<table id="{x.id}" '
             f'class="{self.view_name} {variable_id}">'
-            '</table>')
+            '<thead/><tbody/></table>')
         js_texts = [
             TABLE_JS_TEMPLATE.substitute({
-                'element_id': element_id,
-                'data_uri': request_path + '/' + variable_id,
+                'element_id': x.id,
+                'data_uri': x.uri,
             }),
         ]
         return {
@@ -436,9 +436,8 @@ TABLE_JS_TEMPLATE = Template('''\
   const d = await response.json();
   const columns = d['columns'], columnCount = columns.length;
   const rows = d['data'], rowCount = rows.length;
-  const table = document.getElementById('$element_id');
-  const thead = document.createElement('thead');
-  const tbody = document.createElement('tbody');
+  const nodes = document.getElementById('$element_id').children;
+  const thead = nodes[0], tbody = nodes[1];
   let tr = document.createElement('tr');
   for (let i = 0; i < columnCount; i++) {
     const column = columns[i];
@@ -457,5 +456,4 @@ TABLE_JS_TEMPLATE = Template('''\
     }
     tbody.append(tr);
   }
-  table.append(thead, tbody);
 })();''')

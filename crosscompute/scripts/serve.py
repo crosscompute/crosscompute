@@ -37,7 +37,7 @@ def configure_argument_parser_for_serving(a):
     a.add_argument(
         '--host', metavar='X',
         default=HOST,
-        help='specify 0.0.0.0 to listen for requests from all ip addresses')
+        help='specify * to listen for requests from all ip addresses')
     a.add_argument(
         '--port', metavar='X',
         default=PORT,
