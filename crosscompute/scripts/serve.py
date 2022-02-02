@@ -66,21 +66,37 @@ def configure_argument_parser_for_serving(a):
 
 
 def serve_with(automation, args):
-    host, port, base_uri = args.host, args.port, args.base_uri
+    return serve(
+        automation,
+        args.host,
+        args.port,
+        args.base_uri,
+        args.with_browser,
+        args.is_static,
+        args.is_production,
+        args.disk_poll,
+        args.disk_debounce)
+
+
+def serve(
+        automation, host=HOST, port=PORT, base_uri='', with_browser=True,
+        is_static=False, is_production=False,
+        disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
+        disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS):
     try:
         if is_port_in_use(port):
             raise CrossComputeError(
-                'port=%s is in use; cannot start server', port)
-        if args.with_browser and 'DISPLAY' in environ:
+                f'port {port} is in use; cannot start server')
+        if with_browser and 'DISPLAY' in environ:
             L.info('opening browser; set --no-browser to disable')
             open_browser(f'http://localhost:{port}{base_uri}')
         automation.serve(
             host=host,
             port=port,
-            is_static=args.is_static,
-            is_production=args.is_production,
-            disk_poll_in_milliseconds=args.disk_poll,
-            disk_debounce_in_milliseconds=args.disk_debounce,
+            is_static=is_static,
+            is_production=is_production,
+            disk_poll_in_milliseconds=disk_poll_in_milliseconds,
+            disk_debounce_in_milliseconds=disk_debounce_in_milliseconds,
             base_uri=base_uri)
     except CrossComputeError as e:
         L.error(e)

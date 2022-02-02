@@ -37,6 +37,10 @@ def configure_argument_parser_for_running(a):
 
 
 def run_with(automation, args):
+    return run(automation)
+
+
+def run(automation):
     try:
         automation.run()
     except CrossComputeError as e:

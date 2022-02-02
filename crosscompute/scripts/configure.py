@@ -40,15 +40,19 @@ def configure_argument_parser_for_configuring(a):
 
 
 def configure_with(args):
-    path_or_folder = args.path_or_folder
+    return configure(args.path_or_folder)
+
+
+def configure(path_or_folder):
+    path_or_folder = path_or_folder
     if exists(path_or_folder):
         try:
             automation = Automation.load(path_or_folder)
             configuration = automation.configuration
         except CrossComputeError:
             configuration = {}
-    configuration, configuration_path = input_configuration_with(
-        configuration, args)
+    configuration, configuration_path = input_configuration(
+        configuration, path_or_folder)
     if 'folder' in configuration:
         del configuration['folder']
         del configuration['path']
@@ -57,13 +61,13 @@ def configure_with(args):
     return configuration_path
 
 
-def input_configuration_with(configuration, args):
+def input_configuration(configuration, path_or_folder):
     if not configuration:
         configuration = load_raw_configuration_yaml(join(
             TEMPLATES_FOLDER, 'configuration.yaml'), with_comments=True)
     old_automation_name = configuration.get('name', AUTOMATION_NAME)
     old_automation_version = configuration.get('version', AUTOMATION_VERSION)
-    old_configuration_path = get_configuration_path(args.path_or_folder)
+    old_configuration_path = get_configuration_path(path_or_folder)
     try:
         new_automation_name = input(
             'automation name [%s]: ' % old_automation_name)
