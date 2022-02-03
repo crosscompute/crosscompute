@@ -83,6 +83,7 @@ class Automation():
         configuration = load_configuration(path)
         self.path = path
         self.folder = configuration['folder']
+        self.configuration = configuration
         self.definitions = get_automation_definitions(configuration)
         self._file_type_by_path = self._get_file_type_by_path()
         self._timestamp_object = Value('d', time())
