@@ -26,6 +26,7 @@ from ..constants import (
     STREAMS_ROUTE)
 from ..exceptions import (
     CrossComputeConfigurationError,
+    CrossComputeConfigurationNotFoundError,
     CrossComputeError)
 from ..macros.iterable import group_by
 from ..macros.process import StoppableProcess
@@ -77,7 +78,8 @@ class Automation():
                 continue
             break
         else:
-            raise CrossComputeError('could not find configuration')
+            raise CrossComputeConfigurationNotFoundError(
+                'configuration not found')
 
     def initialize_from_path(self, path):
         configuration = load_configuration(path)

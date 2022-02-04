@@ -1,6 +1,7 @@
 # TODO: Save to yaml, ini, toml
 import tomli
 from configparser import ConfigParser
+from copy import deepcopy
 from invisibleroads_macros_log import format_path
 from logging import getLogger
 from os.path import abspath, basename, dirname, exists, join, splitext
@@ -75,6 +76,10 @@ def validate_configuration(configuration):
             except KeyError as e:
                 raise CrossComputeConfigurationError(
                     f'{e} required for each variable')
+    batch_definitions = configuration.get('batches', [])
+    if not isinstance(batch_definitions, list):
+        raise CrossComputeConfigurationError('batches must be a list')
+    # TODO: Validate
     return configuration
 
 
@@ -143,7 +148,7 @@ def get_automation_definitions(configuration):
 
 def get_automation_configurations(configuration):
     automation_configurations = []
-    configurations = [configuration]
+    configurations = [deepcopy(configuration)]
     while configurations:
         c = configurations.pop(0)
         folder = c['folder']
