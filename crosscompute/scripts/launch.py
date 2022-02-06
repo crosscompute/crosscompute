@@ -1,11 +1,11 @@
 from argparse import ArgumentParser
 from logging import getLogger
-from multiprocessing import Process
 
 from crosscompute.exceptions import (
     CrossComputeConfigurationError,
     CrossComputeDataError,
     CrossComputeError)
+from crosscompute.macros.process import LoggableProcess
 from crosscompute.routines.automation import Automation
 from crosscompute.routines.log import (
     configure_argument_parser_for_logging,
@@ -38,9 +38,11 @@ def do(arguments=None):
     automation = get_automation_from(args)
     processes = []
     if launch_mode in ['serve', 'all']:
-        processes.append(Process(target=serve_with, args=(automation, args)))
+        processes.append(LoggableProcess(
+            name='serve', target=serve_with, args=(automation, args)))
     if launch_mode in ['run', 'all']:
-        processes.append(Process(target=run_with, args=(automation, args)))
+        processes.append(LoggableProcess(
+            name='run', target=run_with, args=(automation, args)))
     try:
         for process in processes:
             process.start()

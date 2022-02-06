@@ -5,7 +5,7 @@
 import logging
 import subprocess
 from logging import getLogger
-from multiprocessing import Process, Queue, Value
+from multiprocessing import Queue, Value
 from os import environ, getenv, listdir
 from os.path import exists, isdir, join, realpath
 from time import time
@@ -29,7 +29,7 @@ from ..exceptions import (
     CrossComputeConfigurationNotFoundError,
     CrossComputeError)
 from ..macros.iterable import group_by
-from ..macros.process import StoppableProcess
+from ..macros.process import LoggableProcess, StoppableProcess
 from ..routes.automation import AutomationRoutes
 from ..routes.stream import StreamRoutes
 from .configuration import (
@@ -108,9 +108,8 @@ class Automation():
             getLogger('watchgod.watcher').setLevel(logging.ERROR)
 
         def run_server():
-            L.info('starting worker')
-            worker_process = Process(target=self.work, args=(
-                automation_queue,))
+            worker_process = LoggableProcess(
+                name='worker', target=self.work, args=(automation_queue,))
             worker_process.daemon = True
             worker_process.start()
             L.info('serving at http://%s:%s%s', host, port, base_uri)
@@ -145,7 +144,7 @@ class Automation():
     def watch(
             self, run_server, disk_poll_in_milliseconds,
             disk_debounce_in_milliseconds):
-        server_process = StoppableProcess(target=run_server)
+        server_process = StoppableProcess(name='server', target=run_server)
         server_process.start()
         for changes in watch(
                 self.folder, min_sleep=disk_poll_in_milliseconds,
@@ -163,7 +162,8 @@ class Automation():
                         L.error(e)
                         continue
                     server_process.stop()
-                    server_process = StoppableProcess(target=run_server)
+                    server_process = StoppableProcess(
+                        name='server', target=run_server)
                     server_process.start()
                 elif file_type == 's':
                     for d in self.definitions:

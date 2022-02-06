@@ -3,10 +3,11 @@ import webbrowser
 from invisibleroads_macros_text import normalize_key
 from logging import getLogger
 from markdown import markdown
-from multiprocessing import Process
 from time import sleep
 from urllib.error import HTTPError, URLError
 from urllib.request import urlopen as open_uri
+
+from .process import LoggableProcess
 
 
 def format_slug(text):
@@ -45,9 +46,9 @@ def open_browser(uri, check_interval_in_seconds=1):
         except KeyboardInterrupt:
             pass
 
-    browser_process = Process(target=wait_then_run)
-    browser_process.daemon = True
-    browser_process.start()
+    process = LoggableProcess(name='browser', target=wait_then_run)
+    process.daemon = True
+    process.start()
 
 
 L = getLogger(__name__)
