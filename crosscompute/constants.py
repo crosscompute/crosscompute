@@ -1,7 +1,14 @@
 import re
+from enum import IntEnum
 from os.path import dirname, join
 
 from .macros.web import format_slug
+
+
+class Error(IntEnum):
+
+    CONFIGURATION_NOT_FOUND = -100
+    COMMAND_NOT_FOUND = -10
 
 
 PACKAGE_FOLDER = dirname(__file__)

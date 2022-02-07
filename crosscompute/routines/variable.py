@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from importlib.metadata import entry_points
 from invisibleroads_macros_log import format_path
 from logging import getLogger
-from os.path import basename, getmtime, join, splitext
+from os.path import basename, exists, getmtime, join, splitext
 from string import Template
 
 from ..constants import (
@@ -291,6 +291,24 @@ def save_variable_data(target_path, variable_definitions, data_by_id):
         open(target_path, 'wt').write(variable_data)
 
 
+def update_variable_data(target_path, data_by_id):
+    try:
+        if exists(target_path):
+            f = open(target_path, 'r+t')
+            d = json.load(f)
+            d.update(data_by_id)
+            f.seek(0)
+            f.truncate()
+        else:
+            f = open(target_path, 'wt')
+            d = data_by_id
+        json.dump(d, f)
+    except (json.JSONDecodeError, OSError) as e:
+        raise CrossComputeDataError(e)
+    finally:
+        f.close()
+
+
 def load_variable_data(path, variable_id):
     try:
         new_time = getmtime(path)
@@ -425,8 +443,8 @@ def apply_functions(value, function_names, function_by_name):
     return value
 
 
-VIEW_BY_NAME = {_.name: import_attribute(_.value) for _ in entry_points()[
-    'crosscompute.views']}
+VIEW_BY_NAME = {_.name: import_attribute(
+    _.value) for _ in entry_points().select(group='crosscompute.views')}
 L = getLogger(__name__)
 
 

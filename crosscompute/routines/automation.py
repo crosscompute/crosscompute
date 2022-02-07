@@ -2,6 +2,7 @@
 # TODO: Watch multiple folders if not all under parent folder
 # TODO: Consider whether to send partial updates for variables
 # TODO: Precompile notebook scripts
+import json
 import logging
 import subprocess
 from logging import getLogger
@@ -18,6 +19,7 @@ from waitress import serve
 from watchgod import watch
 
 from ..constants import (
+    Error,
     AUTOMATION_PATH,
     DISK_DEBOUNCE_IN_MILLISECONDS,
     DISK_POLL_IN_MILLISECONDS,
@@ -41,7 +43,8 @@ from .configuration import (
 from .variable import (
     format_text,
     get_variable_data_by_id,
-    save_variable_data)
+    save_variable_data,
+    update_variable_data)
 
 
 class Automation():
@@ -262,6 +265,7 @@ def run_automation(automation_definition, batch_definition):
     command_string = script_definition.get('command')
     if not command_string:
         return
+    reference_time = time()
     folder = automation_definition['folder']
     batch_folder, custom_environment = prepare_batch(
         automation_definition, batch_definition)
@@ -271,24 +275,49 @@ def run_automation(automation_definition, batch_definition):
         format_path(join(folder, batch_folder)))
     mode_folder_by_name = {_ + '_folder': make_folder(join(
         folder, batch_folder, _)) for _ in MODE_NAMES}
-    script_environment = {
-        'CROSSCOMPUTE_' + k.upper(): v for k, v in mode_folder_by_name.items()
-    } | {'PATH': getenv('PATH', '')} | custom_environment
-    L.debug('environment = %s', script_environment)
+    script_environment = _prepare_script_environment(
+        mode_folder_by_name, custom_environment)
     debug_folder = mode_folder_by_name['debug_folder']
-    o_path = join(debug_folder, 'stdout.txt')
-    e_path = join(debug_folder, 'stderr.txt')
+    command_text = format_text(command_string, mode_folder_by_name)
+    command_folder = join(folder, script_definition.get('folder', '.'))
+    return_code = _run_command(
+        command_text, command_folder, script_environment,
+        join(debug_folder, 'stdout.txt'), join(debug_folder, 'stderr.txt'))
     try:
-        with open(o_path, 'wt') as o_file, open(e_path, 'wt') as e_file:
-            subprocess.run(
-                format_text(command_string, mode_folder_by_name), check=True,
-                shell=True,  # Expand $HOME and ~
-                cwd=join(folder, script_definition.get('folder', '.')),
-                env=script_environment, stdout=o_file, stderr=e_file)
+        update_variable_data(join(debug_folder, 'variables.dictionary'), {
+            'execution_time_in_seconds': time() - reference_time,
+            'return_code': return_code})
+    except CrossComputeDataError as e:
+        L.error(e)
+
+
+def _run_command(
+        command_string, command_folder, script_environment, stdout_path,
+        stderr_path):
+    try:
+        stdout_file = open(stdout_path, 'wt')
+        stderr_file = open(stderr_path, 'w+t')
+        process = subprocess.run(
+            command_string,
+            check=True,
+            shell=True,  # Expand $HOME and ~ in command_string
+            cwd=command_folder,
+            env=script_environment,
+            stdout=stdout_file,
+            stderr=stderr_file)
+        return_code = process.returncode
     except OSError as e:
         L.error(e)
-    except subprocess.CalledProcessError:
-        L.error(open(e_path, 'rt').read().rstrip())
+        return_code = Error.COMMAND_NOT_FOUND
+    except subprocess.CalledProcessError as e:
+        stderr_file.seek(0)
+        stderr_text = stderr_file.read().rstrip()
+        L.error(stderr_text)
+        return_code = e.returncode
+    finally:
+        stdout_file.close()
+        stderr_file.close()
+    return return_code
 
 
 def prepare_batch(automation_definition, batch_definition):
@@ -297,7 +326,7 @@ def prepare_batch(automation_definition, batch_definition):
     batch_folder = batch_definition['folder']
     variable_definitions_by_path = group_by(variable_definitions, 'path')
     data_by_id = batch_definition.get('data_by_id', {})
-    custom_environment = prepare_environment(
+    custom_environment = _prepare_custom_environment(
         automation_definition,
         variable_definitions_by_path.pop('ENVIRONMENT', []),
         data_by_id)
@@ -311,7 +340,15 @@ def prepare_batch(automation_definition, batch_definition):
     return batch_folder, custom_environment
 
 
-def prepare_environment(
+def _prepare_script_environment(mode_folder_by_name, custom_environment):
+    script_environment = {
+        'CROSSCOMPUTE_' + k.upper(): v for k, v in mode_folder_by_name.items()
+    } | {'PATH': getenv('PATH', '')} | custom_environment
+    L.debug('environment = %s', script_environment)
+    return script_environment
+
+
+def _prepare_custom_environment(
         automation_definition, variable_definitions, data_by_id):
     custom_environment = {}
     data_by_id = data_by_id.copy()
