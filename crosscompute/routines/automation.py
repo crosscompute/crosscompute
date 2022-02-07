@@ -13,6 +13,7 @@ from time import time
 from invisibleroads_macros_disk import is_path_in_folder, make_folder
 from invisibleroads_macros_log import format_path
 from pyramid.config import Configurator
+from pyramid.events import NewResponse
 from waitress import serve
 from watchgod import watch
 
@@ -181,6 +182,10 @@ class Automation():
             config.include(automation_routes.includeme)
             if not is_static:
                 config.include(stream_routes.includeme)
+            if not is_production:
+                def update_cache_headers(e):
+                    e.response.headers.update({'Cache-Control': 'no-store'})
+                config.add_subscriber(update_cache_headers, NewResponse)
 
             def update_renderer_globals():
                 renderer_environment = config.get_jinja2_environment()
@@ -192,7 +197,6 @@ class Automation():
                     'BASE_URI': base_uri,
                     'STREAMS_ROUTE': STREAMS_ROUTE,
                 })
-
             config.action(None, update_renderer_globals)
         return config.make_wsgi_app()
 
