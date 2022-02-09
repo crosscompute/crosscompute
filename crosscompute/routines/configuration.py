@@ -182,28 +182,24 @@ def get_batch_definitions(configuration):
     variable_definitions = get_variable_definitions(
         configuration, 'input')
     for raw_batch_definition in configuration.get('batches', []):
-        try:
-            batch_definition = normalize_batch_definition(raw_batch_definition)
-            if 'configuration' in raw_batch_definition:
-                batch_configuration = raw_batch_definition['configuration']
-                if 'path' in batch_configuration:
-                    definitions = get_batch_definitions_from_path(join(
-                        automation_folder, batch_configuration['path'],
-                    ), batch_definition, variable_definitions)
-                # TODO: Support batch_configuration['uri']
-                else:
-                    raise CrossComputeConfigurationError(
-                        'path expected for each batch configuration')
+        batch_definition = normalize_batch_definition(raw_batch_definition)
+        if 'configuration' in raw_batch_definition:
+            batch_configuration = raw_batch_definition['configuration']
+            if 'path' in batch_configuration:
+                definitions = get_batch_definitions_from_path(join(
+                    automation_folder, batch_configuration['path'],
+                ), batch_definition, variable_definitions)
+            # TODO: Support batch_configuration['uri']
             else:
-                batch_slug = batch_definition['slug'] or format_slug(
-                    batch_definition['name'])
-                batch_definition['slug'] = batch_slug
-                batch_definition['uri'] = BATCH_ROUTE.format(
-                    batch_slug=batch_slug)
-                definitions = [batch_definition]
-        except CrossComputeConfigurationError as e:
-            L.error(e)
-            continue
+                raise CrossComputeConfigurationError(
+                    'path expected for each batch configuration')
+        else:
+            batch_slug = batch_definition['slug'] or format_slug(
+                batch_definition['name'])
+            batch_definition['slug'] = batch_slug
+            batch_definition['uri'] = BATCH_ROUTE.format(
+                batch_slug=batch_slug)
+            definitions = [batch_definition]
         batch_definitions.extend(definitions)
     return batch_definitions
 
@@ -311,15 +307,19 @@ def get_batch_definitions_from_path(
     batch_name = batch_definition['name']
     batch_slug = batch_definition['slug']
     batch_definitions = []
-    for data_by_id in yield_data_by_id(path, variable_definitions):
-        folder = format_text(batch_folder, data_by_id)
-        name = format_text(batch_name, data_by_id)
-        slug = format_text(
-            batch_slug, data_by_id) if batch_slug else format_slug(name)
-        batch_definitions.append(batch_definition | {
-            'folder': folder, 'name': name, 'slug': slug,
-            'uri': BATCH_ROUTE.format(batch_slug=slug),
-            'data_by_id': data_by_id})
+    try:
+        for data_by_id in yield_data_by_id(path, variable_definitions):
+            folder = format_text(batch_folder, data_by_id)
+            name = format_text(batch_name, data_by_id)
+            slug = format_text(
+                batch_slug, data_by_id) if batch_slug else format_slug(name)
+            batch_definitions.append(batch_definition | {
+                'folder': folder, 'name': name, 'slug': slug,
+                'uri': BATCH_ROUTE.format(batch_slug=slug),
+                'data_by_id': data_by_id})
+    except CrossComputeError as e:
+        e.path = path
+        raise e
     return batch_definitions
 
 

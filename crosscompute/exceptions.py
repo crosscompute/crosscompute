@@ -1,5 +1,13 @@
+from invisibleroads_macros_log import format_path
+
+
 class CrossComputeError(Exception):
-    pass
+
+    def __str__(self):
+        text = super().__str__()
+        if hasattr(self, 'path'):
+            text += f' in {format_path(self.path)}'
+        return text
 
 
 class CrossComputeConfigurationError(CrossComputeError):

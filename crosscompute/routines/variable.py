@@ -288,6 +288,9 @@ def save_variable_data(target_path, variable_definitions, data_by_id):
             f'{file_extension} does not support multiple variables')
     else:
         variable_data = list(variable_data_by_id.values())[0]
+        # TODO: Save data as text if is text
+        # TODO: Save data as binary if is binary
+        # TODO: Save data from upload or cloud if is dictionary
         open(target_path, 'wt').write(variable_data)
 
 
@@ -395,7 +398,7 @@ def parse_data_by_id(data_by_id, variable_definitions):
         try:
             variable_data = data_by_id[variable_id]
         except KeyError:
-            raise CrossComputeDataError(f'{variable_id} required')
+            raise CrossComputeDataError(f'variable {variable_id} required')
         variable_view = VariableView.get_from(variable_definition)
         try:
             variable_data = variable_view.parse(variable_data)

@@ -2,7 +2,6 @@
 # TODO: Watch multiple folders if not all under parent folder
 # TODO: Consider whether to send partial updates for variables
 # TODO: Precompile notebook scripts
-import json
 import logging
 import subprocess
 from logging import getLogger
@@ -30,6 +29,7 @@ from ..constants import (
 from ..exceptions import (
     CrossComputeConfigurationError,
     CrossComputeConfigurationNotFoundError,
+    CrossComputeDataError,
     CrossComputeError)
 from ..macros.iterable import group_by
 from ..macros.process import LoggableProcess, StoppableProcess
@@ -76,7 +76,7 @@ class Automation():
                 continue
             try:
                 self.initialize_from_path(absolute_path)
-            except CrossComputeConfigurationError:
+            except (CrossComputeConfigurationError, CrossComputeDataError):
                 raise
             except CrossComputeError:
                 continue
