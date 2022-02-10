@@ -182,7 +182,8 @@ class DiskAutomation(Automation):
 
     def _get_app(self, automation_queue, is_static, is_production, base_uri):
         automation_routes = AutomationRoutes(
-            self.definitions, automation_queue, self._timestamp_object)
+            self.configuration, self.definitions, automation_queue,
+            self._timestamp_object)
         stream_routes = StreamRoutes(self._timestamp_object)
         with Configurator(settings={
             'jinja2.trim_blocks': True,

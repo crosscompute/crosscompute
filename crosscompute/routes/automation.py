@@ -23,7 +23,7 @@ from ..constants import (
 from ..exceptions import CrossComputeDataError
 from ..macros.iterable import extend_uniquely, find_item
 from ..macros.web import get_html_from_markdown
-from ..routines.batch import Batch
+from ..routines.batch import DiskBatch
 from ..routines.configuration import (
     get_css_uris,
     get_variable_definitions,
@@ -37,7 +37,9 @@ from ..routines.variable import (
 class AutomationRoutes():
 
     def __init__(
-            self, automation_definitions, automation_queue, timestamp_object):
+            self, configuration, automation_definitions,
+            automation_queue, timestamp_object):
+        self.configuration = configuration
         self.automation_definitions = automation_definitions
         self.automation_queue = automation_queue
         self._timestamp_object = timestamp_object
@@ -127,31 +129,21 @@ class AutomationRoutes():
 
     def see_root(self, request):
         'Render root with a list of available automations'
-        automation_definitions = self.automation_definitions
-        for automation_definition in automation_definitions:
-            if 'parent' not in automation_definition:
-                css_uris = get_css_uris(automation_definition)
-                break
-        else:
-            css_uris = []
+        css_uris = get_css_uris(self.configuration)
         return {
-            'automations': automation_definitions,
+            'title_text': self.configuration.get('name', 'Automations'),
+            'automations': self.automation_definitions,
             'css_uris': css_uris,
             'timestamp_value': self._timestamp_object.value,
         }
 
     def see_style(self, request):
         matchdict = request.matchdict
-        automation_definitions = self.automation_definitions
         if 'automation_slug' in matchdict:
             automation_definition = self.get_automation_definition_from(
                 request)
-        elif automation_definitions:
-            automation_definition = automation_definitions[0]
-            if 'parent' in automation_definition:
-                automation_definition = automation_definition['parent']
         else:
-            raise HTTPNotFound
+            automation_definition = self.configuration
         style_definitions = automation_definition.get('display', {}).get(
             'styles', [])
         try:
@@ -195,6 +187,7 @@ class AutomationRoutes():
         automation_definition = self.get_automation_definition_from(request)
         css_uris = get_css_uris(automation_definition)
         return automation_definition | {
+            'title_text': automation_definition['name'],
             'css_uris': css_uris,
             'timestamp_value': self._timestamp_object.value,
         }
@@ -203,10 +196,11 @@ class AutomationRoutes():
         automation_definition = self.get_automation_definition_from(request)
         batch_definition = self.get_batch_definition_from(
             request, automation_definition)
-        batch = Batch(automation_definition, batch_definition)
+        batch = DiskBatch(automation_definition, batch_definition)
         mode_name = self.get_mode_name_from(request)
         for_print = 'p' in request.params
         return {
+            'title_text': batch_definition['name'],
             'automation_definition': automation_definition,
             'batch_definition': batch_definition,
             'uri': request.path,

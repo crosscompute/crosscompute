@@ -35,7 +35,6 @@ class AutomationDefinition(dict):
             if k.startswith('___'):
                 del self.__dict__[k]
         self.folder = Path(self['folder'])
-        self.uri = self['uri']
 
     def _validate(self):
         for f in AUTOMATION_DEFINITION_VALIDATION_FUNCTIONS:
@@ -53,7 +52,6 @@ class BatchDefinition(dict):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.folder = Path(self['folder'])
-        self.uri = self['uri']
 
 
 class VariableDefinition(dict):

@@ -9,7 +9,6 @@ from ..constants import (
 from ..exceptions import (
     CrossComputeDataError)
 from .configuration import (
-    AutomationDefinition,
     BatchDefinition,
     VariableDefinition)
 from .interface import Batch
@@ -20,11 +19,10 @@ from .variable import (
 class DiskBatch(Batch):
 
     def __init__(self, automation_definition, batch_definition):
-        self.automation_definition = automation_d = AutomationDefinition(
-            automation_definition)
+        self.automation_definition = automation_definition
         self.batch_definition = batch_d = BatchDefinition(
             batch_definition)
-        self.folder = automation_d.folder / batch_d.folder
+        self.folder = automation_definition.folder / batch_d.folder
 
     def get_variable_configuration(self, variable_definition):
         variable_definition = VariableDefinition(variable_definition)
@@ -59,8 +57,8 @@ class DiskBatch(Batch):
 
     def get_data_uri(self, variable_definition):
         variable_definition = VariableDefinition(variable_definition)
-        automation_uri = self.automation_definition.uri
-        batch_uri = self.batch_definition.uri
+        automation_uri = self.automation_definition['uri']
+        batch_uri = self.batch_definition['uri']
         mode_code = MODE_CODE_BY_NAME[variable_definition.mode_name]
         mode_uri = MODE_ROUTE.format(mode_code=mode_code)
         variable_uri = VARIABLE_ROUTE.format(

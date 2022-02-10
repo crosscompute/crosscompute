@@ -4,6 +4,7 @@
 {% block head_html %}
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title_text }}</title>
 {{ head_text | safe }}
 {%- endblock %}
 {% for css_uri in css_uris %}
