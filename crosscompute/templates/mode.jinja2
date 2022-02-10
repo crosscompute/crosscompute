@@ -10,25 +10,29 @@
 #}
 
 {% block body_html -%}
-{%- if mode_name == 'input' -%}
-<form>
-{%- endif -%}
 {{ super() }}
-{%- if mode_name == 'input' %}
+{% if mode_name == 'input' %}
 <button id="run" type="button">Run</button>
-</form>
-{%- endif -%}
+{% endif -%}
 {%- endblock %}
 
 {%- block body_js -%}
+{%- if mode_name == 'input' -%}
+GET_DATA_BY_VIEW_NAME = {};
+{% endif -%}
 {{ super() }}
 {%- if mode_name == 'input' -%}
-document.getElementById('run').onclick = async function(e) {
-  const url = '{{ BASE_URI }}{{ automation_definition['uri'] }}.json';
-  const response = await fetch(url, {
+document.getElementById('run').onclick = async () => {
+  const dataById = {};
+  for (const x of document.getElementsByClassName('input')) {
+    const { view: viewName, id: variableId } = x.dataset;
+    dataById[variableId] = GET_DATA_BY_VIEW_NAME[viewName](x);
+  }
+  const uri = '{{ BASE_URI }}{{ automation_definition['uri'] }}.json';
+  const response = await fetch(uri, {
     method: 'POST',
-    body: new FormData(e.target.parentNode)
-  });
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(dataById)});
   const d = await response.json();
   window.location = '{{ BASE_URI }}{{ automation_definition['uri'] }}/r/' + d['id'] + '/o';
 }

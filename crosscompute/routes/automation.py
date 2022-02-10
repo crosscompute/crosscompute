@@ -2,6 +2,7 @@
 # TODO: Let user customize root template
 # TODO: Add unit tests
 import json
+from functools import partial
 from invisibleroads_macros_disk import make_random_folder
 from itertools import count
 from logging import getLogger
@@ -22,17 +23,15 @@ from ..constants import (
 from ..exceptions import CrossComputeDataError
 from ..macros.iterable import extend_uniquely, find_item
 from ..macros.web import get_html_from_markdown
+from ..routines.batch import Batch
 from ..routines.configuration import (
     get_css_uris,
-    get_template_texts,
     get_variable_definitions,
     parse_data_by_id)
 from ..routines.variable import (
-    VariableElement,
+    Element,
     VariableView,
-    load_variable_data_from_folder,
-    redact,
-    save_variables)
+    load_variable_data_from_folder)
 
 
 class AutomationRoutes():
@@ -189,8 +188,6 @@ class AutomationRoutes():
             automation_definition['runs'] = []
         automation_definition['runs'].append({
             'name': run_id, 'slug': run_id, 'folder': folder, 'uri': run_uri})
-        save_variables(folder, {'input': redact(
-            data_by_id, variable_definitions)})
         # TODO: Change target page depending on definition
         return {'id': run_id}
 
@@ -204,28 +201,18 @@ class AutomationRoutes():
 
     def see_automation_batch_mode(self, request):
         automation_definition = self.get_automation_definition_from(request)
-        automation_folder = automation_definition['folder']
         batch_definition = self.get_batch_definition_from(
             request, automation_definition)
-        absolute_batch_folder = join(automation_folder, batch_definition[
-            'folder'])
+        batch = Batch(automation_definition, batch_definition)
         mode_name = self.get_mode_name_from(request)
-        css_uris = get_css_uris(automation_definition)
-        template_text = '\n'.join(get_template_texts(
-            automation_definition, mode_name))
-        variable_definitions = get_variable_definitions(
-            automation_definition, mode_name, with_all=True)
-        request_path = request.path
         for_print = 'p' in request.params
         return {
             'automation_definition': automation_definition,
             'batch_definition': batch_definition,
-            'uri': request_path,
+            'uri': request.path,
             'mode_name': mode_name,
             'timestamp_value': self._timestamp_object.value,
-        } | render_mode_dictionary(
-            mode_name, template_text, variable_definitions,
-            absolute_batch_folder, css_uris, request_path, for_print)
+        } | render_mode_dictionary(batch, mode_name, for_print)
 
     def see_automation_batch_mode_variable(self, request):
         automation_definition = self.get_automation_definition_from(request)
@@ -248,8 +235,7 @@ class AutomationRoutes():
         variable_path = variable_definition['path']
         try:
             variable_data = load_variable_data_from_folder(
-                absolute_batch_folder, mode_name, variable_path,
-                self.variable_id)
+                absolute_batch_folder, mode_name, variable_path, variable_id)
         except CrossComputeDataError:
             raise HTTPNotFound
         if isinstance(variable_data, dict):
@@ -294,33 +280,40 @@ class AutomationRoutes():
         return mode_name
 
 
-def render_mode_dictionary(
-        mode_name, template_text, variable_definitions, absolute_batch_folder,
-        css_uris, request_path, for_print):
+def render_mode_dictionary(batch, mode_name, for_print):
+    automation_definition = batch.automation_definition
+    css_uris = automation_definition.get_css_uris()
+    template_text = automation_definition.get_template_text(mode_name)
+    variable_definitions = get_variable_definitions(
+        automation_definition, mode_name, with_all=True)
     m = {'css_uris': css_uris.copy(), 'js_uris': [], 'js_texts': []}
     i = count()
-
-    def render_html(match):
-        matching_text, terms = match.group(0), match.group(1).split('|')
-        variable_id = terms[0].strip()
-        try:
-            d = find_item(variable_definitions, 'id', variable_id)
-        except StopIteration:
-            L.warning('%s in template but not in configuration', variable_id)
-            return matching_text
-        view = VariableView.get_from(d).load(absolute_batch_folder)
-        rendered_element = view.render(VariableElement(
-            f'v{next(i)}', mode_name, terms[1:],
-            f'{request_path}/{variable_id}', for_print))
-        for k, v in m.items():
-            extend_uniquely(v, rendered_element[k])
-        return rendered_element['body_text']
-
+    render_html = partial(
+        _render_html, variable_definitions=variable_definitions,
+        batch=batch, m=m, i=i, mode_name=mode_name, for_print=for_print)
     return m | {
         'body_text': get_html_from_markdown(VARIABLE_ID_PATTERN.sub(
             render_html, template_text)),
-        'js_text': '\n'.join(m['js_texts']),
-    }
+        'js_text': '\n'.join(m['js_texts'])}
+
+
+def _render_html(
+        match, variable_definitions, batch, m, i, mode_name, for_print):
+    matching_text = match.group(0)
+    terms = match.group(1).split('|')
+    variable_id = terms[0].strip()
+    try:
+        variable_definition = find_item(
+            variable_definitions, 'id', variable_id)
+    except StopIteration:
+        L.warning('%s in template but not in configuration', variable_id)
+        return matching_text
+    view = VariableView.get_from(variable_definition)
+    element = Element(f'v{next(i)}', mode_name, for_print, terms[1:])
+    rendered_element = view.render(batch, element)
+    for k, v in m.items():
+        extend_uniquely(v, [_.strip() for _ in rendered_element[k]])
+    return rendered_element['body_text']
 
 
 L = getLogger(__name__)

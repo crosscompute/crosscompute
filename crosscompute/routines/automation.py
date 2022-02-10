@@ -41,8 +41,8 @@ from .configuration import (
     get_variable_definitions,
     load_configuration)
 from .variable import (
-    format_text,
     get_variable_data_by_id,
+    get_variable_value_by_id,
     load_variable_data,
     save_variable_data,
     update_variable_data)
@@ -137,12 +137,14 @@ class Automation():
     def run(self):
         for automation_definition in self.definitions:
             for batch_definition in automation_definition.get('batches', []):
-                run_automation(automation_definition, batch_definition)
+                run_automation(
+                    automation_definition, batch_definition,
+                    load_variable_data)
 
     def work(self, automation_queue):
         try:
             while automation_pack := automation_queue.get():
-                run_automation(*automation_pack)
+                run_automation(*automation_pack, load_variable_data)
         except KeyboardInterrupt:
             pass
 
@@ -181,7 +183,10 @@ class Automation():
         automation_routes = AutomationRoutes(
             self.definitions, automation_queue, self._timestamp_object)
         stream_routes = StreamRoutes(self._timestamp_object)
-        with Configurator() as config:
+        with Configurator(settings={
+            'jinja2.trim_blocks': True,
+            'jinja2.lstrip_blocks': True,
+        }) as config:
             config.include('pyramid_jinja2')
             config.include(automation_routes.includeme)
             if not is_static:
@@ -261,7 +266,8 @@ class Automation():
         return paths
 
 
-def run_automation(automation_definition, batch_definition):
+def run_automation(
+        automation_definition, batch_definition, process_data):
     script_definition = automation_definition.get('script', {})
     command_string = script_definition.get('command')
     if not command_string:
@@ -279,17 +285,16 @@ def run_automation(automation_definition, batch_definition):
     script_environment = _prepare_script_environment(
         mode_folder_by_name, custom_environment)
     debug_folder = mode_folder_by_name['debug_folder']
-    command_text = format_text(command_string, mode_folder_by_name)
+    command_text = command_string.format(**mode_folder_by_name)
     command_folder = join(folder, script_definition.get('folder', '.'))
     return_code = _run_command(
         command_text, command_folder, script_environment,
         join(debug_folder, 'stdout.txt'), join(debug_folder, 'stderr.txt'))
-    _process_batch_folder(automation_definition, batch_definition, [
+    return _process_batch(automation_definition, batch_definition, [
         'output', 'log', 'debug',
     ], {'debug': {
         'execution_time_in_seconds': time() - reference_time,
-        'return_code': return_code,
-    }}, load_variable_data)
+        'return_code': return_code}}, process_data)
 
 
 def _run_command(
@@ -352,50 +357,51 @@ def _prepare_script_environment(mode_folder_by_name, custom_environment):
 def _prepare_custom_environment(
         automation_definition, variable_definitions, data_by_id):
     custom_environment = {}
-    data_by_id = data_by_id.copy()
-    try:
-        environment_variable_definitions = automation_definition.get(
-            'environment', {}).get('variables', [])
-        for variable_id in (_['id'] for _ in environment_variable_definitions):
+    environment_variable_definitions = automation_definition.get(
+        'environment', {}).get('variables', [])
+    for variable_id in (_['id'] for _ in environment_variable_definitions):
+        custom_environment[variable_id] = environ[variable_id]
+    for variable_id in (_['id'] for _ in variable_definitions):
+        if variable_id in data_by_id:
+            continue
+        try:
             custom_environment[variable_id] = environ[variable_id]
-        for variable_id in (_['id'] for _ in variable_definitions):
-            if variable_id in data_by_id:
-                continue
-            data_by_id[variable_id] = environ[variable_id]
-    except KeyError:
-        raise CrossComputeConfigurationError(
-            f'{variable_id} is missing in the environment')
-    return custom_environment | get_variable_data_by_id(
+        except KeyError:
+            raise CrossComputeConfigurationError(
+                f'{variable_id} is missing in the environment')
+    variable_data_by_id = get_variable_data_by_id(
         variable_definitions, data_by_id)
+    variable_value_by_id = get_variable_value_by_id(variable_data_by_id)
+    return custom_environment | variable_value_by_id
 
 
-def _process_batch_folder(
+def _process_batch(
         automation_definition, batch_definition, mode_names,
-        data_by_id_by_mode_name, load_data):
+        data_by_id_by_mode_name, process_data):
     variable_data_by_id_by_mode_name = {}
     automation_folder = automation_definition['folder']
     batch_folder = batch_definition['folder']
     for mode_name in mode_names:
         variable_data_by_id_by_mode_name[mode_name] = variable_data_by_id = {}
         data_by_id = data_by_id_by_mode_name.get(mode_name, {})
+        mode_folder = join(automation_folder, batch_folder, mode_name)
         for variable_definition in get_variable_definitions(
                 automation_definition, mode_name):
             variable_id = variable_definition['id']
             if variable_id in data_by_id:
                 continue
             variable_path = variable_definition['path']
-            path = join(
-                automation_folder, batch_folder, mode_name, variable_path)
+            path = join(mode_folder, variable_path)
             try:
-                variable_data = load_data(path, variable_id)
+                variable_data = process_data(path, variable_id)
             except CrossComputeDataError as e:
                 L.error(e)
                 continue
             variable_data_by_id[variable_id] = variable_data
-        variable_data_by_id.update(data_by_id)
-    update_variable_data(join(
-        automation_folder, batch_folder, 'variables.json',
-    ), variable_data_by_id_by_mode_name)
+        if data_by_id:
+            update_variable_data(join(
+                mode_folder, 'variables.dictionary'), data_by_id)
+            variable_data_by_id.update(data_by_id)
     return variable_data_by_id_by_mode_name
 
 

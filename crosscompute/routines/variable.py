@@ -4,7 +4,7 @@ from importlib_metadata import entry_points
 from invisibleroads_macros_disk import is_path_in_folder
 from invisibleroads_macros_log import format_path
 from logging import getLogger
-from os.path import basename, exists, join, splitext
+from os.path import basename, exists, join
 from string import Template
 
 from ..constants import (
@@ -17,16 +17,16 @@ from ..exceptions import (
 from ..macros.disk import FileCache
 from ..macros.package import import_attribute
 from ..macros.web import get_html_from_markdown
+from .interface import BatchInterface
 
 
 @dataclass(repr=False, eq=False, order=False, frozen=True)
-class VariableElement():
+class Element():
 
     id: str
     mode_name: str
-    function_names: list[str]
-    uri: str
     for_print: bool
+    function_names: list[str]
 
 
 class VariableView():
@@ -49,22 +49,17 @@ class VariableView():
             View = Class
         return View(variable_definition)
 
-    def load(self, absolute_batch_folder):
-        self.data = self._get_data(absolute_batch_folder)
-        self.configuration = self._get_configuration(absolute_batch_folder)
-        return self
-
     def parse(self, data):
         return data
 
-    def render(self, x: VariableElement):
+    def render(self, b: BatchInterface, x: Element):
         if x.mode_name == 'input':
             render = self.render_input
         else:
             render = self.render_output
-        return render(x)
+        return render(b, x)
 
-    def render_input(self, x: VariableElement):
+    def render_input(self, b: BatchInterface, x: Element):
         return {
             'css_uris': [],
             'js_uris': [],
@@ -72,56 +67,29 @@ class VariableView():
             'js_texts': [],
         }
 
-    def render_output(self, x: VariableElement):
+    def render_output(self, b: BatchInterface, x: Element):
         return {
             'css_uris': [],
             'js_uris': [],
             'body_text': '',
             'js_texts': [],
         }
-
-    def _get_data(self, absolute_batch_folder):
-        variable_path = self.variable_path
-        if variable_path == 'ENVIRONMENT':
-            return
-        try:
-            variable_data = load_variable_data_from_folder(
-                absolute_batch_folder, self.mode_name, variable_path,
-                self.variable_id)
-        except CrossComputeDataError:
-            return
-        return variable_data
-
-    def _get_configuration(self, absolute_batch_folder):
-        variable_configuration = self.variable_definition.get(
-            'configuration', {})
-        configuration_path = variable_configuration.get('path')
-        if configuration_path:
-            path = join(
-                absolute_batch_folder, self.mode_name, configuration_path)
-            try:
-                variable_configuration.update(json.load(open(path, 'rt')))
-            except OSError:
-                L.error('path not found %s', format_path(path))
-            except json.JSONDecodeError:
-                L.error('must be json %s', format_path(path))
-            except TypeError:
-                L.error('must contain a dictionary %s', format_path(path))
-        return variable_configuration
 
 
 class LinkView(VariableView):
 
     view_name = 'link'
 
-    def render_output(self, x: VariableElement):
-        variable_id = self.variable_id
-        c = self.configuration
+    def render_output(self, b: BatchInterface, x: Element):
+        variable_definition = self.variable_definition
+        data_uri = b.get_data_uri(variable_definition)
+        c = b.get_variable_configuration(variable_definition)
         name = c.get('name', basename(self.variable_path))
         text = c.get('text', name)
         body_text = (
-            f'<a id="{x.id}" href="{x.uri}" '
-            f'class="{self.view_name} {variable_id}" download="{name}">'
+            f'<a id="{x.id}" href="{data_uri}" '
+            f'class="{self.mode_name} {self.view_name} {self.variable_id}" '
+            f'download="{name}">'
             f'{text}</a>')
         return {
             'css_uris': [],
@@ -137,31 +105,49 @@ class StringView(VariableView):
     input_type = 'text'
     function_by_name = FUNCTION_BY_NAME
 
-    def render_input(self, x: VariableElement):
+    def get_value(self, b: BatchInterface):
+        variable_definition = self.variable_definition
+        data = b.get_data(variable_definition)
+        if 'value' in data:
+            value = data['value']
+        elif 'path' in data:
+            value = FILE_TEXT_CACHE[data['path']]
+        else:
+            value = ''
+        return value
+
+    def render_input(self, b: BatchInterface, x: Element):
+        view_name = self.view_name
         variable_id = self.variable_id
-        value = '' if self.data is None else self.data
+        value = self.get_value(b)
         body_text = (
-            f'<input id="{x.id}" name="{variable_id}" '
-            f'class="{self.view_name} {variable_id}" '
-            f'value="{value}" type="{self.input_type}">')
+            f'<input id="{x.id}" '
+            f'class="{self.mode_name} {view_name} {variable_id}" '
+            f'value="{value}" type="{self.input_type}" '
+            f'data-view="{view_name}" data-id="{variable_id}">')
+        js_texts = [
+            STRING_JS_TEMPLATE.substitute({
+                'view_name': view_name,
+            }),
+        ]
         return {
             'css_uris': [],
             'js_uris': [],
             'body_text': body_text,
-            'js_texts': [],
+            'js_texts': js_texts,
         }
 
-    def render_output(self, x: VariableElement):
+    def render_output(self, b: BatchInterface, x: Element):
+        value = self.get_value(b)
         try:
-            data = apply_functions(
-                self.data, x.function_names, self.function_by_name)
+            value = apply_functions(
+                value, x.function_names, self.function_by_name)
         except KeyError as e:
             L.error('%s function not supported for string', e)
-            data = self.data
         body_text = (
             f'<span id="{x.id}" '
-            f'class="{self.view_name} {self.variable_id}">'
-            f'{data}</span>')
+            f'class="{self.mode_name} {self.view_name} {self.variable_id}">'
+            f'{value}</span>')
         return {
             'css_uris': [],
             'js_uris': [],
@@ -176,13 +162,14 @@ class NumberView(StringView):
     input_type = 'number'
 
     def parse(self, data):
+        value = data['value']
         try:
-            data = float(data)
+            value = float(value)
         except ValueError:
-            raise CrossComputeDataError(f'{data} is not a number')
-        if data.is_integer():
-            data = int(data)
-        return data
+            raise CrossComputeDataError(f'{value} is not a number')
+        if value.is_integer():
+            value = int(value)
+        return {'value': value}
 
 
 class PasswordView(StringView):
@@ -201,18 +188,25 @@ class TextView(StringView):
 
     view_name = 'text'
 
-    def render_input(self, x: VariableElement):
+    def render_input(self, b: BatchInterface, x: Element):
+        view_name = self.view_name
         variable_id = self.variable_id
-        value = self.data or ''
+        value = self.get_value(b)
         body_text = (
-            f'<textarea id="{x.id}" name="{variable_id}" '
-            f'class="{self.view_name} {variable_id}">'
+            f'<textarea id="{x.id}" '
+            f'class="{self.mode_name} {view_name} {variable_id}" '
+            f'data-view="{view_name}" data-id="{variable_id}">'
             f'{value}</textarea>')
+        js_texts = [
+            STRING_JS_TEMPLATE.substitute({
+                'view_name': view_name,
+            }),
+        ]
         return {
             'css_uris': [],
             'js_uris': [],
             'body_text': body_text,
-            'js_texts': [],
+            'js_texts': js_texts,
         }
 
 
@@ -220,11 +214,12 @@ class MarkdownView(TextView):
 
     view_name = 'markdown'
 
-    def render_output(self, x: VariableElement):
-        data = get_html_from_markdown(self.data)
+    def render_output(self, b: BatchInterface, x: Element):
+        value = self.get_value(b)
+        data = get_html_from_markdown(value)
         body_text = (
             f'<span id="{x.id}" '
-            f'class="{self.view_name} {self.variable_id}">'
+            f'class="{self.mode_name} {self.view_name} {self.variable_id}">'
             f'{data}</span>')
         return {
             'css_uris': [],
@@ -238,12 +233,14 @@ class ImageView(VariableView):
 
     view_name = 'image'
 
-    def render_output(self, x: VariableElement):
+    def render_output(self, b: BatchInterface, x: Element):
         variable_id = self.variable_id
+        variable_definition = self.variable_definition
+        data_uri = b.get_data_uri(variable_definition)
         body_text = (
             f'<img id="{x.id}" '
-            f'class="{self.view_name} {variable_id}" '
-            f'src="{x.uri}">')
+            f'class="{self.mode_name} {self.view_name} {variable_id}" '
+            f'src="{data_uri}">')
         return {
             'css_uris': [],
             'js_uris': [],
@@ -256,16 +253,18 @@ class TableView(VariableView):
 
     view_name = 'table'
 
-    def render_output(self, x: VariableElement):
+    def render_output(self, b: BatchInterface, x: Element):
         variable_id = self.variable_id
+        variable_definition = self.variable_definition
+        data_uri = b.get_data_uri(variable_definition)
         body_text = (
             f'<table id="{x.id}" '
-            f'class="{self.view_name} {variable_id}">'
+            f'class="{self.mode_name} {self.view_name} {variable_id}">'
             '<thead/><tbody/></table>')
         js_texts = [
             TABLE_JS_TEMPLATE.substitute({
                 'element_id': x.id,
-                'data_uri': x.uri,
+                'data_uri': data_uri,
             }),
         ]
         return {
@@ -276,29 +275,22 @@ class TableView(VariableView):
         }
 
 
-def save_variables(absolute_batch_folder, variables_by_mode_name):
-    variables_path = join(absolute_batch_folder, 'variables.json')
-    with open(variables_path, 'wt') as f:
-        json.dump(variables_by_mode_name, f)
-    FILE_CACHE[variables_path] = variables_by_mode_name
-    return variables_path
-
-
 def save_variable_data(target_path, data_by_id, variable_definitions):
-    file_extension = splitext(target_path)[1]
     variable_data_by_id = get_variable_data_by_id(
         variable_definitions, data_by_id)
-    if file_extension == '.dictionary':
+    if target_path.endswith('.dictionary'):
         with open(target_path, 'wt') as input_file:
-            json.dump(variable_data_by_id, input_file)
+            variable_value_by_id = get_variable_value_by_id(
+                variable_data_by_id)
+            json.dump(variable_value_by_id, input_file)
     elif len(variable_data_by_id) > 1:
         raise CrossComputeConfigurationError(
-            f'{file_extension} does not support multiple variables')
+            'use file extension .dictionary for multiple variables')
     else:
         variable_data = list(variable_data_by_id.values())[0]
         # TODO: Download variable_data['uri']
         # TODO: Copy variable_data['path']
-        open(target_path, 'wt').write(variable_data)
+        open(target_path, 'wt').write(variable_data['value'])
 
 
 def update_variable_data(target_path, data_by_id):
@@ -313,7 +305,6 @@ def update_variable_data(target_path, data_by_id):
             f = open(target_path, 'wt')
             d = data_by_id
         json.dump(d, f)
-        FILE_CACHE[target_path] = d
     except (json.JSONDecodeError, OSError) as e:
         raise CrossComputeDataError(e)
     finally:
@@ -322,47 +313,43 @@ def update_variable_data(target_path, data_by_id):
 
 def load_variable_data_from_folder(
         absolute_batch_folder, mode_name, variable_path, variable_id):
-    variables_path = join(absolute_batch_folder, 'variables.json')
-    try:
-        variable_data = FILE_CACHE[variables_path]
-    except OSError:
-        folder = join(absolute_batch_folder, mode_name)
-        path = join(folder, variable_path)
-        if not is_path_in_folder(path, folder):
-            raise CrossComputeDataError(
-                f'{path} for variable {variable_id} must be inside {folder}')
-        return load_variable_data(join(
-            absolute_batch_folder, mode_name, variable_path), variable_id)
-    try:
-        variable_data = variable_data[variable_id]
-    except KeyError:
+    folder = join(absolute_batch_folder, mode_name)
+    path = join(folder, variable_path)
+    if not is_path_in_folder(path, folder):
         raise CrossComputeDataError(
-            f'variable {variable_id} not found in {variables_path}')
-    return variable_data
+            f'{path} for variable {variable_id} must be inside {folder}')
+    return load_variable_data(path, variable_id)
 
 
 def load_variable_data(path, variable_id):
     try:
-        variable_data = FILE_CACHE[path]
+        file_data = FILE_DATA_CACHE[path]
     except OSError:
         raise CrossComputeDataError(
             f'{format_path(path)} path not found for variable {variable_id}')
     if path.endswith('.dictionary'):
+        file_value = file_data['value']
         try:
-            variable_data = variable_data[variable_id]
+            variable_value = file_value[variable_id]
         except KeyError:
             raise CrossComputeDataError(
                 f'variable {variable_id} not found in {format_path(path)}')
-    # TODO: {uri}
+        variable_data = {'value': variable_value}
+    else:
+        variable_data = file_data
     return variable_data
 
 
 def load_file_data(path):
     if path.endswith('.dictionary'):
-        return json.load(open(path, 'rt'))
+        return {'value': json.load(open(path, 'rt'))}
     if not exists(path):
         raise FileNotFoundError
     return {'path': path}
+
+
+def load_file_text(path):
+    return open(path, 'rt').read().rstrip()
 
 
 def get_variable_data_by_id(variable_definitions, data_by_id):
@@ -381,11 +368,17 @@ def get_variable_data_by_id(variable_definitions, data_by_id):
     return variable_data_by_id
 
 
+def get_variable_value_by_id(data_by_id):
+    return {
+        variable_id: data['value'] for variable_id, data in data_by_id.items()
+    }
+
+
 def format_text(text, data_by_id):
     if not data_by_id:
         return text
     if None in data_by_id:
-        f = data_by_id[None]
+        f = data_by_id[None].get('value', '')
     else:
         def f(match):
             matching_text = match.group(0)
@@ -393,10 +386,11 @@ def format_text(text, data_by_id):
             expression_terms = expression_text.split('|')
             variable_id = expression_terms[0].strip()
             try:
-                text = data_by_id[variable_id]
+                data = data_by_id[variable_id]
             except KeyError:
                 L.warning('%s missing in batch configuration', variable_id)
                 return matching_text
+            text = data.get('value', '')
             try:
                 text = apply_functions(
                     text, expression_terms[1:], FUNCTION_BY_NAME)
@@ -404,17 +398,6 @@ def format_text(text, data_by_id):
                 L.error('%s function not supported for string', e)
             return str(text)
     return VARIABLE_ID_PATTERN.sub(f, text)
-
-
-def redact(data_by_id, variable_definitions):
-    d = {}
-    for variable_definition in variable_definitions:
-        variable_id = variable_definition['id']
-        variable_path = variable_definition['path']
-        if variable_path == 'ENVIRONMENT':
-            continue
-        d[variable_id] = data_by_id[variable_id]
-    return d
 
 
 def apply_functions(value, function_names, function_by_name):
@@ -435,6 +418,8 @@ VIEW_BY_NAME = {_.name: import_attribute(
 L = getLogger(__name__)
 
 
+STRING_JS_TEMPLATE = Template('''\
+GET_DATA_BY_VIEW_NAME['$view_name'] = x => ({ value: x.value });''')
 TABLE_JS_TEMPLATE = Template('''\
 (async function () {
   const response = await fetch('$data_uri');
@@ -464,6 +449,9 @@ TABLE_JS_TEMPLATE = Template('''\
 })();''')
 
 
-FILE_CACHE = FileCache(
+FILE_DATA_CACHE = FileCache(
     load_file_data=load_file_data,
+    maximum_length=MAXIMUM_FILE_CACHE_LENGTH)
+FILE_TEXT_CACHE = FileCache(
+    load_file_data=load_file_text,
     maximum_length=MAXIMUM_FILE_CACHE_LENGTH)

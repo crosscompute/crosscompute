@@ -5,7 +5,9 @@ from configparser import ConfigParser
 from copy import deepcopy
 from invisibleroads_macros_log import format_path
 from logging import getLogger
+from os import environ
 from os.path import abspath, basename, dirname, exists, join, splitext
+from pathlib import Path
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 from time import time
@@ -25,6 +27,46 @@ from ..macros.web import format_slug
 from .variable import VariableView, format_text
 
 
+class AutomationDefinition(dict):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.folder = Path(self['folder'])
+        self.uri = self['uri']
+
+    def get_css_uris(self):
+        return get_css_uris(self)
+
+    def get_template_text(self, mode_name):
+        return '\n'.join(get_template_texts(self, mode_name))
+
+
+class BatchDefinition(dict):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.folder = Path(self['folder'])
+        self.uri = self['uri']
+
+
+class VariableDefinition(dict):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.variable_id = self['id']
+        self.variable_path = self['path']
+        self.mode_name = self['mode']
+        self.configuration = VariableConfiguration(self.get(
+            'configuration', {}))
+
+
+class VariableConfiguration(dict):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.path = self.get('path')
+
+
 def load_configuration(configuration_path):
     configuration_path = abspath(configuration_path)
     configuration_format = get_configuration_format(configuration_path)
@@ -36,7 +78,11 @@ def load_configuration(configuration_path):
     configuration = load_raw_configuration(configuration_path)
     configuration['folder'] = dirname(configuration_path)
     configuration['path'] = configuration_path
-    configuration = validate_configuration(configuration)
+    try:
+        configuration = validate_configuration(configuration)
+    except CrossComputeConfigurationError as e:
+        e.path = configuration_path
+        raise
     L.debug(f'{format_path(configuration_path)} loaded')
     return configuration
 
@@ -60,11 +106,13 @@ def get_configuration_format(path):
 def validate_configuration(configuration):
     if 'crosscompute' not in configuration:
         raise CrossComputeError('crosscompute expected')
+
     protocol_version = configuration['crosscompute']
     if protocol_version != __version__:
         raise CrossComputeConfigurationError(
             f'crosscompute {protocol_version} != {__version__}; '
             f'pip install crosscompute=={protocol_version}')
+
     for mode_name in MODE_NAMES:
         mode_configuration = configuration.get(mode_name, {})
         for variable_definition in mode_configuration.get('variables', []):
@@ -75,10 +123,23 @@ def validate_configuration(configuration):
             except KeyError as e:
                 raise CrossComputeConfigurationError(
                     f'{e} required for each variable')
+
     batch_definitions = configuration.get('batches', [])
     if not isinstance(batch_definitions, list):
         raise CrossComputeConfigurationError('batches must be a list')
-    # TODO: Validate
+
+    for environment_variable_definition in configuration.get(
+            'environment', {}).get('variables', []):
+        try:
+            environment_variable_id = environment_variable_definition['id']
+        except KeyError:
+            raise CrossComputeConfigurationError(
+                'id required for each environment variable')
+        try:
+            environ[environment_variable_id]
+        except KeyError:
+            raise CrossComputeConfigurationError(
+                f'{environment_variable_id} is missing in the environment')
     return configuration
 
 
@@ -318,7 +379,7 @@ def get_batch_definitions_from_path(
                 'data_by_id': data_by_id})
     except CrossComputeError as e:
         e.path = path
-        raise e
+        raise
     return batch_definitions
 
 
@@ -328,8 +389,8 @@ def yield_data_by_id_from_csv(path, variable_definitions):
             csv_reader = csv.reader(file)
             keys = [_.strip() for _ in next(csv_reader)]
             for values in csv_reader:
-                data_by_id = parse_data_by_id(dict(zip(
-                    keys, values)), variable_definitions)
+                data_by_id = {k: {'value': v} for k, v in zip(keys, values)}
+                data_by_id = parse_data_by_id(data_by_id, variable_definitions)
                 if data_by_id.get('#') == '#':
                     continue
                 yield data_by_id
@@ -353,8 +414,8 @@ def yield_data_by_id_from_txt(path, variable_definitions):
                 line = line.strip()
                 if not line or line.startswith('#'):
                     continue
-                yield parse_data_by_id({
-                    variable_id: line}, variable_definitions)
+                data_by_id = {variable_id: {'value': line}}
+                yield parse_data_by_id(data_by_id, variable_definitions)
     except OSError:
         raise CrossComputeConfigurationError(f'{path} path not found')
 

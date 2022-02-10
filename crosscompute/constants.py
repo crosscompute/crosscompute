@@ -38,6 +38,7 @@ STREAMS_ROUTE = '/streams'
 
 MODE_NAMES = 'input', 'output', 'log', 'debug'
 MODE_NAME_BY_CODE = {_[0]: _ for _ in MODE_NAMES}
+MODE_CODE_BY_NAME = {k: v for v, k in MODE_NAME_BY_CODE.items()}
 STREAM_PING_INTERVAL_IN_SECONDS = 1
 
 
@@ -46,4 +47,4 @@ FUNCTION_BY_NAME = {
     'title': str.title,
 }
 VARIABLE_ID_PATTERN = re.compile(r'{\s*([^}]+?)\s*}')
-MAXIMUM_FILE_CACHE_LENGTH = 1024
+MAXIMUM_FILE_CACHE_LENGTH = 2 ** 8

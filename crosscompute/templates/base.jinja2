@@ -1,36 +1,36 @@
 <!DOCTYPE html>
 <html>
 <head>
-{%- block head_html -%}
+{% block head_html %}
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 {{ head_text | safe }}
-{%- endblock -%}
-{%- for css_uri in css_uris %}
+{%- endblock %}
+{% for css_uri in css_uris %}
 <link href="{{ css_uri if '//' in css_uri else BASE_URI + css_uri }}" rel="stylesheet">
-{%- endfor %}
+{% endfor %}
 </head>
 <body>
 <header>
-{%- block header_html -%}
+{% block header_html %}
 {{ header_text | safe }}
-{%- endblock -%}
+{%- endblock %}
 </header>
-{% block body_html -%}
+{% block body_html %}
 {{ body_text | safe }}
 {%- endblock %}
 <footer>
-{%- block footer_html -%}
+{% block footer_html %}
 {{ footer_text | safe }}
-{%- endblock -%}
+{%- endblock %}
 </footer>
-{%- for js_uri in js_uris %}
+{% for js_uri in js_uris %}
 <script src="{{ js_uri }}"></script>
-{%- endfor %}
+{% endfor %}
 <script>
-{%- block body_js -%}
+{% block body_js %}
 {{ js_text | safe }}
-{%- endblock -%}
+{% endblock %}
 </script>
 </body>
 </html>
