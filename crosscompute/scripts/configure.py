@@ -1,4 +1,3 @@
-# TODO: Load existing configuration
 from argparse import ArgumentParser
 from invisibleroads_macros_log import format_path
 from logging import getLogger
@@ -12,7 +11,7 @@ from crosscompute.constants import (
     TEMPLATES_FOLDER)
 from crosscompute.exceptions import (
     CrossComputeError)
-from crosscompute.routines.automation import Automation
+from crosscompute.routines.automation import DiskAutomation
 from crosscompute.routines.configuration import (
     get_configuration_format,
     load_raw_configuration_yaml,
@@ -47,7 +46,7 @@ def configure(path_or_folder):
     path_or_folder = path_or_folder
     if exists(path_or_folder):
         try:
-            automation = Automation.load(path_or_folder)
+            automation = DiskAutomation.load(path_or_folder)
             configuration = automation.configuration
         except CrossComputeError:
             configuration = {}

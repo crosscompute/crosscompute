@@ -17,7 +17,7 @@ from ..exceptions import (
 from ..macros.disk import FileCache
 from ..macros.package import import_attribute
 from ..macros.web import get_html_from_markdown
-from .interface import BatchInterface
+from .interface import Batch
 
 
 @dataclass(repr=False, eq=False, order=False, frozen=True)
@@ -32,6 +32,7 @@ class Element():
 class VariableView():
 
     view_name = 'variable'
+    environment_variable_definitions = []
 
     def __init__(self, variable_definition):
         self.variable_definition = variable_definition
@@ -43,7 +44,7 @@ class VariableView():
     def get_from(Class, variable_definition):
         view_name = variable_definition['view']
         try:
-            View = VIEW_BY_NAME[view_name]
+            View = VARIABLE_VIEW_BY_NAME[view_name]
         except KeyError:
             L.error('%s view not installed', view_name)
             View = Class
@@ -52,14 +53,14 @@ class VariableView():
     def parse(self, data):
         return data
 
-    def render(self, b: BatchInterface, x: Element):
+    def render(self, b: Batch, x: Element):
         if x.mode_name == 'input':
             render = self.render_input
         else:
             render = self.render_output
         return render(b, x)
 
-    def render_input(self, b: BatchInterface, x: Element):
+    def render_input(self, b: Batch, x: Element):
         return {
             'css_uris': [],
             'js_uris': [],
@@ -67,7 +68,7 @@ class VariableView():
             'js_texts': [],
         }
 
-    def render_output(self, b: BatchInterface, x: Element):
+    def render_output(self, b: Batch, x: Element):
         return {
             'css_uris': [],
             'js_uris': [],
@@ -80,7 +81,7 @@ class LinkView(VariableView):
 
     view_name = 'link'
 
-    def render_output(self, b: BatchInterface, x: Element):
+    def render_output(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
         data_uri = b.get_data_uri(variable_definition)
         c = b.get_variable_configuration(variable_definition)
@@ -105,7 +106,7 @@ class StringView(VariableView):
     input_type = 'text'
     function_by_name = FUNCTION_BY_NAME
 
-    def get_value(self, b: BatchInterface):
+    def get_value(self, b: Batch):
         variable_definition = self.variable_definition
         data = b.get_data(variable_definition)
         if 'value' in data:
@@ -116,7 +117,7 @@ class StringView(VariableView):
             value = ''
         return value
 
-    def render_input(self, b: BatchInterface, x: Element):
+    def render_input(self, b: Batch, x: Element):
         view_name = self.view_name
         variable_id = self.variable_id
         value = self.get_value(b)
@@ -137,7 +138,7 @@ class StringView(VariableView):
             'js_texts': js_texts,
         }
 
-    def render_output(self, b: BatchInterface, x: Element):
+    def render_output(self, b: Batch, x: Element):
         value = self.get_value(b)
         try:
             value = apply_functions(
@@ -188,7 +189,7 @@ class TextView(StringView):
 
     view_name = 'text'
 
-    def render_input(self, b: BatchInterface, x: Element):
+    def render_input(self, b: Batch, x: Element):
         view_name = self.view_name
         variable_id = self.variable_id
         value = self.get_value(b)
@@ -214,7 +215,7 @@ class MarkdownView(TextView):
 
     view_name = 'markdown'
 
-    def render_output(self, b: BatchInterface, x: Element):
+    def render_output(self, b: Batch, x: Element):
         value = self.get_value(b)
         data = get_html_from_markdown(value)
         body_text = (
@@ -233,7 +234,7 @@ class ImageView(VariableView):
 
     view_name = 'image'
 
-    def render_output(self, b: BatchInterface, x: Element):
+    def render_output(self, b: Batch, x: Element):
         variable_id = self.variable_id
         variable_definition = self.variable_definition
         data_uri = b.get_data_uri(variable_definition)
@@ -253,7 +254,7 @@ class TableView(VariableView):
 
     view_name = 'table'
 
-    def render_output(self, b: BatchInterface, x: Element):
+    def render_output(self, b: Batch, x: Element):
         variable_id = self.variable_id
         variable_definition = self.variable_definition
         data_uri = b.get_data_uri(variable_definition)
@@ -413,8 +414,6 @@ def apply_functions(value, function_names, function_by_name):
     return value
 
 
-VIEW_BY_NAME = {_.name: import_attribute(
-    _.value) for _ in entry_points().select(group='crosscompute.views')}
 L = getLogger(__name__)
 
 
@@ -447,6 +446,10 @@ TABLE_JS_TEMPLATE = Template('''\
     tbody.append(tr);
   }
 })();''')
+
+
+VARIABLE_VIEW_BY_NAME = {_.name: import_attribute(
+    _.value) for _ in entry_points().select(group='crosscompute.views')}
 
 
 FILE_DATA_CACHE = FileCache(

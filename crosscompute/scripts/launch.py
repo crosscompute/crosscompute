@@ -3,10 +3,10 @@ from logging import getLogger
 
 from crosscompute.exceptions import (
     CrossComputeConfigurationError,
-    CrossComputeDataError,
-    CrossComputeError)
+    CrossComputeConfigurationNotFoundError,
+    CrossComputeDataError)
 from crosscompute.macros.process import LoggableProcess
-from crosscompute.routines.automation import Automation
+from crosscompute.routines.automation import DiskAutomation
 from crosscompute.routines.log import (
     configure_argument_parser_for_logging,
     configure_logging_from)
@@ -87,15 +87,15 @@ def get_launch_mode_from(args):
 def get_automation_from(args):
     path_or_folder = args.path_or_folder
     try:
-        automation = Automation.load(path_or_folder or '.')
-    except (CrossComputeConfigurationError, CrossComputeDataError) as e:
-        L.error(e)
-        raise SystemExit
-    except CrossComputeError:
+        automation = DiskAutomation.load(path_or_folder or '.')
+    except CrossComputeConfigurationNotFoundError:
         L.info('existing configuration not found; configuring new automation')
         print()
         path = configure_with(args)
-        automation = Automation.load(path)
+        automation = DiskAutomation.load(path)
+    except (CrossComputeConfigurationError, CrossComputeDataError) as e:
+        L.error(e)
+        raise SystemExit
     return automation
 
 

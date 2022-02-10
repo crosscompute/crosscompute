@@ -12,11 +12,12 @@ from .configuration import (
     AutomationDefinition,
     BatchDefinition,
     VariableDefinition)
+from .interface import Batch
 from .variable import (
     load_variable_data_from_folder)
 
 
-class Batch():
+class DiskBatch(Batch):
 
     def __init__(self, automation_definition, batch_definition):
         self.automation_definition = automation_d = AutomationDefinition(

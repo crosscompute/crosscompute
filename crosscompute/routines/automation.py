@@ -40,6 +40,7 @@ from .configuration import (
     get_display_configuration,
     get_variable_definitions,
     load_configuration)
+from .interface import Automation
 from .variable import (
     get_variable_data_by_id,
     get_variable_value_by_id,
@@ -48,7 +49,7 @@ from .variable import (
     update_variable_data)
 
 
-class Automation():
+class DiskAutomation(Automation):
 
     @classmethod
     def load(Class, path_or_folder=None):

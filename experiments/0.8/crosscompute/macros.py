@@ -1,19 +1,7 @@
-import sys
 from invisibleroads_macros_text import compact_whitespace
 from math import isnan
-from os import environ
 from os.path import split
 from packaging.version import parse as parse_version
-
-
-def get_environment_value(name, default=None):
-    try:
-        value = environ[name]
-    except KeyError:
-        if default is None:
-            sys.exit(f'{name} is required in the environment')
-        value = default
-    return value
 
 
 def sanitize_name(name):

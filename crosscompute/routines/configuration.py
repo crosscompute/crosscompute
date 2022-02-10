@@ -5,14 +5,12 @@ from configparser import ConfigParser
 from copy import deepcopy
 from invisibleroads_macros_log import format_path
 from logging import getLogger
-from os import environ
 from os.path import abspath, basename, dirname, exists, join, splitext
 from pathlib import Path
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 from time import time
 
-from .. import __version__
 from ..constants import (
     AUTOMATION_NAME,
     AUTOMATION_ROUTE,
@@ -25,14 +23,23 @@ from ..exceptions import (
     CrossComputeError)
 from ..macros.web import format_slug
 from .variable import VariableView, format_text
+from .validation import AUTOMATION_DEFINITION_VALIDATION_FUNCTIONS
 
 
 class AutomationDefinition(dict):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._validate()
+        for k in self.__dict__.copy():
+            if k.startswith('___'):
+                del self.__dict__[k]
         self.folder = Path(self['folder'])
         self.uri = self['uri']
+
+    def _validate(self):
+        for f in AUTOMATION_DEFINITION_VALIDATION_FUNCTIONS:
+            self.__dict__.update(f(self))
 
     def get_css_uris(self):
         return get_css_uris(self)
@@ -79,7 +86,7 @@ def load_configuration(configuration_path):
     configuration['folder'] = dirname(configuration_path)
     configuration['path'] = configuration_path
     try:
-        configuration = validate_configuration(configuration)
+        configuration = AutomationDefinition(configuration)
     except CrossComputeConfigurationError as e:
         e.path = configuration_path
         raise
@@ -101,46 +108,6 @@ def get_configuration_format(path):
         raise CrossComputeError(
             f'{file_extension} format not supported for configuration'.strip())
     return configuration_format
-
-
-def validate_configuration(configuration):
-    if 'crosscompute' not in configuration:
-        raise CrossComputeError('crosscompute expected')
-
-    protocol_version = configuration['crosscompute']
-    if protocol_version != __version__:
-        raise CrossComputeConfigurationError(
-            f'crosscompute {protocol_version} != {__version__}; '
-            f'pip install crosscompute=={protocol_version}')
-
-    for mode_name in MODE_NAMES:
-        mode_configuration = configuration.get(mode_name, {})
-        for variable_definition in mode_configuration.get('variables', []):
-            try:
-                variable_definition['id']
-                variable_definition['view']
-                variable_definition['path']
-            except KeyError as e:
-                raise CrossComputeConfigurationError(
-                    f'{e} required for each variable')
-
-    batch_definitions = configuration.get('batches', [])
-    if not isinstance(batch_definitions, list):
-        raise CrossComputeConfigurationError('batches must be a list')
-
-    for environment_variable_definition in configuration.get(
-            'environment', {}).get('variables', []):
-        try:
-            environment_variable_id = environment_variable_definition['id']
-        except KeyError:
-            raise CrossComputeConfigurationError(
-                'id required for each environment variable')
-        try:
-            environ[environment_variable_id]
-        except KeyError:
-            raise CrossComputeConfigurationError(
-                f'{environment_variable_id} is missing in the environment')
-    return configuration
 
 
 def save_raw_configuration_yaml(configuration_path, configuration):

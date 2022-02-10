@@ -4,7 +4,7 @@ from logging import getLogger
 
 from crosscompute.exceptions import (
     CrossComputeError)
-from crosscompute.routines.automation import Automation
+from crosscompute.routines.automation import DiskAutomation
 from crosscompute.routines.log import (
     configure_argument_parser_for_logging,
     configure_logging_from)
@@ -20,7 +20,7 @@ def do(arguments=None):
     args = a.parse_args(arguments)
     configure_logging_from(args)
     try:
-        automation = Automation.load(args.path_or_folder)
+        automation = DiskAutomation.load(args.path_or_folder)
     except CrossComputeError as e:
         L.error(e)
         return
