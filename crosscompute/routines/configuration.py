@@ -1,4 +1,5 @@
 # TODO: Save to yaml, ini, toml
+import csv
 import tomli
 from configparser import ConfigParser
 from copy import deepcopy
@@ -18,12 +19,10 @@ from ..constants import (
     STYLE_ROUTE)
 from ..exceptions import (
     CrossComputeConfigurationError,
+    CrossComputeDataError,
     CrossComputeError)
 from ..macros.web import format_slug
-from .variable import (
-    format_text,
-    yield_data_by_id_from_csv,
-    yield_data_by_id_from_txt)
+from .variable import VariableView, format_text
 
 
 def load_configuration(configuration_path):
@@ -321,6 +320,61 @@ def get_batch_definitions_from_path(
         e.path = path
         raise e
     return batch_definitions
+
+
+def yield_data_by_id_from_csv(path, variable_definitions):
+    try:
+        with open(path, 'rt') as file:
+            csv_reader = csv.reader(file)
+            keys = [_.strip() for _ in next(csv_reader)]
+            for values in csv_reader:
+                data_by_id = parse_data_by_id(dict(zip(
+                    keys, values)), variable_definitions)
+                if data_by_id.get('#') == '#':
+                    continue
+                yield data_by_id
+    except OSError:
+        raise CrossComputeConfigurationError(f'{path} path not found')
+
+
+def yield_data_by_id_from_txt(path, variable_definitions):
+    if len(variable_definitions) > 1:
+        raise CrossComputeConfigurationError(
+            'use .csv to configure multiple variables')
+
+    try:
+        variable_id = variable_definitions[0]['id']
+    except IndexError:
+        variable_id = None
+
+    try:
+        with open(path, 'rt') as batch_configuration_file:
+            for line in batch_configuration_file:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                yield parse_data_by_id({
+                    variable_id: line}, variable_definitions)
+    except OSError:
+        raise CrossComputeConfigurationError(f'{path} path not found')
+
+
+def parse_data_by_id(data_by_id, variable_definitions):
+    for variable_definition in variable_definitions:
+        variable_id = variable_definition['id']
+        try:
+            variable_data = data_by_id[variable_id]
+        except KeyError:
+            raise CrossComputeDataError(f'variable {variable_id} required')
+        if 'path' in data_by_id:
+            continue
+        variable_view = VariableView.get_from(variable_definition)
+        try:
+            variable_data = variable_view.parse(variable_data)
+        except CrossComputeDataError as e:
+            raise CrossComputeDataError(f'{e} for variable {variable_id}')
+        data_by_id[variable_id] = variable_data
+    return data_by_id
 
 
 def get_scalar_text(configuration, key, default=None):

@@ -43,6 +43,7 @@ from .configuration import (
 from .variable import (
     format_text,
     get_variable_data_by_id,
+    load_variable_data,
     save_variable_data,
     update_variable_data)
 
@@ -267,7 +268,7 @@ def run_automation(automation_definition, batch_definition):
         return
     reference_time = time()
     folder = automation_definition['folder']
-    batch_folder, custom_environment = prepare_batch(
+    batch_folder, custom_environment = _prepare_batch(
         automation_definition, batch_definition)
     L.info(
         '%s %s running %s', automation_definition['name'],
@@ -283,12 +284,12 @@ def run_automation(automation_definition, batch_definition):
     return_code = _run_command(
         command_text, command_folder, script_environment,
         join(debug_folder, 'stdout.txt'), join(debug_folder, 'stderr.txt'))
-    try:
-        update_variable_data(join(debug_folder, 'variables.dictionary'), {
-            'execution_time_in_seconds': time() - reference_time,
-            'return_code': return_code})
-    except CrossComputeDataError as e:
-        L.error(e)
+    _process_batch_folder(automation_definition, batch_definition, [
+        'output', 'log', 'debug',
+    ], {'debug': {
+        'execution_time_in_seconds': time() - reference_time,
+        'return_code': return_code,
+    }}, load_variable_data)
 
 
 def _run_command(
@@ -320,7 +321,7 @@ def _run_command(
     return return_code
 
 
-def prepare_batch(automation_definition, batch_definition):
+def _prepare_batch(automation_definition, batch_definition):
     variable_definitions = get_variable_definitions(
         automation_definition, 'input')
     batch_folder = batch_definition['folder']
@@ -336,7 +337,7 @@ def prepare_batch(automation_definition, batch_definition):
     input_folder = make_folder(join(automation_folder, batch_folder, 'input'))
     for path, variable_definitions in variable_definitions_by_path.items():
         input_path = join(input_folder, path)
-        save_variable_data(input_path, variable_definitions, data_by_id)
+        save_variable_data(input_path, data_by_id, variable_definitions)
     return batch_folder, custom_environment
 
 
@@ -366,6 +367,36 @@ def _prepare_custom_environment(
             f'{variable_id} is missing in the environment')
     return custom_environment | get_variable_data_by_id(
         variable_definitions, data_by_id)
+
+
+def _process_batch_folder(
+        automation_definition, batch_definition, mode_names,
+        data_by_id_by_mode_name, load_data):
+    variable_data_by_id_by_mode_name = {}
+    automation_folder = automation_definition['folder']
+    batch_folder = batch_definition['folder']
+    for mode_name in mode_names:
+        variable_data_by_id_by_mode_name[mode_name] = variable_data_by_id = {}
+        data_by_id = data_by_id_by_mode_name.get(mode_name, {})
+        for variable_definition in get_variable_definitions(
+                automation_definition, mode_name):
+            variable_id = variable_definition['id']
+            if variable_id in data_by_id:
+                continue
+            variable_path = variable_definition['path']
+            path = join(
+                automation_folder, batch_folder, mode_name, variable_path)
+            try:
+                variable_data = load_data(path, variable_id)
+            except CrossComputeDataError as e:
+                L.error(e)
+                continue
+            variable_data_by_id[variable_id] = variable_data
+        variable_data_by_id.update(data_by_id)
+    update_variable_data(join(
+        automation_folder, batch_folder, 'variables.json',
+    ), variable_data_by_id_by_mode_name)
+    return variable_data_by_id_by_mode_name
 
 
 L = getLogger(__name__)

@@ -46,4 +46,4 @@ FUNCTION_BY_NAME = {
     'title': str.title,
 }
 VARIABLE_ID_PATTERN = re.compile(r'{\s*([^}]+?)\s*}')
-VARIABLE_CACHE = {}
+MAXIMUM_FILE_CACHE_LENGTH = 1024

@@ -2,10 +2,10 @@
 # TODO: Let user customize root template
 # TODO: Add unit tests
 import json
-from invisibleroads_macros_disk import is_path_in_folder, make_random_folder
+from invisibleroads_macros_disk import make_random_folder
 from itertools import count
 from logging import getLogger
-from os.path import basename, exists, join, splitext
+from os.path import basename, join
 from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
 from pyramid.response import FileResponse, Response
 
@@ -25,12 +25,14 @@ from ..macros.web import get_html_from_markdown
 from ..routines.configuration import (
     get_css_uris,
     get_template_texts,
-    get_variable_definitions)
+    get_variable_definitions,
+    parse_data_by_id)
 from ..routines.variable import (
     VariableElement,
     VariableView,
-    load_variable_data,
-    parse_data_by_id)
+    load_variable_data_from_folder,
+    redact,
+    save_variables)
 
 
 class AutomationRoutes():
@@ -180,19 +182,15 @@ class AutomationRoutes():
         runs_folder = join(automation_definition['folder'], 'runs')
         folder = make_random_folder(runs_folder, ID_LENGTH)
         self.automation_queue.put((automation_definition, {
-            'folder': folder,
-            'data_by_id': data_by_id,
-        }))
+            'folder': folder, 'data_by_id': data_by_id}))
         run_id = basename(folder)
+        run_uri = RUN_ROUTE.format(run_slug=run_id)
         if 'runs' not in automation_definition:
             automation_definition['runs'] = []
-        run_uri = RUN_ROUTE.format(run_slug=run_id)
         automation_definition['runs'].append({
-            'name': run_id,
-            'slug': run_id,
-            'folder': folder,
-            'uri': run_uri,
-        })
+            'name': run_id, 'slug': run_id, 'folder': folder, 'uri': run_uri})
+        save_variables(folder, {'input': redact(
+            data_by_id, variable_definitions)})
         # TODO: Change target page depending on definition
         return {'id': run_id}
 
@@ -245,17 +243,20 @@ class AutomationRoutes():
                 normalize=str.casefold)
         except StopIteration:
             raise HTTPNotFound
-        folder = join(automation_folder, batch_definition[
-            'folder'], mode_name)
-        path = join(folder, variable_definition['path'])
-        if not is_path_in_folder(path, folder):
-            raise HTTPBadRequest
-        if not exists(path):
+        absolute_batch_folder = join(
+            automation_folder, batch_definition['folder'])
+        variable_path = variable_definition['path']
+        try:
+            variable_data = load_variable_data_from_folder(
+                absolute_batch_folder, mode_name, variable_path,
+                self.variable_id)
+        except CrossComputeDataError:
             raise HTTPNotFound
-        L.debug(variable_definition)
-        if splitext(path)[1] == '.dictionary':
-            return Response(load_variable_data(path, variable_id))
-        return FileResponse(path, request=request)
+        if isinstance(variable_data, dict):
+            if 'path' not in variable_data:
+                raise HTTPBadRequest
+            return FileResponse(variable_data['path'], request=request)
+        return Response(variable_data)
 
     def get_automation_definition_from(self, request):
         matchdict = request.matchdict
