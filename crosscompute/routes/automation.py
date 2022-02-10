@@ -30,8 +30,7 @@ from ..routines.configuration import (
     parse_data_by_id)
 from ..routines.variable import (
     Element,
-    VariableView,
-    load_variable_data_from_folder)
+    VariableView)
 
 
 class AutomationRoutes():
@@ -185,7 +184,7 @@ class AutomationRoutes():
 
     def see_automation(self, request):
         automation_definition = self.get_automation_definition_from(request)
-        css_uris = get_css_uris(automation_definition)
+        css_uris = automation_definition.get_css_uris()
         return automation_definition | {
             'title_text': automation_definition['name'],
             'css_uris': css_uris,
@@ -210,7 +209,6 @@ class AutomationRoutes():
 
     def see_automation_batch_mode_variable(self, request):
         automation_definition = self.get_automation_definition_from(request)
-        automation_folder = automation_definition['folder']
         batch_definition = self.get_batch_definition_from(
             request, automation_definition)
         mode_name = self.get_mode_name_from(request)
@@ -224,19 +222,16 @@ class AutomationRoutes():
                 normalize=str.casefold)
         except StopIteration:
             raise HTTPNotFound
-        absolute_batch_folder = join(
-            automation_folder, batch_definition['folder'])
-        variable_path = variable_definition['path']
-        try:
-            variable_data = load_variable_data_from_folder(
-                absolute_batch_folder, mode_name, variable_path, variable_id)
-        except CrossComputeDataError:
-            raise HTTPNotFound
-        if isinstance(variable_data, dict):
-            if 'path' not in variable_data:
-                raise HTTPBadRequest
+        batch = DiskBatch(automation_definition, batch_definition)
+
+        variable_data = batch.get_data(variable_definition)
+        if 'path' in variable_data:
             return FileResponse(variable_data['path'], request=request)
-        return Response(variable_data)
+        if 'value' in variable_data:
+            return Response(variable_data['value'])
+        if 'error' in variable_data:
+            raise HTTPNotFound
+        raise HTTPBadRequest
 
     def get_automation_definition_from(self, request):
         matchdict = request.matchdict

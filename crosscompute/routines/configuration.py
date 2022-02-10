@@ -5,18 +5,14 @@ from configparser import ConfigParser
 from copy import deepcopy
 from invisibleroads_macros_log import format_path
 from logging import getLogger
-from os.path import abspath, basename, dirname, exists, join, splitext
+from os.path import abspath, basename, join, splitext
 from pathlib import Path
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
-from time import time
 
 from ..constants import (
-    AUTOMATION_NAME,
-    AUTOMATION_ROUTE,
     BATCH_ROUTE,
-    MODE_NAMES,
-    STYLE_ROUTE)
+    MODE_NAMES)
 from ..exceptions import (
     CrossComputeConfigurationError,
     CrossComputeDataError,
@@ -28,13 +24,15 @@ from .validation import AUTOMATION_DEFINITION_VALIDATION_FUNCTIONS
 
 class AutomationDefinition(dict):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, path='', index=0, **kwargs):
         super().__init__(*args, **kwargs)
+        self.path = path = Path(path)
+        self.folder = path.parents[0]
+        self.index = index
         self._validate()
         for k in self.__dict__.copy():
             if k.startswith('___'):
                 del self.__dict__[k]
-        self.folder = Path(self['folder'])
 
     def _validate(self):
         for f in AUTOMATION_DEFINITION_VALIDATION_FUNCTIONS:
@@ -72,7 +70,7 @@ class VariableConfiguration(dict):
         self.path = self.get('path')
 
 
-def load_configuration(configuration_path):
+def load_configuration(configuration_path, index=0):
     configuration_path = abspath(configuration_path)
     configuration_format = get_configuration_format(configuration_path)
     load_raw_configuration = {
@@ -81,10 +79,11 @@ def load_configuration(configuration_path):
         'yaml': load_raw_configuration_yaml,
     }[configuration_format]
     configuration = load_raw_configuration(configuration_path)
-    configuration['folder'] = dirname(configuration_path)
-    configuration['path'] = configuration_path
     try:
-        configuration = AutomationDefinition(configuration)
+        configuration = AutomationDefinition(
+            configuration,
+            path=configuration_path,
+            index=index)
     except CrossComputeConfigurationError as e:
         e.path = configuration_path
         raise
@@ -154,18 +153,8 @@ def get_automation_definitions(configuration):
             get_automation_configurations(configuration)):
         if 'output' not in automation_configuration:
             continue
-        automation_name = automation_configuration.get(
-            'name', make_automation_name(automation_index))
-        automation_slug = automation_configuration.get(
-            'slug', format_slug(automation_name))
-        automation_uri = AUTOMATION_ROUTE.format(
-            automation_slug=automation_slug)
-        automation_configuration['name'] = automation_name
-        automation_configuration['slug'] = automation_slug
-        automation_configuration['uri'] = automation_uri
         automation_configuration.update({
             'batches': get_batch_definitions(automation_configuration),
-            'display': get_display_configuration(automation_configuration),
         })
         automation_definitions.append(automation_configuration)
     return automation_definitions
@@ -176,12 +165,12 @@ def get_automation_configurations(configuration):
     configurations = [deepcopy(configuration)]
     while configurations:
         c = configurations.pop(0)
-        folder = c['folder']
-        for import_configuration in c.get('imports', []):
+        folder = c.folder
+        for i, import_configuration in enumerate(c.get('imports', []), 1):
             if 'path' in import_configuration:
                 path = import_configuration['path']
                 automation_configuration = load_configuration(join(
-                    folder, path))
+                    folder, path), index=i)
             elif 'uri' in import_configuration:
                 L.error('uri import not supported yet')
                 continue
@@ -191,19 +180,14 @@ def get_automation_configurations(configuration):
             else:
                 L.error('path or uri or name required for each import')
                 continue
-            automation_configuration['parent'] = c
             configurations.append(automation_configuration)
         automation_configurations.append(c)
     return automation_configurations
 
 
-def make_automation_name(automation_index):
-    return AUTOMATION_NAME.replace('X', str(automation_index))
-
-
 def get_batch_definitions(configuration):
     batch_definitions = []
-    automation_folder = configuration['folder']
+    automation_folder = configuration.folder
     variable_definitions = get_variable_definitions(
         configuration, 'input')
     for raw_batch_definition in configuration.get('batches', []):
@@ -234,31 +218,6 @@ def get_css_uris(configuration):
     return [_['uri'] for _ in style_definitions]
 
 
-def get_display_configuration(configuration):
-    folder = configuration['folder']
-    display_configuration = configuration.get('display', {})
-    has_parent = 'parent' in configuration
-    automation_uri = configuration['uri']
-    for style_definition in display_configuration.get('styles', []):
-        style_uri = style_definition.get('uri', '').strip()
-        style_path = style_definition.get('path', '').strip()
-        if '//' in style_uri:
-            continue
-        if not style_uri and not style_path:
-            L.error('uri or path required for each style')
-            continue
-        path = join(folder, style_path)
-        if not exists(path):
-            L.error('style not found at path %s', path)
-            continue
-        style_name = '%s-%s.css' % (splitext(style_path)[0], time())
-        style_uri = STYLE_ROUTE.format(style_name=style_name)
-        if has_parent:
-            style_uri = automation_uri + style_uri
-        style_definition['uri'] = style_uri
-    return display_configuration
-
-
 def get_variable_definitions(configuration, mode_name, with_all=False):
     mode_configuration = configuration.get(mode_name, {})
     variable_definitions = mode_configuration.get('variables', [])
@@ -276,7 +235,7 @@ def get_variable_definitions(configuration, mode_name, with_all=False):
 
 def get_template_texts(configuration, mode_name):
     template_texts = []
-    folder = configuration['folder']
+    folder = configuration.folder
     mode_configuration = configuration.get(mode_name, {})
     for template_definition in mode_configuration.get('templates', []):
         try:
