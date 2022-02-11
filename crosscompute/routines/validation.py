@@ -1,11 +1,17 @@
+# TODO: Save to yaml, ini, toml
+import tomli
 from collections import Counter
+from configparser import ConfigParser
 from crosscompute.exceptions import (
     CrossComputeConfigurationError,
     CrossComputeError)
+from invisibleroads_macros_log import format_path
 from logging import getLogger
 from os import environ
 from os.path import relpath, splitext
 from pathlib import Path
+from ruamel.yaml import YAML
+from ruamel.yaml.error import YAMLError
 from time import time
 
 from .. import __version__
@@ -50,6 +56,7 @@ class AutomationDefinition(Definition):
         self._validation_functions = [
             validate_protocol,
             validate_automation_identifiers,
+            validate_imports,
             validate_variable_definitions,
             validate_variable_views,
             validate_batch_definitions,
@@ -58,6 +65,7 @@ class AutomationDefinition(Definition):
         ]
 
     def get_variable_definitions(self, mode_name):
+        # TODO: Implement with_all
         return self.variable_definitions_by_mode_name[mode_name]
 
     '''
@@ -97,6 +105,68 @@ class BatchDefinition(Definition):
         ]
 
 
+def save_raw_configuration_yaml(configuration_path, configuration):
+    yaml = YAML()
+    try:
+        with open(configuration_path, 'wt') as configuration_file:
+            yaml.dump(configuration, configuration_file)
+    except (OSError, YAMLError) as e:
+        raise CrossComputeConfigurationError(e)
+    return configuration_path
+
+
+def load_configuration(configuration_path, index=0):
+    configuration_path = Path(configuration_path).absolute()
+    configuration_format = get_configuration_format(configuration_path)
+    load_raw_configuration = {
+        'ini': load_raw_configuration_ini,
+        'toml': load_raw_configuration_toml,
+        'yaml': load_raw_configuration_yaml,
+    }[configuration_format]
+    configuration = load_raw_configuration(configuration_path)
+    try:
+        configuration = AutomationDefinition(
+            configuration,
+            path=configuration_path,
+            index=index)
+    except CrossComputeConfigurationError as e:
+        if not hasattr(e, 'path'):
+            e.path = configuration_path
+        raise
+    L.debug(f'{format_path(configuration_path)} loaded')
+    return configuration
+
+
+def load_raw_configuration_ini(configuration_path):
+    configuration = ConfigParser()
+    try:
+        paths = configuration.read(configuration_path)
+    except (OSError, UnicodeDecodeError) as e:
+        raise CrossComputeConfigurationError(e)
+    if not paths:
+        raise CrossComputeConfigurationError(f'{configuration_path} not found')
+    return dict(configuration)
+
+
+def load_raw_configuration_toml(configuration_path):
+    try:
+        with open(configuration_path, 'rt') as configuration_file:
+            configuration = tomli.load(configuration_file)
+    except (OSError, UnicodeDecodeError) as e:
+        raise CrossComputeConfigurationError(e)
+    return configuration
+
+
+def load_raw_configuration_yaml(configuration_path, with_comments=False):
+    yaml = YAML(typ='rt' if with_comments else 'safe')
+    try:
+        with open(configuration_path, 'rt') as configuration_file:
+            configuration = yaml.load(configuration_file)
+    except (OSError, YAMLError) as e:
+        raise CrossComputeConfigurationError(e)
+    return configuration or {}
+
+
 def validate_protocol(configuration):
     if 'crosscompute' not in configuration:
         raise CrossComputeError('crosscompute expected')
@@ -128,11 +198,9 @@ def validate_variable_definitions(configuration):
         variable_definitions = [VariableDefinition(
             _, mode_name=mode_name,
         ) for _ in get_dictionaries(mode_configuration, 'variables')]
-        variable_ids = [_.id for _ in variable_definitions]
-        for variable_id, count in Counter(variable_ids).items():
-            if count > 1:
-                raise CrossComputeConfigurationError(
-                    f'duplicate variable id {variable_id} in {mode_name}')
+        assert_unique_values(
+            [_.id for _ in variable_definitions],
+            f'duplicate variable id {{x}} in {mode_name}')
         variable_definitions_by_mode_name[mode_name] = variable_definitions
         view_names = [_.view_name for _ in variable_definitions]
     L.debug('view_names =', view_names)
@@ -160,6 +228,15 @@ def validate_batch_definitions(configuration):
     for raw_batch_definition in raw_batch_definitions:
         batch_definitions.extend(get_batch_definitions(
             raw_batch_definition, automation_folder, variable_definitions))
+    assert_unique_values(
+        [_.folder for _ in batch_definitions],
+        'duplicate batch folder {{x}}')
+    assert_unique_values(
+        [_.name for _ in batch_definitions],
+        'duplicate batch name {{x}}')
+    assert_unique_values(
+        [_.uri for _ in batch_definitions],
+        'duplicate batch uri {{x}}')
     return {
         'batch_definitions': batch_definitions,
     }
@@ -207,8 +284,32 @@ def validate_display_configuration(configuration):
     }
 
 
-def validate_template_identifiers():
-    pass
+def validate_imports(configuration):
+    automation_configurations = []
+    remaining_configurations = [configuration]
+    while remaining_configurations:
+        c = remaining_configurations.pop(0)
+        folder = c.folder
+        import_configurations = get_dictionaries(c, 'imports')
+        for i, import_configuration in enumerate(import_configurations, 1):
+            if 'path' in import_configuration:
+                path = import_configuration['path']
+                automation_configuration = load_configuration(
+                    folder / path, index=i)
+            else:
+                raise CrossComputeConfigurationError(
+                    'path required for each import')
+            remaining_configurations.append(automation_configuration)
+        automation_configurations.append(c)
+    automation_definitions = [
+        _ for _ in automation_configurations if 'output' in _]
+    return {
+        'automation_definitions': automation_definitions,
+    }
+
+
+def validate_template_identifiers(template_definition):
+    return {}
 
 
 def validate_variable_identifiers(variable_definition):
@@ -273,6 +374,22 @@ def validate_batch_configuration(batch_definition):
         'reference': batch_reference,
         'configuration': batch_configuration,
     }
+
+
+def get_configuration_format(path):
+    file_extension = path.suffix
+    try:
+        configuration_format = {
+            '.cfg': 'ini',
+            '.ini': 'ini',
+            '.toml': 'toml',
+            '.yaml': 'yaml',
+            '.yml': 'yaml',
+        }[file_extension]
+    except KeyError:
+        raise CrossComputeError(
+            f'{file_extension} format not supported for configuration'.strip())
+    return configuration_format
 
 
 def get_environment_variable_ids(environment_variable_definitions):
@@ -356,6 +473,12 @@ def get_list(d, key):
     if not isinstance(value, list):
         raise CrossComputeConfigurationError(f'{key} must be a list')
     return value
+
+
+def assert_unique_values(xs, message):
+    for x, count in Counter(xs).items():
+        if count > 1:
+            raise CrossComputeConfigurationError(message.format(x=x))
 
 
 L = getLogger(__name__)

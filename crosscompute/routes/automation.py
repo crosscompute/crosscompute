@@ -26,7 +26,6 @@ from ..macros.web import get_html_from_markdown
 from ..routines.batch import DiskBatch
 from ..routines.configuration import (
     get_css_uris,
-    get_variable_definitions,
     parse_data_by_id)
 from ..routines.variable import (
     Element,
@@ -159,8 +158,8 @@ class AutomationRoutes():
 
     def run_automation(self, request):
         automation_definition = self.get_automation_definition_from(request)
-        variable_definitions = get_variable_definitions(
-            automation_definition, 'input')
+        variable_definitions = automation_definition.get_variable_definitions(
+            'input')
         try:
             data_by_id = dict(request.params) or request.json_body
         except json.JSONDecodeError:
@@ -212,8 +211,8 @@ class AutomationRoutes():
         batch_definition = self.get_batch_definition_from(
             request, automation_definition)
         mode_name = self.get_mode_name_from(request)
-        variable_definitions = get_variable_definitions(
-            automation_definition, mode_name)
+        variable_definitions = automation_definition.get_variable_definitions(
+            mode_name)
         matchdict = request.matchdict
         variable_id = matchdict['variable_id']
         try:
@@ -273,8 +272,8 @@ def render_mode_dictionary(batch, mode_name, for_print):
     automation_definition = batch.automation_definition
     css_uris = automation_definition.get_css_uris()
     template_text = automation_definition.get_template_text(mode_name)
-    variable_definitions = get_variable_definitions(
-        automation_definition, mode_name, with_all=True)
+    variable_definitions = automation_definition.get_variable_definitions(
+        mode_name, with_all=True)
     m = {'css_uris': css_uris.copy(), 'js_uris': [], 'js_texts': []}
     i = count()
     render_html = partial(
