@@ -1,3 +1,4 @@
+from collections import Counter
 from crosscompute.exceptions import (
     CrossComputeConfigurationError,
     CrossComputeError)
@@ -15,8 +16,79 @@ from ..constants import (
     MODE_NAMES,
     STYLE_ROUTE)
 from ..macros.web import format_slug
-from .configuration import BatchDefinition
 from .variable import VARIABLE_VIEW_BY_NAME
+
+
+class Definition(dict):
+
+    def __init__(self, d, **kwargs):
+        super().__init__(d)
+        self._initialize(kwargs)
+        self._validate()
+
+    def _initialize(self, kwargs):
+        self._validation_functions = []
+
+    def _validate(self):
+        for f in self._validation_functions:
+            self.__dict__.update(f(self))
+        for k in self.__dict__.copy():
+            if k.startswith('___'):
+                del self.__dict__[k]
+
+
+class AutomationDefinition(Definition):
+
+    def _initialize(self, kwargs):
+        self.path = path = Path(kwargs['path'])
+        self.folder = path.parents[0]
+        self.index = kwargs['index']
+        self._validation_functions = [
+            validate_protocol,
+            validate_automation_identifiers,
+            validate_variable_definitions,
+            validate_variable_views,
+            validate_batch_definitions,
+            validate_environment_variable_definitions,
+            validate_display_configuration,
+        ]
+
+    def get_variable_definitions(self, mode_name):
+        return self.variable_definitions_by_mode_name[mode_name]
+
+    '''
+    def get_template_text(self, mode_name):
+        template_definitions = self.template_definitions_by_mode_name[
+            mode_name]
+        # !!!
+        return '\n'.join(get_template_texts(self, mode_name))
+    '''
+
+
+class TemplateDefinition(Definition):
+
+    def _initialize(self, kwargs):
+        self._validation_functions = [
+            validate_template_identifiers,
+        ]
+
+
+class VariableDefinition(Definition):
+
+    def _initialize(self, kwargs):
+        self.mode_name = kwargs['mode_name']
+        self._validation_functions = [
+            validate_variable_identifiers,
+            validate_variable_configuration,
+        ]
+
+
+class BatchDefinition(Definition):
+
+    def _initialize(self, kwargs):
+        self._validation_functions = [
+            validate_batch_identifiers,
+        ]
 
 
 def validate_protocol(configuration):
@@ -43,30 +115,23 @@ def validate_automation_identifiers(configuration):
 
 
 def validate_variable_definitions(configuration):
+    variable_definitions_by_mode_name = {}
     view_names = []
     for mode_name in MODE_NAMES:
         mode_configuration = get_dictionary(configuration, mode_name)
-        variable_definitions = get_dictionaries(
-            mode_configuration, 'variables')
-        variable_ids = []
-        for variable_definition in variable_definitions:
-            try:
-                variable_id = variable_definition['id']
-                view_name = variable_definition['view']
-                variable_path = variable_definition['path']
-            except KeyError as e:
-                raise CrossComputeConfigurationError(
-                    f'{e} required for each variable')
-            if variable_id in variable_ids:
+        variable_definitions = [VariableDefinition(
+            _, mode_name=mode_name,
+        ) for _ in get_dictionaries(mode_configuration, 'variables')]
+        variable_ids = [_.id for _ in variable_definitions]
+        for variable_id, count in Counter(variable_ids).items():
+            if count > 1:
                 raise CrossComputeConfigurationError(
                     f'duplicate variable id {variable_id} in {mode_name}')
-            if relpath(variable_path).startswith('..'):
-                raise CrossComputeConfigurationError(
-                    f'{variable_path} cannot reference parent folder')
-            variable_ids.append(variable_id)
-            view_names.append(view_name)
+        variable_definitions_by_mode_name[mode_name] = variable_definitions
+        view_names = [_.view_name for _ in variable_definitions]
     L.debug('view_names =', view_names)
     return {
+        'variable_definitions_by_mode_name': variable_definitions_by_mode_name,
         '___view_names': view_names,
     }
 
@@ -103,26 +168,6 @@ def validate_batch_definitions(configuration):
     return {
         'batch_definitions': batch_definitions,
     }
-
-
-def validate_batch_identifiers(batch_definition):
-    try:
-        folder = Path(get_scalar_text(batch_definition, 'folder'))
-    except KeyError as e:
-        raise CrossComputeConfigurationError(f'{e} required for each batch')
-    name = get_scalar_text(batch_definition, 'name', folder.name)
-    slug = get_scalar_text(batch_definition, 'slug', name)
-    d = {
-        'folder': folder,
-        'name': name,
-        'slug': slug,
-    }
-    if 'configuration' not in batch_definition:
-        slug = format_slug(slug)
-        d.update({
-            'slug': slug,
-            'uri': BATCH_ROUTE.format(batch_slug=slug)})
-    return d
 
 
 def validate_environment_variable_definitions(configuration):
@@ -167,6 +212,55 @@ def validate_display_configuration(configuration):
     }
 
 
+def validate_template_identifiers():
+    pass
+
+
+def validate_variable_identifiers(variable_definition):
+    try:
+        variable_id = variable_definition['id']
+        view_name = variable_definition['view']
+        variable_path = variable_definition['path']
+    except KeyError as e:
+        raise CrossComputeConfigurationError(f'{e} required for each variable')
+    if relpath(variable_path).startswith('..'):
+        raise CrossComputeConfigurationError(
+            f'{variable_path} cannot reference parent folder')
+    return {
+        'id': variable_id,
+        'view_name': view_name,
+        'path': variable_path,
+    }
+
+
+def validate_variable_configuration(variable_definition):
+    variable_configuration = get_dictionary(
+        variable_definition, 'configuration')
+    return {
+        'configuration': variable_configuration,
+    }
+
+
+def validate_batch_identifiers(batch_definition):
+    try:
+        folder = Path(get_scalar_text(batch_definition, 'folder'))
+    except KeyError as e:
+        raise CrossComputeConfigurationError(f'{e} required for each batch')
+    name = get_scalar_text(batch_definition, 'name', folder.name)
+    slug = get_scalar_text(batch_definition, 'slug', name)
+    d = {
+        'folder': folder,
+        'name': name,
+        'slug': slug,
+    }
+    if 'configuration' not in batch_definition:
+        slug = format_slug(slug)
+        d.update({
+            'slug': slug,
+            'uri': BATCH_ROUTE.format(batch_slug=slug)})
+    return d
+
+
 def get_environment_variable_ids(environment_variable_definitions):
     variable_ids = set()
     for environment_variable_definition in environment_variable_definitions:
@@ -197,7 +291,7 @@ def get_scalar_text(d, key, default=None):
 
 def get_batch_definitions_from_path(
         batch_configuration_path, raw_batch_definition, variable_definitions):
-    pass
+    return []
 
 
 def make_automation_name(automation_index):
@@ -226,19 +320,4 @@ def get_list(d, key):
     return value
 
 
-AUTOMATION_DEFINITION_VALIDATION_FUNCTIONS = [
-    validate_protocol,
-    validate_automation_identifiers,
-    validate_variable_definitions,
-    validate_variable_views,
-    validate_batch_definitions,
-    validate_environment_variable_definitions,
-    validate_display_configuration,
-]
-TEMPLATE_DEFINITION_VALIDATION_FUNCTIONS = [
-]
-VARIABLE_DEFINITION_VALIDATION_FUNCTIONS = [
-]
-BATCH_DEFINITION_VALIDATION_FUNCTIONS = [
-]
 L = getLogger(__name__)

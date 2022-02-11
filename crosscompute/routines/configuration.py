@@ -18,84 +18,8 @@ from ..exceptions import (
     CrossComputeDataError,
     CrossComputeError)
 from ..macros.web import format_slug
+from .validation import AutomationDefinition
 from .variable import VariableView, format_text
-from .validation import (
-    AUTOMATION_DEFINITION_VALIDATION_FUNCTIONS,
-    BATCH_DEFINITION_VALIDATION_FUNCTIONS,
-    TEMPLATE_DEFINITION_VALIDATION_FUNCTIONS,
-    VARIABLE_DEFINITION_VALIDATION_FUNCTIONS)
-
-
-class Definition(dict):
-
-    validation_functions = []
-
-    def __init__(self, d, **kwargs):
-        super().__init__(d)
-        self._initialize(kwargs)
-        self._validate()
-
-    def _initialize(self, kwargs):
-        pass
-
-    def _validate(self):
-        for f in self.validation_functions:
-            self.__dict__.update(f(self))
-        for k in self.__dict__.copy():
-            if k.startswith('___'):
-                del self.__dict__[k]
-
-
-class AutomationDefinition(Definition):
-
-    validation_functions = AUTOMATION_DEFINITION_VALIDATION_FUNCTIONS
-
-    def _initialize(self, kwargs):
-        self.path = path = Path(kwargs['path'])
-        self.folder = path.parents[0]
-        self.index = kwargs['index']
-
-    '''
-    def get_template_text(self, mode_name):
-        template_definitions = self.template_definitions_by_mode_name[
-            mode_name]
-        # !!!
-        return '\n'.join(get_template_texts(self, mode_name))
-    '''
-
-
-class TemplateDefinition(Definition):
-
-    validation_functions = TEMPLATE_DEFINITION_VALIDATION_FUNCTIONS
-
-
-class VariableDefinition(Definition):
-
-    validation_functions = VARIABLE_DEFINITION_VALIDATION_FUNCTIONS
-
-    def _initialize(self, kwargs):
-        '''
-        self.variable_id = self['id']
-        self.variable_path = self['path']
-        self.mode_name = self['mode']
-        self.configuration = VariableConfiguration(self.get(
-            'configuration', {}))
-        '''
-        pass
-
-
-class BatchDefinition(Definition):
-
-    validation_functions = BATCH_DEFINITION_VALIDATION_FUNCTIONS
-
-
-'''
-class VariableConfiguration(dict):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.path = self.get('path')
-'''
 
 
 def load_configuration(configuration_path, index=0):
@@ -200,12 +124,6 @@ def get_automation_configurations(configuration):
                 path = import_configuration['path']
                 automation_configuration = load_configuration(join(
                     folder, path), index=i)
-            elif 'uri' in import_configuration:
-                L.error('uri import not supported yet')
-                continue
-            elif 'name' in import_configuration:
-                L.error('name import not supported yet')
-                continue
             else:
                 L.error('path or uri or name required for each import')
                 continue
@@ -263,7 +181,6 @@ def get_batch_definitions_from_path(
     try:
         yield_data_by_id = {
             '.csv': yield_data_by_id_from_csv,
-            '.txt': yield_data_by_id_from_txt,
         }[file_extension]
     except KeyError:
         raise CrossComputeConfigurationError(
@@ -300,28 +217,6 @@ def yield_data_by_id_from_csv(path, variable_definitions):
                 if data_by_id.get('#') == '#':
                     continue
                 yield data_by_id
-    except OSError:
-        raise CrossComputeConfigurationError(f'{path} path not found')
-
-
-def yield_data_by_id_from_txt(path, variable_definitions):
-    if len(variable_definitions) > 1:
-        raise CrossComputeConfigurationError(
-            'use .csv to configure multiple variables')
-
-    try:
-        variable_id = variable_definitions[0]['id']
-    except IndexError:
-        variable_id = None
-
-    try:
-        with open(path, 'rt') as batch_configuration_file:
-            for line in batch_configuration_file:
-                line = line.strip()
-                if not line or line.startswith('#'):
-                    continue
-                data_by_id = {variable_id: {'value': line}}
-                yield parse_data_by_id(data_by_id, variable_definitions)
     except OSError:
         raise CrossComputeConfigurationError(f'{path} path not found')
 
