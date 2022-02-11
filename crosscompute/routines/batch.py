@@ -13,7 +13,7 @@ from .configuration import (
     VariableDefinition)
 from .interface import Batch
 from .variable import (
-    load_variable_data_from_folder)
+    load_variable_data)
 
 
 class DiskBatch(Batch):
@@ -43,14 +43,14 @@ class DiskBatch(Batch):
 
     def get_data(self, variable_definition):
         variable_definition = VariableDefinition(variable_definition)
-        variable_path = variable_definition.variable_path
+        variable_path = variable_definition.path
         if variable_path == 'ENVIRONMENT':
             return {}
         mode_name = variable_definition.mode_name
-        variable_id = variable_definition.variable_id
+        variable_id = variable_definition.id
         try:
-            variable_data = load_variable_data_from_folder(
-                self.folder, mode_name, variable_path, variable_id)
+            variable_data = load_variable_data(
+                self.folder / mode_name / variable_path, variable_id)
         except CrossComputeDataError as e:
             return {'error': e}
         return variable_data

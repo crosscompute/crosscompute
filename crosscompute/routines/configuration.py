@@ -1,25 +1,19 @@
 # TODO: Save to yaml, ini, toml
-import csv
 import tomli
 from configparser import ConfigParser
 from copy import deepcopy
 from invisibleroads_macros_log import format_path
 from logging import getLogger
 from os.path import abspath, join, splitext
-from pathlib import Path
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
 from ..constants import (
-    BATCH_ROUTE,
     MODE_NAMES)
 from ..exceptions import (
     CrossComputeConfigurationError,
-    CrossComputeDataError,
     CrossComputeError)
-from ..macros.web import format_slug
 from .validation import AutomationDefinition
-from .variable import VariableView, format_text
 
 
 def load_configuration(configuration_path, index=0):
@@ -106,9 +100,6 @@ def get_automation_definitions(configuration):
             get_automation_configurations(configuration)):
         if 'output' not in automation_configuration:
             continue
-        automation_configuration.update({
-            'batches': get_batch_definitions(automation_configuration),
-        })
         automation_definitions.append(automation_configuration)
     return automation_definitions
 
@@ -173,70 +164,6 @@ def get_template_texts(configuration, mode_name):
         variable_ids = [_['id'] for _ in variable_definitions if 'id' in _]
         template_texts = ['\n'.join('{%s}' % _ for _ in variable_ids)]
     return template_texts
-
-
-def get_batch_definitions_from_path(
-        path, batch_definition, variable_definitions):
-    file_extension = splitext(path)[1]
-    try:
-        yield_data_by_id = {
-            '.csv': yield_data_by_id_from_csv,
-        }[file_extension]
-    except KeyError:
-        raise CrossComputeConfigurationError(
-            f'{file_extension} not supported for batch configuration')
-    batch_folder = batch_definition['folder']
-    batch_name = batch_definition['name']
-    batch_slug = batch_definition['slug']
-    batch_definitions = []
-    try:
-        for data_by_id in yield_data_by_id(path, variable_definitions):
-            folder = format_text(batch_folder, data_by_id)
-            name = format_text(batch_name, data_by_id)
-            slug = format_text(
-                batch_slug, data_by_id) if batch_slug else format_slug(name)
-            batch_definitions.append(batch_definition | {
-                'folder': folder, 'name': name, 'slug': slug,
-                'uri': BATCH_ROUTE.format(batch_slug=slug),
-                'data_by_id': data_by_id})
-    except CrossComputeError as e:
-        if not hasattr(e, 'path'):
-            e.path = path
-        raise
-    return batch_definitions
-
-
-def yield_data_by_id_from_csv(path, variable_definitions):
-    try:
-        with open(path, 'rt') as file:
-            csv_reader = csv.reader(file)
-            keys = [_.strip() for _ in next(csv_reader)]
-            for values in csv_reader:
-                data_by_id = {k: {'value': v} for k, v in zip(keys, values)}
-                data_by_id = parse_data_by_id(data_by_id, variable_definitions)
-                if data_by_id.get('#') == '#':
-                    continue
-                yield data_by_id
-    except OSError:
-        raise CrossComputeConfigurationError(f'{path} path not found')
-
-
-def parse_data_by_id(data_by_id, variable_definitions):
-    for variable_definition in variable_definitions:
-        variable_id = variable_definition['id']
-        try:
-            variable_data = data_by_id[variable_id]
-        except KeyError:
-            raise CrossComputeDataError(f'variable {variable_id} required')
-        if 'path' in data_by_id:
-            continue
-        variable_view = VariableView.get_from(variable_definition)
-        try:
-            variable_data = variable_view.parse(variable_data)
-        except CrossComputeDataError as e:
-            raise CrossComputeDataError(f'{e} for variable {variable_id}')
-        data_by_id[variable_id] = variable_data
-    return data_by_id
 
 
 L = getLogger(__name__)

@@ -16,7 +16,11 @@ from ..constants import (
     MODE_NAMES,
     STYLE_ROUTE)
 from ..macros.web import format_slug
-from .variable import VARIABLE_VIEW_BY_NAME
+from .variable import (
+    format_text,
+    get_data_by_id_from_folder,
+    yield_data_by_id_from_csv,
+    VARIABLE_VIEW_BY_NAME)
 
 
 class Definition(dict):
@@ -86,8 +90,10 @@ class VariableDefinition(Definition):
 class BatchDefinition(Definition):
 
     def _initialize(self, kwargs):
+        self.data_by_id = kwargs.get('data_by_id')
         self._validation_functions = [
             validate_batch_identifiers,
+            validate_batch_configuration,
         ]
 
 
@@ -152,19 +158,8 @@ def validate_batch_definitions(configuration):
     automation_folder = configuration.folder
     variable_definitions = configuration.get_variable_definitions('input')
     for raw_batch_definition in raw_batch_definitions:
-        if 'configuration' in raw_batch_definition:
-            batch_configuration = raw_batch_definition['configuration']
-            if 'path' in batch_configuration:
-                new_batch_definitions = get_batch_definitions_from_path(
-                    automation_folder / batch_configuration['path'],
-                    raw_batch_definition, variable_definitions)
-            else:
-                raise CrossComputeConfigurationError(
-                    'path expected for each batch configuration')
-        else:
-            new_batch_definitions = [BatchDefinition(raw_batch_definition)]
-        batch_definitions.extend(new_batch_definitions)
-
+        batch_definitions.extend(get_batch_definitions(
+            raw_batch_definition, automation_folder, variable_definitions))
     return {
         'batch_definitions': batch_definitions,
     }
@@ -225,11 +220,12 @@ def validate_variable_identifiers(variable_definition):
         raise CrossComputeConfigurationError(f'{e} required for each variable')
     if relpath(variable_path).startswith('..'):
         raise CrossComputeConfigurationError(
-            f'{variable_path} cannot reference parent folder')
+            f'path {variable_path} for variable {variable_id} must be within '
+            'the folder')
     return {
         'id': variable_id,
         'view_name': view_name,
-        'path': variable_path,
+        'path': Path(variable_path),
     }
 
 
@@ -248,17 +244,35 @@ def validate_batch_identifiers(batch_definition):
         raise CrossComputeConfigurationError(f'{e} required for each batch')
     name = get_scalar_text(batch_definition, 'name', folder.name)
     slug = get_scalar_text(batch_definition, 'slug', name)
+    data_by_id = batch_definition.data_by_id
+    if data_by_id:
+        folder = format_text(str(folder), data_by_id)
+        name = format_text(name, data_by_id)
+        slug = format_text(slug, data_by_id)
     d = {
         'folder': folder,
         'name': name,
         'slug': slug,
     }
-    if 'configuration' not in batch_definition:
+    if data_by_id:
+        for k, v in d.items():
+            if k in batch_definition:
+                batch_definition[k] = v
+    if data_by_id is not None:
         slug = format_slug(slug)
         d.update({
             'slug': slug,
             'uri': BATCH_ROUTE.format(batch_slug=slug)})
     return d
+
+
+def validate_batch_configuration(batch_definition):
+    batch_reference = get_dictionary(batch_definition, 'reference')
+    batch_configuration = get_dictionary(batch_definition, 'configuration')
+    return {
+        'reference': batch_reference,
+        'configuration': batch_configuration,
+    }
 
 
 def get_environment_variable_ids(environment_variable_definitions):
@@ -289,9 +303,33 @@ def get_scalar_text(d, key, default=None):
     return value
 
 
-def get_batch_definitions_from_path(
-        batch_configuration_path, raw_batch_definition, variable_definitions):
-    return []
+def get_batch_definitions(
+        raw_batch_definition, automation_folder, variable_definitions):
+    batch_definitions = []
+    raw_batch_definition = BatchDefinition(raw_batch_definition)
+
+    if 'folder' in raw_batch_definition.reference:
+        reference_folder = raw_batch_definition.reference['folder']
+        reference_data_by_id = get_data_by_id_from_folder(
+            automation_folder / reference_folder / 'input',
+            variable_definitions)
+    else:
+        reference_data_by_id = {}
+
+    if 'path' in raw_batch_definition.configuration:
+        batch_configuration_path = raw_batch_definition.configuration['path']
+        for configuration_data_by_id in yield_data_by_id_from_csv(
+                automation_folder / batch_configuration_path,
+                variable_definitions):
+            batch_definitions.append(BatchDefinition(
+                raw_batch_definition,
+                data_by_id=reference_data_by_id | configuration_data_by_id))
+    else:
+        batch_definitions.append(BatchDefinition(
+            raw_batch_definition,
+            data_by_id=reference_data_by_id))
+
+    return batch_definitions
 
 
 def make_automation_name(automation_index):

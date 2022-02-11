@@ -1,10 +1,10 @@
+import csv
 import json
 from dataclasses import dataclass
 from importlib_metadata import entry_points
-from invisibleroads_macros_disk import is_path_in_folder
 from invisibleroads_macros_log import format_path
 from logging import getLogger
-from os.path import basename, exists, join
+from os.path import basename, exists
 from string import Template
 
 from ..constants import (
@@ -36,13 +36,13 @@ class VariableView():
 
     def __init__(self, variable_definition):
         self.variable_definition = variable_definition
-        self.variable_id = variable_definition['id']
-        self.variable_path = variable_definition['path']
-        self.mode_name = variable_definition['mode']
+        self.variable_id = variable_definition.id
+        self.variable_path = variable_definition.path
+        self.mode_name = variable_definition.mode_name
 
     @classmethod
     def get_from(Class, variable_definition):
-        view_name = variable_definition['view']
+        view_name = variable_definition.view_name
         try:
             View = VARIABLE_VIEW_BY_NAME[view_name]
         except KeyError:
@@ -162,15 +162,14 @@ class NumberView(StringView):
     view_name = 'number'
     input_type = 'number'
 
-    def parse(self, data):
-        value = data['value']
+    def parse(self, value):
         try:
             value = float(value)
         except ValueError:
             raise CrossComputeDataError(f'{value} is not a number')
         if value.is_integer():
             value = int(value)
-        return {'value': value}
+        return value
 
 
 class PasswordView(StringView):
@@ -279,7 +278,7 @@ class TableView(VariableView):
 def save_variable_data(target_path, data_by_id, variable_definitions):
     variable_data_by_id = get_variable_data_by_id(
         variable_definitions, data_by_id)
-    if target_path.endswith('.dictionary'):
+    if target_path.suffix == '.dictionary':
         with open(target_path, 'wt') as input_file:
             variable_value_by_id = get_variable_value_by_id(
                 variable_data_by_id)
@@ -294,32 +293,65 @@ def save_variable_data(target_path, data_by_id, variable_definitions):
         open(target_path, 'wt').write(variable_data['value'])
 
 
+def get_data_by_id_from_folder(folder, variable_definitions):
+    data_by_id = {}
+    for variable_definition in variable_definitions:
+        variable_id = variable_definition.id
+        variable_path = variable_definition.path
+        variable_data = load_variable_data(folder / variable_path, variable_id)
+        data_by_id[variable_id] = variable_data
+    return data_by_id
+
+
+def yield_data_by_id_from_csv(path, variable_definitions):
+    try:
+        with path.open('rt') as f:
+            csv_reader = csv.reader(f)
+            keys = [_.strip() for _ in next(csv_reader)]
+            for values in csv_reader:
+                data_by_id = {k: {'value': v} for k, v in zip(keys, values)}
+                data_by_id = parse_data_by_id(data_by_id, variable_definitions)
+                if data_by_id.get('#') == '#':
+                    continue
+                yield data_by_id
+    except OSError:
+        raise CrossComputeConfigurationError(f'{path} path not found')
+
+
+def parse_data_by_id(data_by_id, variable_definitions):
+    for variable_definition in variable_definitions:
+        variable_id = variable_definition['id']
+        try:
+            variable_data = data_by_id[variable_id]
+        except KeyError:
+            continue
+        if 'value' not in variable_data:
+            continue
+        variable_value = variable_data['value']
+        variable_view = VariableView.get_from(variable_definition)
+        try:
+            variable_value = variable_view.parse(variable_value)
+        except CrossComputeDataError as e:
+            raise CrossComputeDataError(f'{e} for variable {variable_id}')
+        variable_data['value'] = variable_value
+    return data_by_id
+
+
 def update_variable_data(target_path, data_by_id):
     try:
         if exists(target_path):
-            f = open(target_path, 'r+t')
-            d = json.load(f)
-            d.update(data_by_id)
-            f.seek(0)
-            f.truncate()
+            with open(target_path, 'r+t') as f:
+                d = json.load(f)
+                d.update(data_by_id)
+                f.seek(0)
+                f.truncate()
+                json.dump(d, f)
         else:
-            f = open(target_path, 'wt')
-            d = data_by_id
-        json.dump(d, f)
+            with open(target_path, 'wt') as f:
+                d = data_by_id
+                json.dump(d, f)
     except (json.JSONDecodeError, OSError) as e:
         raise CrossComputeDataError(e)
-    finally:
-        f.close()
-
-
-def load_variable_data_from_folder(
-        absolute_batch_folder, mode_name, variable_path, variable_id):
-    folder = join(absolute_batch_folder, mode_name)
-    path = join(folder, variable_path)
-    if not is_path_in_folder(path, folder):
-        raise CrossComputeDataError(
-            f'{path} for variable {variable_id} must be inside {folder}')
-    return load_variable_data(path, variable_id)
 
 
 def load_variable_data(path, variable_id):
@@ -328,7 +360,7 @@ def load_variable_data(path, variable_id):
     except OSError:
         raise CrossComputeDataError(
             f'{format_path(path)} path not found for variable {variable_id}')
-    if path.endswith('.dictionary'):
+    if path.suffix == '.dictionary':
         file_value = file_data['value']
         try:
             variable_value = file_value[variable_id]
@@ -342,15 +374,15 @@ def load_variable_data(path, variable_id):
 
 
 def load_file_data(path):
-    if path.endswith('.dictionary'):
-        return {'value': json.load(open(path, 'rt'))}
-    if not exists(path):
+    if path.suffix == '.dictionary':
+        return {'value': json.load(path.open('rt'))}
+    if not path.exists():
         raise FileNotFoundError
     return {'path': path}
 
 
 def load_file_text(path):
-    return open(path, 'rt').read().rstrip()
+    return path.read_text().rstrip()
 
 
 def get_variable_data_by_id(variable_definitions, data_by_id):
@@ -378,26 +410,25 @@ def get_variable_value_by_id(data_by_id):
 def format_text(text, data_by_id):
     if not data_by_id:
         return text
-    if None in data_by_id:
-        f = data_by_id[None].get('value', '')
-    else:
-        def f(match):
-            matching_text = match.group(0)
-            expression_text = match.group(1)
-            expression_terms = expression_text.split('|')
-            variable_id = expression_terms[0].strip()
-            try:
-                data = data_by_id[variable_id]
-            except KeyError:
-                L.warning('%s missing in batch configuration', variable_id)
-                return matching_text
-            text = data.get('value', '')
-            try:
-                text = apply_functions(
-                    text, expression_terms[1:], FUNCTION_BY_NAME)
-            except KeyError as e:
-                L.error('%s function not supported for string', e)
-            return str(text)
+
+    def f(match):
+        matching_text = match.group(0)
+        expression_text = match.group(1)
+        expression_terms = expression_text.split('|')
+        variable_id = expression_terms[0].strip()
+        try:
+            variable_data = data_by_id[variable_id]
+        except KeyError:
+            L.warning('%s missing in batch configuration', variable_id)
+            return matching_text
+        text = variable_data.get('value', '')
+        try:
+            text = apply_functions(
+                text, expression_terms[1:], FUNCTION_BY_NAME)
+        except KeyError as e:
+            L.error('%s function not supported for string', e)
+        return str(text)
+
     return VARIABLE_ID_PATTERN.sub(f, text)
 
 

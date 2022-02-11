@@ -300,31 +300,24 @@ def run_automation(
 
 
 def _run_command(
-        command_string, command_folder, script_environment, stdout_path,
-        stderr_path):
+        command_string, command_folder, script_environment, o_path, e_path):
     try:
-        stdout_file = open(stdout_path, 'wt')
-        stderr_file = open(stderr_path, 'w+t')
-        process = subprocess.run(
-            command_string,
-            check=True,
-            shell=True,  # Expand $HOME and ~ in command_string
-            cwd=command_folder,
-            env=script_environment,
-            stdout=stdout_file,
-            stderr=stderr_file)
+        with open(o_path, 'wt') as o_file, open(e_path, 'wt') as e_file:
+            process = subprocess.run(
+                command_string,
+                check=True,
+                shell=True,  # Expand $HOME and ~ in command_string
+                cwd=command_folder,
+                env=script_environment,
+                stdout=o_file,
+                stderr=e_file)
         return_code = process.returncode
     except OSError as e:
         L.error(e)
         return_code = Error.COMMAND_NOT_FOUND
     except subprocess.CalledProcessError as e:
-        stderr_file.seek(0)
-        stderr_text = stderr_file.read().rstrip()
-        L.error(stderr_text)
+        L.error(open(e_file).read().rstrip())
         return_code = e.returncode
-    finally:
-        stdout_file.close()
-        stderr_file.close()
     return return_code
 
 
@@ -379,31 +372,31 @@ def _prepare_custom_environment(
 
 def _process_batch(
         automation_definition, batch_definition, mode_names,
-        data_by_id_by_mode_name, process_data):
+        extra_data_by_id_by_mode_name, process_data):
     variable_data_by_id_by_mode_name = {}
-    automation_folder = automation_definition['folder']
-    batch_folder = batch_definition['folder']
+    automation_folder = automation_definition.folder
+    batch_folder = batch_definition.folder
     for mode_name in mode_names:
         variable_data_by_id_by_mode_name[mode_name] = variable_data_by_id = {}
-        data_by_id = data_by_id_by_mode_name.get(mode_name, {})
-        mode_folder = join(automation_folder, batch_folder, mode_name)
+        extra_data_by_id = extra_data_by_id_by_mode_name.get(mode_name, {})
+        mode_folder = automation_folder / batch_folder / mode_name
         for variable_definition in get_variable_definitions(
                 automation_definition, mode_name):
-            variable_id = variable_definition['id']
-            if variable_id in data_by_id:
+            variable_id = variable_definition.id
+            variable_path = variable_definition.path
+            if variable_id in extra_data_by_id:
                 continue
-            variable_path = variable_definition['path']
-            path = join(mode_folder, variable_path)
+            path = mode_folder / variable_path
             try:
                 variable_data = process_data(path, variable_id)
             except CrossComputeDataError as e:
                 L.error(e)
                 continue
             variable_data_by_id[variable_id] = variable_data
-        if data_by_id:
+        if extra_data_by_id:
             update_variable_data(join(
-                mode_folder, 'variables.dictionary'), data_by_id)
-            variable_data_by_id.update(data_by_id)
+                mode_folder, 'variables.dictionary'), extra_data_by_id)
+            variable_data_by_id.update(extra_data_by_id)
     return variable_data_by_id_by_mode_name
 
 
