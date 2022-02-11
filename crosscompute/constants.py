@@ -32,7 +32,7 @@ BATCH_ROUTE = '/b/{batch_slug}'
 VARIABLE_ROUTE = '/{variable_id}'
 MODE_ROUTE = '/{mode_code}'
 RUN_ROUTE = '/r/{run_slug}'
-STYLE_ROUTE = '/s/{style_name}'
+STYLE_ROUTE = '/s/{style_name}.css'
 STREAMS_ROUTE = '/streams'
 
 

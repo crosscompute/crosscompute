@@ -4,15 +4,18 @@ from crosscompute.exceptions import (
 from logging import getLogger
 from os import environ
 from os.path import relpath, splitext
+from pathlib import Path
 from time import time
 
 from .. import __version__
 from ..constants import (
     AUTOMATION_NAME,
     AUTOMATION_ROUTE,
+    BATCH_ROUTE,
     MODE_NAMES,
     STYLE_ROUTE)
 from ..macros.web import format_slug
+from .configuration import BatchDefinition
 from .variable import VARIABLE_VIEW_BY_NAME
 
 
@@ -27,7 +30,7 @@ def validate_protocol(configuration):
     return {}
 
 
-def validate_identifiers(configuration):
+def validate_automation_identifiers(configuration):
     index = configuration.index
     name = configuration.get('name', make_automation_name(index))
     slug = configuration.get('slug', format_slug(name))
@@ -69,37 +72,64 @@ def validate_variable_definitions(configuration):
 
 
 def validate_variable_views(configuration):
-    variable_ids = set()
     for view_name in configuration.___view_names:
         try:
             View = VARIABLE_VIEW_BY_NAME[view_name]
         except KeyError:
             raise CrossComputeConfigurationError(f'{view_name} not installed')
-        d = check_environment_variable_definitions(
-            View.environment_variable_definitions)
-        variable_ids.update(d['___environment_variable_ids'])
+        get_environment_variable_ids(View.environment_variable_definitions)
     return {}
 
 
 def validate_batch_definitions(configuration):
-    batch_definitions = get_dictionaries(configuration, 'batches')
-    for batch_definition in batch_definitions:
-        try:
-            batch_definition['folder']
-        except KeyError as e:
-            raise CrossComputeConfigurationError(
-                f'{e} required for each batch')
-    return {}
+    batch_definitions = []
+    raw_batch_definitions = get_dictionaries(configuration, 'batches')
+    automation_folder = configuration.folder
+    variable_definitions = configuration.get_variable_definitions('input')
+    for raw_batch_definition in raw_batch_definitions:
+        if 'configuration' in raw_batch_definition:
+            batch_configuration = raw_batch_definition['configuration']
+            if 'path' in batch_configuration:
+                new_batch_definitions = get_batch_definitions_from_path(
+                    automation_folder / batch_configuration['path'],
+                    raw_batch_definition, variable_definitions)
+            else:
+                raise CrossComputeConfigurationError(
+                    'path expected for each batch configuration')
+        else:
+            new_batch_definitions = [BatchDefinition(raw_batch_definition)]
+        batch_definitions.extend(new_batch_definitions)
+
+    return {
+        'batch_definitions': batch_definitions,
+    }
+
+
+def validate_batch_identifiers(batch_definition):
+    try:
+        folder = Path(get_scalar_text(batch_definition, 'folder'))
+    except KeyError as e:
+        raise CrossComputeConfigurationError(f'{e} required for each batch')
+    name = get_scalar_text(batch_definition, 'name', folder.name)
+    slug = get_scalar_text(batch_definition, 'slug', name)
+    d = {
+        'folder': folder,
+        'name': name,
+        'slug': slug,
+    }
+    if 'configuration' not in batch_definition:
+        slug = format_slug(slug)
+        d.update({
+            'slug': slug,
+            'uri': BATCH_ROUTE.format(batch_slug=slug)})
+    return d
 
 
 def validate_environment_variable_definitions(configuration):
-    variable_ids = set()
     environment_configuration = get_dictionary(configuration, 'environment')
     environment_variable_definitions = get_dictionaries(
         environment_configuration, 'variables')
-    d = check_environment_variable_definitions(
-        environment_variable_definitions)
-    variable_ids.update(d['___environment_variable_ids'])
+    get_environment_variable_ids(environment_variable_definitions)
     return {}
 
 
@@ -110,6 +140,7 @@ def validate_display_configuration(configuration):
     automation_folder = configuration.folder
     automation_index = configuration.index
     automation_uri = configuration.uri
+    reference_time = time()
     for raw_style_definition in raw_style_definitions:
         style_uri = raw_style_definition.get('uri', '').strip()
         style_path = raw_style_definition.get('path', '').strip()
@@ -122,19 +153,21 @@ def validate_display_configuration(configuration):
             if not path.exists():
                 raise CrossComputeConfigurationError(
                     f'style not found at {path}')
-            style_name = '%s-%s.css' % (format_slug(splitext(
-                style_path)[0]), time())
+            style_name = format_slug(
+                f'{splitext(style_path)[0]}-{reference_time}')
             style_uri = STYLE_ROUTE.format(style_name=style_name)
             if automation_index > 0:
                 style_uri = automation_uri + style_uri
             style_definition.update({'uri': style_uri, 'path': style_path})
         style_definitions.append(style_definition)
+    css_uris = [_['uri'] for _ in style_definitions]
     return {
         'style_definitions': style_definitions,
+        'css_uris': css_uris,
     }
 
 
-def check_environment_variable_definitions(environment_variable_definitions):
+def get_environment_variable_ids(environment_variable_definitions):
     variable_ids = set()
     for environment_variable_definition in environment_variable_definitions:
         try:
@@ -149,9 +182,22 @@ def check_environment_variable_definitions(environment_variable_definitions):
                 f'{variable_id} is missing in the environment')
         variable_ids.add(variable_id)
     L.debug('environment_variable_ids =', variable_ids)
-    return {
-        '___environment_variable_ids': variable_ids,
-    }
+    return variable_ids
+
+
+def get_scalar_text(d, key, default=None):
+    value = d.get(key) or default
+    if value is None:
+        raise KeyError(key)
+    if isinstance(value, dict):
+        raise CrossComputeConfigurationError(
+            f'surround {key} with quotes since it begins with a {{')
+    return value
+
+
+def get_batch_definitions_from_path(
+        batch_configuration_path, raw_batch_definition, variable_definitions):
+    pass
 
 
 def make_automation_name(automation_index):
@@ -182,11 +228,17 @@ def get_list(d, key):
 
 AUTOMATION_DEFINITION_VALIDATION_FUNCTIONS = [
     validate_protocol,
-    validate_identifiers,
+    validate_automation_identifiers,
     validate_variable_definitions,
     validate_variable_views,
     validate_batch_definitions,
     validate_environment_variable_definitions,
     validate_display_configuration,
+]
+TEMPLATE_DEFINITION_VALIDATION_FUNCTIONS = [
+]
+VARIABLE_DEFINITION_VALIDATION_FUNCTIONS = [
+]
+BATCH_DEFINITION_VALIDATION_FUNCTIONS = [
 ]
 L = getLogger(__name__)

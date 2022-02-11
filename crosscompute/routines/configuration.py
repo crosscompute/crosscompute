@@ -5,7 +5,7 @@ from configparser import ConfigParser
 from copy import deepcopy
 from invisibleroads_macros_log import format_path
 from logging import getLogger
-from os.path import abspath, basename, join, splitext
+from os.path import abspath, join, splitext
 from pathlib import Path
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
@@ -19,55 +19,83 @@ from ..exceptions import (
     CrossComputeError)
 from ..macros.web import format_slug
 from .variable import VariableView, format_text
-from .validation import AUTOMATION_DEFINITION_VALIDATION_FUNCTIONS
+from .validation import (
+    AUTOMATION_DEFINITION_VALIDATION_FUNCTIONS,
+    BATCH_DEFINITION_VALIDATION_FUNCTIONS,
+    TEMPLATE_DEFINITION_VALIDATION_FUNCTIONS,
+    VARIABLE_DEFINITION_VALIDATION_FUNCTIONS)
 
 
-class AutomationDefinition(dict):
+class Definition(dict):
 
-    def __init__(self, *args, path='', index=0, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.path = path = Path(path)
-        self.folder = path.parents[0]
-        self.index = index
+    validation_functions = []
+
+    def __init__(self, d, **kwargs):
+        super().__init__(d)
+        self._initialize(kwargs)
         self._validate()
+
+    def _initialize(self, kwargs):
+        pass
+
+    def _validate(self):
+        for f in self.validation_functions:
+            self.__dict__.update(f(self))
         for k in self.__dict__.copy():
             if k.startswith('___'):
                 del self.__dict__[k]
 
-    def _validate(self):
-        for f in AUTOMATION_DEFINITION_VALIDATION_FUNCTIONS:
-            self.__dict__.update(f(self))
 
-    def get_css_uris(self):
-        return get_css_uris(self)
+class AutomationDefinition(Definition):
 
+    validation_functions = AUTOMATION_DEFINITION_VALIDATION_FUNCTIONS
+
+    def _initialize(self, kwargs):
+        self.path = path = Path(kwargs['path'])
+        self.folder = path.parents[0]
+        self.index = kwargs['index']
+
+    '''
     def get_template_text(self, mode_name):
+        template_definitions = self.template_definitions_by_mode_name[
+            mode_name]
+        # !!!
         return '\n'.join(get_template_texts(self, mode_name))
+    '''
 
 
-class BatchDefinition(dict):
+class TemplateDefinition(Definition):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.folder = Path(self['folder'])
+    validation_functions = TEMPLATE_DEFINITION_VALIDATION_FUNCTIONS
 
 
-class VariableDefinition(dict):
+class VariableDefinition(Definition):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    validation_functions = VARIABLE_DEFINITION_VALIDATION_FUNCTIONS
+
+    def _initialize(self, kwargs):
+        '''
         self.variable_id = self['id']
         self.variable_path = self['path']
         self.mode_name = self['mode']
         self.configuration = VariableConfiguration(self.get(
             'configuration', {}))
+        '''
+        pass
 
 
+class BatchDefinition(Definition):
+
+    validation_functions = BATCH_DEFINITION_VALIDATION_FUNCTIONS
+
+
+'''
 class VariableConfiguration(dict):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.path = self.get('path')
+'''
 
 
 def load_configuration(configuration_path, index=0):
@@ -85,7 +113,8 @@ def load_configuration(configuration_path, index=0):
             path=configuration_path,
             index=index)
     except CrossComputeConfigurationError as e:
-        e.path = configuration_path
+        if not hasattr(e, 'path'):
+            e.path = configuration_path
         raise
     L.debug(f'{format_path(configuration_path)} loaded')
     return configuration
@@ -185,39 +214,6 @@ def get_automation_configurations(configuration):
     return automation_configurations
 
 
-def get_batch_definitions(configuration):
-    batch_definitions = []
-    automation_folder = configuration.folder
-    variable_definitions = get_variable_definitions(
-        configuration, 'input')
-    for raw_batch_definition in configuration.get('batches', []):
-        batch_definition = normalize_batch_definition(raw_batch_definition)
-        if 'configuration' in raw_batch_definition:
-            batch_configuration = raw_batch_definition['configuration']
-            if 'path' in batch_configuration:
-                definitions = get_batch_definitions_from_path(join(
-                    automation_folder, batch_configuration['path'],
-                ), batch_definition, variable_definitions)
-            # TODO: Support batch_configuration['uri']
-            else:
-                raise CrossComputeConfigurationError(
-                    'path expected for each batch configuration')
-        else:
-            batch_slug = batch_definition['slug'] or format_slug(
-                batch_definition['name'])
-            batch_definition['slug'] = batch_slug
-            batch_definition['uri'] = BATCH_ROUTE.format(
-                batch_slug=batch_slug)
-            definitions = [batch_definition]
-        batch_definitions.extend(definitions)
-    return batch_definitions
-
-
-def get_css_uris(configuration):
-    style_definitions = configuration.get('display', {}).get('styles', [])
-    return [_['uri'] for _ in style_definitions]
-
-
 def get_variable_definitions(configuration, mode_name, with_all=False):
     mode_configuration = configuration.get(mode_name, {})
     variable_definitions = mode_configuration.get('variables', [])
@@ -261,21 +257,6 @@ def get_template_texts(configuration, mode_name):
     return template_texts
 
 
-def normalize_batch_definition(batch_definition):
-    try:
-        batch_folder = get_scalar_text(batch_definition, 'folder')
-    except KeyError:
-        raise CrossComputeConfigurationError('folder required for each batch')
-    batch_name = get_scalar_text(batch_definition, 'name', basename(
-        batch_folder))
-    batch_slug = get_scalar_text(batch_definition, 'slug', '')
-    return {
-        'folder': batch_folder,
-        'name': batch_name,
-        'slug': batch_slug,
-    }
-
-
 def get_batch_definitions_from_path(
         path, batch_definition, variable_definitions):
     file_extension = splitext(path)[1]
@@ -302,7 +283,8 @@ def get_batch_definitions_from_path(
                 'uri': BATCH_ROUTE.format(batch_slug=slug),
                 'data_by_id': data_by_id})
     except CrossComputeError as e:
-        e.path = path
+        if not hasattr(e, 'path'):
+            e.path = path
         raise
     return batch_definitions
 
@@ -360,16 +342,6 @@ def parse_data_by_id(data_by_id, variable_definitions):
             raise CrossComputeDataError(f'{e} for variable {variable_id}')
         data_by_id[variable_id] = variable_data
     return data_by_id
-
-
-def get_scalar_text(configuration, key, default=None):
-    value = configuration.get(key, default)
-    if value is None:
-        raise KeyError
-    if isinstance(value, dict):
-        L.warning('surround text with quotes if it begins with a {')
-        value = '{%s}' % list(value.keys())[0]
-    return value
 
 
 L = getLogger(__name__)
