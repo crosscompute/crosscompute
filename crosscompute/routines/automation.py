@@ -36,10 +36,8 @@ from ..macros.process import LoggableProcess, StoppableProcess
 from ..routes.automation import AutomationRoutes
 from ..routes.stream import StreamRoutes
 from .configuration import (
-    get_automation_definitions,
-    get_display_configuration,
-    get_variable_definitions,
-    load_configuration)
+    load_configuration,
+    validate_display_configuration)
 from .interface import Automation
 from .variable import (
     get_variable_data_by_id,
@@ -92,7 +90,7 @@ class DiskAutomation(Automation):
         self.configuration = configuration
         self.path = path
         self.folder = configuration.folder
-        self.definitions = get_automation_definitions(configuration)
+        self.definitions = configuration.automation_definitions
         self._file_type_by_path = self._get_file_type_by_path()
         self._timestamp_object = Value('d', time())
         L.debug('configuration_path = %s', path)
@@ -175,7 +173,7 @@ class DiskAutomation(Automation):
                     server_process.start()
                 elif file_type == 's':
                     for d in self.definitions:
-                        d['display'] = get_display_configuration(d)
+                        validate_display_configuration(d)
                     self._timestamp_object.value = time()
                 else:
                     self._timestamp_object.value = time()
@@ -270,28 +268,27 @@ class DiskAutomation(Automation):
 
 def run_automation(
         automation_definition, batch_definition, process_data):
-    script_definition = automation_definition.get('script', {})
-    command_string = script_definition.get('command')
+    script_configuration = automation_definition.script
+    command_string = script_configuration.get('command')
     if not command_string:
         return
     reference_time = time()
-    folder = automation_definition['folder']
+    folder = automation_definition.folder
     batch_folder, custom_environment = _prepare_batch(
         automation_definition, batch_definition)
     L.info(
-        '%s %s running %s', automation_definition['name'],
-        automation_definition['version'],
-        format_path(join(folder, batch_folder)))
-    mode_folder_by_name = {_ + '_folder': make_folder(join(
-        folder, batch_folder, _)) for _ in MODE_NAMES}
+        '%s %s running %s', automation_definition.name,
+        automation_definition.version, format_path(folder / batch_folder))
+    mode_folder_by_name = {_ + '_folder': make_folder(
+        folder / batch_folder / _) for _ in MODE_NAMES}
     script_environment = _prepare_script_environment(
         mode_folder_by_name, custom_environment)
     debug_folder = mode_folder_by_name['debug_folder']
     command_text = command_string.format(**mode_folder_by_name)
-    command_folder = join(folder, script_definition.get('folder', '.'))
+    command_folder = join(folder, script_configuration.get('folder', '.'))
     return_code = _run_command(
         command_text, command_folder, script_environment,
-        join(debug_folder, 'stdout.txt'), join(debug_folder, 'stderr.txt'))
+        debug_folder / 'stdout.txt', debug_folder / 'stderr.txt')
     return _process_batch(automation_definition, batch_definition, [
         'output', 'log', 'debug',
     ], {'debug': {
@@ -322,8 +319,8 @@ def _run_command(
 
 
 def _prepare_batch(automation_definition, batch_definition):
-    variable_definitions = get_variable_definitions(
-        automation_definition, 'input')
+    variable_definitions = automation_definition.get_variable_definitions(
+        'input')
     batch_folder = batch_definition['folder']
     variable_definitions_by_path = group_by(variable_definitions, 'path')
     data_by_id = batch_definition.get('data_by_id', {})
@@ -380,8 +377,9 @@ def _process_batch(
         variable_data_by_id_by_mode_name[mode_name] = variable_data_by_id = {}
         extra_data_by_id = extra_data_by_id_by_mode_name.get(mode_name, {})
         mode_folder = automation_folder / batch_folder / mode_name
-        for variable_definition in get_variable_definitions(
-                automation_definition, mode_name):
+        variable_definitions = automation_definition.get_variable_definitions(
+            mode_name)
+        for variable_definition in variable_definitions:
             variable_id = variable_definition.id
             variable_path = variable_definition.path
             if variable_id in extra_data_by_id:

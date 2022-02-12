@@ -1,6 +1,6 @@
 import re
 from enum import IntEnum
-from os.path import dirname, join
+from pathlib import Path
 
 from .macros.web import format_slug
 
@@ -11,8 +11,8 @@ class Error(IntEnum):
     COMMAND_NOT_FOUND = -10
 
 
-PACKAGE_FOLDER = dirname(__file__)
-TEMPLATES_FOLDER = join(PACKAGE_FOLDER, 'templates')
+PACKAGE_FOLDER = Path(__file__).parent
+TEMPLATES_FOLDER = PACKAGE_FOLDER / 'templates'
 ID_LENGTH = 16
 
 

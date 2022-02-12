@@ -1,8 +1,7 @@
-# TODO: Use Pathlib.Path
 from argparse import ArgumentParser
 from invisibleroads_macros_log import format_path
 from logging import getLogger
-from os.path import exists, isdir, join
+from pathlib import Path
 
 from crosscompute import __version__
 from crosscompute.constants import (
@@ -12,11 +11,9 @@ from crosscompute.constants import (
     TEMPLATES_FOLDER)
 from crosscompute.exceptions import (
     CrossComputeError)
-from crosscompute.routines.automation import DiskAutomation
 from crosscompute.routines.configuration import (
-    get_configuration_format,
-    load_raw_configuration_yaml,
-    save_raw_configuration_yaml)
+    load_raw_configuration,
+    save_raw_configuration)
 from crosscompute.routines.log import (
     configure_argument_parser_for_logging,
     configure_logging_from)
@@ -44,18 +41,16 @@ def configure_with(args):
 
 
 def configure(path_or_folder):
-    path_or_folder = path_or_folder
-    if exists(path_or_folder):
+    configuration = {}
+    path_or_folder = Path(path_or_folder)
+    if path_or_folder.exists():
         try:
-            automation = DiskAutomation.load(path_or_folder)
-            configuration = automation.configuration
+            configuration = load_raw_configuration(
+                path_or_folder, with_comments=True)
         except CrossComputeError:
-            configuration = {}
+            pass
     configuration, configuration_path = input_configuration(
         configuration, path_or_folder)
-    if 'folder' in configuration:
-        del configuration['folder']
-        del configuration['path']
     print(dict(configuration))
     save_configuration(configuration_path, configuration)
     return configuration_path
@@ -63,8 +58,8 @@ def configure(path_or_folder):
 
 def input_configuration(configuration, path_or_folder):
     if not configuration:
-        configuration = load_raw_configuration_yaml(join(
-            TEMPLATES_FOLDER, 'configuration.yaml'), with_comments=True)
+        configuration = load_raw_configuration(
+            TEMPLATES_FOLDER / 'configuration.yaml', with_comments=True)
     old_automation_name = configuration.get('name', AUTOMATION_NAME)
     old_automation_version = configuration.get('version', AUTOMATION_VERSION)
     old_configuration_path = get_configuration_path(path_or_folder)
@@ -81,11 +76,12 @@ def input_configuration(configuration, path_or_folder):
     configuration['crosscompute'] = __version__
     configuration['name'] = new_automation_name or old_automation_name
     configuration['version'] = new_automation_version or old_automation_version
-    return configuration, new_configuration_path or old_configuration_path
+    configuration_path = Path(new_configuration_path or old_configuration_path)
+    return configuration, configuration_path
 
 
 def save_configuration(configuration_path, configuration):
-    if exists(configuration_path):
+    if configuration_path.exists():
         L.warning(f'{format_path(configuration_path)} already exists')
         question = '\033[1moverwrite? yes or [no]:\033[0m '
         participle = 'overwritten'
@@ -96,10 +92,6 @@ def save_configuration(configuration_path, configuration):
         L.warning(f'{format_path(configuration_path)} not {participle}')
         raise SystemExit
     try:
-        configuration_format = get_configuration_format(configuration_path)
-        save_raw_configuration = {
-            'yaml': save_raw_configuration_yaml,
-        }[configuration_format]
         save_raw_configuration(configuration_path, configuration)
     except CrossComputeError as e:
         L.error(e)
@@ -108,8 +100,8 @@ def save_configuration(configuration_path, configuration):
 
 
 def get_configuration_path(path_or_folder):
-    if path_or_folder and isdir(path_or_folder):
-        configuration_path = join(path_or_folder, AUTOMATION_PATH)
+    if path_or_folder and path_or_folder.is_dir():
+        configuration_path = path_or_folder / AUTOMATION_PATH
     else:
         configuration_path = path_or_folder or AUTOMATION_PATH
     return configuration_path

@@ -6,7 +6,6 @@ from functools import partial
 from invisibleroads_macros_disk import make_random_folder
 from itertools import count
 from logging import getLogger
-from os.path import basename, join
 from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
 from pyramid.response import FileResponse, Response
 
@@ -24,12 +23,10 @@ from ..exceptions import CrossComputeDataError
 from ..macros.iterable import extend_uniquely, find_item
 from ..macros.web import get_html_from_markdown
 from ..routines.batch import DiskBatch
-from ..routines.configuration import (
-    get_css_uris,
-    parse_data_by_id)
 from ..routines.variable import (
     Element,
-    VariableView)
+    VariableView,
+    parse_data_by_id)
 
 
 class AutomationRoutes():
@@ -127,7 +124,7 @@ class AutomationRoutes():
 
     def see_root(self, request):
         'Render root with a list of available automations'
-        css_uris = get_css_uris(self.configuration)
+        css_uris = self.configuration.css_uris
         return {
             'title_text': self.configuration.get('name', 'Automations'),
             'automations': self.automation_definitions,
@@ -142,14 +139,13 @@ class AutomationRoutes():
                 request)
         else:
             automation_definition = self.configuration
-        style_definitions = automation_definition.get('display', {}).get(
-            'styles', [])
+        style_definitions = automation_definition.style_definitions
         try:
             style_definition = find_item(
                 style_definitions, 'uri', request.environ['PATH_INFO'])
         except StopIteration:
             raise HTTPNotFound
-        path = join(automation_definition['folder'], style_definition['path'])
+        path = automation_definition.folder / style_definition['path']
         try:
             response = FileResponse(path, request)
         except TypeError:
@@ -168,11 +164,11 @@ class AutomationRoutes():
             data_by_id = parse_data_by_id(data_by_id, variable_definitions)
         except CrossComputeDataError as e:
             raise HTTPBadRequest(e)
-        runs_folder = join(automation_definition['folder'], 'runs')
+        runs_folder = automation_definition.folder / 'runs'
         folder = make_random_folder(runs_folder, ID_LENGTH)
         self.automation_queue.put((automation_definition, {
             'folder': folder, 'data_by_id': data_by_id}))
-        run_id = basename(folder)
+        run_id = folder.name
         run_uri = RUN_ROUTE.format(run_slug=run_id)
         if 'runs' not in automation_definition:
             automation_definition['runs'] = []
@@ -183,9 +179,9 @@ class AutomationRoutes():
 
     def see_automation(self, request):
         automation_definition = self.get_automation_definition_from(request)
-        css_uris = automation_definition.get_css_uris()
+        css_uris = automation_definition.css_uris
         return automation_definition | {
-            'title_text': automation_definition['name'],
+            'title_text': automation_definition.name,
             'css_uris': css_uris,
             'timestamp_value': self._timestamp_object.value,
         }
@@ -198,7 +194,7 @@ class AutomationRoutes():
         mode_name = self.get_mode_name_from(request)
         for_print = 'p' in request.params
         return {
-            'title_text': batch_definition['name'],
+            'title_text': batch_definition.name,
             'automation_definition': automation_definition,
             'batch_definition': batch_definition,
             'uri': request.path,
@@ -222,7 +218,6 @@ class AutomationRoutes():
         except StopIteration:
             raise HTTPNotFound
         batch = DiskBatch(automation_definition, batch_definition)
-
         variable_data = batch.get_data(variable_definition)
         if 'path' in variable_data:
             return FileResponse(variable_data['path'], request=request)
@@ -270,7 +265,7 @@ class AutomationRoutes():
 
 def render_mode_dictionary(batch, mode_name, for_print):
     automation_definition = batch.automation_definition
-    css_uris = automation_definition.get_css_uris()
+    css_uris = automation_definition.css_uris
     template_text = automation_definition.get_template_text(mode_name)
     variable_definitions = automation_definition.get_variable_definitions(
         mode_name, with_all=True)
@@ -294,7 +289,8 @@ def _render_html(
         variable_definition = find_item(
             variable_definitions, 'id', variable_id)
     except StopIteration:
-        L.warning('%s in template but not in configuration', variable_id)
+        L.warning(
+            '%s variable in template but not in configuration', variable_id)
         return matching_text
     view = VariableView.get_from(variable_definition)
     element = Element(f'v{next(i)}', mode_name, for_print, terms[1:])

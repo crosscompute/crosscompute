@@ -318,6 +318,28 @@ def yield_data_by_id_from_csv(path, variable_definitions):
         raise CrossComputeConfigurationError(f'{path} path not found')
 
 
+def yield_data_by_id_from_txt(path, variable_definitions):
+    if len(variable_definitions) > 1:
+        raise CrossComputeConfigurationError(
+            'use .csv to configure multiple variables')
+
+    try:
+        variable_id = variable_definitions[0]['id']
+    except IndexError:
+        variable_id = None
+
+    try:
+        with path.open('rt') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                data_by_id = {variable_id: {'value': line}}
+                yield parse_data_by_id(data_by_id, variable_definitions)
+    except OSError:
+        raise CrossComputeConfigurationError(f'{path} path not found')
+
+
 def parse_data_by_id(data_by_id, variable_definitions):
     for variable_definition in variable_definitions:
         variable_id = variable_definition['id']
@@ -481,8 +503,10 @@ TABLE_JS_TEMPLATE = Template('''\
 
 VARIABLE_VIEW_BY_NAME = {_.name: import_attribute(
     _.value) for _ in entry_points().select(group='crosscompute.views')}
-
-
+YIELD_DATA_BY_ID_BY_EXTENSION = {
+    '.csv': yield_data_by_id_from_csv,
+    '.txt': yield_data_by_id_from_txt,
+}
 FILE_DATA_CACHE = FileCache(
     load_file_data=load_file_data,
     maximum_length=MAXIMUM_FILE_CACHE_LENGTH)
