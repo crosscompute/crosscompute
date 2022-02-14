@@ -23,6 +23,7 @@ from ..exceptions import CrossComputeDataError
 from ..macros.iterable import extend_uniquely, find_item
 from ..macros.web import get_html_from_markdown
 from ..routines.batch import DiskBatch
+from ..routines.configuration import BatchDefinition
 from ..routines.variable import (
     Element,
     VariableView,
@@ -166,14 +167,13 @@ class AutomationRoutes():
             raise HTTPBadRequest(e)
         runs_folder = automation_definition.folder / 'runs'
         folder = make_random_folder(runs_folder, ID_LENGTH)
-        self.automation_queue.put((automation_definition, {
-            'folder': folder, 'data_by_id': data_by_id}))
+        batch_definition = BatchDefinition({
+            'folder': folder}, data_by_id=data_by_id)
+        self.automation_queue.put((automation_definition, batch_definition))
         run_id = folder.name
-        run_uri = RUN_ROUTE.format(run_slug=run_id)
         if 'runs' not in automation_definition:
             automation_definition['runs'] = []
-        automation_definition['runs'].append({
-            'name': run_id, 'slug': run_id, 'folder': folder, 'uri': run_uri})
+        automation_definition['runs'].append(batch_definition)
         # TODO: Change target page depending on definition
         return {'id': run_id}
 

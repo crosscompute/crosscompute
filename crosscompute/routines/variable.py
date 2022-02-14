@@ -1,5 +1,6 @@
 import csv
 import json
+import shutil
 from dataclasses import dataclass
 from importlib_metadata import entry_points
 from invisibleroads_macros_log import format_path
@@ -288,9 +289,11 @@ def save_variable_data(target_path, data_by_id, variable_definitions):
             'use file extension .dictionary for multiple variables')
     else:
         variable_data = list(variable_data_by_id.values())[0]
+        if 'value' in variable_data:
+            open(target_path, 'wt').write(variable_data['value'])
+        elif 'path' in variable_data:
+            shutil.copy(variable_data['path'], target_path)
         # TODO: Download variable_data['uri']
-        # TODO: Copy variable_data['path']
-        open(target_path, 'wt').write(variable_data['value'])
 
 
 def get_data_by_id_from_folder(folder, variable_definitions):
@@ -314,8 +317,8 @@ def yield_data_by_id_from_csv(path, variable_definitions):
                 if data_by_id.get('#') == '#':
                     continue
                 yield data_by_id
-    except OSError:
-        raise CrossComputeConfigurationError(f'{path} path not found')
+    except OSError as e:
+        raise CrossComputeConfigurationError(e)
 
 
 def yield_data_by_id_from_txt(path, variable_definitions):
@@ -324,7 +327,7 @@ def yield_data_by_id_from_txt(path, variable_definitions):
             'use .csv to configure multiple variables')
 
     try:
-        variable_id = variable_definitions[0]['id']
+        variable_id = variable_definitions[0].id
     except IndexError:
         variable_id = None
 
@@ -336,13 +339,13 @@ def yield_data_by_id_from_txt(path, variable_definitions):
                     continue
                 data_by_id = {variable_id: {'value': line}}
                 yield parse_data_by_id(data_by_id, variable_definitions)
-    except OSError:
-        raise CrossComputeConfigurationError(f'{path} path not found')
+    except OSError as e:
+        raise CrossComputeConfigurationError(e)
 
 
 def parse_data_by_id(data_by_id, variable_definitions):
     for variable_definition in variable_definitions:
-        variable_id = variable_definition['id']
+        variable_id = variable_definition.id
         try:
             variable_data = data_by_id[variable_id]
         except KeyError:
@@ -379,9 +382,8 @@ def update_variable_data(target_path, data_by_id):
 def load_variable_data(path, variable_id):
     try:
         file_data = FILE_DATA_CACHE[path]
-    except OSError:
-        raise CrossComputeDataError(
-            f'{format_path(path)} path not found for variable {variable_id}')
+    except OSError as e:
+        raise CrossComputeDataError(e)
     if path.suffix == '.dictionary':
         file_value = file_data['value']
         try:
@@ -410,7 +412,7 @@ def load_file_text(path):
 def get_variable_data_by_id(variable_definitions, data_by_id):
     variable_data_by_id = {}
     for variable_definition in variable_definitions:
-        variable_id = variable_definition['id']
+        variable_id = variable_definition.id
         if None in data_by_id:
             variable_data = data_by_id[None]
         else:
@@ -507,6 +509,8 @@ YIELD_DATA_BY_ID_BY_EXTENSION = {
     '.csv': yield_data_by_id_from_csv,
     '.txt': yield_data_by_id_from_txt,
 }
+
+
 FILE_DATA_CACHE = FileCache(
     load_file_data=load_file_data,
     maximum_length=MAXIMUM_FILE_CACHE_LENGTH)

@@ -1,4 +1,3 @@
-# TODO: Validate configuration
 from argparse import ArgumentParser
 from logging import getLogger
 

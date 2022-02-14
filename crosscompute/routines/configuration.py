@@ -64,6 +64,7 @@ class AutomationDefinition(Definition):
             validate_imports,
             validate_variable_definitions,
             validate_variable_views,
+            validate_template_definitions,
             validate_batch_definitions,
             validate_environment_variable_definitions,
             validate_script_configuration,
@@ -82,21 +83,8 @@ class AutomationDefinition(Definition):
                     MODE_NAME))
         return variable_definitions
 
-    '''
     def get_template_text(self, mode_name):
-        template_definitions = self.template_definitions_by_mode_name[
-            mode_name]
-        # !!!
-        return '\n'.join(get_template_texts(self, mode_name))
-    '''
-
-
-class TemplateDefinition(Definition):
-
-    def _initialize(self, kwargs):
-        self._validation_functions = [
-            validate_template_identifiers,
-        ]
+        return self.template_text_by_mode_name[mode_name]
 
 
 class VariableDefinition(Definition):
@@ -106,6 +94,15 @@ class VariableDefinition(Definition):
         self._validation_functions = [
             validate_variable_identifiers,
             validate_variable_configuration,
+        ]
+
+
+class TemplateDefinition(Definition):
+
+    def _initialize(self, kwargs):
+        self.mode_name = kwargs['mode_name']
+        self._validation_functions = [
+            validate_template_identifiers,
         ]
 
 
@@ -248,6 +245,31 @@ def validate_variable_views(configuration):
     return {}
 
 
+def validate_template_definitions(configuration):
+    template_definitions_by_mode_name = {}
+    template_text_by_mode_name = {}
+    automation_folder = configuration.folder
+    try:
+        for mode_name in MODE_NAMES:
+            mode_configuration = get_dictionary(configuration, mode_name)
+            template_definitions = [TemplateDefinition(
+                _, mode_name=mode_name,
+            ) for _ in get_dictionaries(mode_configuration, 'templates')]
+            variable_definitions = configuration.get_variable_definitions(
+                mode_name)
+            template_text_by_mode_name[mode_name] = get_template_text(
+                template_definitions, automation_folder, variable_definitions)
+            assert_unique_values(
+                [_.id for _ in template_definitions],
+                f'duplicate template id {{x}} in {mode_name}')
+            template_definitions_by_mode_name[mode_name] = template_definitions
+    except OSError as e:
+        raise CrossComputeConfigurationError(e)
+    return {
+        'template_definitions_by_mode_name': template_definitions_by_mode_name,
+    }
+
+
 def validate_batch_definitions(configuration):
     batch_definitions = []
     raw_batch_definitions = get_dictionaries(configuration, 'batches')
@@ -274,8 +296,11 @@ def validate_environment_variable_definitions(configuration):
     environment_configuration = get_dictionary(configuration, 'environment')
     environment_variable_definitions = get_dictionaries(
         environment_configuration, 'variables')
-    get_environment_variable_ids(environment_variable_definitions)
-    return {}
+    environment_variable_ids = get_environment_variable_ids(
+        environment_variable_definitions)
+    return {
+        'environment_variable_ids': environment_variable_ids,
+    }
 
 
 def validate_script_configuration(configuration):
@@ -338,15 +363,26 @@ def validate_imports(configuration):
         automation_configurations.append(c)
     automation_definitions = [
         _ for _ in automation_configurations if 'output' in _]
+    assert_unique_values(
+        [_.name for _ in automation_definitions],
+        'duplicate automation name {{x}}')
+    assert_unique_values(
+        [_.slug for _ in automation_definitions],
+        'duplicate automation slug {{x}}')
     return {
         'automation_definitions': automation_definitions,
     }
 
 
 def validate_template_identifiers(template_definition):
-    template_definitions_by_mode_name = {}
+    try:
+        template_path = template_definition['path']
+    except KeyError as e:
+        raise CrossComputeConfigurationError(f'{e} required for each template')
+    template_id = template_definition.get('id', template_path)
     return {
-        'template_definitions_by_mode_name': template_definitions_by_mode_name,
+        'id': template_id,
+        'path': Path(template_path),
     }
 
 
@@ -429,6 +465,22 @@ def get_configuration_format(path):
             f'{file_extension} format not supported for automation '
             'configuration').lstrip())
     return configuration_format
+
+
+def get_template_text(
+        template_definitions, automation_folder, variable_definitions):
+    template_texts = []
+    for template_definition in template_definitions:
+        path = automation_folder / template_definition.path
+        with open(path, 'rt') as f:
+            template_text = f.read().strip()
+        if not template_text:
+            continue
+        template_texts.append(template_text)
+    if not template_texts:
+        variable_ids = [_.id for _ in variable_definitions]
+        template_texts = ['\n'.join('f{%s}' % _ for _ in variable_ids)]
+    return '\n'.join(template_texts)
 
 
 def get_environment_variable_ids(environment_variable_definitions):

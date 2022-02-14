@@ -18,7 +18,7 @@ ID_LENGTH = 16
 
 AUTOMATION_NAME = 'Automation X'
 AUTOMATION_VERSION = '0.0.0'
-AUTOMATION_PATH = 'automate.yml'
+AUTOMATION_PATH = Path('automate.yml')
 
 
 HOST = '127.0.0.1'

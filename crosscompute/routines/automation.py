@@ -1,13 +1,13 @@
-# TODO: Trigger refresh on variable configuration update
 # TODO: Watch multiple folders if not all under parent folder
 # TODO: Consider whether to send partial updates for variables
 # TODO: Precompile notebook scripts
 import logging
 import subprocess
+from itertools import repeat
 from logging import getLogger
 from multiprocessing import Queue, Value
-from os import environ, getenv, listdir
-from os.path import exists, isdir, join, realpath
+from os import environ, getenv
+from pathlib import Path
 from time import time
 
 from invisibleroads_macros_disk import is_path_in_folder, make_folder
@@ -52,30 +52,31 @@ class DiskAutomation(Automation):
     @classmethod
     def load(Class, path_or_folder=None):
         instance = Class()
-        if isdir(path_or_folder):
-            instance.initialize_from_folder(path_or_folder)
+        path_or_folder = Path(path_or_folder)
+        if path_or_folder.is_dir():
+            instance._initialize_from_folder(path_or_folder)
         else:
-            instance.initialize_from_path(path_or_folder)
+            instance._initialize_from_path(path_or_folder)
         return instance
 
-    def reload(self):
+    def _reload(self):
         path = self.path
-        if exists(path):
-            self.initialize_from_path(path)
+        if path.exists():
+            self._initialize_from_path(path)
         else:
-            self.initialize_from_folder(self.folder)
+            self._initialize_from_folder(self.folder)
 
-    def initialize_from_folder(self, folder):
-        paths = listdir(folder)
+    def _initialize_from_folder(self, folder):
+        paths = list(folder.iterdir())
         if AUTOMATION_PATH in paths:
             paths.remove(AUTOMATION_PATH)
             paths.insert(0, AUTOMATION_PATH)
         for relative_path in paths:
-            absolute_path = join(folder, relative_path)
-            if isdir(absolute_path):
+            absolute_path = folder / relative_path
+            if absolute_path.is_dir():
                 continue
             try:
-                self.initialize_from_path(absolute_path)
+                self._initialize_from_path(absolute_path)
             except (CrossComputeConfigurationError, CrossComputeDataError):
                 raise
             except CrossComputeError:
@@ -85,13 +86,13 @@ class DiskAutomation(Automation):
             raise CrossComputeConfigurationNotFoundError(
                 'configuration not found')
 
-    def initialize_from_path(self, path):
+    def _initialize_from_path(self, path):
         configuration = load_configuration(path)
         self.configuration = configuration
         self.path = path
         self.folder = configuration.folder
         self.definitions = configuration.automation_definitions
-        self._file_type_by_path = self._get_file_type_by_path()
+        self._file_code_by_path = self._get_file_code_by_path()
         self._timestamp_object = Value('d', time())
         L.debug('configuration_path = %s', path)
 
@@ -135,15 +136,15 @@ class DiskAutomation(Automation):
 
     def run(self):
         for automation_definition in self.definitions:
-            for batch_definition in automation_definition.get('batches', []):
-                run_automation(
+            for batch_definition in automation_definition.batch_definitions:
+                _run_automation(
                     automation_definition, batch_definition,
                     load_variable_data)
 
     def work(self, automation_queue):
         try:
             while automation_pack := automation_queue.get():
-                run_automation(*automation_pack, load_variable_data)
+                _run_automation(*automation_pack, load_variable_data)
         except KeyboardInterrupt:
             pass
 
@@ -157,13 +158,13 @@ class DiskAutomation(Automation):
                 debounce=disk_debounce_in_milliseconds):
             for changed_type, changed_path in changes:
                 try:
-                    file_type = self._get_file_type(changed_path)
+                    file_code = self._get_file_code(changed_path)
                 except KeyError:
                     continue
-                L.debug('%s %s %s', changed_type, changed_path, file_type)
-                if file_type == 'c':
+                L.debug('%s %s %s', changed_type, changed_path, file_code)
+                if file_code == 'c':
                     try:
-                        self.reload()
+                        self._reload()
                     except CrossComputeError as e:
                         L.error(e)
                         continue
@@ -171,7 +172,7 @@ class DiskAutomation(Automation):
                     server_process = StoppableProcess(
                         name='server', target=run_server)
                     server_process.start()
-                elif file_type == 's':
+                elif file_code == 's':
                     for d in self.definitions:
                         validate_display_configuration(d)
                     self._timestamp_object.value = time()
@@ -204,69 +205,99 @@ class DiskAutomation(Automation):
                     'IS_STATIC': is_static,
                     'IS_PRODUCTION': is_production,
                     'BASE_URI': base_uri,
-                    'STREAMS_ROUTE': STREAMS_ROUTE,
-                })
+                    'STREAMS_ROUTE': STREAMS_ROUTE})
             config.action(None, update_renderer_globals)
         return config.make_wsgi_app()
 
-    def _get_file_type(self, path):
+    def _get_file_code(self, path):
+        path = Path(path)
+        real_path = path.resolve()
         for automation_definition in self.definitions:
-            automation_folder = automation_definition['folder']
-            if is_path_in_folder(path, join(automation_folder, 'runs')):
-                return 'v'
-        return self._file_type_by_path[realpath(path)]
+            automation_folder = automation_definition.folder
+            runs_folder = automation_folder / 'runs'
+            if not is_path_in_folder(path, runs_folder):
+                continue
+            run_id = path.absolute().relative_to(runs_folder).parts[0]
+            run_folder = runs_folder / run_id
+            expected_paths = self._get_variable_paths_from_folder(run_folder)
+            for expected_path in expected_paths:
+                if real_path == expected_path.resolve():
+                    return 'v'
+        return self._file_code_by_path[real_path]
 
-    def _get_file_type_by_path(self):
+    def _get_file_code_by_path(self):
         'Set c = configuration, s = style, t = template, v = variable'
-        file_type_by_path = {}
+        packs = []
+        packs.extend(zip(self._get_configuration_paths(), repeat('c')))
+        packs.extend(zip(self._get_variable_paths(), repeat('v')))
+        packs.extend(zip(self._get_template_paths(), repeat('t')))
+        packs.extend(zip(self._get_style_paths(), repeat('s')))
+        return {path.resolve(): code for path, code in packs}
 
-        def add(path, file_type):
-            file_type_by_path[realpath(path)] = file_type
-
-        for path in [self.path] + [_['path'] for _ in self.definitions]:
-            add(path, 'c')
+    def _get_configuration_paths(self):
+        paths = set()
+        # Get automation configuration paths
+        paths.update([self.path] + [_.path for _ in self.definitions])
+        # Get batch configuration paths
         for automation_definition in self.definitions:
-            folder = automation_definition['folder']
-            configuration = load_configuration(automation_definition['path'])
-            for batch_definition in configuration.get('batches', []):
-                batch_configuration = batch_definition.get('configuration', {})
+            automation_folder = automation_definition.folder
+            # Use raw batch definitions
+            raw_batch_definitions = automation_definition.get('batches', [])
+            for raw_batch_definition in raw_batch_definitions:
+                batch_configuration = raw_batch_definition.get(
+                    'configuration', {})
                 if 'path' not in batch_configuration:
                     continue
-                add(join(folder, batch_configuration['path']), 'c')
-            for mode_name in MODE_NAMES:
-                mode_configuration = automation_definition.get(mode_name, {})
-                template_definitions = mode_configuration.get('templates', [])
+                paths.add(automation_folder / batch_configuration['path'])
+        return paths
+
+    def _get_variable_paths(self):
+        paths = set()
+        for automation_definition in self.definitions:
+            automation_folder = automation_definition.folder
+            # Use computed batch definitions
+            for batch_definition in automation_definition.batch_definitions:
+                paths.update(self._get_variable_paths_from_folder(
+                    automation_folder / batch_definition.folder))
+        return paths
+
+    def _get_template_paths(self):
+        paths = set()
+        for automation_definition in self.definitions:
+            automation_folder = automation_definition.folder
+            d = automation_definition.template_definitions_by_mode_name
+            for template_definitions in d.values():
                 for template_definition in template_definitions:
                     if 'path' not in template_definition:
                         continue
-                    add(join(folder, template_definition['path']), 't')
-            for batch_definition in automation_definition.get('batches', []):
-                for path in self._get_paths_from_folder(join(
-                        folder, batch_definition['folder'])):
-                    add(path, 'v')
-            display_configuration = automation_definition.get('display', {})
-            for style_definition in display_configuration.get('styles', []):
-                if 'path' not in style_definition:
-                    continue
-                add(join(folder, style_definition['path']), 's')
-        return file_type_by_path
+                    paths.add(automation_folder / template_definition.path)
+        return paths
 
-    def _get_paths_from_folder(self, folder):
+    def _get_style_paths(self):
         paths = set()
         for automation_definition in self.definitions:
-            for mode_name in MODE_NAMES:
-                mode_configuration = automation_definition.get(mode_name, {})
-                variable_definitions = mode_configuration.get('variables', [])
+            automation_folder = automation_definition.folder
+            for style_definition in automation_definition.style_definitions:
+                if 'path' not in style_definition:
+                    continue
+                paths.add(automation_folder / style_definition['path'])
+        return paths
+
+    def _get_variable_paths_from_folder(self, absolute_batch_folder):
+        paths = set()
+        for automation_definition in self.definitions:
+            d = automation_definition.variable_definitions_by_mode_name
+            for mode_name, variable_definitions in d.items():
+                folder = absolute_batch_folder / mode_name
                 for variable_definition in variable_definitions:
-                    variable_configuration = variable_definition.get(
-                        'configuration', {})
+                    variable_configuration = variable_definition.configuration
                     if 'path' in variable_configuration:
-                        paths.add(join(folder, variable_configuration['path']))
-                    paths.add(join(folder, variable_definition['path']))
+                        paths.add(folder / variable_configuration['path'])
+                    paths.add(folder / variable_definition.path)
         return paths
 
 
-def run_automation(
+def _run_automation(
         automation_definition, batch_definition, process_data):
     script_configuration = automation_definition.script
     command_string = script_configuration.get('command')
@@ -285,7 +316,7 @@ def run_automation(
         mode_folder_by_name, custom_environment)
     debug_folder = mode_folder_by_name['debug_folder']
     command_text = command_string.format(**mode_folder_by_name)
-    command_folder = join(folder, script_configuration.get('folder', '.'))
+    command_folder = folder / script_configuration.get('folder', '.')
     return_code = _run_command(
         command_text, command_folder, script_environment,
         debug_folder / 'stdout.txt', debug_folder / 'stderr.txt')
@@ -321,7 +352,7 @@ def _run_command(
 def _prepare_batch(automation_definition, batch_definition):
     variable_definitions = automation_definition.get_variable_definitions(
         'input')
-    batch_folder = batch_definition['folder']
+    batch_folder = batch_definition.folder
     variable_definitions_by_path = group_by(variable_definitions, 'path')
     data_by_id = batch_definition.get('data_by_id', {})
     custom_environment = _prepare_custom_environment(
@@ -330,10 +361,10 @@ def _prepare_batch(automation_definition, batch_definition):
         data_by_id)
     if not data_by_id:
         return batch_folder, custom_environment
-    automation_folder = automation_definition['folder']
-    input_folder = make_folder(join(automation_folder, batch_folder, 'input'))
+    automation_folder = automation_definition.folder
+    input_folder = make_folder(automation_folder / batch_folder / 'input')
     for path, variable_definitions in variable_definitions_by_path.items():
-        input_path = join(input_folder, path)
+        input_path = input_folder / path
         save_variable_data(input_path, data_by_id, variable_definitions)
     return batch_folder, custom_environment
 
@@ -349,11 +380,9 @@ def _prepare_script_environment(mode_folder_by_name, custom_environment):
 def _prepare_custom_environment(
         automation_definition, variable_definitions, data_by_id):
     custom_environment = {}
-    environment_variable_definitions = automation_definition.get(
-        'environment', {}).get('variables', [])
-    for variable_id in (_['id'] for _ in environment_variable_definitions):
+    for variable_id in automation_definition.environment_variable_ids:
         custom_environment[variable_id] = environ[variable_id]
-    for variable_id in (_['id'] for _ in variable_definitions):
+    for variable_id in (_.id for _ in variable_definitions):
         if variable_id in data_by_id:
             continue
         try:
@@ -392,8 +421,8 @@ def _process_batch(
                 continue
             variable_data_by_id[variable_id] = variable_data
         if extra_data_by_id:
-            update_variable_data(join(
-                mode_folder, 'variables.dictionary'), extra_data_by_id)
+            update_variable_data(
+                mode_folder / 'variables.dictionary', extra_data_by_id)
             variable_data_by_id.update(extra_data_by_id)
     return variable_data_by_id_by_mode_name
 
