@@ -168,19 +168,22 @@ class AutomationRoutes():
         runs_folder = automation_definition.folder / 'runs'
         folder = make_random_folder(runs_folder, ID_LENGTH)
         batch_definition = BatchDefinition({
-            'folder': folder}, data_by_id=data_by_id)
+            'folder': folder,
+        }, data_by_id=data_by_id, is_run=True)
         self.automation_queue.put((automation_definition, batch_definition))
-        run_id = folder.name
-        if 'runs' not in automation_definition:
-            automation_definition['runs'] = []
-        automation_definition['runs'].append(batch_definition)
+        automation_definition.run_definitions.append(batch_definition)
+        run_id = batch_definition.name
         # TODO: Change target page depending on definition
         return {'id': run_id}
 
     def see_automation(self, request):
         automation_definition = self.get_automation_definition_from(request)
         css_uris = automation_definition.css_uris
-        return automation_definition | {
+        return {
+            'name': automation_definition.name,
+            'uri': automation_definition.uri,
+            'batches': automation_definition.batch_definitions,
+            'runs': automation_definition.run_definitions,
             'title_text': automation_definition.name,
             'css_uris': css_uris,
             'timestamp_value': self._timestamp_object.value,
@@ -242,13 +245,13 @@ class AutomationRoutes():
         matchdict = request.matchdict
         if 'batch_slug' in matchdict:
             slug = matchdict['batch_slug']
-            key = 'batches'
+            key = 'batch_definitions'
         else:
             slug = matchdict['run_slug']
-            key = 'runs'
+            key = 'run_definitions'
+        batch_definitions = getattr(automation_definition, key)
         try:
-            batch_definition = find_item(automation_definition.get(
-                key, []), 'slug', slug)
+            batch_definition = find_item(batch_definitions, 'slug', slug)
         except StopIteration:
             raise HTTPNotFound
         return batch_definition

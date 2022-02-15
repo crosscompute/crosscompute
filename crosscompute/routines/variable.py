@@ -241,7 +241,8 @@ class ImageView(VariableView):
         body_text = (
             f'<img id="{x.id}" '
             f'class="{self.mode_name} {self.view_name} {variable_id}" '
-            f'src="{data_uri}">')
+            f'src="{data_uri}" alt="">')
+        # TODO: Show spinner onerror
         return {
             'css_uris': [],
             'js_uris': [],
@@ -474,6 +475,7 @@ L = getLogger(__name__)
 
 STRING_JS_TEMPLATE = Template('''\
 GET_DATA_BY_VIEW_NAME['$view_name'] = x => ({ value: x.value });''')
+# IMAGE_JS_TEMPLATE = Template('''''')
 TABLE_JS_TEMPLATE = Template('''\
 (async function () {
   const response = await fetch('$data_uri');

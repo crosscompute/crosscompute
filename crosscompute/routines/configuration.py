@@ -21,6 +21,7 @@ from ..constants import (
     AUTOMATION_VERSION,
     BATCH_ROUTE,
     MODE_NAMES,
+    RUN_ROUTE,
     STYLE_ROUTE)
 from ..macros.web import format_slug
 from .variable import (
@@ -110,9 +111,18 @@ class BatchDefinition(Definition):
 
     def _initialize(self, kwargs):
         self.data_by_id = kwargs.get('data_by_id')
+        self.is_run = kwargs.get('is_run', False)
         self._validation_functions = [
             validate_batch_identifiers,
             validate_batch_configuration,
+        ]
+
+
+class StyleDefinition(Definition):
+
+    def _initialize(self, kwargs):
+        self._validation_functions = [
+            validate_style_identifiers,
         ]
 
 
@@ -146,7 +156,7 @@ def load_configuration(configuration_path, index=0):
         if not hasattr(e, 'path'):
             e.path = configuration_path
         raise
-    L.debug(f'{format_path(configuration_path)} loaded')
+    L.debug('%s loaded', format_path(configuration_path))
     return configuration
 
 
@@ -217,7 +227,7 @@ def validate_automation_identifiers(configuration):
 
 def validate_variable_definitions(configuration):
     variable_definitions_by_mode_name = {}
-    view_names = []
+    view_names = set()
     for mode_name in MODE_NAMES:
         mode_configuration = get_dictionary(configuration, mode_name)
         variable_definitions = [VariableDefinition(
@@ -227,8 +237,8 @@ def validate_variable_definitions(configuration):
             [_.id for _ in variable_definitions],
             f'duplicate variable id {{x}} in {mode_name}')
         variable_definitions_by_mode_name[mode_name] = variable_definitions
-        view_names = [_.view_name for _ in variable_definitions]
-    L.debug('view_names =', view_names)
+        view_names.update(_.view_name for _ in variable_definitions)
+    L.debug('view_names = %s', list(view_names))
     return {
         'variable_definitions_by_mode_name': variable_definitions_by_mode_name,
         '___view_names': view_names,
@@ -241,7 +251,11 @@ def validate_variable_views(configuration):
             View = VARIABLE_VIEW_BY_NAME[view_name]
         except KeyError:
             raise CrossComputeConfigurationError(f'{view_name} not installed')
-        get_environment_variable_ids(View.environment_variable_definitions)
+        environment_variable_ids = get_environment_variable_ids(
+            View.environment_variable_definitions)
+        if environment_variable_ids:
+            L.debug('%s.environment_variable_ids = %s', view_name, list(
+                environment_variable_ids))
     return {}
 
 
@@ -267,6 +281,7 @@ def validate_template_definitions(configuration):
         raise CrossComputeConfigurationError(e)
     return {
         'template_definitions_by_mode_name': template_definitions_by_mode_name,
+        'template_text_by_mode_name': template_text_by_mode_name,
     }
 
 
@@ -289,6 +304,7 @@ def validate_batch_definitions(configuration):
         'duplicate batch uri {{x}}')
     return {
         'batch_definitions': batch_definitions,
+        'run_definitions': [],
     }
 
 
@@ -298,6 +314,8 @@ def validate_environment_variable_definitions(configuration):
         environment_configuration, 'variables')
     environment_variable_ids = get_environment_variable_ids(
         environment_variable_definitions)
+    if environment_variable_ids:
+        L.debug('environment_variable_ids = %s', environment_variable_ids)
     return {
         'environment_variable_ids': environment_variable_ids,
     }
@@ -319,25 +337,23 @@ def validate_display_configuration(configuration):
     automation_uri = configuration.uri
     reference_time = time()
     for raw_style_definition in raw_style_definitions:
-        style_uri = raw_style_definition.get('uri', '').strip()
-        style_path = raw_style_definition.get('path', '').strip()
-        if not style_uri and not style_path:
-            raise CrossComputeConfigurationError(
-                'uri or path required for each style')
-        style_definition = {'uri': style_uri}
+        style_definition = StyleDefinition(raw_style_definition)
+        style_uri = style_definition.uri
+        style_path = style_definition.path
         if '//' not in style_uri:
             path = automation_folder / style_path
             if not path.exists():
                 raise CrossComputeConfigurationError(
-                    f'style not found at {path}')
+                    f'{path} not found for style')
             style_name = format_slug(
                 f'{splitext(style_path)[0]}-{reference_time}')
             style_uri = STYLE_ROUTE.format(style_name=style_name)
             if automation_index > 0:
                 style_uri = automation_uri + style_uri
-            style_definition.update({'uri': style_uri, 'path': style_path})
+            style_definition.path = style_path
+            style_definition.uri = style_uri
         style_definitions.append(style_definition)
-    css_uris = [_['uri'] for _ in style_definitions]
+    css_uris = [_.uri for _ in style_definitions]
     return {
         'style_definitions': style_definitions,
         'css_uris': css_uris,
@@ -413,6 +429,7 @@ def validate_variable_configuration(variable_definition):
 
 
 def validate_batch_identifiers(batch_definition):
+    is_run = batch_definition.is_run
     try:
         folder = Path(get_scalar_text(batch_definition, 'folder'))
     except KeyError as e:
@@ -420,24 +437,22 @@ def validate_batch_identifiers(batch_definition):
     name = get_scalar_text(batch_definition, 'name', folder.name)
     slug = get_scalar_text(batch_definition, 'slug', name)
     data_by_id = batch_definition.data_by_id
-    if data_by_id:
+    if data_by_id and not is_run:
         folder = format_text(str(folder), data_by_id)
         name = format_text(name, data_by_id)
         slug = format_text(slug, data_by_id)
-    d = {
-        'folder': folder,
-        'name': name,
-        'slug': slug,
-    }
+    d = {'folder': folder, 'name': name, 'slug': slug}
     if data_by_id:
         for k, v in d.items():
             if k in batch_definition:
                 batch_definition[k] = v
     if data_by_id is not None:
-        slug = format_slug(slug)
-        d.update({
-            'slug': slug,
-            'uri': BATCH_ROUTE.format(batch_slug=slug)})
+        if is_run:
+            uri = RUN_ROUTE.format(run_slug=slug)
+        else:
+            slug = format_slug(slug)
+            uri = BATCH_ROUTE.format(batch_slug=slug)
+        d.update({'slug': slug, 'uri': uri})
     return d
 
 
@@ -447,6 +462,18 @@ def validate_batch_configuration(batch_definition):
     return {
         'reference': batch_reference,
         'configuration': batch_configuration,
+    }
+
+
+def validate_style_identifiers(style_definition):
+    uri = style_definition.get('uri', '').strip()
+    path = style_definition.get('path', '').strip()
+    if not uri and not path:
+        raise CrossComputeConfigurationError(
+            'uri or path required for each style')
+    return {
+        'uri': uri,
+        'path': Path(path),
     }
 
 
@@ -479,7 +506,7 @@ def get_template_text(
         template_texts.append(template_text)
     if not template_texts:
         variable_ids = [_.id for _ in variable_definitions]
-        template_texts = ['\n'.join('f{%s}' % _ for _ in variable_ids)]
+        template_texts = ['\n'.join('{%s}' % _ for _ in variable_ids)]
     return '\n'.join(template_texts)
 
 
@@ -497,7 +524,6 @@ def get_environment_variable_ids(environment_variable_definitions):
             raise CrossComputeConfigurationError(
                 f'{variable_id} is missing in the environment')
         variable_ids.add(variable_id)
-    L.debug('environment_variable_ids =', variable_ids)
     return variable_ids
 
 

@@ -29,12 +29,14 @@ def group_by(items, key):
     return dict(items_by_key)
 
 
-def find_item(items, key, value, normalize=lambda _: _, compare=operator.eq):
+def find_item(
+        items, key, value, get_value=lambda item, key: getattr(item, key),
+        normalize=lambda _: _, compare=operator.eq):
     normalized_value = normalize(value)
 
     def is_match(item):
         try:
-            v = item.get(key)
+            v = get_value(item, key)
         except KeyError:
             is_match = False
         else:

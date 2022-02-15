@@ -94,7 +94,6 @@ class DiskAutomation(Automation):
         self.definitions = configuration.automation_definitions
         self._file_code_by_path = self._get_file_code_by_path()
         self._timestamp_object = Value('d', time())
-        L.debug('configuration_path = %s', path)
 
     def serve(
             self,
@@ -344,7 +343,7 @@ def _run_command(
         L.error(e)
         return_code = Error.COMMAND_NOT_FOUND
     except subprocess.CalledProcessError as e:
-        L.error(open(e_file).read().rstrip())
+        L.error(open(e_path).read().rstrip())
         return_code = e.returncode
     return return_code
 
@@ -352,9 +351,9 @@ def _run_command(
 def _prepare_batch(automation_definition, batch_definition):
     variable_definitions = automation_definition.get_variable_definitions(
         'input')
-    batch_folder = batch_definition.folder
     variable_definitions_by_path = group_by(variable_definitions, 'path')
-    data_by_id = batch_definition.get('data_by_id', {})
+    data_by_id = batch_definition.data_by_id
+    batch_folder = batch_definition.folder
     custom_environment = _prepare_custom_environment(
         automation_definition,
         variable_definitions_by_path.pop('ENVIRONMENT', []),
