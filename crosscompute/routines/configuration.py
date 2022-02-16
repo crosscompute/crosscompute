@@ -1,4 +1,5 @@
 # TODO: Save to ini, toml
+import subprocess
 import tomli
 from collections import Counter
 from configparser import ConfigParser
@@ -117,6 +118,14 @@ class BatchDefinition(Definition):
         self._validation_functions = [
             validate_batch_identifiers,
             validate_batch_configuration,
+        ]
+
+
+class ScriptDefinition(Definition):
+
+    def _initialize(self, kwargs):
+        self._validation_functions = [
+            validate_script_identifiers,
         ]
 
 
@@ -357,9 +366,34 @@ def validate_environment_variables(configuration):
 
 
 def validate_script(configuration):
-    script_configuration = get_dictionary(configuration, 'script')
+    raw_script_definition = get_dictionary(configuration, 'script')
+    script_definition = ScriptDefinition(raw_script_definition)
+    if not script_definition.command:
+        automation_folder = configuration.folder
+        script_folder = script_definition.folder
+        script_path = script_definition.path
+        suffix = script_path.suffix
+        if suffix == '.ipynb':
+            try:
+                subprocess.run([
+                    'jupyter',
+                    'nbconvert',
+                    '--to',
+                    'script',
+                    script_path,
+                ], check=True, cwd=automation_folder / script_folder)
+            except subprocess.CalledProcessError as e:
+                raise CrossComputeConfigurationError(e)
+            new_script_path = script_path.with_suffix('.py')
+            command = f'python "{new_script_path}"'
+        elif suffix == '.py':
+            command = f'python "{script_path}"'
+        else:
+            raise CrossComputeConfigurationError(
+                f'{suffix} not supported for script path')
+        script_definition.command = command
     return {
-        'script': script_configuration,
+        'script_definition': script_definition,
     }
 
 
@@ -480,6 +514,20 @@ def validate_batch_configuration(batch_definition):
     return {
         'reference': batch_reference,
         'configuration': batch_configuration,
+    }
+
+
+def validate_script_identifiers(script_definition):
+    folder = script_definition.get('folder', '.').strip()
+    path = script_definition.get('path', '').strip()
+    command = script_definition.get('command', '').strip()
+    if not path and not command:
+        raise CrossComputeConfigurationError(
+            'path or command required for script')
+    return {
+        'folder': Path(folder),
+        'path': Path(path),
+        'command': command,
     }
 
 

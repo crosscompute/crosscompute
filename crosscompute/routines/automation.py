@@ -303,8 +303,8 @@ class DiskAutomation(Automation):
 
 def _run_automation(
         automation_definition, batch_definition, process_data):
-    script_configuration = automation_definition.script
-    command_string = script_configuration.get('command')
+    script_definition = automation_definition.script_definition
+    command_string = script_definition.command
     if not command_string:
         return
     reference_time = time()
@@ -320,7 +320,7 @@ def _run_automation(
         mode_folder_by_name, custom_environment)
     debug_folder = mode_folder_by_name['debug_folder']
     command_text = command_string.format(**mode_folder_by_name)
-    command_folder = folder / script_configuration.get('folder', '.')
+    command_folder = folder / script_definition.folder
     return_code = _run_command(
         command_text, command_folder, script_environment,
         debug_folder / 'stdout.txt', debug_folder / 'stderr.txt')
