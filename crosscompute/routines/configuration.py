@@ -64,13 +64,14 @@ class AutomationDefinition(Definition):
             validate_protocol,
             validate_automation_identifiers,
             validate_imports,
-            validate_variable_definitions,
+            validate_variables,
             validate_variable_views,
-            validate_template_definitions,
-            validate_batch_definitions,
-            validate_environment_variable_definitions,
-            validate_script_configuration,
-            validate_display_configuration,
+            validate_templates,
+            validate_batches,
+            validate_environment_variables,
+            validate_script,
+            validate_display_styles,
+            validate_display_templates,
         ]
 
     def get_variable_definitions(self, mode_name, with_all=False):
@@ -102,7 +103,7 @@ class VariableDefinition(Definition):
 class TemplateDefinition(Definition):
 
     def _initialize(self, kwargs):
-        self.mode_name = kwargs['mode_name']
+        self.mode_name = kwargs.get('mode_name')
         self._validation_functions = [
             validate_template_identifiers,
         ]
@@ -226,7 +227,40 @@ def validate_automation_identifiers(configuration):
     }
 
 
-def validate_variable_definitions(configuration):
+def validate_imports(configuration):
+    automation_configurations = []
+    remaining_configurations = [configuration]
+    while remaining_configurations:
+        c = remaining_configurations.pop(0)
+        folder = c.folder
+        import_configurations = get_dictionaries(c, 'imports')
+        for i, import_configuration in enumerate(import_configurations, 1):
+            if 'path' in import_configuration:
+                path = import_configuration['path']
+                try:
+                    automation_configuration = load_configuration(
+                        folder / path, index=i)
+                except CrossComputeConfigurationFormatError as e:
+                    raise CrossComputeConfigurationError(e)
+            else:
+                raise CrossComputeConfigurationError(
+                    'path required for each import')
+            remaining_configurations.append(automation_configuration)
+        automation_configurations.append(c)
+    automation_definitions = [
+        _ for _ in automation_configurations if 'output' in _]
+    assert_unique_values(
+        [_.name for _ in automation_definitions],
+        'duplicate automation name {{x}}')
+    assert_unique_values(
+        [_.slug for _ in automation_definitions],
+        'duplicate automation slug {{x}}')
+    return {
+        'automation_definitions': automation_definitions,
+    }
+
+
+def validate_variables(configuration):
     variable_definitions_by_mode_name = {}
     view_names = set()
     for mode_name in MODE_NAMES:
@@ -260,7 +294,7 @@ def validate_variable_views(configuration):
     return {}
 
 
-def validate_template_definitions(configuration):
+def validate_templates(configuration):
     template_definitions_by_mode_name = {}
     template_text_by_mode_name = {}
     automation_folder = configuration.folder
@@ -286,7 +320,7 @@ def validate_template_definitions(configuration):
     }
 
 
-def validate_batch_definitions(configuration):
+def validate_batches(configuration):
     batch_definitions = []
     raw_batch_definitions = get_dictionaries(configuration, 'batches')
     automation_folder = configuration.folder
@@ -309,7 +343,7 @@ def validate_batch_definitions(configuration):
     }
 
 
-def validate_environment_variable_definitions(configuration):
+def validate_environment_variables(configuration):
     environment_configuration = get_dictionary(configuration, 'environment')
     environment_variable_definitions = get_dictionaries(
         environment_configuration, 'variables')
@@ -322,22 +356,22 @@ def validate_environment_variable_definitions(configuration):
     }
 
 
-def validate_script_configuration(configuration):
+def validate_script(configuration):
     script_configuration = get_dictionary(configuration, 'script')
     return {
         'script': script_configuration,
     }
 
 
-def validate_display_configuration(configuration):
-    style_definitions = []
+def validate_display_styles(configuration):
     display_configuration = get_dictionary(configuration, 'display')
-    raw_style_definitions = get_dictionaries(display_configuration, 'styles')
     automation_folder = configuration.folder
     automation_index = configuration.index
     automation_uri = configuration.uri
     reference_time = time()
-    for raw_style_definition in raw_style_definitions:
+    style_definitions = []
+    for raw_style_definition in get_dictionaries(
+            display_configuration, 'styles'):
         style_definition = StyleDefinition(raw_style_definition)
         style_uri = style_definition.uri
         style_path = style_definition.path
@@ -361,36 +395,16 @@ def validate_display_configuration(configuration):
     }
 
 
-def validate_imports(configuration):
-    automation_configurations = []
-    remaining_configurations = [configuration]
-    while remaining_configurations:
-        c = remaining_configurations.pop(0)
-        folder = c.folder
-        import_configurations = get_dictionaries(c, 'imports')
-        for i, import_configuration in enumerate(import_configurations, 1):
-            if 'path' in import_configuration:
-                path = import_configuration['path']
-                try:
-                    automation_configuration = load_configuration(
-                        folder / path, index=i)
-                except CrossComputeConfigurationFormatError as e:
-                    raise CrossComputeConfigurationError(e)
-            else:
-                raise CrossComputeConfigurationError(
-                    'path required for each import')
-            remaining_configurations.append(automation_configuration)
-        automation_configurations.append(c)
-    automation_definitions = [
-        _ for _ in automation_configurations if 'output' in _]
-    assert_unique_values(
-        [_.name for _ in automation_definitions],
-        'duplicate automation name {{x}}')
-    assert_unique_values(
-        [_.slug for _ in automation_definitions],
-        'duplicate automation slug {{x}}')
+def validate_display_templates(configuration):
+    display_configuration = get_dictionary(configuration, 'display')
+    template_path_by_id = {}
+    for raw_template_definition in get_dictionaries(
+            display_configuration, 'templates'):
+        template_definition = TemplateDefinition(raw_template_definition)
+        template_id = template_definition.id
+        template_path_by_id[template_id] = template_definition.path
     return {
-        'automation_definitions': automation_definitions,
+        'template_path_by_id': template_path_by_id,
     }
 
 
@@ -568,9 +582,9 @@ def get_batch_definitions(
         for configuration_data_by_id in yield_data_by_id(
                 automation_folder / batch_configuration_path,
                 variable_definitions):
+            data_by_id = reference_data_by_id | configuration_data_by_id
             batch_definitions.append(BatchDefinition(
-                raw_batch_definition,
-                data_by_id=reference_data_by_id | configuration_data_by_id))
+                raw_batch_definition, data_by_id=data_by_id))
     else:
         batch_definitions.append(BatchDefinition(
             raw_batch_definition, data_by_id=reference_data_by_id))

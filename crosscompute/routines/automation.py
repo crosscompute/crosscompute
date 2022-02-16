@@ -2,6 +2,7 @@
 # TODO: Consider whether to send partial updates for variables
 # TODO: Precompile notebook scripts
 import logging
+import shlex
 import subprocess
 from itertools import repeat
 from logging import getLogger
@@ -38,7 +39,7 @@ from ..routes.automation import AutomationRoutes
 from ..routes.stream import StreamRoutes
 from .configuration import (
     load_configuration,
-    validate_display_configuration)
+    validate_display_styles)
 from .interface import Automation
 from .variable import (
     get_variable_data_by_id,
@@ -178,7 +179,7 @@ class DiskAutomation(Automation):
                     server_process.start()
                 elif file_code == 's':
                     for d in self.definitions:
-                        validate_display_configuration(d)
+                        validate_display_styles(d)
                     self._timestamp_object.value = time()
                 else:
                     self._timestamp_object.value = time()
@@ -190,18 +191,23 @@ class DiskAutomation(Automation):
             self.configuration, self.definitions, automation_queue,
             self._timestamp_object)
         stream_routes = StreamRoutes(self._timestamp_object)
-        with Configurator(settings={
+        settings = {
             'jinja2.trim_blocks': True,
             'jinja2.lstrip_blocks': True,
-        }) as config:
+        }
+        if not is_static and not is_production:
+            settings.update({
+                'pyramid.reload_templates': True,
+            })
+        with Configurator(settings=settings) as config:
             config.include('pyramid_jinja2')
             config.include(automation_routes.includeme)
             if not is_static:
                 config.include(stream_routes.includeme)
-            _configure_cache_headers(config, is_production)
-            _configure_allowed_origins(config, allowed_origins)
             _configure_renderer_globals(
                 config, is_static, is_production, base_uri)
+            _configure_cache_headers(config, is_production)
+            _configure_allowed_origins(config, allowed_origins)
         return config.make_wsgi_app()
 
     def _get_file_code(self, path):
@@ -266,6 +272,9 @@ class DiskAutomation(Automation):
                     if 'path' not in template_definition:
                         continue
                     paths.add(automation_folder / template_definition.path)
+        d = automation_definition.template_path_by_id
+        for path in d.values():
+            paths.add(automation_folder / path)
         return paths
 
     def _get_style_paths(self):
@@ -327,9 +336,8 @@ def _run_command(
     try:
         with open(o_path, 'wt') as o_file, open(e_path, 'wt') as e_file:
             process = subprocess.run(
-                command_string,
+                shlex.split(command_string),
                 check=True,
-                shell=True,  # Expand $HOME and ~ in command_string
                 cwd=command_folder,
                 env=script_environment,
                 stdout=o_file,
@@ -453,8 +461,8 @@ def _configure_renderer_globals(config, is_static, is_production, base_uri):
 
     def update_renderer_globals():
         config.get_jinja2_environment().globals.update({
-            'BASE_JINJA2': 'base.jinja2',
-            'LIVE_JINJA2': 'live.jinja2',
+            'BASE_JINJA2': 'crosscompute:templates/base.jinja2',
+            'LIVE_JINJA2': 'crosscompute:templates/live.jinja2',
             'IS_STATIC': is_static,
             'IS_PRODUCTION': is_production,
             'BASE_URI': base_uri,

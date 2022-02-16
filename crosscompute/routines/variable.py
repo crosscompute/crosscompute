@@ -320,6 +320,8 @@ def yield_data_by_id_from_csv(path, variable_definitions):
                 yield data_by_id
     except OSError as e:
         raise CrossComputeConfigurationError(e)
+    except StopIteration:
+        pass
 
 
 def yield_data_by_id_from_txt(path, variable_definitions):
