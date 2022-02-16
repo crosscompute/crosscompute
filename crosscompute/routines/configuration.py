@@ -490,9 +490,15 @@ def validate_batch_identifiers(batch_definition):
     slug = get_scalar_text(batch_definition, 'slug', name)
     data_by_id = batch_definition.data_by_id
     if data_by_id and not is_run:
-        folder = format_text(str(folder), data_by_id)
-        name = format_text(name, data_by_id)
-        slug = format_text(slug, data_by_id)
+        try:
+            folder = format_text(str(folder), data_by_id)
+            name = format_text(name, data_by_id)
+            slug = format_text(slug, data_by_id)
+        except CrossComputeConfigurationError as e:
+            batch_configuration = batch_definition.get('configuration', {})
+            if 'path' in batch_configuration:
+                e.path = batch_configuration['path']
+            raise
     d = {'folder': folder, 'name': name, 'slug': slug}
     if data_by_id:
         for k, v in d.items():

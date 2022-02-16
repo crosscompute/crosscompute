@@ -442,21 +442,21 @@ def format_text(text, data_by_id):
         return text
 
     def f(match):
-        matching_text = match.group(0)
         expression_text = match.group(1)
         expression_terms = expression_text.split('|')
         variable_id = expression_terms[0].strip()
         try:
             variable_data = data_by_id[variable_id]
         except KeyError:
-            L.warning('%s missing in batch configuration', variable_id)
-            return matching_text
+            raise CrossComputeConfigurationError(
+                f'variable {variable_id} missing in batch configuration')
         text = variable_data.get('value', '')
         try:
             text = apply_functions(
                 text, expression_terms[1:], FUNCTION_BY_NAME)
         except KeyError as e:
-            L.error('%s function not supported for string', e)
+            raise CrossComputeConfigurationError(
+                f'{e} function not supported in {text}')
         return str(text)
 
     return VARIABLE_ID_PATTERN.sub(f, text)
