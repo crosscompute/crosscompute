@@ -18,5 +18,9 @@ class CrossComputeConfigurationNotFoundError(CrossComputeConfigurationError):
     pass
 
 
+class CrossComputeConfigurationFormatError(CrossComputeError):
+    pass
+
+
 class CrossComputeDataError(CrossComputeError):
     pass

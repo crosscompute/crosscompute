@@ -2,9 +2,6 @@
 import tomli
 from collections import Counter
 from configparser import ConfigParser
-from crosscompute.exceptions import (
-    CrossComputeConfigurationError,
-    CrossComputeError)
 from invisibleroads_macros_log import format_path
 from logging import getLogger
 from os import environ
@@ -23,6 +20,10 @@ from ..constants import (
     MODE_NAMES,
     RUN_ROUTE,
     STYLE_ROUTE)
+from ..exceptions import (
+    CrossComputeConfigurationError,
+    CrossComputeConfigurationFormatError,
+    CrossComputeError)
 from ..macros.web import format_slug
 from .variable import (
     format_text,
@@ -370,8 +371,11 @@ def validate_imports(configuration):
         for i, import_configuration in enumerate(import_configurations, 1):
             if 'path' in import_configuration:
                 path = import_configuration['path']
-                automation_configuration = load_configuration(
-                    folder / path, index=i)
+                try:
+                    automation_configuration = load_configuration(
+                        folder / path, index=i)
+                except CrossComputeConfigurationFormatError as e:
+                    raise CrossComputeConfigurationError(e)
             else:
                 raise CrossComputeConfigurationError(
                     'path required for each import')
@@ -488,7 +492,7 @@ def get_configuration_format(path):
             '.yml': 'yaml',
         }[file_extension]
     except KeyError:
-        raise CrossComputeError((
+        raise CrossComputeConfigurationFormatError((
             f'{file_extension} format not supported for automation '
             'configuration').lstrip())
     return configuration_format

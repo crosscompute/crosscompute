@@ -28,6 +28,7 @@ from ..constants import (
     STREAMS_ROUTE)
 from ..exceptions import (
     CrossComputeConfigurationError,
+    CrossComputeConfigurationFormatError,
     CrossComputeConfigurationNotFoundError,
     CrossComputeDataError,
     CrossComputeError)
@@ -77,6 +78,8 @@ class DiskAutomation(Automation):
                 continue
             try:
                 self._initialize_from_path(path)
+            except CrossComputeConfigurationFormatError:
+                continue
             except (CrossComputeConfigurationError, CrossComputeDataError):
                 raise
             except CrossComputeError:
@@ -383,7 +386,7 @@ def _prepare_custom_environment(
             raise CrossComputeConfigurationError(
                 f'{variable_id} is missing in the environment')
     variable_data_by_id = get_variable_data_by_id(
-        variable_definitions, data_by_id)
+        variable_definitions, data_by_id, with_exceptions=False)
     variable_value_by_id = get_variable_value_by_id(variable_data_by_id)
     return custom_environment | variable_value_by_id
 

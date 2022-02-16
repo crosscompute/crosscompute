@@ -410,7 +410,8 @@ def load_file_text(path):
     return path.read_text().rstrip()
 
 
-def get_variable_data_by_id(variable_definitions, data_by_id):
+def get_variable_data_by_id(
+        variable_definitions, data_by_id, with_exceptions=True):
     variable_data_by_id = {}
     for variable_definition in variable_definitions:
         variable_id = variable_definition.id
@@ -420,6 +421,8 @@ def get_variable_data_by_id(variable_definitions, data_by_id):
             try:
                 variable_data = data_by_id[variable_id]
             except KeyError:
+                if not with_exceptions:
+                    continue
                 raise CrossComputeConfigurationError(
                     f'{variable_id} not defined in batch configuration')
         variable_data_by_id[variable_id] = variable_data
