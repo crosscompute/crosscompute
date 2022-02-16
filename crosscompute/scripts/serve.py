@@ -52,6 +52,14 @@ def configure_argument_parser_for_serving(a):
         '--production', dest='is_production', action='store_true',
         help='disable server restart on file change')
     a.add_argument(
+        '--base-uri', metavar='X',
+        default='',
+        help='specify base uri for all routes')
+    a.add_argument(
+        '--origins', metavar='X', nargs='+', dest='allowed_origins',
+        default=[],
+        help='specify allowed origins')
+    a.add_argument(
         '--disk-poll', metavar='X', type=int,
         default=DISK_POLL_IN_MILLISECONDS,
         help='interval in milliseconds to check disk for changes')
@@ -59,10 +67,6 @@ def configure_argument_parser_for_serving(a):
         '--disk-debounce', metavar='X', type=int,
         default=DISK_DEBOUNCE_IN_MILLISECONDS,
         help='interval in milliseconds to wait until the disk stops changing')
-    a.add_argument(
-        '--base-uri', metavar='X',
-        default='',
-        help='specify base uri for all routes')
 
 
 def serve_with(automation, args):
@@ -70,17 +74,19 @@ def serve_with(automation, args):
         automation,
         args.host,
         args.port,
-        args.base_uri,
         args.with_browser,
         args.is_static,
         args.is_production,
+        args.base_uri,
+        args.allowed_origins,
         args.disk_poll,
         args.disk_debounce)
 
 
 def serve(
-        automation, host=HOST, port=PORT, base_uri='', with_browser=True,
+        automation, host=HOST, port=PORT, with_browser=True,
         is_static=False, is_production=False,
+        base_uri='', allowed_origins=None,
         disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
         disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS):
     try:
@@ -95,9 +101,10 @@ def serve(
             port=port,
             is_static=is_static,
             is_production=is_production,
+            base_uri=base_uri,
+            allowed_origins=allowed_origins,
             disk_poll_in_milliseconds=disk_poll_in_milliseconds,
-            disk_debounce_in_milliseconds=disk_debounce_in_milliseconds,
-            base_uri=base_uri)
+            disk_debounce_in_milliseconds=disk_debounce_in_milliseconds)
     except CrossComputeError as e:
         L.error(e)
     except KeyboardInterrupt:

@@ -68,15 +68,15 @@ class DiskAutomation(Automation):
 
     def _initialize_from_folder(self, folder):
         paths = list(folder.iterdir())
-        if AUTOMATION_PATH in paths:
-            paths.remove(AUTOMATION_PATH)
-            paths.insert(0, AUTOMATION_PATH)
-        for relative_path in paths:
-            absolute_path = folder / relative_path
-            if absolute_path.is_dir():
+        default_automation_path = folder / AUTOMATION_PATH
+        if default_automation_path in paths:
+            paths.remove(default_automation_path)
+            paths.insert(0, default_automation_path)
+        for path in paths:
+            if path.is_dir():
                 continue
             try:
-                self._initialize_from_path(absolute_path)
+                self._initialize_from_path(path)
             except (CrossComputeConfigurationError, CrossComputeDataError):
                 raise
             except CrossComputeError:
@@ -101,9 +101,10 @@ class DiskAutomation(Automation):
             port=PORT,
             is_static=False,
             is_production=False,
+            base_uri='',
+            allowed_origins=None,
             disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
             disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS,
-            base_uri='',
             automation_queue=None):
         if automation_queue is None:
             automation_queue = Queue()
@@ -119,7 +120,8 @@ class DiskAutomation(Automation):
             L.info('serving at http://%s:%s%s', host, port, base_uri)
             # TODO: Decouple from pyramid and waitress
             app = self._get_app(
-                automation_queue, is_static, is_production, base_uri)
+                automation_queue, is_static, is_production, base_uri,
+                allowed_origins)
             try:
                 serve(app, host=host, port=port, url_prefix=base_uri)
             except OSError as e:
@@ -178,7 +180,9 @@ class DiskAutomation(Automation):
                 else:
                     self._timestamp_object.value = time()
 
-    def _get_app(self, automation_queue, is_static, is_production, base_uri):
+    def _get_app(
+            self, automation_queue, is_static, is_production, base_uri,
+            allowed_origins):
         automation_routes = AutomationRoutes(
             self.configuration, self.definitions, automation_queue,
             self._timestamp_object)
@@ -191,21 +195,10 @@ class DiskAutomation(Automation):
             config.include(automation_routes.includeme)
             if not is_static:
                 config.include(stream_routes.includeme)
-            if not is_production:
-                def update_cache_headers(e):
-                    e.response.headers.update({'Cache-Control': 'no-store'})
-                config.add_subscriber(update_cache_headers, NewResponse)
-
-            def update_renderer_globals():
-                renderer_environment = config.get_jinja2_environment()
-                renderer_environment.globals.update({
-                    'BASE_JINJA2': 'base.jinja2',
-                    'LIVE_JINJA2': 'live.jinja2',
-                    'IS_STATIC': is_static,
-                    'IS_PRODUCTION': is_production,
-                    'BASE_URI': base_uri,
-                    'STREAMS_ROUTE': STREAMS_ROUTE})
-            config.action(None, update_renderer_globals)
+            _configure_cache_headers(config, is_production)
+            _configure_allowed_origins(config, allowed_origins)
+            _configure_renderer_globals(
+                config, is_static, is_production, base_uri)
         return config.make_wsgi_app()
 
     def _get_file_code(self, path):
@@ -424,6 +417,47 @@ def _process_batch(
                 mode_folder / 'variables.dictionary', extra_data_by_id)
             variable_data_by_id.update(extra_data_by_id)
     return variable_data_by_id_by_mode_name
+
+
+def _configure_cache_headers(config, is_production):
+    if is_production:
+        return
+
+    def update_cache_headers(e):
+        e.response.headers.update({'Cache-Control': 'no-store'})
+
+    config.add_subscriber(update_cache_headers, NewResponse)
+
+
+def _configure_allowed_origins(config, allowed_origins):
+    if not allowed_origins:
+        return
+
+    def update_cors_headers(e):
+        request_headers = e.request.headers
+        if 'Origin' not in request_headers:
+            return
+        origin = request_headers['Origin']
+        if origin not in allowed_origins:
+            return
+        e.response.headers.update({
+            'Access-Control-Allow-Origin': origin})
+
+    config.add_subscriber(update_cors_headers, NewResponse)
+
+
+def _configure_renderer_globals(config, is_static, is_production, base_uri):
+
+    def update_renderer_globals():
+        config.get_jinja2_environment().globals.update({
+            'BASE_JINJA2': 'base.jinja2',
+            'LIVE_JINJA2': 'live.jinja2',
+            'IS_STATIC': is_static,
+            'IS_PRODUCTION': is_production,
+            'BASE_URI': base_uri,
+            'STREAMS_ROUTE': STREAMS_ROUTE})
+
+    config.action(None, update_renderer_globals)
 
 
 L = getLogger(__name__)
