@@ -1,4 +1,3 @@
-import multiprocessing as mp
 from argparse import ArgumentParser
 from logging import getLogger
 
@@ -53,5 +52,4 @@ L = getLogger(__name__)
 
 
 if __name__ == '__main__':
-    mp.set_start_method('fork')
     do()

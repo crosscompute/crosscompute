@@ -304,7 +304,7 @@ class DiskAutomation(Automation):
 def _run_automation(
         automation_definition, batch_definition, process_data):
     script_definition = automation_definition.script_definition
-    command_string = script_definition.command
+    command_string = script_definition.get_command_string()
     if not command_string:
         return
     reference_time = time()

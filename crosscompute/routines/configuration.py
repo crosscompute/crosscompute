@@ -124,9 +124,34 @@ class BatchDefinition(Definition):
 class ScriptDefinition(Definition):
 
     def _initialize(self, kwargs):
+        self.automation_folder = kwargs['automation_folder']
         self._validation_functions = [
             validate_script_identifiers,
         ]
+
+    def get_command_string(self):
+        command_string = self.command
+        if command_string:
+            return command_string
+        if 'path' not in self:
+            return
+        print('!!! converting', self.path)
+        script_folder = self.folder
+        script_path = self.path
+        suffix = script_path.suffix
+        if suffix == '.ipynb':
+            try:
+                subprocess.run([
+                    'jupyter', 'nbconvert', '--to', 'script', script_path,
+                ], check=True, cwd=self.automation_folder / script_folder)
+            except subprocess.CalledProcessError as e:
+                raise CrossComputeConfigurationError(e)
+            new_script_path = script_path.with_suffix('.py')
+            command_string = f'python "{new_script_path}"'
+        elif suffix == '.py':
+            command_string = f'python "{script_path}"'
+        self.command = command_string
+        return command_string
 
 
 class StyleDefinition(Definition):
@@ -366,28 +391,10 @@ def validate_environment_variables(configuration):
 
 
 def validate_script(configuration):
+    automation_folder = configuration.folder
     raw_script_definition = get_dictionary(configuration, 'script')
-    script_definition = ScriptDefinition(raw_script_definition)
-    if 'path' in script_definition and 'command' not in script_definition:
-        automation_folder = configuration.folder
-        script_folder = script_definition.folder
-        script_path = script_definition.path
-        suffix = script_path.suffix
-        if suffix == '.ipynb':
-            try:
-                subprocess.run([
-                    'jupyter', 'nbconvert', '--to', 'script', script_path,
-                ], check=True, cwd=automation_folder / script_folder)
-            except subprocess.CalledProcessError as e:
-                raise CrossComputeConfigurationError(e)
-            new_script_path = script_path.with_suffix('.py')
-            command = f'python "{new_script_path}"'
-        elif suffix == '.py':
-            command = f'python "{script_path}"'
-        else:
-            raise CrossComputeConfigurationError(
-                f'{suffix} not supported for script path')
-        script_definition.command = command
+    script_definition = ScriptDefinition(
+        raw_script_definition, automation_folder=automation_folder)
     return {
         'script_definition': script_definition,
     }
@@ -521,11 +528,24 @@ def validate_batch_configuration(batch_definition):
 
 def validate_script_identifiers(script_definition):
     folder = script_definition.get('folder', '.').strip()
-    path = script_definition.get('path', '').strip()
-    command = script_definition.get('command', '').strip()
+
+    if 'path' in script_definition:
+        path = Path(script_definition['path'].strip())
+        suffix = path.suffix
+        if suffix not in ['.ipynb', '.py']:
+            raise CrossComputeConfigurationError(
+                f'{suffix} not supported for script path')
+    else:
+        path = None
+
+    if 'command' in script_definition:
+        command = script_definition['command'].strip()
+    else:
+        command = None
+
     return {
         'folder': Path(folder),
-        'path': Path(path),
+        'path': path,
         'command': command,
     }
 

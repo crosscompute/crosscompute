@@ -23,6 +23,7 @@ from crosscompute.scripts.serve import (
 
 
 def do(arguments=None):
+    mp.set_start_method('fork')
     a = ArgumentParser()
     configure_argument_parser_for_logging(a)
     configure_argument_parser_for_launching(a)
@@ -104,5 +105,4 @@ L = getLogger(__name__)
 
 
 if __name__ == '__main__':
-    mp.set_start_method('fork')
     do()
