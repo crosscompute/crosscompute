@@ -368,19 +368,15 @@ def validate_environment_variables(configuration):
 def validate_script(configuration):
     raw_script_definition = get_dictionary(configuration, 'script')
     script_definition = ScriptDefinition(raw_script_definition)
-    script_path = script_definition.path
-    if script_path and not script_definition.command:
+    if 'path' in script_definition and 'command' not in script_definition:
         automation_folder = configuration.folder
         script_folder = script_definition.folder
+        script_path = script_definition.path
         suffix = script_path.suffix
         if suffix == '.ipynb':
             try:
                 subprocess.run([
-                    'jupyter',
-                    'nbconvert',
-                    '--to',
-                    'script',
-                    script_path,
+                    'jupyter', 'nbconvert', '--to', 'script', script_path,
                 ], check=True, cwd=automation_folder / script_folder)
             except subprocess.CalledProcessError as e:
                 raise CrossComputeConfigurationError(e)
