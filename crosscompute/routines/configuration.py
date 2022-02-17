@@ -527,9 +527,6 @@ def validate_script_identifiers(script_definition):
     folder = script_definition.get('folder', '.').strip()
     path = script_definition.get('path', '').strip()
     command = script_definition.get('command', '').strip()
-    if not path and not command:
-        raise CrossComputeConfigurationError(
-            'path or command required for script')
     return {
         'folder': Path(folder),
         'path': Path(path),
