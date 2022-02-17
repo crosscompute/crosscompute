@@ -368,10 +368,10 @@ def validate_environment_variables(configuration):
 def validate_script(configuration):
     raw_script_definition = get_dictionary(configuration, 'script')
     script_definition = ScriptDefinition(raw_script_definition)
-    if not script_definition.command:
+    script_path = script_definition.path
+    if script_path and not script_definition.command:
         automation_folder = configuration.folder
         script_folder = script_definition.folder
-        script_path = script_definition.path
         suffix = script_path.suffix
         if suffix == '.ipynb':
             try:
