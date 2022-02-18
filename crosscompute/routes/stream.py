@@ -39,8 +39,11 @@ class StreamRoutes():
 
     def yield_message(self):
         # TODO: Send queued changes
+        from random import randint
+        x = randint(0, 100)
         while True:
             sleep(STREAM_PING_INTERVAL_IN_SECONDS)
+            print('PING', x)
             yield self.make_ping()
 
     def make_ping(self):
