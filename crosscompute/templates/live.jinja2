@@ -1,6 +1,12 @@
 {% extends BASE_JINJA2 %}
 
 {% block body_js %}
+setInterval(async function() {
+  const response = await fetch('{{ BASE_URI }}', {method: 'HEAD'});
+  console.log(response.headers);
+  }, {{ PING_INTERVAL_IN_MILLISECONDS }});
+
+/*
 let streamSource, reconnectionId, serverTime = {{ timestamp_value }};
 function connect() {
   streamSource = new EventSource('{{ BASE_URI }}{{ STREAMS_ROUTE }}');
@@ -25,5 +31,6 @@ function connect() {
   }
 }
 connect();
+*/
 {{ super() }}
 {%- endblock %}

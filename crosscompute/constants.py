@@ -39,7 +39,7 @@ STREAMS_ROUTE = '/streams'
 MODE_NAMES = 'input', 'output', 'log', 'debug'
 MODE_NAME_BY_CODE = {_[0]: _ for _ in MODE_NAMES}
 MODE_CODE_BY_NAME = {k: v for v, k in MODE_NAME_BY_CODE.items()}
-STREAM_PING_INTERVAL_IN_SECONDS = 1
+PING_INTERVAL_IN_SECONDS = 1
 
 
 FUNCTION_BY_NAME = {

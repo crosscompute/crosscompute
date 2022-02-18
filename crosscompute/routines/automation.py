@@ -25,6 +25,7 @@ from ..constants import (
     DISK_POLL_IN_MILLISECONDS,
     HOST,
     MODE_NAMES,
+    PING_INTERVAL_IN_SECONDS,
     PORT,
     STREAMS_ROUTE)
 from ..exceptions import (
@@ -466,7 +467,9 @@ def _configure_renderer_globals(config, is_static, is_production, base_uri):
             'IS_STATIC': is_static,
             'IS_PRODUCTION': is_production,
             'BASE_URI': base_uri,
-            'STREAMS_ROUTE': STREAMS_ROUTE})
+            'STREAMS_ROUTE': STREAMS_ROUTE,
+            'PING_INTERVAL_IN_MILLISECONDS': PING_INTERVAL_IN_SECONDS * 1000,
+        })
 
     config.action(None, update_renderer_globals)
 
