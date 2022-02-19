@@ -128,7 +128,8 @@ class DiskAutomation(Automation):
                 automation_queue, is_static, is_production, base_uri,
                 allowed_origins)
             try:
-                serve(app, host=host, port=port, url_prefix=base_uri)
+                serve(
+                    app, host=host, port=port, url_prefix=base_uri, threads=8)
             except OSError as e:
                 L.error(e)
 
