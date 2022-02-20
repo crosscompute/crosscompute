@@ -33,7 +33,7 @@ VARIABLE_ROUTE = '/{variable_id}'
 MODE_ROUTE = '/{mode_code}'
 RUN_ROUTE = '/r/{run_slug}'
 STYLE_ROUTE = '/s/{style_name}.css'
-STREAMS_ROUTE = '/streams'
+MUTATIONS_ROUTE = '/mutations'
 
 
 MODE_NAMES = 'input', 'output', 'log', 'debug'

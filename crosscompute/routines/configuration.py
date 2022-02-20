@@ -135,7 +135,6 @@ class ScriptDefinition(Definition):
             return command_string
         if 'path' not in self:
             return
-        print('!!! converting', self.path)
         script_folder = self.folder
         script_path = self.path
         suffix = script_path.suffix

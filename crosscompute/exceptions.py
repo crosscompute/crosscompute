@@ -5,6 +5,11 @@ class CrossComputeError(Exception):
 
     def __str__(self):
         text = super().__str__()
+        if hasattr(self, 'automation_definition'):
+            automation_definition = self.automation_definition
+            automation_name = automation_definition.name
+            automation_version = automation_definition.version
+            text += f' for {automation_name} {automation_version}'
         if hasattr(self, 'path'):
             text += f' in {format_path(self.path)}'
         return text
@@ -23,4 +28,8 @@ class CrossComputeConfigurationFormatError(CrossComputeError):
 
 
 class CrossComputeDataError(CrossComputeError):
+    pass
+
+
+class CrossComputeExecutionError(CrossComputeError):
     pass

@@ -25,19 +25,20 @@ from ..constants import (
     DISK_POLL_IN_MILLISECONDS,
     HOST,
     MODE_NAMES,
+    MUTATIONS_ROUTE,
     PING_INTERVAL_IN_SECONDS,
-    PORT,
-    STREAMS_ROUTE)
+    PORT)
 from ..exceptions import (
     CrossComputeConfigurationError,
     CrossComputeConfigurationFormatError,
     CrossComputeConfigurationNotFoundError,
     CrossComputeDataError,
-    CrossComputeError)
+    CrossComputeError,
+    CrossComputeExecutionError)
 from ..macros.iterable import group_by
 from ..macros.process import LoggableProcess, StoppableProcess
 from ..routes.automation import AutomationRoutes
-from ..routes.stream import StreamRoutes
+from ..routes.mutation import MutationRoutes
 from .configuration import (
     load_configuration,
     validate_display_styles)
@@ -143,15 +144,27 @@ class DiskAutomation(Automation):
 
     def run(self):
         for automation_definition in self.definitions:
-            for batch_definition in automation_definition.batch_definitions:
-                _run_automation(
-                    automation_definition, batch_definition,
-                    load_variable_data)
+            batch_definitions = automation_definition.batch_definitions
+            try:
+                for batch_definition in batch_definitions:
+                    _run_automation(
+                        automation_definition, batch_definition,
+                        load_variable_data)
+            except CrossComputeError as e:
+                e.automation_definition = automation_definition
+                L.error(e)
 
     def work(self, automation_queue):
         try:
             while automation_pack := automation_queue.get():
-                _run_automation(*automation_pack, load_variable_data)
+                automation_definition, batch_definition = automation_pack
+                try:
+                    _run_automation(
+                        automation_definition, batch_definition,
+                        load_variable_data)
+                except CrossComputeError as e:
+                    e.automation_definition = automation_definition
+                    L.error(e)
         except KeyboardInterrupt:
             pass
 
@@ -192,7 +205,7 @@ class DiskAutomation(Automation):
         automation_routes = AutomationRoutes(
             self.configuration, self.definitions, automation_queue,
             self._timestamp_object)
-        stream_routes = StreamRoutes(self._timestamp_object)
+        mutation_routes = MutationRoutes(self._timestamp_object)
         settings = {
             'jinja2.trim_blocks': True,
             'jinja2.lstrip_blocks': True,
@@ -205,7 +218,7 @@ class DiskAutomation(Automation):
             config.include('pyramid_jinja2')
             config.include(automation_routes.includeme)
             if not is_static:
-                config.include(stream_routes.includeme)
+                config.include(mutation_routes.includeme)
             _configure_renderer_globals(
                 config, is_static, is_production, base_uri)
             _configure_cache_headers(config, is_production)
@@ -323,9 +336,14 @@ def _run_automation(
     debug_folder = mode_folder_by_name['debug_folder']
     command_text = command_string.format(**mode_folder_by_name)
     command_folder = folder / script_definition.folder
-    return_code = _run_command(
-        command_text, command_folder, script_environment,
-        debug_folder / 'stdout.txt', debug_folder / 'stderr.txt')
+    try:
+        return_code = _run_command(
+            command_text, command_folder, script_environment,
+            debug_folder / 'stdout.txt', debug_folder / 'stderr.txt')
+    except CrossComputeExecutionError as e:
+        e.automation_definition = automation_definition
+        L.error(e)
+        return_code = e.return_code
     return _process_batch(automation_definition, batch_definition, [
         'output', 'log', 'debug',
     ], {'debug': {
@@ -345,12 +363,16 @@ def _run_command(
                 stdout=o_file,
                 stderr=e_file)
         return_code = process.returncode
-    except OSError as e:
-        L.error(e)
-        return_code = Error.COMMAND_NOT_FOUND
+    except (IndexError, OSError):
+        e = CrossComputeExecutionError(
+            f'could not run {shlex.quote(command_string)} in {command_folder}')
+        e.return_code = Error.COMMAND_NOT_FOUND
+        raise e
     except subprocess.CalledProcessError as e:
-        L.error(open(e_path).read().rstrip())
-        return_code = e.returncode
+        error_text = open(e_path).read().rstrip()
+        error = CrossComputeExecutionError(error_text)
+        error.return_code = e.returncode
+        raise error
     return return_code
 
 
@@ -422,6 +444,7 @@ def _process_batch(
             try:
                 variable_data = process_data(path, variable_id)
             except CrossComputeDataError as e:
+                e.automation_definitions = automation_definition
                 L.error(e)
                 continue
             variable_data_by_id[variable_id] = variable_data
@@ -468,7 +491,7 @@ def _configure_renderer_globals(config, is_static, is_production, base_uri):
             'IS_STATIC': is_static,
             'IS_PRODUCTION': is_production,
             'BASE_URI': base_uri,
-            'STREAMS_ROUTE': STREAMS_ROUTE,
+            'MUTATIONS_ROUTE': MUTATIONS_ROUTE,
             'PING_INTERVAL_IN_MILLISECONDS': PING_INTERVAL_IN_SECONDS * 1000,
         })
 

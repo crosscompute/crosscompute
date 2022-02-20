@@ -81,22 +81,23 @@ def input_configuration(configuration, path_or_folder):
 
 
 def save_configuration(configuration_path, configuration):
+    formatted_configuration_path = format_path(configuration_path)
     if configuration_path.exists():
-        L.warning(f'{format_path(configuration_path)} already exists')
+        L.warning('%s already exists', formatted_configuration_path)
         question = '\033[1moverwrite? yes or [no]:\033[0m '
         participle = 'overwritten'
     else:
         question = 'save? yes or [no]: '
         participle = 'saved'
     if not input(question).lower() == 'yes':
-        L.warning(f'{format_path(configuration_path)} not {participle}')
+        L.warning('%s not %s', formatted_configuration_path, participle)
         raise SystemExit
     try:
         save_raw_configuration(configuration_path, configuration)
     except CrossComputeError as e:
         L.error(e)
         raise SystemExit
-    L.info(f'{format_path(configuration_path)} {participle}')
+    L.info('%s %s', formatted_configuration_path, participle)
 
 
 def get_configuration_path(path_or_folder):
