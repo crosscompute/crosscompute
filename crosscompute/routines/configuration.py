@@ -238,11 +238,13 @@ def load_raw_configuration_yaml(configuration_path, with_comments=False):
 def validate_protocol(configuration):
     if 'crosscompute' not in configuration:
         raise CrossComputeError('crosscompute expected')
-    protocol_version = configuration['crosscompute']
-    if protocol_version != __version__:
+    protocol_version = configuration['crosscompute'].strip()
+    if not protocol_version:
+        raise CrossComputeConfigurationError('crosscompute version required')
+    elif protocol_version != __version__:
         raise CrossComputeConfigurationError(
-            f'crosscompute {protocol_version} != {__version__}; '
-            f'pip install crosscompute=={protocol_version}')
+            f'crosscompute version {protocol_version} is not compatible with '
+            f'{__version__}; pip install crosscompute=={protocol_version}')
     return {}
 
 
