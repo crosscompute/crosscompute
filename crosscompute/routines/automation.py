@@ -318,9 +318,8 @@ class DiskAutomation(Automation):
 
 def _run_automation(
         automation_definition, batch_definition, process_data):
-    script_definition = automation_definition.script_definition
-    command_string = script_definition.get_command_string()
-    if not command_string:
+    script_definitions = automation_definition.script_definitions
+    if not script_definitions:
         return
     reference_time = time()
     folder = automation_definition.folder
@@ -334,12 +333,14 @@ def _run_automation(
     script_environment = _prepare_script_environment(
         mode_folder_by_name, custom_environment)
     debug_folder = mode_folder_by_name['debug_folder']
-    command_text = command_string.format(**mode_folder_by_name)
-    command_folder = folder / script_definition.folder
+    o_path = debug_folder / 'stdout.txt'
+    e_path = debug_folder / 'stderr.txt'
     try:
-        return_code = _run_command(
-            command_text, command_folder, script_environment,
-            debug_folder / 'stdout.txt', debug_folder / 'stderr.txt')
+        with open(o_path, 'wt') as o_file, open(e_path, 'w+t') as e_file:
+            for script_definition in script_definitions:
+                return_code = _run_script(
+                    script_definition, mode_folder_by_name,
+                    script_environment, o_file, e_file)
     except CrossComputeExecutionError as e:
         e.automation_definition = automation_definition
         L.error(e)
@@ -351,29 +352,43 @@ def _run_automation(
         'return_code': return_code}}, process_data)
 
 
+def _run_script(
+        script_definition, mode_folder_by_name, script_environment,
+        stdout_file, stderr_file):
+    command_string = script_definition.get_command_string()
+    if not command_string:
+        return
+    command_text = command_string.format(**mode_folder_by_name)
+    automation_folder = script_definition.automation_folder
+    script_folder = script_definition.folder
+    command_folder = automation_folder / script_folder
+    return _run_command(
+        command_text, command_folder, script_environment, stdout_file,
+        stderr_file)
+
+
 def _run_command(
-        command_string, command_folder, script_environment, o_path, e_path):
+        command_string, command_folder, script_environment, o_file, e_file):
     try:
-        with open(o_path, 'wt') as o_file, open(e_path, 'wt') as e_file:
-            process = subprocess.run(
-                shlex.split(command_string),
-                check=True,
-                cwd=command_folder,
-                env=script_environment,
-                stdout=o_file,
-                stderr=e_file)
-        return_code = process.returncode
+        process = subprocess.run(
+            shlex.split(command_string),
+            check=True,
+            cwd=command_folder,
+            env=script_environment,
+            stdout=o_file,
+            stderr=e_file)
     except (IndexError, OSError):
         e = CrossComputeExecutionError(
             f'could not run {shlex.quote(command_string)} in {command_folder}')
         e.return_code = Error.COMMAND_NOT_FOUND
         raise e
     except subprocess.CalledProcessError as e:
-        error_text = open(e_path).read().rstrip()
+        e_file.seek(0)
+        error_text = e_file.read().rstrip()
         error = CrossComputeExecutionError(error_text)
         error.return_code = e.returncode
         raise error
-    return return_code
+    return process.returncode
 
 
 def _prepare_batch(automation_definition, batch_definition):

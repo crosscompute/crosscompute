@@ -69,8 +69,8 @@ class AutomationDefinition(Definition):
             validate_variable_views,
             validate_templates,
             validate_batches,
+            validate_scripts,
             validate_environment_variables,
-            validate_script,
             validate_display_styles,
             validate_display_templates,
         ]
@@ -391,13 +391,13 @@ def validate_environment_variables(configuration):
     }
 
 
-def validate_script(configuration):
+def validate_scripts(configuration):
     automation_folder = configuration.folder
-    raw_script_definition = get_dictionary(configuration, 'script')
-    script_definition = ScriptDefinition(
-        raw_script_definition, automation_folder=automation_folder)
+    script_definitions = [ScriptDefinition(
+        _, automation_folder=automation_folder
+    ) for _ in get_dictionaries(configuration, 'scripts')]
     return {
-        'script_definition': script_definition,
+        'script_definitions': script_definitions,
     }
 
 
