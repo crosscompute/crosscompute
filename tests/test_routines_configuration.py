@@ -19,7 +19,7 @@ def test_validate_protocol():
     with raises(CrossComputeConfigurationError):
         validate_protocol({'crosscompute': ''})
     with raises(CrossComputeConfigurationError):
-        validate_protocol({'crosscompute': 'x'})
+        validate_protocol({'crosscompute': '0.0.0'})
     validate_protocol({'crosscompute': __version__})
 
 

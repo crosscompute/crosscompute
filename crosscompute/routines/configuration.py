@@ -25,6 +25,7 @@ from ..exceptions import (
     CrossComputeConfigurationError,
     CrossComputeConfigurationFormatError,
     CrossComputeError)
+from ..macros.package import is_equivalent_version
 from ..macros.web import format_slug
 from .variable import (
     format_text,
@@ -247,7 +248,8 @@ def validate_protocol(configuration):
     protocol_version = configuration['crosscompute'].strip()
     if not protocol_version:
         raise CrossComputeConfigurationError('crosscompute version required')
-    elif protocol_version != __version__:
+    elif not is_equivalent_version(
+            protocol_version, __version__, version_depth=3):
         raise CrossComputeConfigurationError(
             f'crosscompute version {protocol_version} is not compatible with '
             f'{__version__}; pip install crosscompute=={protocol_version}')
