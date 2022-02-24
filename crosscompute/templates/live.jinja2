@@ -6,7 +6,7 @@ let serverTimestamp = {{ timestamp_value }};
 setInterval(async function() {
   let response = await fetch('{{ BASE_URI }}{{ MUTATIONS_ROUTE }}');
   const d = await response.json();
-  if (serverTimestamp == d.server_timestamp) return;
+  if (serverTimestamp === d.server_timestamp) return;
   response = await fetch(location.href, { method: 'head' });
   if (response.ok) {
     location.reload();
