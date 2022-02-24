@@ -60,6 +60,7 @@ class AutomationRoutes():
 
         config.add_view(
             self.see_root,
+            request_method='GET',
             route_name='root',
             renderer=template_path)
 
@@ -71,9 +72,11 @@ class AutomationRoutes():
 
         config.add_view(
             self.see_style,
+            request_method='GET',
             route_name='style')
         config.add_view(
             self.see_style,
+            request_method='GET',
             route_name='automation style')
 
     def configure_automations(self, config):
@@ -86,10 +89,12 @@ class AutomationRoutes():
 
         config.add_view(
             self.run_automation,
+            request_method='POST',
             route_name='automation.json',
             renderer='json')
         config.add_view(
             self.see_automation,
+            request_method='GET',
             route_name='automation',
             renderer='crosscompute:templates/automation.jinja2')
 
@@ -106,10 +111,12 @@ class AutomationRoutes():
 
         config.add_view(
             self.see_automation_batch_mode,
+            request_method='GET',
             route_name='automation batch mode',
             renderer='crosscompute:templates/mode.jinja2')
         config.add_view(
             self.see_automation_batch_mode_variable,
+            request_method='GET',
             route_name='automation batch mode variable')
 
     def configure_runs(self, config):
@@ -125,10 +132,12 @@ class AutomationRoutes():
 
         config.add_view(
             self.see_automation_batch_mode,
+            request_method='GET',
             route_name='automation run mode',
             renderer='crosscompute:templates/mode.jinja2')
         config.add_view(
             self.see_automation_batch_mode_variable,
+            request_method='GET',
             route_name='automation run mode variable')
 
     def see_root(self, request):
@@ -202,6 +211,7 @@ class AutomationRoutes():
         batch_definition = self.get_batch_definition_from(
             request, automation_definition)
         batch = DiskBatch(automation_definition, batch_definition)
+        base_uri = request.registry.settings['base_uri']
         mode_name = self.get_mode_name_from(request)
         for_print = 'p' in request.params
         return {
@@ -211,7 +221,7 @@ class AutomationRoutes():
             'uri': request.path,
             'mode_name': mode_name,
             'timestamp_value': self._timestamp_object.value,
-        } | render_mode_dictionary(batch, mode_name, for_print)
+        } | render_mode_dictionary(batch, base_uri, mode_name, for_print)
 
     def see_automation_batch_mode_variable(self, request):
         automation_definition = self.get_automation_definition_from(request)
@@ -274,7 +284,7 @@ class AutomationRoutes():
         return mode_name
 
 
-def render_mode_dictionary(batch, mode_name, for_print):
+def render_mode_dictionary(batch, base_uri, mode_name, for_print):
     automation_definition = batch.automation_definition
     css_uris = automation_definition.css_uris
     template_text = automation_definition.get_template_text(mode_name)
@@ -284,7 +294,8 @@ def render_mode_dictionary(batch, mode_name, for_print):
     i = count()
     render_html = partial(
         _render_html, variable_definitions=variable_definitions,
-        batch=batch, m=m, i=i, mode_name=mode_name, for_print=for_print)
+        batch=batch, m=m, i=i, base_uri=base_uri, mode_name=mode_name,
+        for_print=for_print)
     return m | {
         'body_text': get_html_from_markdown(VARIABLE_ID_PATTERN.sub(
             render_html, template_text)),
@@ -292,7 +303,8 @@ def render_mode_dictionary(batch, mode_name, for_print):
 
 
 def _render_html(
-        match, variable_definitions, batch, m, i, mode_name, for_print):
+        match, variable_definitions, batch, m, i, base_uri, mode_name,
+        for_print):
     matching_text = match.group(0)
     terms = match.group(1).split('|')
     variable_id = terms[0].strip()
@@ -304,7 +316,7 @@ def _render_html(
             '%s variable in template but not in configuration', variable_id)
         return matching_text
     view = VariableView.get_from(variable_definition)
-    element = Element(f'v{next(i)}', mode_name, for_print, terms[1:])
+    element = Element(f'v{next(i)}', base_uri, mode_name, for_print, terms[1:])
     rendered_element = view.render(batch, element)
     for k, v in m.items():
         extend_uniquely(v, [_.strip() for _ in rendered_element[k]])
