@@ -608,7 +608,7 @@ def get_environment_variable_ids(environment_variable_definitions):
             environ[variable_id]
         except KeyError:
             raise CrossComputeConfigurationError(
-                f'{variable_id} is missing in the environment')
+                f'{variable_id} is missing in the environment as defined')
         variable_ids.add(variable_id)
     return variable_ids
 

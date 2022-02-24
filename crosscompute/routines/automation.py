@@ -207,6 +207,7 @@ class DiskAutomation(Automation):
             self._timestamp_object)
         mutation_routes = MutationRoutes(self._timestamp_object)
         settings = {
+            'base_uri': base_uri,
             'jinja2.trim_blocks': True,
             'jinja2.lstrip_blocks': True,
         }

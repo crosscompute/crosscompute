@@ -25,6 +25,7 @@ from .interface import Batch
 class Element():
 
     id: str
+    base_uri: str
     mode_name: str
     for_print: bool
     function_names: list[str]
@@ -84,7 +85,7 @@ class LinkView(VariableView):
 
     def render_output(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
-        data_uri = b.get_data_uri(variable_definition)
+        data_uri = b.get_data_uri(variable_definition, x)
         c = b.get_variable_configuration(variable_definition)
         name = c.get('name', basename(self.variable_path))
         text = c.get('text', name)
@@ -237,7 +238,7 @@ class ImageView(VariableView):
     def render_output(self, b: Batch, x: Element):
         variable_id = self.variable_id
         variable_definition = self.variable_definition
-        data_uri = b.get_data_uri(variable_definition)
+        data_uri = b.get_data_uri(variable_definition, x)
         body_text = (
             f'<img id="{x.id}" '
             f'class="{self.mode_name} {self.view_name} {variable_id}" '
@@ -258,7 +259,7 @@ class TableView(VariableView):
     def render_output(self, b: Batch, x: Element):
         variable_id = self.variable_id
         variable_definition = self.variable_definition
-        data_uri = b.get_data_uri(variable_definition)
+        data_uri = b.get_data_uri(variable_definition, x)
         body_text = (
             f'<table id="{x.id}" '
             f'class="{self.mode_name} {self.view_name} {variable_id}">'
