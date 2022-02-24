@@ -88,7 +88,13 @@ class AutomationDefinition(Definition):
         return variable_definitions
 
     def get_template_text(self, mode_name):
-        return self.template_text_by_mode_name[mode_name]
+        automation_folder = self.folder
+        variable_definitions = self.get_variable_definitions(
+            mode_name)
+        template_definitions = self.template_definitions_by_mode_name[
+            mode_name]
+        return get_template_text(
+            template_definitions, automation_folder, variable_definitions)
 
 
 class VariableDefinition(Definition):
@@ -331,18 +337,12 @@ def validate_variable_views(configuration):
 
 def validate_templates(configuration):
     template_definitions_by_mode_name = {}
-    template_text_by_mode_name = {}
-    automation_folder = configuration.folder
     try:
         for mode_name in MODE_NAMES:
             mode_configuration = get_dictionary(configuration, mode_name)
             template_definitions = [TemplateDefinition(
                 _, mode_name=mode_name,
             ) for _ in get_dictionaries(mode_configuration, 'templates')]
-            variable_definitions = configuration.get_variable_definitions(
-                mode_name)
-            template_text_by_mode_name[mode_name] = get_template_text(
-                template_definitions, automation_folder, variable_definitions)
             assert_unique_values(
                 [_.id for _ in template_definitions],
                 f'duplicate template id {{x}} in {mode_name}')
@@ -351,7 +351,6 @@ def validate_templates(configuration):
         raise CrossComputeConfigurationError(e)
     return {
         'template_definitions_by_mode_name': template_definitions_by_mode_name,
-        'template_text_by_mode_name': template_text_by_mode_name,
     }
 
 

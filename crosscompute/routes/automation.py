@@ -60,6 +60,7 @@ class AutomationRoutes():
 
         config.add_view(
             self.see_root,
+            request_method='GET',
             route_name='root',
             renderer=template_path)
 
@@ -71,9 +72,11 @@ class AutomationRoutes():
 
         config.add_view(
             self.see_style,
+            request_method='GET',
             route_name='style')
         config.add_view(
             self.see_style,
+            request_method='GET',
             route_name='automation style')
 
     def configure_automations(self, config):
@@ -86,10 +89,12 @@ class AutomationRoutes():
 
         config.add_view(
             self.run_automation,
+            request_method='POST',
             route_name='automation.json',
             renderer='json')
         config.add_view(
             self.see_automation,
+            request_method='GET',
             route_name='automation',
             renderer='crosscompute:templates/automation.jinja2')
 
@@ -106,10 +111,12 @@ class AutomationRoutes():
 
         config.add_view(
             self.see_automation_batch_mode,
+            request_method='GET',
             route_name='automation batch mode',
             renderer='crosscompute:templates/mode.jinja2')
         config.add_view(
             self.see_automation_batch_mode_variable,
+            request_method='GET',
             route_name='automation batch mode variable')
 
     def configure_runs(self, config):
@@ -125,10 +132,12 @@ class AutomationRoutes():
 
         config.add_view(
             self.see_automation_batch_mode,
+            request_method='GET',
             route_name='automation run mode',
             renderer='crosscompute:templates/mode.jinja2')
         config.add_view(
             self.see_automation_batch_mode_variable,
+            request_method='GET',
             route_name='automation run mode variable')
 
     def see_root(self, request):

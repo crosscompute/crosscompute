@@ -40,8 +40,7 @@ from ..macros.process import LoggableProcess, StoppableProcess
 from ..routes.automation import AutomationRoutes
 from ..routes.mutation import MutationRoutes
 from .configuration import (
-    load_configuration,
-    validate_display_styles)
+    load_configuration)
 from .interface import Automation
 from .variable import (
     get_variable_data_by_id,
@@ -176,6 +175,7 @@ class DiskAutomation(Automation):
         for changes in watch(
                 self.folder, min_sleep=disk_poll_in_milliseconds,
                 debounce=disk_debounce_in_milliseconds):
+            should_restart_server = False
             for changed_type, changed_path in changes:
                 try:
                     file_code = self._get_file_code(changed_path)
@@ -183,21 +183,19 @@ class DiskAutomation(Automation):
                     continue
                 L.debug('%s %s %s', changed_type, changed_path, file_code)
                 if file_code == 'c':
-                    try:
-                        self._reload()
-                    except CrossComputeError as e:
-                        L.error(e)
-                        continue
-                    server_process.stop()
-                    server_process = StoppableProcess(
-                        name='server', target=run_server)
-                    server_process.start()
-                elif file_code == 's':
-                    for d in self.definitions:
-                        validate_display_styles(d)
-                    self._timestamp_object.value = time()
-                else:
-                    self._timestamp_object.value = time()
+                    should_restart_server = True
+            if should_restart_server:
+                try:
+                    self._reload()
+                except CrossComputeError as e:
+                    L.error(e)
+                    continue
+                server_process.stop()
+                server_process = StoppableProcess(
+                    name='server', target=run_server)
+                server_process.start()
+            else:
+                self._timestamp_object.value = time()
 
     def _get_app(
             self, automation_queue, is_static, is_production, base_uri,
