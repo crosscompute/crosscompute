@@ -28,6 +28,6 @@ def configure_logging(intensity):
     elif intensity <= -2:
         logging_level = logging.CRITICAL
     logging.basicConfig(
-        format='%(asctime)s %(name)s %(levelname)s %(message)s',
+        format='%(asctime)s %(levelname)s %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S',
         level=logging_level)

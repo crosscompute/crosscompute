@@ -1,11 +1,13 @@
+import multiprocessing as mp
 from argparse import ArgumentParser
 from logging import getLogger
-from multiprocessing import Process
 
 from crosscompute.exceptions import (
     CrossComputeConfigurationError,
-    CrossComputeError)
-from crosscompute.routines.automation import Automation
+    CrossComputeConfigurationNotFoundError,
+    CrossComputeDataError)
+from crosscompute.macros.process import LoggableProcess
+from crosscompute.routines.automation import DiskAutomation
 from crosscompute.routines.log import (
     configure_argument_parser_for_logging,
     configure_logging_from)
@@ -20,14 +22,15 @@ from crosscompute.scripts.serve import (
     serve_with)
 
 
-def do():
+def do(arguments=None):
+    mp.set_start_method('fork')
     a = ArgumentParser()
     configure_argument_parser_for_logging(a)
     configure_argument_parser_for_launching(a)
     configure_argument_parser_for_configuring(a)
     configure_argument_parser_for_serving(a)
     configure_argument_parser_for_running(a)
-    args = a.parse_args()
+    args = a.parse_args(arguments)
     configure_logging_from(args)
     launch_mode = get_launch_mode_from(args)
 
@@ -37,9 +40,11 @@ def do():
     automation = get_automation_from(args)
     processes = []
     if launch_mode in ['serve', 'all']:
-        processes.append(Process(target=serve_with, args=(automation, args)))
+        processes.append(LoggableProcess(
+            name='serve', target=serve_with, args=(automation, args)))
     if launch_mode in ['run', 'all']:
-        processes.append(Process(target=run_with, args=(automation, args)))
+        processes.append(LoggableProcess(
+            name='run', target=run_with, args=(automation, args)))
     try:
         for process in processes:
             process.start()
@@ -84,15 +89,15 @@ def get_launch_mode_from(args):
 def get_automation_from(args):
     path_or_folder = args.path_or_folder
     try:
-        automation = Automation.load(path_or_folder or '.')
-    except CrossComputeConfigurationError as e:
-        L.error(e)
-        raise SystemExit
-    except CrossComputeError:
+        automation = DiskAutomation.load(path_or_folder or '.')
+    except CrossComputeConfigurationNotFoundError:
         L.info('existing configuration not found; configuring new automation')
         print()
         path = configure_with(args)
-        automation = Automation.load(path)
+        automation = DiskAutomation.load(path)
+    except (CrossComputeConfigurationError, CrossComputeDataError) as e:
+        L.error(e)
+        raise SystemExit
     return automation
 
 

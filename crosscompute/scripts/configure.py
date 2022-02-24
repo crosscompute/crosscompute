@@ -1,8 +1,7 @@
-# TODO: Load existing configuration
 from argparse import ArgumentParser
 from invisibleroads_macros_log import format_path
 from logging import getLogger
-from os.path import exists, isdir, join
+from pathlib import Path
 
 from crosscompute import __version__
 from crosscompute.constants import (
@@ -12,21 +11,19 @@ from crosscompute.constants import (
     TEMPLATES_FOLDER)
 from crosscompute.exceptions import (
     CrossComputeError)
-from crosscompute.routines.automation import Automation
 from crosscompute.routines.configuration import (
-    get_configuration_format,
-    load_raw_configuration_yaml,
-    save_raw_configuration_yaml)
+    load_raw_configuration,
+    save_raw_configuration)
 from crosscompute.routines.log import (
     configure_argument_parser_for_logging,
     configure_logging_from)
 
 
-def do():
+def do(arguments=None):
     a = ArgumentParser()
     configure_argument_parser_for_logging(a)
     configure_argument_parser_for_configuring(a)
-    args = a.parse_args()
+    args = a.parse_args(arguments)
     configure_logging_from(args)
 
     configure_with(args)
@@ -40,29 +37,32 @@ def configure_argument_parser_for_configuring(a):
 
 
 def configure_with(args):
-    path_or_folder = args.path_or_folder
-    if exists(path_or_folder):
+    return configure(args.path_or_folder)
+
+
+def configure(path_or_folder):
+    configuration = {}
+    path_or_folder = Path(path_or_folder)
+    if path_or_folder.exists():
         try:
-            automation = Automation.load(path_or_folder)
-            configuration = automation.configuration
+            configuration = load_raw_configuration(
+                path_or_folder, with_comments=True)
         except CrossComputeError:
-            configuration = {}
-    configuration, configuration_path = input_configuration_with(
-        configuration, args)
-    del configuration['folder']
-    del configuration['path']
+            pass
+    configuration, configuration_path = input_configuration(
+        configuration, path_or_folder)
     print(dict(configuration))
     save_configuration(configuration_path, configuration)
     return configuration_path
 
 
-def input_configuration_with(configuration, args):
+def input_configuration(configuration, path_or_folder):
     if not configuration:
-        configuration = load_raw_configuration_yaml(join(
-            TEMPLATES_FOLDER, 'configuration.yaml'), with_comments=True)
+        configuration = load_raw_configuration(
+            TEMPLATES_FOLDER / 'configuration.yaml', with_comments=True)
     old_automation_name = configuration.get('name', AUTOMATION_NAME)
     old_automation_version = configuration.get('version', AUTOMATION_VERSION)
-    old_configuration_path = get_configuration_path(args.path_or_folder)
+    old_configuration_path = get_configuration_path(path_or_folder)
     try:
         new_automation_name = input(
             'automation name [%s]: ' % old_automation_name)
@@ -76,35 +76,33 @@ def input_configuration_with(configuration, args):
     configuration['crosscompute'] = __version__
     configuration['name'] = new_automation_name or old_automation_name
     configuration['version'] = new_automation_version or old_automation_version
-    return configuration, new_configuration_path or old_configuration_path
+    configuration_path = Path(new_configuration_path or old_configuration_path)
+    return configuration, configuration_path
 
 
 def save_configuration(configuration_path, configuration):
-    if exists(configuration_path):
-        L.warning(f'{format_path(configuration_path)} already exists')
+    formatted_configuration_path = format_path(configuration_path)
+    if configuration_path.exists():
+        L.warning('%s already exists', formatted_configuration_path)
         question = '\033[1moverwrite? yes or [no]:\033[0m '
         participle = 'overwritten'
     else:
         question = 'save? yes or [no]: '
         participle = 'saved'
     if not input(question).lower() == 'yes':
-        L.warning(f'{format_path(configuration_path)} not {participle}')
+        L.warning('%s not %s', formatted_configuration_path, participle)
         raise SystemExit
     try:
-        configuration_format = get_configuration_format(configuration_path)
-        save_raw_configuration = {
-            'yaml': save_raw_configuration_yaml,
-        }[configuration_format]
         save_raw_configuration(configuration_path, configuration)
     except CrossComputeError as e:
         L.error(e)
         raise SystemExit
-    L.info(f'{format_path(configuration_path)} {participle}')
+    L.info('%s %s', formatted_configuration_path, participle)
 
 
 def get_configuration_path(path_or_folder):
-    if path_or_folder and isdir(path_or_folder):
-        configuration_path = join(path_or_folder, AUTOMATION_PATH)
+    if path_or_folder and path_or_folder.is_dir():
+        configuration_path = path_or_folder / AUTOMATION_PATH
     else:
         configuration_path = path_or_folder or AUTOMATION_PATH
     return configuration_path

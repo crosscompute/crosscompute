@@ -1,17 +1,24 @@
 import re
-from os.path import dirname, join
+from enum import IntEnum
+from pathlib import Path
 
 from .macros.web import format_slug
 
 
-PACKAGE_FOLDER = dirname(__file__)
-TEMPLATES_FOLDER = join(PACKAGE_FOLDER, 'templates')
+class Error(IntEnum):
+
+    CONFIGURATION_NOT_FOUND = -100
+    COMMAND_NOT_FOUND = -10
+
+
+PACKAGE_FOLDER = Path(__file__).parent
+TEMPLATES_FOLDER = PACKAGE_FOLDER / 'templates'
 ID_LENGTH = 16
 
 
 AUTOMATION_NAME = 'Automation X'
 AUTOMATION_VERSION = '0.0.0'
-AUTOMATION_PATH = 'automate.yml'
+AUTOMATION_PATH = Path('automate.yml')
 
 
 HOST = '127.0.0.1'
@@ -25,13 +32,14 @@ BATCH_ROUTE = '/b/{batch_slug}'
 VARIABLE_ROUTE = '/{variable_id}'
 MODE_ROUTE = '/{mode_code}'
 RUN_ROUTE = '/r/{run_slug}'
-STYLE_ROUTE = '/s/{style_name}'
-STREAMS_ROUTE = '/streams'
+STYLE_ROUTE = '/s/{style_name}.css'
+MUTATIONS_ROUTE = '/mutations'
 
 
 MODE_NAMES = 'input', 'output', 'log', 'debug'
 MODE_NAME_BY_CODE = {_[0]: _ for _ in MODE_NAMES}
-STREAM_PING_INTERVAL_IN_SECONDS = 1
+MODE_CODE_BY_NAME = {k: v for v, k in MODE_NAME_BY_CODE.items()}
+PING_INTERVAL_IN_SECONDS = 1
 
 
 FUNCTION_BY_NAME = {
@@ -39,4 +47,4 @@ FUNCTION_BY_NAME = {
     'title': str.title,
 }
 VARIABLE_ID_PATTERN = re.compile(r'{\s*([^}]+?)\s*}')
-VARIABLE_CACHE = {}
+MAXIMUM_FILE_CACHE_LENGTH = 256

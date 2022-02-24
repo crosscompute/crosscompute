@@ -63,15 +63,6 @@ class SafeDict(dict):
         return '{' + key + '}'
 
 
-def run_automation(automation_definition, is_mock=True, log=None):
-    automation_kind = automation_definition['kind']
-    if automation_kind == 'report':
-        d = run_report_automation(automation_definition, is_mock, log)
-    elif automation_kind == 'result':
-        d = run_result_automation(automation_definition, is_mock, log)
-    return d
-
-
 def run_report_automation(report_definition, is_mock=True, log=None):
     style_dictionary = get_nested_value(
         report_definition, 'print', 'style', {})
@@ -376,44 +367,6 @@ def render_result(tool_definition, result_dictionary):
     return document_dictionary
 
 
-def render_blocks(tool_definition, result_dictionary):
-    input_variable_definition_by_id = get_by_id(tool_definition[
-        'input']['variables'])
-    output_variable_definition_by_id = get_by_id(tool_definition[
-        'output']['variables'])
-    input_variable_data_by_id = get_data_by_id(result_dictionary[
-        'input']['variables'])
-    output_variable_data_by_id = get_data_by_id(result_dictionary[
-        'output']['variables'])
-    template_dictionary = get_template_dictionary(
-        'output', tool_definition, result_dictionary)
-    blocks = deepcopy(template_dictionary['blocks'])
-    for block in blocks:
-        if 'id' not in block:
-            continue
-        variable_id = block['id']
-        if variable_id in output_variable_definition_by_id:
-            variable_definition = output_variable_definition_by_id[variable_id]
-            variable_data = output_variable_data_by_id.get(variable_id, {})
-        elif variable_id in input_variable_definition_by_id:
-            variable_definition = input_variable_definition_by_id[variable_id]
-            variable_data = input_variable_data_by_id.get(variable_id, {})
-        else:
-            continue
-        block['name'] = variable_definition['name']
-        block['view'] = variable_definition['view']
-        block['data'] = variable_data
-    return blocks
-
-
-def load_relevant_path(path, name, kinds):
-    try:
-        relevant_path = find_relevant_path(path, name)
-    except OSError:
-        raise CrossComputeExecutionError({name: 'could not be found'})
-    return load_definition(relevant_path, kinds)
-
-
 def find_relevant_path(path, name):
     if not path:
         path = '.'
@@ -470,29 +423,6 @@ def yield_result_dictionary(result_definition):
         result_dictionary['input']['variables'] = [update(
             _) for _ in result_dictionary['input']['variables']]
         yield result_dictionary
-
-
-def get_result_folder(result_dictionary):
-    folder = S['folder']
-    if 'id' in result_dictionary:
-        result_id = result_dictionary['id']
-        result_folder = join(folder, 'results', result_id)
-    else:
-        drafts_folder = join(folder, 'drafts')
-        result_folder = make_random_folder(drafts_folder, S['draft.id.length'])
-    return result_folder
-
-
-def get_mime_type(file_path):
-    file_extension = splitext(file_path)[1]
-    if file_extension == '.geojson':
-        mime_type = 'application/geo+json'
-    else:
-        mime_type = guess_type(file_path)[0]
-    if mime_type is None:
-        raise CrossComputeDefinitionError({
-            'path': 'has unsupported extension'})
-    return mime_type
 
 
 def prepare_dataset(file_path, file_view, project_dictionaries):
@@ -681,14 +611,6 @@ def process_result_input_stream(script_command, is_quiet, as_json):
     return result_count
 
 
-def get_by_id(variable_dictionaries):
-    return {_['id']: _ for _ in variable_dictionaries}
-
-
-def get_data_by_id(variable_dictionaries):
-    return {_['id']: _['data'] for _ in variable_dictionaries}
-
-
 def get_result_name(result_dictionary):
     variable_value_by_id = {}
     for key in ['input', 'output']:
@@ -713,23 +635,6 @@ def get_result_name(result_dictionary):
     raw_result_name = result_dictionary['name']
     result_name = raw_result_name.format_map(SafeDict(variable_value_by_id))
     return sanitize_name(result_name)
-
-
-def get_script_environment(environment_variable_definitions, folder_by_name):
-    d = {}
-    for variable_definition in environment_variable_definitions:
-        variable_id = variable_definition['id']
-        try:
-            d[variable_id] = environ[variable_id]
-        except KeyError:
-            raise CrossComputeExecutionError({
-                'environment': f'{variable_id} is required by the script'})
-    for key, path in folder_by_name.items():
-        d['CROSSCOMPUTE_' + key.upper()] = path
-    d.update({
-        'PATH': environ.get('PATH', ''),
-        'VIRTUAL_ENV': environ.get('VIRTUAL_ENV', '')})
-    return d
 
 
 def clean_bash_output(output_file):

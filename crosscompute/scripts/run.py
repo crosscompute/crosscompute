@@ -1,10 +1,9 @@
-# TODO: Validate configuration
 from argparse import ArgumentParser
 from logging import getLogger
 
 from crosscompute.exceptions import (
     CrossComputeError)
-from crosscompute.routines.automation import Automation
+from crosscompute.routines.automation import DiskAutomation
 from crosscompute.routines.log import (
     configure_argument_parser_for_logging,
     configure_logging_from)
@@ -12,15 +11,15 @@ from crosscompute.scripts.configure import (
     configure_argument_parser_for_configuring)
 
 
-def do():
+def do(arguments=None):
     a = ArgumentParser()
     configure_argument_parser_for_logging(a)
     configure_argument_parser_for_configuring(a)
     configure_argument_parser_for_running(a)
-    args = a.parse_args()
+    args = a.parse_args(arguments)
     configure_logging_from(args)
     try:
-        automation = Automation.load(args.path_or_folder)
+        automation = DiskAutomation.load(args.path_or_folder)
     except CrossComputeError as e:
         L.error(e)
         return
@@ -37,6 +36,10 @@ def configure_argument_parser_for_running(a):
 
 
 def run_with(automation, args):
+    return run(automation)
+
+
+def run(automation):
     try:
         automation.run()
     except CrossComputeError as e:

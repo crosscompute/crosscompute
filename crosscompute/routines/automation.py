@@ -2,89 +2,104 @@
 # TODO: Consider whether to send partial updates for variables
 # TODO: Precompile notebook scripts
 import logging
+import shlex
 import subprocess
+from itertools import repeat
+from logging import getLogger
+from multiprocessing import Queue, Value
+from os import environ, getenv
+from pathlib import Path
+from time import time
+
 from invisibleroads_macros_disk import is_path_in_folder, make_folder
 from invisibleroads_macros_log import format_path
-from logging import getLogger
-from multiprocessing import Process, Queue, Value
-from os import environ, getenv, listdir
-from os.path import exists, isdir, join, realpath
 from pyramid.config import Configurator
-from time import time
+from pyramid.events import NewResponse
 from waitress import serve
 from watchgod import watch
 
 from ..constants import (
+    Error,
     AUTOMATION_PATH,
     DISK_DEBOUNCE_IN_MILLISECONDS,
     DISK_POLL_IN_MILLISECONDS,
     HOST,
     MODE_NAMES,
-    PORT,
-    STREAMS_ROUTE)
+    MUTATIONS_ROUTE,
+    PING_INTERVAL_IN_SECONDS,
+    PORT)
 from ..exceptions import (
     CrossComputeConfigurationError,
-    CrossComputeError)
+    CrossComputeConfigurationFormatError,
+    CrossComputeConfigurationNotFoundError,
+    CrossComputeDataError,
+    CrossComputeError,
+    CrossComputeExecutionError)
 from ..macros.iterable import group_by
-from ..macros.process import StoppableProcess
+from ..macros.process import LoggableProcess, StoppableProcess
 from ..routes.automation import AutomationRoutes
-from ..routes.stream import StreamRoutes
+from ..routes.mutation import MutationRoutes
 from .configuration import (
-    get_automation_definitions,
-    get_display_configuration,
-    get_variable_definitions,
-    load_configuration)
+    load_configuration,
+    validate_display_styles)
+from .interface import Automation
 from .variable import (
-    format_text,
     get_variable_data_by_id,
-    save_variable_data)
+    get_variable_value_by_id,
+    load_variable_data,
+    save_variable_data,
+    update_variable_data)
 
 
-class Automation():
+class DiskAutomation(Automation):
 
     @classmethod
     def load(Class, path_or_folder=None):
         instance = Class()
-        if isdir(path_or_folder):
-            instance.initialize_from_folder(path_or_folder)
+        path_or_folder = Path(path_or_folder)
+        if path_or_folder.is_dir():
+            instance._initialize_from_folder(path_or_folder)
         else:
-            instance.initialize_from_path(path_or_folder)
+            instance._initialize_from_path(path_or_folder)
         return instance
 
-    def reload(self):
+    def _reload(self):
         path = self.path
-        if exists(path):
-            self.initialize_from_path(path)
+        if path.exists():
+            self._initialize_from_path(path)
         else:
-            self.initialize_from_folder(self.folder)
+            self._initialize_from_folder(self.folder)
 
-    def initialize_from_folder(self, folder):
-        paths = listdir(folder)
-        if AUTOMATION_PATH in paths:
-            paths.remove(AUTOMATION_PATH)
-            paths.insert(0, AUTOMATION_PATH)
-        for relative_path in paths:
-            absolute_path = join(folder, relative_path)
-            if isdir(absolute_path):
+    def _initialize_from_folder(self, folder):
+        paths = list(folder.iterdir())
+        default_automation_path = folder / AUTOMATION_PATH
+        if default_automation_path in paths:
+            paths.remove(default_automation_path)
+            paths.insert(0, default_automation_path)
+        for path in paths:
+            if path.is_dir():
                 continue
             try:
-                self.initialize_from_path(absolute_path)
-            except CrossComputeConfigurationError:
+                self._initialize_from_path(path)
+            except CrossComputeConfigurationFormatError:
+                continue
+            except (CrossComputeConfigurationError, CrossComputeDataError):
                 raise
             except CrossComputeError:
                 continue
             break
         else:
-            raise CrossComputeError('could not find configuration')
+            raise CrossComputeConfigurationNotFoundError(
+                'configuration not found')
 
-    def initialize_from_path(self, path):
+    def _initialize_from_path(self, path):
         configuration = load_configuration(path)
+        self.configuration = configuration
         self.path = path
-        self.folder = configuration['folder']
-        self.definitions = get_automation_definitions(configuration)
-        self._file_type_by_path = self._get_file_type_by_path()
+        self.folder = configuration.folder
+        self.definitions = configuration.automation_definitions
+        self._file_code_by_path = self._get_file_code_by_path()
         self._timestamp_object = Value('d', time())
-        L.debug('configuration_path = %s', path)
 
     def serve(
             self,
@@ -92,9 +107,10 @@ class Automation():
             port=PORT,
             is_static=False,
             is_production=False,
+            base_uri='',
+            allowed_origins=None,
             disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
             disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS,
-            base_uri='',
             automation_queue=None):
         if automation_queue is None:
             automation_queue = Queue()
@@ -103,17 +119,18 @@ class Automation():
             getLogger('watchgod.watcher').setLevel(logging.ERROR)
 
         def run_server():
-            L.info('starting worker')
-            worker_process = Process(target=self.work, args=(
-                automation_queue,))
+            worker_process = LoggableProcess(
+                name='worker', target=self.work, args=(automation_queue,))
             worker_process.daemon = True
             worker_process.start()
             L.info('serving at http://%s:%s%s', host, port, base_uri)
             # TODO: Decouple from pyramid and waitress
             app = self._get_app(
-                automation_queue, is_static, is_production, base_uri)
+                automation_queue, is_static, is_production, base_uri,
+                allowed_origins)
             try:
-                serve(app, host=host, port=port, url_prefix=base_uri)
+                serve(
+                    app, host=host, port=port, url_prefix=base_uri, threads=8)
             except OSError as e:
                 L.error(e)
 
@@ -127,199 +144,373 @@ class Automation():
 
     def run(self):
         for automation_definition in self.definitions:
-            for batch_definition in automation_definition.get('batches', []):
-                run_automation(automation_definition, batch_definition)
+            batch_definitions = automation_definition.batch_definitions
+            try:
+                for batch_definition in batch_definitions:
+                    _run_automation(
+                        automation_definition, batch_definition,
+                        load_variable_data)
+            except CrossComputeError as e:
+                e.automation_definition = automation_definition
+                L.error(e)
 
     def work(self, automation_queue):
         try:
             while automation_pack := automation_queue.get():
-                run_automation(*automation_pack)
+                automation_definition, batch_definition = automation_pack
+                try:
+                    _run_automation(
+                        automation_definition, batch_definition,
+                        load_variable_data)
+                except CrossComputeError as e:
+                    e.automation_definition = automation_definition
+                    L.error(e)
         except KeyboardInterrupt:
             pass
 
     def watch(
             self, run_server, disk_poll_in_milliseconds,
             disk_debounce_in_milliseconds):
-        server_process = StoppableProcess(target=run_server)
+        server_process = StoppableProcess(name='server', target=run_server)
         server_process.start()
         for changes in watch(
                 self.folder, min_sleep=disk_poll_in_milliseconds,
                 debounce=disk_debounce_in_milliseconds):
             for changed_type, changed_path in changes:
                 try:
-                    file_type = self._get_file_type(changed_path)
+                    file_code = self._get_file_code(changed_path)
                 except KeyError:
                     continue
-                L.debug('%s %s %s', changed_type, changed_path, file_type)
-                if file_type == 'c':
+                L.debug('%s %s %s', changed_type, changed_path, file_code)
+                if file_code == 'c':
                     try:
-                        self.reload()
+                        self._reload()
                     except CrossComputeError as e:
                         L.error(e)
                         continue
                     server_process.stop()
-                    server_process = StoppableProcess(target=run_server)
+                    server_process = StoppableProcess(
+                        name='server', target=run_server)
                     server_process.start()
-                elif file_type == 's':
+                elif file_code == 's':
                     for d in self.definitions:
-                        d['display'] = get_display_configuration(d)
+                        validate_display_styles(d)
                     self._timestamp_object.value = time()
                 else:
                     self._timestamp_object.value = time()
 
-    def _get_app(self, automation_queue, is_static, is_production, base_uri):
+    def _get_app(
+            self, automation_queue, is_static, is_production, base_uri,
+            allowed_origins):
         automation_routes = AutomationRoutes(
-            self.definitions, automation_queue, self._timestamp_object)
-        stream_routes = StreamRoutes(self._timestamp_object)
-        with Configurator() as config:
+            self.configuration, self.definitions, automation_queue,
+            self._timestamp_object)
+        mutation_routes = MutationRoutes(self._timestamp_object)
+        settings = {
+            'jinja2.trim_blocks': True,
+            'jinja2.lstrip_blocks': True,
+        }
+        if not is_static and not is_production:
+            settings.update({
+                'pyramid.reload_templates': True,
+            })
+        with Configurator(settings=settings) as config:
             config.include('pyramid_jinja2')
             config.include(automation_routes.includeme)
             if not is_static:
-                config.include(stream_routes.includeme)
-
-            def update_renderer_globals():
-                renderer_environment = config.get_jinja2_environment()
-                renderer_environment.globals.update({
-                    'BASE_JINJA2': 'base.jinja2',
-                    'LIVE_JINJA2': 'live.jinja2',
-                    'IS_STATIC': is_static,
-                    'IS_PRODUCTION': is_production,
-                    'BASE_URI': base_uri,
-                    'STREAMS_ROUTE': STREAMS_ROUTE,
-                })
-
-            config.action(None, update_renderer_globals)
+                config.include(mutation_routes.includeme)
+            _configure_renderer_globals(
+                config, is_static, is_production, base_uri)
+            _configure_cache_headers(config, is_production)
+            _configure_allowed_origins(config, allowed_origins)
         return config.make_wsgi_app()
 
-    def _get_file_type(self, path):
+    def _get_file_code(self, path):
+        path = Path(path)
+        real_path = path.resolve()
         for automation_definition in self.definitions:
-            automation_folder = automation_definition['folder']
-            if is_path_in_folder(path, join(automation_folder, 'runs')):
-                return 'v'
-        return self._file_type_by_path[realpath(path)]
+            automation_folder = automation_definition.folder
+            runs_folder = automation_folder / 'runs'
+            if not is_path_in_folder(path, runs_folder):
+                continue
+            run_id = path.absolute().relative_to(runs_folder).parts[0]
+            run_folder = runs_folder / run_id
+            expected_paths = self._get_variable_paths_from_folder(run_folder)
+            for expected_path in expected_paths:
+                if real_path == expected_path.resolve():
+                    return 'v'
+        return self._file_code_by_path[real_path]
 
-    def _get_file_type_by_path(self):
+    def _get_file_code_by_path(self):
         'Set c = configuration, s = style, t = template, v = variable'
-        file_type_by_path = {}
+        packs = []
+        packs.extend(zip(self._get_configuration_paths(), repeat('c')))
+        packs.extend(zip(self._get_variable_paths(), repeat('v')))
+        packs.extend(zip(self._get_template_paths(), repeat('t')))
+        packs.extend(zip(self._get_style_paths(), repeat('s')))
+        return {path.resolve(): code for path, code in packs}
 
-        def add(path, file_type):
-            file_type_by_path[realpath(path)] = file_type
-
-        for path in [self.path] + [_['path'] for _ in self.definitions]:
-            add(path, 'c')
+    def _get_configuration_paths(self):
+        paths = set()
+        # Get automation configuration paths
+        paths.update([self.path] + [_.path for _ in self.definitions])
+        # Get batch configuration paths
         for automation_definition in self.definitions:
-            folder = automation_definition['folder']
-            configuration = load_configuration(automation_definition['path'])
-            for batch_definition in configuration.get('batches', []):
-                batch_configuration = batch_definition.get('configuration', {})
+            automation_folder = automation_definition.folder
+            # Use raw batch definitions
+            raw_batch_definitions = automation_definition.get('batches', [])
+            for raw_batch_definition in raw_batch_definitions:
+                batch_configuration = raw_batch_definition.get(
+                    'configuration', {})
                 if 'path' not in batch_configuration:
                     continue
-                add(join(folder, batch_configuration['path']), 'c')
-            for mode_name in MODE_NAMES:
-                mode_configuration = automation_definition.get(mode_name, {})
-                template_definitions = mode_configuration.get('templates', [])
+                paths.add(automation_folder / batch_configuration['path'])
+        return paths
+
+    def _get_variable_paths(self):
+        paths = set()
+        for automation_definition in self.definitions:
+            automation_folder = automation_definition.folder
+            # Use computed batch definitions
+            for batch_definition in automation_definition.batch_definitions:
+                paths.update(self._get_variable_paths_from_folder(
+                    automation_folder / batch_definition.folder))
+        return paths
+
+    def _get_template_paths(self):
+        paths = set()
+        for automation_definition in self.definitions:
+            automation_folder = automation_definition.folder
+            d = automation_definition.template_definitions_by_mode_name
+            for template_definitions in d.values():
                 for template_definition in template_definitions:
                     if 'path' not in template_definition:
                         continue
-                    add(join(folder, template_definition['path']), 't')
-            for batch_definition in automation_definition.get('batches', []):
-                for path in self._get_paths_from_folder(join(
-                        folder, batch_definition['folder'])):
-                    add(path, 'v')
-            display_configuration = automation_definition.get('display', {})
-            for style_definition in display_configuration.get('styles', []):
-                if 'path' not in style_definition:
-                    continue
-                add(join(folder, style_definition['path']), 's')
-        return file_type_by_path
+                    paths.add(automation_folder / template_definition.path)
+        d = automation_definition.template_path_by_id
+        for path in d.values():
+            paths.add(automation_folder / path)
+        return paths
 
-    def _get_paths_from_folder(self, folder):
+    def _get_style_paths(self):
         paths = set()
         for automation_definition in self.definitions:
-            for mode_name in MODE_NAMES:
-                mode_configuration = automation_definition.get(mode_name, {})
-                variable_definitions = mode_configuration.get('variables', [])
+            automation_folder = automation_definition.folder
+            for style_definition in automation_definition.style_definitions:
+                if 'path' not in style_definition:
+                    continue
+                paths.add(automation_folder / style_definition['path'])
+        return paths
+
+    def _get_variable_paths_from_folder(self, absolute_batch_folder):
+        paths = set()
+        for automation_definition in self.definitions:
+            d = automation_definition.variable_definitions_by_mode_name
+            for mode_name, variable_definitions in d.items():
+                folder = absolute_batch_folder / mode_name
                 for variable_definition in variable_definitions:
-                    variable_configuration = variable_definition.get(
-                        'configuration', {})
+                    variable_configuration = variable_definition.configuration
                     if 'path' in variable_configuration:
-                        paths.add(join(folder, variable_configuration['path']))
-                    paths.add(join(folder, variable_definition['path']))
+                        paths.add(folder / variable_configuration['path'])
+                    paths.add(folder / variable_definition.path)
         return paths
 
 
-def run_automation(automation_definition, batch_definition):
-    script_definition = automation_definition.get('script', {})
-    command_string = script_definition.get('command')
-    if not command_string:
+def _run_automation(
+        automation_definition, batch_definition, process_data):
+    script_definitions = automation_definition.script_definitions
+    if not script_definitions:
         return
-    folder = automation_definition['folder']
-    batch_folder, custom_environment = prepare_batch(
+    reference_time = time()
+    folder = automation_definition.folder
+    batch_folder, custom_environment = _prepare_batch(
         automation_definition, batch_definition)
     L.info(
-        '%s %s running %s', automation_definition['name'],
-        automation_definition['version'],
-        format_path(join(folder, batch_folder)))
-    mode_folder_by_name = {_ + '_folder': make_folder(join(
-        folder, batch_folder, _)) for _ in MODE_NAMES}
-    script_environment = {
-        'CROSSCOMPUTE_' + k.upper(): v for k, v in mode_folder_by_name.items()
-    } | {'PATH': getenv('PATH', '')} | custom_environment
-    L.debug('environment = %s', script_environment)
+        '%s %s running %s', automation_definition.name,
+        automation_definition.version, format_path(folder / batch_folder))
+    mode_folder_by_name = {_ + '_folder': make_folder(
+        folder / batch_folder / _) for _ in MODE_NAMES}
+    script_environment = _prepare_script_environment(
+        mode_folder_by_name, custom_environment)
     debug_folder = mode_folder_by_name['debug_folder']
-    o_path = join(debug_folder, 'stdout.txt')
-    e_path = join(debug_folder, 'stderr.txt')
+    o_path = debug_folder / 'stdout.txt'
+    e_path = debug_folder / 'stderr.txt'
     try:
-        with open(o_path, 'wt') as o_file, open(e_path, 'wt') as e_file:
-            subprocess.run(
-                format_text(command_string, mode_folder_by_name), check=True,
-                shell=True,  # Expand $HOME and ~
-                cwd=join(folder, script_definition.get('folder', '.')),
-                env=script_environment, stdout=o_file, stderr=e_file)
-    except OSError as e:
+        with open(o_path, 'wt') as o_file, open(e_path, 'w+t') as e_file:
+            for script_definition in script_definitions:
+                return_code = _run_script(
+                    script_definition, mode_folder_by_name,
+                    script_environment, o_file, e_file)
+    except CrossComputeExecutionError as e:
+        e.automation_definition = automation_definition
         L.error(e)
-    except subprocess.CalledProcessError:
-        L.error(open(e_path, 'rt').read().rstrip())
+        return_code = e.return_code
+    return _process_batch(automation_definition, batch_definition, [
+        'output', 'log', 'debug',
+    ], {'debug': {
+        'execution_time_in_seconds': time() - reference_time,
+        'return_code': return_code}}, process_data)
 
 
-def prepare_batch(automation_definition, batch_definition):
-    variable_definitions = get_variable_definitions(
-        automation_definition, 'input')
-    batch_folder = batch_definition['folder']
+def _run_script(
+        script_definition, mode_folder_by_name, script_environment,
+        stdout_file, stderr_file):
+    command_string = script_definition.get_command_string()
+    if not command_string:
+        return
+    command_text = command_string.format(**mode_folder_by_name)
+    automation_folder = script_definition.automation_folder
+    script_folder = script_definition.folder
+    command_folder = automation_folder / script_folder
+    return _run_command(
+        command_text, command_folder, script_environment, stdout_file,
+        stderr_file)
+
+
+def _run_command(
+        command_string, command_folder, script_environment, o_file, e_file):
+    try:
+        process = subprocess.run(
+            shlex.split(command_string),
+            check=True,
+            cwd=command_folder,
+            env=script_environment,
+            stdout=o_file,
+            stderr=e_file)
+    except (IndexError, OSError):
+        e = CrossComputeExecutionError(
+            f'could not run {shlex.quote(command_string)} in {command_folder}')
+        e.return_code = Error.COMMAND_NOT_FOUND
+        raise e
+    except subprocess.CalledProcessError as e:
+        e_file.seek(0)
+        error_text = e_file.read().rstrip()
+        error = CrossComputeExecutionError(error_text)
+        error.return_code = e.returncode
+        raise error
+    return process.returncode
+
+
+def _prepare_batch(automation_definition, batch_definition):
+    variable_definitions = automation_definition.get_variable_definitions(
+        'input')
     variable_definitions_by_path = group_by(variable_definitions, 'path')
-    data_by_id = batch_definition.get('data_by_id', {})
-    custom_environment = prepare_environment(
+    data_by_id = batch_definition.data_by_id
+    batch_folder = batch_definition.folder
+    custom_environment = _prepare_custom_environment(
         automation_definition,
         variable_definitions_by_path.pop('ENVIRONMENT', []),
         data_by_id)
     if not data_by_id:
         return batch_folder, custom_environment
-    automation_folder = automation_definition['folder']
-    input_folder = make_folder(join(automation_folder, batch_folder, 'input'))
+    automation_folder = automation_definition.folder
+    input_folder = make_folder(automation_folder / batch_folder / 'input')
     for path, variable_definitions in variable_definitions_by_path.items():
-        input_path = join(input_folder, path)
-        save_variable_data(input_path, variable_definitions, data_by_id)
+        input_path = input_folder / path
+        save_variable_data(input_path, data_by_id, variable_definitions)
     return batch_folder, custom_environment
 
 
-def prepare_environment(
+def _prepare_script_environment(mode_folder_by_name, custom_environment):
+    script_environment = {
+        'CROSSCOMPUTE_' + k.upper(): v for k, v in mode_folder_by_name.items()
+    } | {'PATH': getenv('PATH', '')} | custom_environment
+    L.debug('environment = %s', script_environment)
+    return script_environment
+
+
+def _prepare_custom_environment(
         automation_definition, variable_definitions, data_by_id):
     custom_environment = {}
-    data_by_id = data_by_id.copy()
-    try:
-        environment_variable_definitions = automation_definition.get(
-            'environment', {}).get('variables', [])
-        for variable_id in (_['id'] for _ in environment_variable_definitions):
+    for variable_id in automation_definition.environment_variable_ids:
+        custom_environment[variable_id] = environ[variable_id]
+    for variable_id in (_.id for _ in variable_definitions):
+        if variable_id in data_by_id:
+            continue
+        try:
             custom_environment[variable_id] = environ[variable_id]
-        for variable_id in (_['id'] for _ in variable_definitions):
-            if variable_id in data_by_id:
+        except KeyError:
+            raise CrossComputeConfigurationError(
+                f'{variable_id} is missing in the environment')
+    variable_data_by_id = get_variable_data_by_id(
+        variable_definitions, data_by_id, with_exceptions=False)
+    variable_value_by_id = get_variable_value_by_id(variable_data_by_id)
+    return custom_environment | variable_value_by_id
+
+
+def _process_batch(
+        automation_definition, batch_definition, mode_names,
+        extra_data_by_id_by_mode_name, process_data):
+    variable_data_by_id_by_mode_name = {}
+    automation_folder = automation_definition.folder
+    batch_folder = batch_definition.folder
+    for mode_name in mode_names:
+        variable_data_by_id_by_mode_name[mode_name] = variable_data_by_id = {}
+        extra_data_by_id = extra_data_by_id_by_mode_name.get(mode_name, {})
+        mode_folder = automation_folder / batch_folder / mode_name
+        variable_definitions = automation_definition.get_variable_definitions(
+            mode_name)
+        for variable_definition in variable_definitions:
+            variable_id = variable_definition.id
+            variable_path = variable_definition.path
+            if variable_id in extra_data_by_id:
                 continue
-            data_by_id[variable_id] = environ[variable_id]
-    except KeyError:
-        raise CrossComputeConfigurationError(
-            f'{variable_id} is missing in the environment')
-    return custom_environment | get_variable_data_by_id(
-        variable_definitions, data_by_id)
+            path = mode_folder / variable_path
+            try:
+                variable_data = process_data(path, variable_id)
+            except CrossComputeDataError as e:
+                e.automation_definitions = automation_definition
+                L.error(e)
+                continue
+            variable_data_by_id[variable_id] = variable_data
+        if extra_data_by_id:
+            update_variable_data(
+                mode_folder / 'variables.dictionary', extra_data_by_id)
+            variable_data_by_id.update(extra_data_by_id)
+    return variable_data_by_id_by_mode_name
+
+
+def _configure_cache_headers(config, is_production):
+    if is_production:
+        return
+
+    def update_cache_headers(e):
+        e.response.headers.update({'Cache-Control': 'no-store'})
+
+    config.add_subscriber(update_cache_headers, NewResponse)
+
+
+def _configure_allowed_origins(config, allowed_origins):
+    if not allowed_origins:
+        return
+
+    def update_cors_headers(e):
+        request_headers = e.request.headers
+        if 'Origin' not in request_headers:
+            return
+        origin = request_headers['Origin']
+        if origin not in allowed_origins:
+            return
+        e.response.headers.update({
+            'Access-Control-Allow-Origin': origin})
+
+    config.add_subscriber(update_cors_headers, NewResponse)
+
+
+def _configure_renderer_globals(config, is_static, is_production, base_uri):
+
+    def update_renderer_globals():
+        config.get_jinja2_environment().globals.update({
+            'BASE_JINJA2': 'crosscompute:templates/base.jinja2',
+            'LIVE_JINJA2': 'crosscompute:templates/live.jinja2',
+            'IS_STATIC': is_static,
+            'IS_PRODUCTION': is_production,
+            'BASE_URI': base_uri,
+            'MUTATIONS_ROUTE': MUTATIONS_ROUTE,
+            'PING_INTERVAL_IN_MILLISECONDS': PING_INTERVAL_IN_SECONDS * 1000,
+        })
+
+    config.action(None, update_renderer_globals)
 
 
 L = getLogger(__name__)
