@@ -1,1 +1,1 @@
-include *.jinja2
+include crosscompute/templates/*.jinja2
