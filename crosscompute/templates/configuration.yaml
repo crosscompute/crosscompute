@@ -1,9 +1,178 @@
 ---
+# Examples: https://github.com/crosscompute/crosscompute-examples
+# Documentation: https://d.crosscompute.com
+# Forum: https://forum.crosscompute.com
+
 # version of crosscompute
 crosscompute: 0.0.0
 
 # name of your automation
 name: Automation X
 
+# slug for automation URI
+# slug: automation-x
+
 # version of your automation
 version: 0.0.0
+
+# imports configuration
+# - id to use when referencing this import in your template
+# - path to the configuration file that you want to import
+# imports:
+#   - id: automation-y
+#     path: tools/automation-y/automate.yml
+
+# input configuration
+# input:
+
+  # input variables
+  # - id to use when referencing your variable in the template
+  # - view to use when rendering your variable on the display
+  # - path where your script loads the variable, relative to the input folder;
+  #   specify ENVIRONMENT to prevent saving the variable to disk
+  # - configuration of the view
+  # variables:
+  #   - id: x1
+  #     view: string
+  #     path: variables.dictionary
+  #   - id: x2
+  #     view: number
+  #     path: variables.dictionary
+  #   - id: x3
+  #     view: password
+  #     path: ENVIRONMENT
+  #   - id: x4
+  #     view: email
+  #     path: ENVIRONMENT
+  #   - id: x5
+  #     view: text
+  #     path: x5.txt
+  #   - id: x6
+  #     view: markdown
+  #     path: x6.md
+
+  # input templates
+  # - path to your markdown template or jupyter notebook form
+  # templates:
+  #   - path: form.md
+
+# output configuration
+# output:
+
+  # output variables
+  # - id to use when referencing your variable in the template
+  # - view to use when rendering your variable on the display
+  # - path where your script saves the variable,
+  #   relative to the output folder
+  # - configuration of the view
+  # variables:
+  #   - id: y1
+  #     view: link
+  #     path: y1.pdf
+  #   - id: y2
+  #     view: string
+  #     path: variables.dictionary
+  #   - id: y3
+  #     view: number
+  #     path: variables.dictionary
+  #   - id: y4
+  #     view: text
+  #     path: y4.txt
+  #   - id: y5
+  #     view: markdown
+  #     path: y5.md
+  #   - id: y6
+  #     view: image
+  #     path: y6.svg
+  #   - id: y7
+  #     view: table
+  #     path: y7.json
+  #   - id: y8
+  #     view: map-mapbox
+  #     path: y8.geojson
+  #     configuration:
+  #       style: mapbox://styles/mapbox/dark-v10
+  #       layers:
+  #         - type: fill
+  #           type: circle
+  #           paint:
+  #             fill-color: blue
+  #             circle-color: red
+  #       path: y8-configuration.json
+  #   - id: y9
+  #     view: map-deck-screengrid
+  #     path: y9.json
+  #     configuration:
+  #       style: mapbox://styles/mapbox/dark-v10
+  #       path: y9-configuration.json
+
+  # output templates
+  # - path to your markdown template or jupyter notebook form
+  # templates:
+  #   - path: report-section1.md
+  #   - path: report-section2.md
+
+# tests configuration
+# - folder that contains an input subfolder with paths for
+#   input variables that define a specific test
+# tests:
+#   - folder: tests/test1
+#   - folder: tests/test2
+
+# batches configuration
+# - name of the batch; can include variable ids and filters
+# - slug for batch URI; can include variable ids and filters
+# - folder that contains an input subfolder with paths for
+#   input variables; can include variable ids and filters
+# - reference batch to use to fill omitted variables in batch configuration
+# - configuration for batch template
+# batches:
+
+  # case 0: use a batch folder to set values for input variables
+  # - folder: batches/batch0
+
+  # case 1: use a batch configuration to vary values for input variables
+  # - name: '{x1 | title} {x2}'
+  #   slug: '{x1 | slug}-{x2}'
+  #   folder: batches/{x1 | slug}-{x2}
+  #   configuration:
+  #     path: datasets/batches.csv
+
+  # case 2: use a reference folder to set default values for missing variables
+  #         use a batch configuration to vary selected variables
+  # - name: '{x1 | title} {x2}'
+  #   slug: '{x1 | slug}-{x2}'
+  #   folder: batches/{x1 | slug}-{x2}
+  #   reference:
+  #     folder: batches/batch0
+  #   configuration:
+  #     path: datasets/batches.csv
+
+# scripts configuration
+# - path to your script, relative to the script folder
+# - command to run your script, if path is not specified
+# - folder where your script should run
+# scripts:
+#   - path: run1.ipynb
+#     command: python run1.py {input_folder} {output_folder} {log_folder} {debug_folder}
+#     folder: .
+#   - path: run2.ipynb
+#     command: python run2.py {input_folder} {output_folder} {log_folder} {debug_folder}
+#     folder: .
+
+# display configuration
+# display:
+
+  # styles configuration
+  # - uri to CSS stylesheet that will be used to render your templates
+  # - path to CSS stylesheet that will be used to render your templates
+  # styles:
+  #   - uri: https://fonts.googleapis.com/css?family=Tangerine
+  #   - path: report.css
+
+  # templates configuration
+  # - id of template
+  # - path to template
+  # templates:
+  #   - id: root
+  #     path: root.jinja2

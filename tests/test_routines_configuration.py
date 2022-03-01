@@ -6,7 +6,8 @@ from crosscompute.exceptions import (
     CrossComputeError)
 from crosscompute.routines.configuration import (
     validate_automation_identifiers,
-    validate_protocol)
+    validate_protocol,
+    validate_variables)
 
 
 class DummyConfiguration(dict):
@@ -35,3 +36,30 @@ def test_validate_automation_identifiers():
     assert d['version'] == 'x'
     assert d['slug'] == 'x'
     assert d['uri'] == '/a/x'
+
+
+def test_validate_variables():
+    d = validate_variables(DummyConfiguration({}))
+    assert len(d['variable_definitions_by_mode_name']['input']) == 0
+    with raises(CrossComputeConfigurationError):
+        validate_variables(DummyConfiguration({
+            'input': {'variables': [{
+                'id': 'x',
+                'view': 'string',
+                'path': 'x.txt',
+            }, {
+                'id': 'x',
+                'view': 'string',
+                'path': 'x.txt',
+            }]}}))
+    d = validate_variables(DummyConfiguration({
+        'input': {'variables': [{
+            'id': 'x',
+            'view': 'string',
+            'path': 'x.txt',
+        }, {
+            'id': 'y',
+            'view': 'string',
+            'path': 'y.txt',
+        }]}}))
+    assert len(d['variable_definitions_by_mode_name']['input']) == 2
