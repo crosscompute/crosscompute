@@ -286,9 +286,9 @@ class DiskAutomation(Automation):
                     if 'path' not in template_definition:
                         continue
                     paths.add(automation_folder / template_definition.path)
-        d = automation_definition.template_path_by_id
-        for path in d.values():
-            paths.add(automation_folder / path)
+            d = automation_definition.template_path_by_id
+            for path in d.values():
+                paths.add(automation_folder / path)
         return paths
 
     def _get_style_paths(self):
