@@ -1,10 +1,11 @@
 # TODO: Save to ini, toml
-import subprocess
 import tomli
 from collections import Counter
 from configparser import ConfigParser
 from invisibleroads_macros_log import format_path
 from logging import getLogger
+from nbconvert import PythonExporter
+from nbformat import read as load_notebook, NO_CONVERT
 from os import environ
 from os.path import relpath, splitext
 from pathlib import Path
@@ -142,21 +143,22 @@ class ScriptDefinition(Definition):
             return command_string
         if 'path' not in self:
             return
-        script_folder = self.folder
         script_path = self.path
         suffix = script_path.suffix
         if suffix == '.ipynb':
+            folder = self.automation_folder / self.folder
+            old_path = folder / script_path
+            script_path = '.' + str(script_path.with_suffix('.ipynb.py'))
+            new_path = folder / script_path
+            L.info('exporting %s to %s', old_path, new_path)
             try:
-                subprocess.run([
-                    'jupyter', 'nbconvert', '--to', 'script', script_path,
-                ], check=True, cwd=self.automation_folder / script_folder)
-            except subprocess.CalledProcessError as e:
+                script_text = PythonExporter().from_notebook_node(
+                    load_notebook(old_path, NO_CONVERT))[0]
+                with (new_path).open('wt') as script_file:
+                    script_file.write(script_text)
+            except Exception as e:
                 raise CrossComputeConfigurationError(e)
-            new_script_path = script_path.with_suffix('.py')
-            command_string = f'python "{new_script_path}"'
-        elif suffix == '.py':
-            command_string = f'python "{script_path}"'
-        self.command = command_string
+        self.command = command_string = f'python "{script_path}"'
         return command_string
 
 
