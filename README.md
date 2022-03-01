@@ -11,7 +11,7 @@ Automate your Jupyter notebooks and scripts as web-based reports, tools, widgets
 Here are some available extensions:
 
 - [crosscompute-views-map](https://github.com/crosscompute/crosscompute-views-map)
-- [jupyterlab-crosscompute](https://github.com/crosscompute/jupyterlab-crosscompute) (being updated to support >= 0.9)
+- [jupyterlab-crosscompute](https://github.com/crosscompute/jupyterlab-crosscompute)
 
 Here are some available views:
 
@@ -26,6 +26,8 @@ Here are some available views:
 - table
 - map-mapbox (crosscompute-views-map)
 - map-deck-screengrid (crosscompute-views-map)
+
+[Here are the currently supported configuration options](https://github.com/crosscompute/crosscompute/blob/develop/crosscompute/templates/configuration.yaml).
 
 ## Usage
 
@@ -43,6 +45,7 @@ crosscompute automate.yml
 Here are some tutorials and examples:
 - [Examples](https://crosscompute.net) [[source](https://github.com/crosscompute/crosscompute-examples)]
 - [Documentation](https://d.crosscompute.com) [[source](https://github.com/crosscompute/crosscompute-docs)]
+- [Forum](https://forum.crosscompute.com)
 
 ## Development
 
