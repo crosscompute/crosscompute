@@ -15,10 +15,12 @@ def configure_logging_from(args):
 
 
 def configure_logging(intensity):
-    if intensity > 1:
-        logging_level = logging.NOTSET
-    elif intensity == 1:
+    logging_format = '%(asctime)s %(levelname)s %(message)s'
+    if intensity >= 1:
         logging_level = logging.DEBUG
+        logging_format = (
+            '%(asctime)s %(levelname)s %(module)s.%(funcName)s:%(lineno)s '
+            '%(message)s')
     elif intensity == 0:
         logging_level = logging.INFO
     elif intensity == -1:
@@ -28,6 +30,6 @@ def configure_logging(intensity):
     elif intensity <= -2:
         logging_level = logging.CRITICAL
     logging.basicConfig(
-        format='%(asctime)s %(levelname)s %(message)s',
+        format=logging_format,
         datefmt='%Y-%m-%d %H:%M:%S',
         level=logging_level)

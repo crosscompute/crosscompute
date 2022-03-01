@@ -148,7 +148,7 @@ class DiskAutomation(Automation):
                 for batch_definition in batch_definitions:
                     _run_automation(
                         automation_definition, batch_definition,
-                        load_variable_data)
+                        process_data=load_variable_data)
             except CrossComputeError as e:
                 e.automation_definition = automation_definition
                 L.error(e)
@@ -160,7 +160,7 @@ class DiskAutomation(Automation):
                 try:
                     _run_automation(
                         automation_definition, batch_definition,
-                        load_variable_data)
+                        process_data=load_variable_data)
                 except CrossComputeError as e:
                     e.automation_definition = automation_definition
                     L.error(e)

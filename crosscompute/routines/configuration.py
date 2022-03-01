@@ -150,7 +150,7 @@ class ScriptDefinition(Definition):
             old_path = folder / script_path
             script_path = '.' + str(script_path.with_suffix('.ipynb.py'))
             new_path = folder / script_path
-            L.info('exporting %s to %s', old_path, new_path)
+            L.info('exporting %s to %s', self.path, script_path)
             try:
                 script_text = PythonExporter().from_notebook_node(
                     load_notebook(old_path, NO_CONVERT))[0]
@@ -341,18 +341,21 @@ def validate_variable_views(configuration):
 
 def validate_templates(configuration):
     template_definitions_by_mode_name = {}
-    try:
-        for mode_name in MODE_NAMES:
-            mode_configuration = get_dictionary(configuration, mode_name)
-            template_definitions = [TemplateDefinition(
-                _, mode_name=mode_name,
-            ) for _ in get_dictionaries(mode_configuration, 'templates')]
-            assert_unique_values(
-                [_.id for _ in template_definitions],
-                f'duplicate template id {{x}} in {mode_name}')
-            template_definitions_by_mode_name[mode_name] = template_definitions
-    except OSError as e:
-        raise CrossComputeConfigurationError(e)
+    automation_folder = configuration.folder
+    for mode_name in MODE_NAMES:
+        mode_configuration = get_dictionary(configuration, mode_name)
+        template_definitions = [TemplateDefinition(
+            _, mode_name=mode_name,
+        ) for _ in get_dictionaries(mode_configuration, 'templates')]
+        for template_definition in template_definitions:
+            template_path = template_definition.path
+            if not (automation_folder / template_path).exists():
+                raise CrossComputeConfigurationError(
+                    f'could not find template {template_path}')
+        assert_unique_values(
+            [_.id for _ in template_definitions],
+            f'duplicate template id {{x}} in {mode_name}')
+        template_definitions_by_mode_name[mode_name] = template_definitions
     return {
         'template_definitions_by_mode_name': template_definitions_by_mode_name,
     }

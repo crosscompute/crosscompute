@@ -384,10 +384,7 @@ def update_variable_data(target_path, data_by_id):
 
 
 def load_variable_data(path, variable_id):
-    try:
-        file_data = FILE_DATA_CACHE[path]
-    except OSError as e:
-        raise CrossComputeDataError(e)
+    file_data = FILE_DATA_CACHE[path]
     if path.suffix == '.dictionary':
         file_value = file_data['value']
         try:
@@ -403,9 +400,13 @@ def load_variable_data(path, variable_id):
 
 def load_file_data(path):
     if path.suffix == '.dictionary':
-        return {'value': json.load(path.open('rt'))}
+        try:
+            value = json.load(path.open('rt'))
+        except (json.JSONDecodeError, OSError) as e:
+            raise CrossComputeDataError(e)
+        return {'value': value}
     if not path.exists():
-        raise FileNotFoundError
+        raise CrossComputeDataError(f'could not find {path}')
     return {'path': path}
 
 
