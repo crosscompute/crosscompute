@@ -66,5 +66,26 @@ def test_validate_variables():
     assert len(d['variable_definitions_by_mode_name']['input']) == 2
 
 
-def test_validate_templates():
-    pass
+def test_validate_templates(tmp_path):
+    c = DummyConfiguration({'input': {'templates': []}})
+    c.folder = tmp_path
+
+    d = validate_templates(c)
+    assert len(d['template_definitions_by_mode_name']['input']) == 0
+
+    c['input']['templates'] = [{}]
+    with raises(CrossComputeConfigurationError):
+        d = validate_templates(c)
+
+    c['input']['templates'] = [{'path': 'x.md'}]
+    with raises(CrossComputeConfigurationError):
+        d = validate_templates(c)
+
+    tmp_path.joinpath('x.md').open('wt').write('')
+    c['input']['templates'] = [{'path': 'x.md'}, {'path': 'x.md'}]
+    with raises(CrossComputeConfigurationError):
+        d = validate_templates(c)
+
+    c['input']['templates'] = [{'path': 'x.md'}]
+    d = validate_templates(c)
+    assert len(d['template_definitions_by_mode_name']['input']) == 1
