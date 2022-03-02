@@ -322,7 +322,7 @@ def _run_automation(
         return
     reference_time = time()
     batch_folder, custom_environment = _prepare_batch(d, batch_definition)
-    batch_identifier = ' '.join([d.name, d.version, batch_folder])
+    batch_identifier = ' '.join([d.name, d.version, str(batch_folder)])
     L.info('%s running', batch_identifier)
     mode_folder_by_name = {_ + '_folder': make_folder(
         d.folder / batch_folder / _) for _ in MODE_NAMES}
