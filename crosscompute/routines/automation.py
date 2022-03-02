@@ -12,7 +12,6 @@ from pathlib import Path
 from time import time
 
 from invisibleroads_macros_disk import is_path_in_folder, make_folder
-from invisibleroads_macros_log import format_path
 from pyramid.config import Configurator
 from pyramid.events import NewResponse
 from waitress import serve
@@ -317,18 +316,16 @@ class DiskAutomation(Automation):
 
 def _run_automation(
         automation_definition, batch_definition, process_data):
-    script_definitions = automation_definition.script_definitions
+    d = automation_definition
+    script_definitions = d.script_definitions
     if not script_definitions:
         return
     reference_time = time()
-    folder = automation_definition.folder
-    batch_folder, custom_environment = _prepare_batch(
-        automation_definition, batch_definition)
-    L.info(
-        '%s %s running %s', automation_definition.name,
-        automation_definition.version, format_path(folder / batch_folder))
+    batch_folder, custom_environment = _prepare_batch(d, batch_definition)
+    batch_identifier = ' '.join([d.name, d.version, batch_folder])
+    L.info('%s running', batch_identifier)
     mode_folder_by_name = {_ + '_folder': make_folder(
-        folder / batch_folder / _) for _ in MODE_NAMES}
+        d.folder / batch_folder / _) for _ in MODE_NAMES}
     script_environment = _prepare_script_environment(
         mode_folder_by_name, custom_environment)
     debug_folder = mode_folder_by_name['debug_folder']
@@ -341,10 +338,13 @@ def _run_automation(
                     script_definition, mode_folder_by_name,
                     script_environment, o_file, e_file)
     except CrossComputeExecutionError as e:
-        e.automation_definition = automation_definition
+        e.automation_definition = d
         L.error(e)
         return_code = e.return_code
-    return _process_batch(automation_definition, batch_definition, [
+        L.info('%s failed', batch_identifier)
+    else:
+        L.info('%s done', batch_identifier)
+    return _process_batch(d, batch_definition, [
         'output', 'log', 'debug',
     ], {'debug': {
         'execution_time_in_seconds': time() - reference_time,

@@ -1,8 +1,17 @@
 import json
 from crosscompute.exceptions import CrossComputeDataError
+from crosscompute.macros.web import format_slug
 from crosscompute.routines.variable import (
+    apply_functions,
     update_variable_data)
 from pytest import raises
+
+
+def test_apply_functions():
+    with raises(KeyError):
+        apply_functions('One Two', ['slug'], {})
+    assert apply_functions('One Two', ['slug', ''], {
+        'slug': format_slug}) == 'one-two'
 
 
 def test_update_variable_data(tmp_path):

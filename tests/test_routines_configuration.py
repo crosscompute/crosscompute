@@ -7,6 +7,7 @@ from crosscompute.exceptions import (
 from crosscompute.routines.configuration import (
     validate_automation_identifiers,
     validate_protocol,
+    validate_templates,
     validate_variables)
 
 
@@ -63,3 +64,7 @@ def test_validate_variables():
             'path': 'y.txt',
         }]}}))
     assert len(d['variable_definitions_by_mode_name']['input']) == 2
+
+
+def test_validate_templates():
+    pass
