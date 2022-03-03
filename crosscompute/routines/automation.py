@@ -144,6 +144,7 @@ class DiskAutomation(Automation):
         for automation_definition in self.definitions:
             batch_definitions = automation_definition.batch_definitions
             try:
+                automation_definition.update_datasets()
                 for batch_definition in batch_definitions:
                     _run_automation(
                         automation_definition, batch_definition,
@@ -157,6 +158,7 @@ class DiskAutomation(Automation):
             while automation_pack := automation_queue.get():
                 automation_definition, batch_definition = automation_pack
                 try:
+                    automation_definition.update_datasets()
                     _run_automation(
                         automation_definition, batch_definition,
                         process_data=load_variable_data)

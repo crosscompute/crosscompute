@@ -6,7 +6,7 @@ from invisibleroads_macros_log import format_path
 from logging import getLogger
 from nbconvert import PythonExporter
 from nbformat import read as load_notebook, NO_CONVERT
-from os import environ
+from os import environ, symlink
 from os.path import relpath, splitext
 from pathlib import Path
 from ruamel.yaml import YAML
@@ -71,6 +71,7 @@ class AutomationDefinition(Definition):
             validate_variable_views,
             validate_templates,
             validate_batches,
+            validate_datasets,
             validate_scripts,
             validate_environment_variables,
             validate_display_styles,
@@ -97,6 +98,20 @@ class AutomationDefinition(Definition):
             mode_name]
         return get_template_text(
             template_definitions, automation_folder, variable_definitions)
+
+    def update_datasets(self):
+        automation_folder = self.folder
+        for dataset_definition in self.dataset_definitions:
+            if 'path' in dataset_definition.reference:
+                reference_path = dataset_definition.reference['path']
+                source_path = automation_folder / reference_path
+                target_path = automation_folder / dataset_definition.path
+                if target_path.is_symlink():
+                    target_path.unlink()
+                elif target_path.exists():
+                    continue
+                target_folder = target_path.parent
+                symlink(source_path.relative_to(target_folder), target_path)
 
 
 class VariableDefinition(Definition):
@@ -126,6 +141,16 @@ class BatchDefinition(Definition):
         self._validation_functions = [
             validate_batch_identifiers,
             validate_batch_configuration,
+        ]
+
+
+class DatasetDefinition(Definition):
+
+    def _initialize(self, kwargs):
+        self.automation_folder = kwargs['automation_folder']
+        self._validation_functions = [
+            validate_dataset_identifiers,
+            validate_dataset_configuration,
         ]
 
 
@@ -397,10 +422,20 @@ def validate_environment_variables(configuration):
     }
 
 
+def validate_datasets(configuration):
+    automation_folder = configuration.folder
+    dataset_definitions = [DatasetDefinition(
+        _, automation_folder=automation_folder,
+    ) for _ in get_dictionaries(configuration, 'datasets')]
+    return {
+        'dataset_definitions': dataset_definitions,
+    }
+
+
 def validate_scripts(configuration):
     automation_folder = configuration.folder
     script_definitions = [ScriptDefinition(
-        _, automation_folder=automation_folder
+        _, automation_folder=automation_folder,
     ) for _ in get_dictionaries(configuration, 'scripts')]
     return {
         'script_definitions': script_definitions,
@@ -530,6 +565,30 @@ def validate_batch_configuration(batch_definition):
     return {
         'reference': batch_reference,
         'configuration': batch_configuration,
+    }
+
+
+def validate_dataset_identifiers(dataset_definition):
+    path = Path(dataset_definition.get('path', '').strip())
+    return {
+        'path': path,
+    }
+
+
+def validate_dataset_configuration(dataset_definition):
+    automation_folder = dataset_definition.automation_folder
+    dataset_reference = get_dictionary(dataset_definition, 'reference')
+    if 'path' in dataset_reference:
+        source_path = Path(dataset_reference['path'].strip())
+        if not (automation_folder / source_path).exists():
+            raise CrossComputeConfigurationError(
+                f'could not find dataset reference path {source_path}')
+        target_path = dataset_definition.path
+        if target_path.exists() and not target_path.is_symlink():
+            raise CrossComputeConfigurationError(
+                f'will not overwrite dataset; please delete {target_path}')
+    return {
+        'reference': dataset_reference,
     }
 
 

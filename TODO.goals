@@ -1,0 +1,3 @@
+Autogenerate datasets/batches.csv if requested during configure
+Implement dataset links
+Implement count/index variables
