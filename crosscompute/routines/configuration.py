@@ -586,7 +586,8 @@ def validate_dataset_configuration(dataset_definition):
         target_path = dataset_definition.path
         if target_path.exists() and not target_path.is_symlink():
             raise CrossComputeConfigurationError(
-                f'will not overwrite dataset; please delete {target_path}')
+                'refusing to overwrite existing dataset; please delete '
+                f'{target_path} from the disk as defined')
     return {
         'reference': dataset_reference,
     }
