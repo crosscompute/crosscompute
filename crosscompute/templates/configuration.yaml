@@ -190,5 +190,9 @@ version: 0.0.0
   # - path to template (required)
   # - id of template
   # templates:
+  #   - path: base.jinja2
+  #     id: base
+  #   - path: live.jinja2
+  #     id: live
   #   - path: root.jinja2
   #     id: root
