@@ -90,6 +90,14 @@ class AutomationDefinition(Definition):
                     MODE_NAME))
         return variable_definitions
 
+    def get_template_path(self, template_id):
+        template_path_by_id = self.template_path_by_id
+        if template_id in template_path_by_id:
+            template_path = str(self.folder / template_path_by_id[template_id])
+        else:
+            template_path = f'crosscompute:templates/{template_id}.jinja2'
+        return template_path
+
     def get_template_text(self, mode_name):
         automation_folder = self.folder
         variable_definitions = self.get_variable_definitions(

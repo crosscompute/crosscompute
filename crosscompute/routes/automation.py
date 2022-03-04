@@ -1,12 +1,10 @@
 # TODO: Show runs with command line option
-# TODO: Let user customize root template
 # TODO: Add unit tests
 import json
 from functools import partial
 from invisibleroads_macros_disk import make_random_folder
 from itertools import count
 from logging import getLogger
-from os import getcwd
 from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
 from pyramid.response import FileResponse, Response
 
@@ -49,20 +47,14 @@ class AutomationRoutes():
         config.include(self.configure_runs)
 
     def configure_root(self, config):
-        template_path_by_id = self.configuration.template_path_by_id
-        if 'root' in template_path_by_id:
-            config.add_jinja2_search_path(getcwd())
-            template_path = str(template_path_by_id['root'])
-        else:
-            template_path = 'crosscompute:templates/root.jinja2'
-
+        configuration = self.configuration
         config.add_route('root', '/')
 
         config.add_view(
             self.see_root,
             request_method='GET',
             route_name='root',
-            renderer=template_path)
+            renderer=configuration.get_template_path('root'))
 
     def configure_styles(self, config):
         config.add_route(

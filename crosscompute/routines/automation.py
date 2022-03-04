@@ -1,6 +1,5 @@
 # TODO: Watch multiple folders if not all under parent folder
 # TODO: Consider whether to send partial updates for variables
-# TODO: Precompile notebook scripts
 import logging
 import shlex
 import subprocess
@@ -201,8 +200,9 @@ class DiskAutomation(Automation):
     def _get_app(
             self, automation_queue, is_static, is_production, base_uri,
             allowed_origins):
+        configuration = self.configuration
         automation_routes = AutomationRoutes(
-            self.configuration, self.definitions, automation_queue,
+            configuration, self.definitions, automation_queue,
             self._timestamp_object)
         mutation_routes = MutationRoutes(self._timestamp_object)
         settings = {
@@ -211,16 +211,14 @@ class DiskAutomation(Automation):
             'jinja2.lstrip_blocks': True,
         }
         if not is_static and not is_production:
-            settings.update({
-                'pyramid.reload_templates': True,
-            })
+            settings.update({'pyramid.reload_templates': True})
         with Configurator(settings=settings) as config:
             config.include('pyramid_jinja2')
             config.include(automation_routes.includeme)
             if not is_static:
                 config.include(mutation_routes.includeme)
             _configure_renderer_globals(
-                config, is_static, is_production, base_uri)
+                config, is_static, is_production, base_uri, configuration)
             _configure_cache_headers(config, is_production)
             _configure_allowed_origins(config, allowed_origins)
         return config.make_wsgi_app()
@@ -498,12 +496,15 @@ def _configure_allowed_origins(config, allowed_origins):
     config.add_subscriber(update_cors_headers, NewResponse)
 
 
-def _configure_renderer_globals(config, is_static, is_production, base_uri):
+def _configure_renderer_globals(
+        config, is_static, is_production, base_uri, configuration):
+    if configuration.template_path_by_id:
+        config.add_jinja2_search_path(str(configuration.folder), prepend=True)
 
     def update_renderer_globals():
         config.get_jinja2_environment().globals.update({
-            'BASE_JINJA2': 'crosscompute:templates/base.jinja2',
-            'LIVE_JINJA2': 'crosscompute:templates/live.jinja2',
+            'BASE_JINJA2': configuration.get_template_path('base'),
+            'LIVE_JINJA2': configuration.get_template_path('live'),
             'IS_STATIC': is_static,
             'IS_PRODUCTION': is_production,
             'BASE_URI': base_uri,
