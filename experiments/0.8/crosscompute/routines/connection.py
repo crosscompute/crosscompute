@@ -15,13 +15,6 @@ from ..macros import (
     get_environment_value)
 
 
-def get_bash_configuration_text():
-    return BASH_CONFIGURATION_TEXT.format(
-        client_url=get_client_url(),
-        server_url=get_server_url(),
-        token=get_token('YOUR-TOKEN'))
-
-
 def fetch_resource(
         resource_name, resource_id=None, method='GET', data=None,
         server_url=None, token=None):
@@ -55,22 +48,10 @@ def fetch_resource(
     return response_json
 
 
-def get_client_url():
-    return get_environment_value('CROSSCOMPUTE_CLIENT', CLIENT_URL)
-
-
-def get_server_url():
-    return get_environment_value('CROSSCOMPUTE_SERVER', SERVER_URL)
-
-
 def get_echoes_url():
     server_url = get_environment_value('CROSSCOMPUTE_ECHOES', get_server_url())
     token = get_token()
     return f'{server_url}/echoes/{token}.json'
-
-
-def get_token(default=None):
-    return get_environment_value('CROSSCOMPUTE_TOKEN', default)
 
 
 def get_resource_url(server_url, resource_name, resource_id=None):

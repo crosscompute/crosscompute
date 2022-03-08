@@ -56,13 +56,6 @@ from ..symmetries import download
 ANSI_ESCAPE_PATTERN = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 
-class SafeDict(dict):
-    # https://stackoverflow.com/a/17215533/192092
-
-    def __missing__(self, key):
-        return '{' + key + '}'
-
-
 def run_report_automation(report_definition, is_mock=True, log=None):
     style_dictionary = get_nested_value(
         report_definition, 'print', 'style', {})
@@ -351,51 +344,6 @@ def run_tests(tool_definition):
         raise CrossComputeExecutionError(d)
     d['results'] = result_dictionaries
     return d
-
-
-def render_result(tool_definition, result_dictionary):
-    blocks = render_blocks(tool_definition, result_dictionary)
-    styles = result_dictionary.get('print', {}).get('style', {}).get('rules', [])
-    document_dictionary = {
-        'blocks': blocks,
-        'styles': styles,
-        'header': get_nested_value(result_dictionary, 'print', 'header', ''),
-        'footer': get_nested_value(result_dictionary, 'print', 'footer', ''),
-    }
-    if 'name' in result_dictionary:
-        document_dictionary['name'] = result_dictionary['name']
-    return document_dictionary
-
-
-def find_relevant_path(path, name):
-    if not path:
-        path = '.'
-    if not exists(path):
-        raise OSError({'path': 'is bad'})
-    path = abspath(path)
-
-    if isdir(path):
-        folder = path
-    else:
-        base, extension = splitext(path)
-        expected_extension = splitext(name)[1]
-        if extension == expected_extension:
-            return path
-        modified_path = base + expected_extension
-        if exists(modified_path):
-            return modified_path
-        folder = dirname(path)
-
-    this_folder = folder
-    while True:
-        this_path = join(this_folder, name)
-        if exists(this_path):
-            break
-        parent_folder = dirname(this_folder)
-        if parent_folder == this_folder:
-            raise OSError({'path': 'is missing'})
-        this_folder = parent_folder
-    return this_path
 
 
 def yield_result_dictionary(result_definition):

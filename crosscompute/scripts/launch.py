@@ -3,9 +3,8 @@ from argparse import ArgumentParser
 from logging import getLogger
 
 from crosscompute.exceptions import (
-    CrossComputeConfigurationError,
     CrossComputeConfigurationNotFoundError,
-    CrossComputeDataError)
+    CrossComputeError)
 from crosscompute.macros.process import LoggableProcess
 from crosscompute.routines.automation import DiskAutomation
 from crosscompute.routines.log import (
@@ -19,6 +18,7 @@ from crosscompute.scripts.run import (
     run_with)
 from crosscompute.scripts.serve import (
     configure_argument_parser_for_serving,
+    configure_serving_from,
     serve_with)
 
 
@@ -31,7 +31,12 @@ def do(arguments=None):
     configure_argument_parser_for_serving(a)
     configure_argument_parser_for_running(a)
     args = a.parse_args(arguments)
-    configure_logging_from(args)
+    try:
+        configure_logging_from(args)
+        configure_serving_from(args)
+    except CrossComputeError as e:
+        L.error(e)
+        return
     launch_mode = get_launch_mode_from(args)
 
     if launch_mode == 'configure':
@@ -95,7 +100,7 @@ def get_automation_from(args):
         print()
         path = configure_with(args)
         automation = DiskAutomation.load(path)
-    except (CrossComputeConfigurationError, CrossComputeDataError) as e:
+    except CrossComputeError as e:
         L.error(e)
         raise SystemExit
     return automation

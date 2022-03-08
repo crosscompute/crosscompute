@@ -17,8 +17,8 @@ def do(arguments=None):
     configure_argument_parser_for_configuring(a)
     configure_argument_parser_for_running(a)
     args = a.parse_args(arguments)
-    configure_logging_from(args)
     try:
+        configure_logging_from(args)
         automation = DiskAutomation.load(args.path_or_folder)
     except CrossComputeError as e:
         L.error(e)

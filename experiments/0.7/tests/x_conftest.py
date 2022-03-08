@@ -9,15 +9,6 @@ from crosscompute.scripts.serve import ResultRequest
 from crosscompute.types import StringType, DATA_TYPE_BY_SUFFIX
 
 
-class WheeType(StringType):
-
-    @classmethod
-    def parse(Class, x, default_value=None):
-        if x != 'whee':
-            raise DataTypeError('whee expected')
-        return x
-
-
 @fixture
 def tool_definition():
     return OrderedDict([
@@ -43,7 +34,6 @@ def result_request(posts_request):
     return ResultRequest(posts_request)
 
 
-DATA_TYPE_BY_SUFFIX['whee'] = WheeType
 FOLDER = dirname(__file__)
 TOOL_FOLDER = join(FOLDER, 'tools', 'multiple-tools')
 RESULT_FOLDER = join(FOLDER, 'results', 'no-links')

@@ -24,8 +24,9 @@ def do(arguments=None):
     configure_argument_parser_for_configuring(a)
     configure_argument_parser_for_serving(a)
     args = a.parse_args(arguments)
-    configure_logging_from(args)
     try:
+        configure_logging_from(args)
+        configure_serving_from(args)
         automation = DiskAutomation.load(args.path_or_folder)
     except CrossComputeError as e:
         L.error(e)
@@ -67,6 +68,12 @@ def configure_argument_parser_for_serving(a):
         '--disk-debounce', metavar='X', type=int,
         default=DISK_DEBOUNCE_IN_MILLISECONDS,
         help='interval in milliseconds to wait until the disk stops changing')
+
+
+def configure_serving_from(args):
+    base_uri = args.base_uri
+    if base_uri and not base_uri.startswith('/'):
+        args.base_uri = '/' + base_uri
 
 
 def serve_with(automation, args):

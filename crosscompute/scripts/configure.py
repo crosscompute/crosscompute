@@ -24,7 +24,11 @@ def do(arguments=None):
     configure_argument_parser_for_logging(a)
     configure_argument_parser_for_configuring(a)
     args = a.parse_args(arguments)
-    configure_logging_from(args)
+    try:
+        configure_logging_from(args)
+    except CrossComputeError as e:
+        L.error(e)
+        return
 
     configure_with(args)
 

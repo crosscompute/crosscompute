@@ -22,7 +22,7 @@ from ..exceptions import CrossComputeDataError
 from ..macros.iterable import extend_uniquely, find_item
 from ..macros.web import get_html_from_markdown
 from ..routines.batch import DiskBatch
-from ..routines.configuration import BatchDefinition
+from ..routines.configuration import BatchDefinition, VariableDefinition
 from ..routines.variable import (
     Element,
     VariableView,
@@ -224,18 +224,25 @@ class AutomationRoutes():
             mode_name)
         matchdict = request.matchdict
         variable_id = matchdict['variable_id']
-        try:
-            variable_definition = find_item(
-                variable_definitions, 'id', variable_id,
-                normalize=str.casefold)
-        except StopIteration:
-            raise HTTPNotFound
+        if mode_name == 'debug' and variable_id == 'return_code':
+            variable_definition = VariableDefinition({
+                'id': 'return_code',
+                'view': 'number',
+                'path': 'variables.dictionary',
+            }, mode_name='debug')
+        else:
+            try:
+                variable_definition = find_item(
+                    variable_definitions, 'id', variable_id,
+                    normalize=str.casefold)
+            except StopIteration:
+                raise HTTPNotFound
         batch = DiskBatch(automation_definition, batch_definition)
         variable_data = batch.get_data(variable_definition)
         if 'path' in variable_data:
             return FileResponse(variable_data['path'], request=request)
         if 'value' in variable_data:
-            return Response(variable_data['value'])
+            return Response(str(variable_data['value']))
         if 'error' in variable_data:
             raise HTTPNotFound
         raise HTTPBadRequest

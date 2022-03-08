@@ -22,14 +22,6 @@ def test_output_logging(tmpdir, text=TEXT):
     assert extract_text(s, 'raw_output-meta') == text
 
 
-def test_output_parsing(tmpdir, text=TEXT):
-    args = str(tmpdir), 'assign', {'x': text}
-    r = run(*args)
-    assert r['raw_outputs']['a'] == text
-    s = serve(*args)[0]
-    assert extract_text(s, 'a-result') == text
-
-
 def test_file_name_with_spaces(tmpdir):
     args = str(tmpdir), 'file-name-with-spaces',
     r = run(*args)
