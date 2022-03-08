@@ -13,6 +13,10 @@ from crosscompute.routines.log import (
 from crosscompute.scripts.configure import (
     configure_argument_parser_for_configuring,
     configure_with)
+from crosscompute.scripts.print import (
+    configure_argument_parser_for_printing,
+    configure_printing_from,
+    print_with)
 from crosscompute.scripts.run import (
     configure_argument_parser_for_running,
     run_with)
@@ -30,10 +34,12 @@ def do(arguments=None):
     configure_argument_parser_for_configuring(a)
     configure_argument_parser_for_serving(a)
     configure_argument_parser_for_running(a)
+    configure_argument_parser_for_printing(a)
     args = a.parse_args(arguments)
     try:
         configure_logging_from(args)
         configure_serving_from(args)
+        configure_printing_from(args)
     except CrossComputeError as e:
         L.error(e)
         return
@@ -43,6 +49,9 @@ def do(arguments=None):
         configure_with(args)
         raise SystemExit
     automation = get_automation_from(args)
+    if launch_mode == 'print':
+        print_with(automation, args)
+        raise SystemExit
     processes = []
     if launch_mode in ['serve', 'all']:
         processes.append(LoggableProcess(
@@ -84,6 +93,8 @@ def get_launch_mode_from(args):
         launch_mode = 'run'
     elif args.is_serve_only:
         launch_mode = 'serve'
+    elif args.prints_format:
+        launch_mode = 'print'
     '''
     elif args.is_debug_only:
         launch_mode = 'debug'

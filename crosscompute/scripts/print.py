@@ -38,24 +38,13 @@ def do(arguments=None):
     except CrossComputeError as e:
         L.error(e)
         return
-    server_process = StoppableProcess(
-        name='serve', target=serve_with, args=(automation, args))
-    server_process.start()
-    runner_process = LoggableProcess(
-        name='run', target=run_with, args=(automation, args))
-    runner_process.start()
-    runner_process.join()
-    printer_process = LoggableProcess(
-        name='print', target=print_with, args=(automation, args))
-    printer_process.start()
-    printer_process.join()
-    server_process.stop()
+    print_with(automation, args)
 
 
 def configure_argument_parser_for_printing(a):
     a.add_argument(
         '--print', metavar='X', dest='prints_format',
-        help='print automations to a specific format')
+        help='print automations in specific format')
     a.add_argument(
         '--prints-folder', metavar='X',
         help='print automations to this folder')
@@ -84,6 +73,13 @@ def configure_printing_from(args):
 
 
 def print_with(automation, args):
+    server_process = StoppableProcess(
+        name='serve', target=serve_with, args=(automation, args))
+    server_process.start()
+    runner_process = LoggableProcess(
+        name='run', target=run_with, args=(automation, args))
+    runner_process.start()
+    runner_process.join()
     prints_format = args.prints_format
     prints_folder = args.prints_folder
     Printer = PRINTER_BY_NAME[prints_format]
@@ -98,6 +94,7 @@ def print_with(automation, args):
         'uri': f'http://127.0.0.1:{args.port}{args.base_uri}',
         'folder': prints_folder})
     printer.render(batch_dictionaries)
+    server_process.stop()
 
 
 L = getLogger(__name__)
