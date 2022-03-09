@@ -16,8 +16,13 @@ async function processMutations() {
   try {
     const response = await fetch(`${uri}?t=${mutationTimestamp}`);
     const d = await response.json();
-    const { configurations, variables, templates, styles } = d;
-    if (configurations.length || templates.length || styles.length) {
+    const { variables } = d;
+    if (
+      d.server_timestamp != {{ SERVER_TIMESTAMP }} ||
+      d.configurations.length ||
+      d.templates.length ||
+      d.styles.length
+    ) {
       refreshPage();
     } else if (variables.length) {
       for (const variable of variables) {

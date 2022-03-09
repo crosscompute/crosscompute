@@ -8,8 +8,9 @@ from ..constants import (
 
 class MutationRoutes():
 
-    def __init__(self, infos_by_timestamp):
+    def __init__(self, server_timestamp, infos_by_timestamp):
         self._infos_by_timestamp = infos_by_timestamp
+        self._server_timestamp = server_timestamp
 
     def includeme(self, config):
         config.add_route('mutation', MUTATION_ROUTE.format(uri='{uri:.*}'))
@@ -40,17 +41,18 @@ class MutationRoutes():
                 if code == 'c':
                     configurations.append({})
                 elif code == 'v':
-                    if uri == info['uri']:
+                    if uri.startswith(info['uri']):
                         variables.append({'id': info['id']})
                 elif code == 't':
-                    if uri == info['uri']:
+                    if uri.startswith(info['uri']):
                         templates.append({})
                 elif code == 's':
                     styles.append({})
         return {
+            'server_timestamp': self._server_timestamp,
+            'mutation_timestamp': new_timestamp,
             'configurations': configurations,
             'variables': variables,
             'templates': templates,
             'styles': styles,
-            'mutation_timestamp': new_timestamp,
         }

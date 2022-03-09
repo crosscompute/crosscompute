@@ -123,6 +123,7 @@ def _get_app(
         base_uri,
         allowed_origins,
         infos_by_timestamp):
+    server_timestamp = time()
     automation_definitions = configuration.automation_definitions
     automation_routes = AutomationRoutes(
         configuration, automation_definitions, queue)
@@ -137,17 +138,20 @@ def _get_app(
         config.include('pyramid_jinja2')
         config.include(automation_routes.includeme)
         if not is_static:
-            mutation_routes = MutationRoutes(infos_by_timestamp)
+            mutation_routes = MutationRoutes(
+                server_timestamp, infos_by_timestamp)
             config.include(mutation_routes.includeme)
         _configure_renderer_globals(
-            config, is_static, is_production, base_uri, configuration)
+            config, is_static, is_production, base_uri, server_timestamp,
+            configuration)
         _configure_cache_headers(config, is_production)
         _configure_allowed_origins(config, allowed_origins)
     return config.make_wsgi_app()
 
 
 def _configure_renderer_globals(
-        config, is_static, is_production, base_uri, configuration):
+        config, is_static, is_production, base_uri, server_timestamp,
+        configuration):
     if configuration.template_path_by_id:
         config.add_jinja2_search_path(str(configuration.folder), prepend=True)
 
@@ -160,6 +164,7 @@ def _configure_renderer_globals(
             'BASE_URI': base_uri,
             'MAXIMUM_PING_INTERVAL': MAXIMUM_PING_INTERVAL_IN_SECONDS * 1000,
             'MINIMUM_PING_INTERVAL': MINIMUM_PING_INTERVAL_IN_SECONDS * 1000,
+            'SERVER_TIMESTAMP': server_timestamp,
         })
 
     config.action(None, update_renderer_globals)
