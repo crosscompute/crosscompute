@@ -1,20 +1,12 @@
 # TODO: Watch multiple folders if not all under parent folder
-# TODO: Consider whether to send partial updates for variables
-import logging
 import shlex
 import subprocess
-from itertools import repeat
+from invisibleroads_macros_disk import make_folder
 from logging import getLogger
-from multiprocessing import Queue, Value
+from multiprocessing import Queue, Manager
 from os import environ, getenv
 from pathlib import Path
 from time import time
-
-from invisibleroads_macros_disk import is_path_in_folder, make_folder
-from pyramid.config import Configurator
-from pyramid.events import NewResponse
-from waitress import serve
-from watchgod import watch
 
 from ..constants import (
     Error,
@@ -23,8 +15,6 @@ from ..constants import (
     DISK_POLL_IN_MILLISECONDS,
     HOST,
     MODE_NAMES,
-    MUTATIONS_ROUTE,
-    PING_INTERVAL_IN_SECONDS,
     PORT)
 from ..exceptions import (
     CrossComputeConfigurationError,
@@ -34,12 +24,10 @@ from ..exceptions import (
     CrossComputeError,
     CrossComputeExecutionError)
 from ..macros.iterable import group_by
-from ..macros.process import LoggableProcess, StoppableProcess
-from ..routes.automation import AutomationRoutes
-from ..routes.mutation import MutationRoutes
 from .configuration import (
     load_configuration)
 from .interface import Automation
+from .server import DiskServer
 from .variable import (
     get_variable_data_by_id,
     get_variable_value_by_id,
@@ -59,6 +47,52 @@ class DiskAutomation(Automation):
         else:
             instance._initialize_from_path(path_or_folder)
         return instance
+
+    def run(self):
+        for automation_definition in self.definitions:
+            batch_definitions = automation_definition.batch_definitions
+            try:
+                automation_definition.update_datasets()
+                for batch_definition in batch_definitions:
+                    _run_automation(
+                        automation_definition, batch_definition,
+                        process_data=load_variable_data)
+            except CrossComputeError as e:
+                e.automation_definition = automation_definition
+                L.error(e)
+
+    def serve(
+            self,
+            host=HOST,
+            port=PORT,
+            is_static=False,
+            is_production=False,
+            base_uri='',
+            allowed_origins=None,
+            disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
+            disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS,
+            automation_queue=None):
+        if automation_queue is None:
+            automation_queue = Queue()
+        with Manager() as manager:
+            server_options = {
+                'host': host,
+                'port': port,
+                'is_static': is_static,
+                'is_production': is_production,
+                'base_uri': base_uri,
+                'allowed_origins': allowed_origins,
+                'infos_by_timestamp': manager.dict(),
+            }
+            server = DiskServer(
+                self.configuration, work, automation_queue, server_options)
+            if is_static and is_production:
+                server.run()
+                return
+            server.watch(
+                disk_poll_in_milliseconds,
+                disk_debounce_in_milliseconds,
+                self._reload)
 
     def _reload(self):
         path = self.path
@@ -95,223 +129,22 @@ class DiskAutomation(Automation):
         self.path = path
         self.folder = configuration.folder
         self.definitions = configuration.automation_definitions
-        self._file_code_by_path = self._get_file_code_by_path()
-        self._timestamp_object = Value('d', time())
 
-    def serve(
-            self,
-            host=HOST,
-            port=PORT,
-            is_static=False,
-            is_production=False,
-            base_uri='',
-            allowed_origins=None,
-            disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
-            disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS,
-            automation_queue=None):
-        if automation_queue is None:
-            automation_queue = Queue()
-        if getLogger().level > logging.DEBUG:
-            getLogger('waitress').setLevel(logging.ERROR)
-            getLogger('watchgod.watcher').setLevel(logging.ERROR)
 
-        def run_server():
-            worker_process = LoggableProcess(
-                name='worker', target=self.work, args=(automation_queue,))
-            worker_process.daemon = True
-            worker_process.start()
-            L.info('serving at http://%s:%s%s', host, port, base_uri)
-            # TODO: Decouple from pyramid and waitress
-            app = self._get_app(
-                automation_queue, is_static, is_production, base_uri,
-                allowed_origins)
-            try:
-                serve(
-                    app, host=host, port=port, url_prefix=base_uri, threads=8)
-            except OSError as e:
-                L.error(e)
-
-        if is_static and is_production:
-            run_server()
-            return
-
-        self.watch(
-            run_server, disk_poll_in_milliseconds,
-            disk_debounce_in_milliseconds)
-
-    def run(self):
-        for automation_definition in self.definitions:
-            batch_definitions = automation_definition.batch_definitions
+def work(automation_queue):
+    try:
+        while automation_pack := automation_queue.get():
+            automation_definition, batch_definition = automation_pack
             try:
                 automation_definition.update_datasets()
-                for batch_definition in batch_definitions:
-                    _run_automation(
-                        automation_definition, batch_definition,
-                        process_data=load_variable_data)
+                _run_automation(
+                    automation_definition, batch_definition,
+                    process_data=load_variable_data)
             except CrossComputeError as e:
                 e.automation_definition = automation_definition
                 L.error(e)
-
-    def work(self, automation_queue):
-        try:
-            while automation_pack := automation_queue.get():
-                automation_definition, batch_definition = automation_pack
-                try:
-                    automation_definition.update_datasets()
-                    _run_automation(
-                        automation_definition, batch_definition,
-                        process_data=load_variable_data)
-                except CrossComputeError as e:
-                    e.automation_definition = automation_definition
-                    L.error(e)
-        except KeyboardInterrupt:
-            pass
-
-    def watch(
-            self, run_server, disk_poll_in_milliseconds,
-            disk_debounce_in_milliseconds):
-        server_process = StoppableProcess(name='server', target=run_server)
-        server_process.start()
-        for changes in watch(
-                self.folder, min_sleep=disk_poll_in_milliseconds,
-                debounce=disk_debounce_in_milliseconds):
-            should_restart_server = False
-            for changed_type, changed_path in changes:
-                try:
-                    file_code = self._get_file_code(changed_path)
-                except KeyError:
-                    continue
-                L.debug('%s %s %s', changed_type, changed_path, file_code)
-                if file_code == 'c':
-                    should_restart_server = True
-            if should_restart_server:
-                try:
-                    self._reload()
-                except CrossComputeError as e:
-                    L.error(e)
-                    continue
-                server_process.stop()
-                server_process = StoppableProcess(
-                    name='server', target=run_server)
-                server_process.start()
-            else:
-                self._timestamp_object.value = time()
-
-    def _get_app(
-            self, automation_queue, is_static, is_production, base_uri,
-            allowed_origins):
-        configuration = self.configuration
-        automation_routes = AutomationRoutes(
-            configuration, self.definitions, automation_queue,
-            self._timestamp_object)
-        mutation_routes = MutationRoutes(self._timestamp_object)
-        settings = {
-            'base_uri': base_uri,
-            'jinja2.trim_blocks': True,
-            'jinja2.lstrip_blocks': True,
-        }
-        if not is_static and not is_production:
-            settings.update({'pyramid.reload_templates': True})
-        with Configurator(settings=settings) as config:
-            config.include('pyramid_jinja2')
-            config.include(automation_routes.includeme)
-            if not is_static:
-                config.include(mutation_routes.includeme)
-            _configure_renderer_globals(
-                config, is_static, is_production, base_uri, configuration)
-            _configure_cache_headers(config, is_production)
-            _configure_allowed_origins(config, allowed_origins)
-        return config.make_wsgi_app()
-
-    def _get_file_code(self, path):
-        path = Path(path)
-        real_path = path.resolve()
-        for automation_definition in self.definitions:
-            automation_folder = automation_definition.folder
-            runs_folder = automation_folder / 'runs'
-            if not is_path_in_folder(path, runs_folder):
-                continue
-            run_id = path.absolute().relative_to(runs_folder).parts[0]
-            run_folder = runs_folder / run_id
-            expected_paths = self._get_variable_paths_from_folder(run_folder)
-            for expected_path in expected_paths:
-                if real_path == expected_path.resolve():
-                    return 'v'
-        return self._file_code_by_path[real_path]
-
-    def _get_file_code_by_path(self):
-        'Set c = configuration, s = style, t = template, v = variable'
-        packs = []
-        packs.extend(zip(self._get_configuration_paths(), repeat('c')))
-        packs.extend(zip(self._get_variable_paths(), repeat('v')))
-        packs.extend(zip(self._get_template_paths(), repeat('t')))
-        packs.extend(zip(self._get_style_paths(), repeat('s')))
-        return {path.resolve(): code for path, code in packs}
-
-    def _get_configuration_paths(self):
-        paths = set()
-        # Get automation configuration paths
-        paths.update([self.path] + [_.path for _ in self.definitions])
-        # Get batch configuration paths
-        for automation_definition in self.definitions:
-            automation_folder = automation_definition.folder
-            # Use raw batch definitions
-            raw_batch_definitions = automation_definition.get('batches', [])
-            for raw_batch_definition in raw_batch_definitions:
-                batch_configuration = raw_batch_definition.get(
-                    'configuration', {})
-                if 'path' not in batch_configuration:
-                    continue
-                paths.add(automation_folder / batch_configuration['path'])
-        return paths
-
-    def _get_variable_paths(self):
-        paths = set()
-        for automation_definition in self.definitions:
-            automation_folder = automation_definition.folder
-            # Use computed batch definitions
-            for batch_definition in automation_definition.batch_definitions:
-                paths.update(self._get_variable_paths_from_folder(
-                    automation_folder / batch_definition.folder))
-        return paths
-
-    def _get_template_paths(self):
-        paths = set()
-        for automation_definition in self.definitions:
-            automation_folder = automation_definition.folder
-            d = automation_definition.template_definitions_by_mode_name
-            for template_definitions in d.values():
-                for template_definition in template_definitions:
-                    if 'path' not in template_definition:
-                        continue
-                    paths.add(automation_folder / template_definition.path)
-            d = automation_definition.template_path_by_id
-            for path in d.values():
-                paths.add(automation_folder / path)
-        return paths
-
-    def _get_style_paths(self):
-        paths = set()
-        for automation_definition in self.definitions:
-            automation_folder = automation_definition.folder
-            for style_definition in automation_definition.style_definitions:
-                if 'path' not in style_definition:
-                    continue
-                paths.add(automation_folder / style_definition['path'])
-        return paths
-
-    def _get_variable_paths_from_folder(self, absolute_batch_folder):
-        paths = set()
-        for automation_definition in self.definitions:
-            d = automation_definition.variable_definitions_by_mode_name
-            for mode_name, variable_definitions in d.items():
-                folder = absolute_batch_folder / mode_name
-                for variable_definition in variable_definitions:
-                    variable_configuration = variable_definition.configuration
-                    if 'path' in variable_configuration:
-                        paths.add(folder / variable_configuration['path'])
-                    paths.add(folder / variable_definition.path)
-        return paths
+    except KeyboardInterrupt:
+        pass
 
 
 def _run_automation(
@@ -467,52 +300,6 @@ def _process_batch(
                 mode_folder / 'variables.dictionary', extra_data_by_id)
             variable_data_by_id.update(extra_data_by_id)
     return variable_data_by_id_by_mode_name
-
-
-def _configure_cache_headers(config, is_production):
-    if is_production:
-        return
-
-    def update_cache_headers(e):
-        e.response.headers.update({'Cache-Control': 'no-store'})
-
-    config.add_subscriber(update_cache_headers, NewResponse)
-
-
-def _configure_allowed_origins(config, allowed_origins):
-    if not allowed_origins:
-        return
-
-    def update_cors_headers(e):
-        request_headers = e.request.headers
-        if 'Origin' not in request_headers:
-            return
-        origin = request_headers['Origin']
-        if origin not in allowed_origins:
-            return
-        e.response.headers.update({
-            'Access-Control-Allow-Origin': origin})
-
-    config.add_subscriber(update_cors_headers, NewResponse)
-
-
-def _configure_renderer_globals(
-        config, is_static, is_production, base_uri, configuration):
-    if configuration.template_path_by_id:
-        config.add_jinja2_search_path(str(configuration.folder), prepend=True)
-
-    def update_renderer_globals():
-        config.get_jinja2_environment().globals.update({
-            'BASE_JINJA2': configuration.get_template_path('base'),
-            'LIVE_JINJA2': configuration.get_template_path('live'),
-            'IS_STATIC': is_static,
-            'IS_PRODUCTION': is_production,
-            'BASE_URI': base_uri,
-            'MUTATIONS_ROUTE': MUTATIONS_ROUTE,
-            'PING_INTERVAL_IN_MILLISECONDS': PING_INTERVAL_IN_SECONDS * 1000,
-        })
-
-    config.action(None, update_renderer_globals)
 
 
 L = getLogger(__name__)

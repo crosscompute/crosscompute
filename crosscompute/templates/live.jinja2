@@ -1,9 +1,10 @@
 {% extends BASE_JINJA2 %}
 
 {% block body_js %}
-let serverTimestamp = {{ timestamp_value }};
+let mutationTimestamp = {{ mutation_timestamp }};
+/*
 setInterval(async function() {
-  let response = await fetch('{{ BASE_URI }}{{ MUTATIONS_ROUTE }}');
+  let response = await fetch('{{ BASE_URI }}{{ mutation_uri }}');
   const d = await response.json();
   if (serverTimestamp === d.server_timestamp) return;
   response = await fetch(location.href, { method: 'head' });
@@ -13,5 +14,6 @@ setInterval(async function() {
     location.href = '/';
   }
 }, {{ PING_INTERVAL_IN_MILLISECONDS }});
+*/
 {{ super() -}}
 {%- endblock %}

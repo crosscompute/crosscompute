@@ -7,6 +7,7 @@ from itertools import count
 from logging import getLogger
 from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
 from pyramid.response import FileResponse, Response
+from time import time
 
 from ..constants import (
     AUTOMATION_ROUTE,
@@ -14,6 +15,7 @@ from ..constants import (
     ID_LENGTH,
     MODE_NAME_BY_CODE,
     MODE_ROUTE,
+    MUTATION_ROUTE,
     RUN_ROUTE,
     STYLE_ROUTE,
     VARIABLE_ID_PATTERN,
@@ -32,12 +34,10 @@ from ..routines.variable import (
 class AutomationRoutes():
 
     def __init__(
-            self, configuration, automation_definitions,
-            automation_queue, timestamp_object):
+            self, configuration, automation_definitions, automation_queue):
         self.configuration = configuration
         self.automation_definitions = automation_definitions
         self.automation_queue = automation_queue
-        self._timestamp_object = timestamp_object
 
     def includeme(self, config):
         config.include(self.configure_root)
@@ -139,7 +139,8 @@ class AutomationRoutes():
             'title_text': self.configuration.get('name', 'Automations'),
             'automations': self.automation_definitions,
             'css_uris': css_uris,
-            'timestamp_value': self._timestamp_object.value,
+            'mutation_uri': MUTATION_ROUTE.format(uri=''),
+            'mutation_timestamp': time(),
         }
 
     def see_style(self, request):
@@ -188,14 +189,16 @@ class AutomationRoutes():
     def see_automation(self, request):
         automation_definition = self.get_automation_definition_from(request)
         css_uris = automation_definition.css_uris
+        uri = automation_definition.uri
         return {
             'name': automation_definition.name,
-            'uri': automation_definition.uri,
+            'uri': uri,
             'batches': automation_definition.batch_definitions,
             'runs': automation_definition.run_definitions,
             'title_text': automation_definition.name,
             'css_uris': css_uris,
-            'timestamp_value': self._timestamp_object.value,
+            'mutation_uri': MUTATION_ROUTE.format(uri=uri),
+            'mutation_timestamp': time(),
         }
 
     def see_automation_batch_mode(self, request):
@@ -205,14 +208,16 @@ class AutomationRoutes():
         batch = DiskBatch(automation_definition, batch_definition)
         base_uri = request.registry.settings['base_uri']
         mode_name = self.get_mode_name_from(request)
+        uri = request.path
         for_print = 'p' in request.params
         return {
             'title_text': batch_definition.name,
             'automation_definition': automation_definition,
             'batch_definition': batch_definition,
-            'uri': request.path,
+            'uri': uri,
             'mode_name': mode_name,
-            'timestamp_value': self._timestamp_object.value,
+            'mutation_uri': MUTATION_ROUTE.format(uri=uri),
+            'mutation_timestamp': time(),
         } | render_mode_dictionary(batch, base_uri, mode_name, for_print)
 
     def see_automation_batch_mode_variable(self, request):

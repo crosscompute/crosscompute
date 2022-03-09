@@ -34,3 +34,15 @@ class Batch(ABC):
     def get_data_configuration(self, variable_definition):
         'Get the resolved variable configuration'
         return {}
+
+
+class Server(ABC):
+
+    def __init__(self, configuration, work=None, queue=None, settings=None):
+        pass
+
+    def run(self):
+        pass
+
+    def watch(self):
+        pass
