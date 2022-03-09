@@ -1,8 +1,9 @@
 # 0.9
 - Start from scratch
 - Restore self-contained server
-- Add views: string, number, password, email, text, markdown, image
+- Add views: string, number, password, email, text, markdown, image, table
 - Move views into crosscompute-views-map: map-mapbox, map-deck-screengrid
+- Refresh variables without reloading page
 
 # 0.8
 - Start from scratch
