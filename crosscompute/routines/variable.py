@@ -11,13 +11,15 @@ from string import Template
 from ..constants import (
     FUNCTION_BY_NAME,
     MAXIMUM_FILE_CACHE_LENGTH,
+    TEMPLATES_FOLDER,
     VARIABLE_ID_PATTERN)
 from ..exceptions import (
     CrossComputeConfigurationError,
     CrossComputeDataError)
 from ..macros.disk import FileCache
 from ..macros.package import import_attribute
-from ..macros.web import get_html_from_markdown
+from ..macros.web import (
+    escape_quotes_html, escape_quotes_js)
 from .interface import Batch
 
 
@@ -85,20 +87,30 @@ class LinkView(VariableView):
 
     def render_output(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
+        variable_id = self.variable_id
+        element_id = x.id
         data_uri = b.get_data_uri(variable_definition, x)
         c = b.get_variable_configuration(variable_definition)
         name = c.get('name', basename(self.variable_path))
         text = c.get('text', name)
         body_text = (
-            f'<a id="{x.id}" href="{data_uri}" '
-            f'class="{self.mode_name} {self.view_name} {self.variable_id}" '
-            f'download="{name}">'
+            f'<a id="{element_id}" href="{data_uri}" '
+            f'class="{self.mode_name} {self.view_name} {variable_id}" '
+            f'download="{escape_quotes_html(name)}">'
             f'{text}</a>')
+        js_texts = [
+            LINK_HEADER,
+            LINK_OUTPUT.substitute({
+                'variable_id': variable_id,
+                'element_id': element_id,
+                'text': escape_quotes_js(text),
+            }),
+        ]
         return {
             'css_uris': [],
             'js_uris': [],
             'body_text': body_text,
-            'js_texts': [],
+            'js_texts': js_texts,
         }
 
 
@@ -126,10 +138,10 @@ class StringView(VariableView):
         body_text = (
             f'<input id="{x.id}" '
             f'class="{self.mode_name} {view_name} {variable_id}" '
-            f'value="{value}" type="{self.input_type}" '
+            f'value="{escape_quotes_html(value)}" type="{self.input_type}" '
             f'data-view="{view_name}" data-id="{variable_id}">')
         js_texts = [
-            STRING_JS_TEMPLATE.substitute({
+            STRING_INPUT.substitute({
                 'view_name': view_name,
             }),
         ]
@@ -146,16 +158,28 @@ class StringView(VariableView):
             value = apply_functions(
                 value, x.function_names, self.function_by_name)
         except KeyError as e:
-            L.error('%s function not supported for string', e)
+            L.error('%s function not supported for %s', e, self.view_name)
+        variable_definition = self.variable_definition
+        variable_id = self.variable_id
+        element_id = x.id
+        data_uri = b.get_data_uri(variable_definition, x)
         body_text = (
             f'<span id="{x.id}" '
             f'class="{self.mode_name} {self.view_name} {self.variable_id}">'
             f'{value}</span>')
+        js_texts = [
+            STRING_HEADER,
+            STRING_OUTPUT.substitute({
+                'variable_id': variable_id,
+                'element_id': element_id,
+                'data_uri': data_uri,
+            }),
+        ]
         return {
             'css_uris': [],
             'js_uris': [],
             'body_text': body_text,
-            'js_texts': [],
+            'js_texts': js_texts,
         }
 
 
@@ -191,17 +215,49 @@ class TextView(StringView):
     view_name = 'text'
 
     def render_input(self, b: Batch, x: Element):
+        variable_definition = self.variable_definition
+        element_id = x.id
+        data_uri = b.get_data_uri(variable_definition, x)
         view_name = self.view_name
         variable_id = self.variable_id
-        value = self.get_value(b)
         body_text = (
             f'<textarea id="{x.id}" '
             f'class="{self.mode_name} {view_name} {variable_id}" '
-            f'data-view="{view_name}" data-id="{variable_id}">'
-            f'{value}</textarea>')
+            f'data-view="{view_name}" data-id="{variable_id}" disabled>'
+            '</textarea>')
         js_texts = [
-            STRING_JS_TEMPLATE.substitute({
+            STRING_HEADER,
+            STRING_INPUT.substitute({
                 'view_name': view_name,
+            }),
+            TEXT_HEADER,
+            TEXT_INPUT.substitute({
+                'element_id': element_id,
+                'data_uri': data_uri,
+            }),
+        ]
+        return {
+            'css_uris': [],
+            'js_uris': [],
+            'body_text': body_text,
+            'js_texts': js_texts,
+        }
+
+    def render_output(self, b: Batch, x: Element):
+        variable_definition = self.variable_definition
+        variable_id = self.variable_id
+        element_id = x.id
+        data_uri = b.get_data_uri(variable_definition, x)
+        body_text = (
+            f'<span id="{x.id}" '
+            f'class="{self.mode_name} {self.view_name} {self.variable_id}">'
+            '</span>')
+        js_texts = [
+            STRING_HEADER,
+            TEXT_OUTPUT.substitute({
+                'variable_id': variable_id,
+                'element_id': element_id,
+                'data_uri': data_uri,
             }),
         ]
         return {
@@ -215,19 +271,33 @@ class TextView(StringView):
 class MarkdownView(TextView):
 
     view_name = 'markdown'
+    js_uris = [
+        'https://cdn.jsdelivr.net/npm/marked/marked.min.js',
+    ]
 
     def render_output(self, b: Batch, x: Element):
-        value = self.get_value(b)
-        data = get_html_from_markdown(value)
+        variable_definition = self.variable_definition
+        variable_id = self.variable_id
+        element_id = x.id
+        data_uri = b.get_data_uri(variable_definition, x)
         body_text = (
             f'<span id="{x.id}" '
             f'class="{self.mode_name} {self.view_name} {self.variable_id}">'
-            f'{data}</span>')
+            '</span>')
+        js_texts = [
+            STRING_HEADER,
+            MARKDOWN_HEADER,
+            MARKDOWN_OUTPUT.substitute({
+                'variable_id': variable_id,
+                'element_id': element_id,
+                'data_uri': data_uri,
+            }),
+        ]
         return {
             'css_uris': [],
-            'js_uris': [],
+            'js_uris': self.js_uris,
             'body_text': body_text,
-            'js_texts': [],
+            'js_texts': js_texts,
         }
 
 
@@ -236,19 +306,28 @@ class ImageView(VariableView):
     view_name = 'image'
 
     def render_output(self, b: Batch, x: Element):
-        variable_id = self.variable_id
         variable_definition = self.variable_definition
+        variable_id = self.variable_id
+        element_id = x.id
         data_uri = b.get_data_uri(variable_definition, x)
         body_text = (
             f'<img id="{x.id}" '
             f'class="{self.mode_name} {self.view_name} {variable_id}" '
             f'src="{data_uri}" alt="">')
         # TODO: Show spinner onerror
+        js_texts = [
+            IMAGE_HEADER,
+            IMAGE_OUTPUT.substitute({
+                'variable_id': variable_id,
+                'element_id': element_id,
+                'data_uri': data_uri,
+            }),
+        ]
         return {
             'css_uris': [],
             'js_uris': [],
             'body_text': body_text,
-            'js_texts': [],
+            'js_texts': js_texts,
         }
 
 
@@ -257,16 +336,19 @@ class TableView(VariableView):
     view_name = 'table'
 
     def render_output(self, b: Batch, x: Element):
-        variable_id = self.variable_id
         variable_definition = self.variable_definition
+        variable_id = self.variable_id
+        element_id = x.id
         data_uri = b.get_data_uri(variable_definition, x)
         body_text = (
-            f'<table id="{x.id}" '
+            f'<table id="{element_id}" '
             f'class="{self.mode_name} {self.view_name} {variable_id}">'
             '<thead/><tbody/></table>')
         js_texts = [
-            TABLE_JS_TEMPLATE.substitute({
-                'element_id': x.id,
+            TABLE_HEADER,
+            TABLE_OUTPUT.substitute({
+                'variable_id': variable_id,
+                'element_id': element_id,
                 'data_uri': data_uri,
             }),
         ]
@@ -403,10 +485,11 @@ def load_file_data(path):
         try:
             value = json.load(path.open('rt'))
         except (json.JSONDecodeError, OSError) as e:
-            raise CrossComputeDataError(e)
+            raise CrossComputeDataError(
+                f'could not load {format_path(path)}: {e}')
         return {'value': value}
     if not path.exists():
-        raise CrossComputeDataError(f'could not find {path}')
+        raise CrossComputeDataError(f'could not find {format_path(path)}')
     return {'path': path}
 
 
@@ -477,39 +560,37 @@ def apply_functions(value, function_names, function_by_name):
     return value
 
 
+def load_view_text(file_name):
+    return open(TEMPLATES_FOLDER / file_name).read().strip()
+
+
 L = getLogger(__name__)
 
 
-STRING_JS_TEMPLATE = Template('''\
-GET_DATA_BY_VIEW_NAME['$view_name'] = x => ({ value: x.value });''')
-# IMAGE_JS_TEMPLATE = Template('''''')
-TABLE_JS_TEMPLATE = Template('''\
-(async function () {
-  const response = await fetch('$data_uri');
-  const d = await response.json();
-  const columns = d['columns'], columnCount = columns.length;
-  const rows = d['data'], rowCount = rows.length;
-  const nodes = document.getElementById('$element_id').children;
-  const thead = nodes[0], tbody = nodes[1];
-  let tr = document.createElement('tr');
-  for (let i = 0; i < columnCount; i++) {
-    const column = columns[i];
-    const th = document.createElement('th');
-    th.innerText = column;
-    tr.append(th);
-  }
-  thead.append(tr);
-  for (let i = 0; i < rowCount; i++) {
-    const row = rows[i];
-    tr = document.createElement('tr');
-    for (let j = 0; j < columnCount; j++) {
-      const td = document.createElement('td');
-      td.innerText = row[j];
-      tr.append(td);
-    }
-    tbody.append(tr);
-  }
-})();''')
+LINK_HEADER = load_view_text('linkHeader.js')
+LINK_OUTPUT = Template(load_view_text('linkOutput.js'))
+
+
+STRING_INPUT = Template(load_view_text('stringInput.js'))
+STRING_HEADER = load_view_text('stringHeader.js')
+STRING_OUTPUT = Template(load_view_text('stringOutput.js'))
+
+
+TEXT_HEADER = load_view_text('textHeader.js')
+TEXT_INPUT = Template(load_view_text('textInput.js'))
+TEXT_OUTPUT = Template(load_view_text('textOutput.js'))
+
+
+MARKDOWN_HEADER = load_view_text('markdownHeader.js')
+MARKDOWN_OUTPUT = Template(load_view_text('markdownOutput.js'))
+
+
+IMAGE_HEADER = load_view_text('imageHeader.js')
+IMAGE_OUTPUT = Template(load_view_text('imageOutput.js'))
+
+
+TABLE_HEADER = load_view_text('tableHeader.js')
+TABLE_OUTPUT = Template(load_view_text('tableOutput.js'))
 
 
 VARIABLE_VIEW_BY_NAME = {_.name: import_attribute(

@@ -14,6 +14,22 @@ def format_slug(text):
     return normalize_key(text, word_separator='-')
 
 
+def escape_quotes_html(x):
+    try:
+        x = x.replace('"', '&#34;').replace("'", '&#39;')
+    except AttributeError:
+        pass
+    return x
+
+
+def escape_quotes_js(x):
+    try:
+        x = x.replace('"', '\\"').replace("'", "\\'")
+    except AttributeError:
+        pass
+    return x
+
+
 def get_html_from_markdown(text):
     html = markdown(text)
     if '</p>\n<p>' not in html:

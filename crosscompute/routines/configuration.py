@@ -508,6 +508,7 @@ def validate_template_identifiers(template_definition):
 
 
 def validate_variable_identifiers(variable_definition):
+    # TODO: Check that variable_id does not have quotes
     try:
         variable_id = variable_definition['id']
         view_name = variable_definition['view']

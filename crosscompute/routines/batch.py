@@ -41,10 +41,11 @@ class DiskBatch(Batch):
             return {}
         mode_name = variable_definition.mode_name
         variable_id = variable_definition.id
+        path = self.folder / mode_name / variable_path
         try:
-            variable_data = load_variable_data(
-                self.folder / mode_name / variable_path, variable_id)
+            variable_data = load_variable_data(path, variable_id)
         except CrossComputeDataError as e:
+            L.error(e)
             return {'error': e}
         return variable_data
 

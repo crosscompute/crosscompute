@@ -33,7 +33,8 @@ VARIABLE_ROUTE = '/{variable_id}'
 MODE_ROUTE = '/{mode_code}'
 RUN_ROUTE = '/r/{run_slug}'
 STYLE_ROUTE = '/s/{style_name}.css'
-MUTATIONS_ROUTE = '/mutations'
+MUTATIONS_ROUTE = '/mutations.json'
+MUTATION_ROUTE = '/mutations/{uri:.+}.json'
 
 
 MODE_NAMES = 'input', 'output', 'log', 'debug'

@@ -1,10 +1,9 @@
----
 # Examples: https://github.com/crosscompute/crosscompute-examples
 # Documentation: https://d.crosscompute.com
 # Forum: https://forum.crosscompute.com
 
 # version of crosscompute (required)
-crosscompute: 0.0.0
+crosscompute: 0.9.1.4
 
 # name of your automation
 name: Automation X
@@ -23,7 +22,7 @@ version: 0.0.0
 #     id: automation-y
 
 # input configuration
-# input:
+input:
 
   # input variables
   # - id to use when referencing your variable in the template (required)
@@ -31,33 +30,33 @@ version: 0.0.0
   # - path where your script loads the variable, relative to the input folder;
   #   specify ENVIRONMENT to prevent saving the variable to disk (required)
   # - configuration of the view
-  # variables:
-  #   - id: x1
-  #     view: string
-  #     path: variables.dictionary
-  #   - id: x2
-  #     view: number
-  #     path: variables.dictionary
-  #   - id: x3
-  #     view: password
-  #     path: ENVIRONMENT
-  #   - id: x4
-  #     view: email
-  #     path: ENVIRONMENT
-  #   - id: x5
-  #     view: text
-  #     path: x5.txt
-  #   - id: x6
-  #     view: markdown
-  #     path: x6.md
+  variables:
+    - id: x1
+      view: string
+      path: variables.dictionary
+    - id: x2
+      view: number
+      path: variables.dictionary
+    - id: x3
+      view: password
+      path: ENVIRONMENT
+    - id: x4
+      view: email
+      path: ENVIRONMENT
+    - id: x5
+      view: text
+      path: x5.txt
+    - id: x6
+      view: markdown
+      path: x6.md
 
   # input templates
   # - path to your markdown template or jupyter notebook form (required)
-  # templates:
-  #   - path: form.md
+  templates:
+    - path: form.md
 
 # output configuration
-# output:
+output:
 
   # output variables
   # - id to use when referencing your variable in the template (required)
@@ -65,55 +64,53 @@ version: 0.0.0
   # - path where your script saves the variable, relative to the output
   #   folder (required)
   # - configuration of the view
-  # variables:
-  #   - id: y1
-  #     view: link
-  #     path: y1.pdf
-  #     configuration:
-  #       name: YOUR-DOWNLOAD-NAME
-  #       text: YOUR-LINK-TEXT
-  #   - id: y2
-  #     view: string
-  #     path: variables.dictionary
-  #   - id: y3
-  #     view: number
-  #     path: variables.dictionary
-  #   - id: y4
-  #     view: text
-  #     path: y4.txt
-  #   - id: y5
-  #     view: markdown
-  #     path: y5.md
-  #   - id: y6
-  #     view: image
-  #     path: y6.svg
-  #   - id: y7
-  #     view: table
-  #     path: y7.json
-  #   - id: y8
-  #     view: map-mapbox
-  #     path: y8.geojson
-  #     configuration:
-  #       style: mapbox://styles/mapbox/dark-v10
-  #       layers:
-  #         - type: fill
-  #           type: circle
-  #           paint:
-  #             fill-color: blue
-  #             circle-color: red
-  #       path: y8-configuration.json
-  #   - id: y9
-  #     view: map-deck-screengrid
-  #     path: y9.json
-  #     configuration:
-  #       style: mapbox://styles/mapbox/dark-v10
-  #       path: y9-configuration.json
+  variables:
+    - id: y1
+      view: link
+      path: y1.txt
+      configuration:
+        name: o"s
+        text: o's
+    - id: y2
+      view: string
+      path: variables.dictionary
+    - id: y3
+      view: number
+      path: variables.dictionary
+    - id: y4
+      view: text
+      path: y4.txt
+    - id: y5
+      view: markdown
+      path: y5.md
+    - id: y6
+      view: image
+      path: y6.svg
+    - id: y7
+      view: table
+      path: y7.json
+    - id: y8
+      view: map-mapbox
+      path: y8.geojson
+      configuration:
+        style: mapbox://styles/mapbox/dark-v10
+        layers:
+          - type: fill
+            paint:
+              fill-color: blue
+        path: y8-configuration.json
+    - id: y9
+      view: map-deck-screengrid
+      path: y9.json
+      configuration:
+        style: mapbox://styles/mapbox/dark-v10
+        path: y9-configuration.json
 
   # output templates
   # - path to your markdown template or jupyter notebook form (required)
-  # templates:
-  #   - path: report-section1.md
-  #   - path: report-section2.md
+  templates:
+    - path: report-section1.md
+    - path: report-section2.md
 
 # tests configuration
 # - folder that contains an input subfolder with paths for
@@ -129,10 +126,10 @@ version: 0.0.0
 # - slug for batch URI; can include variable ids and filters
 # - reference batch to use to fill omitted variables in batch configuration
 # - configuration for batch template
-# batches:
+batches:
 
   # case 0: use a batch folder to set values for input variables
-  # - folder: batches/batch0
+  - folder: batches/standard
 
   # case 1: use a batch configuration to vary values for input variables
   # - folder: batches/{x1 | slug}-{x2}
@@ -180,13 +177,13 @@ version: 0.0.0
   #   - id: GOOGLE_KEY
 
 # display configuration
-# display:
+display:
 
   # styles configuration
   # - path to CSS stylesheet that will be used to render your templates
   # - uri to CSS stylesheet that will be used to render your templates
-  # styles:
-  #   - path: report.css
+  styles:
+    - path: report.css
   #   - uri: https://fonts.googleapis.com/css?family=Tangerine
 
   # templates configuration

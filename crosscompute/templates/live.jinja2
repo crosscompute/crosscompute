@@ -2,7 +2,6 @@
 
 {% block body_js %}
 let serverTimestamp = {{ timestamp_value }};
-
 setInterval(async function() {
   let response = await fetch('{{ BASE_URI }}{{ MUTATIONS_ROUTE }}');
   const d = await response.json();

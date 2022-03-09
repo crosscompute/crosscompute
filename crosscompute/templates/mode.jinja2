@@ -18,10 +18,7 @@
 
 {%- block body_js -%}
 {%- if mode_name == 'input' -%}
-GET_DATA_BY_VIEW_NAME = {};
-{% endif -%}
-{{ super() }}
-{%- if mode_name == 'input' -%}
+const GET_DATA_BY_VIEW_NAME = {};
 document.getElementById('run').onclick = async () => {
   const dataById = {};
   for (const x of document.getElementsByClassName('input')) {
@@ -36,5 +33,19 @@ document.getElementById('run').onclick = async () => {
   const d = await response.json();
   window.location = '{{ BASE_URI }}{{ automation_definition.uri }}/r/' + d['id'] + '/o';
 }
+{% elif mode_name == 'output' -%}
+const functionsByVariableId = {};
+function registerElement(variableId, refreshElement) {
+  if (functionsByVariableId[variableId] === undefined) {
+    functionsByVariableId[variableId] = [];
+  }
+  functionsByVariableId[variableId].push(refreshElement);
+}
+function refreshVariable(variableId) {
+  for (const f of functionsByVariableId[variableId]) {
+    f();
+  }
+}
 {% endif -%}
+{{ super() }}
 {%- endblock -%}
