@@ -84,12 +84,13 @@ class DiskAutomation(Automation):
                 'allowed_origins': allowed_origins,
                 'infos_by_timestamp': manager.dict(),
             }
-            server = DiskServer(
-                self.configuration, work, automation_queue, server_options)
+            server = DiskServer(work, automation_queue, server_options)
+            configuration = self.configuration
             if is_static and is_production:
-                server.run()
+                server.run(configuration)
                 return
             server.watch(
+                configuration,
                 disk_poll_in_milliseconds,
                 disk_debounce_in_milliseconds,
                 self._reload)
@@ -100,6 +101,7 @@ class DiskAutomation(Automation):
             self._initialize_from_path(path)
         else:
             self._initialize_from_folder(self.folder)
+        return self.configuration
 
     def _initialize_from_folder(self, folder):
         paths = list(folder.iterdir())

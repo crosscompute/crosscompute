@@ -26,12 +26,11 @@ from .interface import Server
 
 class DiskServer(Server):
 
-    def __init__(self, configuration, work, queue=None, settings=None):
+    def __init__(self, work, queue=None, settings=None):
         if not queue:
             queue = Queue()
         if not settings:
             settings = {}
-        self._configuration = configuration
         self._work = work
         self._queue = queue
         self._host = settings.get('host', HOST)
@@ -42,7 +41,7 @@ class DiskServer(Server):
         self._allowed_origins = settings.get('allowed_origins')
         self._infos_by_timestamp = settings.get('infos_by_timestamp', {})
 
-    def run(self):
+    def run(self, configuration):
         if L.getEffectiveLevel() > DEBUG:
             getLogger('waitress').setLevel(ERROR)
         worker_process = LoggableProcess(
@@ -54,7 +53,7 @@ class DiskServer(Server):
         port = self._port
         base_uri = self._base_uri
         app = _get_app(
-            self._configuration,
+            configuration,
             self._queue,
             self._is_static,
             self._is_production,
@@ -72,12 +71,14 @@ class DiskServer(Server):
             L.error(e)
 
     def watch(
-            self, disk_poll_in_milliseconds, disk_debounce_in_milliseconds,
+            self,
+            configuration,
+            disk_poll_in_milliseconds,
+            disk_debounce_in_milliseconds,
             reload):
         if L.getEffectiveLevel() > DEBUG:
             getLogger('watchgod.watcher').setLevel(ERROR)
-        server_process, info_by_path = self._run()
-        configuration = self._configuration
+        server_process, info_by_path = self._run(configuration)
         automation_folder = configuration.folder
         for changes in watch(
                 automation_folder,
@@ -97,19 +98,20 @@ class DiskServer(Server):
                 L.debug('%s %s %s', changed_type, changed_path, changed_info)
             if should_restart_server:
                 try:
-                    reload()
+                    configuration = reload()
                 except CrossComputeError as e:
                     L.error(e)
                     continue
                 server_process.stop()
-                server_process, info_by_path = self._run()
+                server_process, info_by_path = self._run(configuration)
             if changed_infos:
                 self._infos_by_timestamp[time()] = changed_infos
 
-    def _run(self):
-        server_process = StoppableProcess(name='server', target=self.run)
+    def _run(self, configuration):
+        server_process = StoppableProcess(
+            name='server', target=self.run, args=(configuration,))
         server_process.start()
-        info_by_path = _get_info_by_path(self._configuration)
+        info_by_path = _get_info_by_path(configuration)
         return server_process, info_by_path
 
 

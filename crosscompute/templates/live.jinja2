@@ -28,7 +28,7 @@ async function processMutations() {
     pingInterval = {{ MINIMUM_PING_INTERVAL }};
   } catch {
     if (pingInterval < {{ MAXIMUM_PING_INTERVAL }}) {
-      pingInterval *= 2;
+      pingInterval *= 1.1;
     }
   }
   setTimeout(processMutations, pingInterval);
