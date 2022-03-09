@@ -2,18 +2,37 @@
 
 {% block body_js %}
 let mutationTimestamp = {{ mutation_timestamp }};
-/*
-setInterval(async function() {
-  let response = await fetch('{{ BASE_URI }}{{ mutation_uri }}');
-  const d = await response.json();
-  if (serverTimestamp === d.server_timestamp) return;
+let pingInterval = {{ MINIMUM_PING_INTERVAL }};
+async function refreshPage() {
   response = await fetch(location.href, { method: 'head' });
   if (response.ok) {
     location.reload();
   } else {
     location.href = '/';
   }
-}, {{ PING_INTERVAL_IN_MILLISECONDS }});
-*/
+}
+async function processMutations() {
+  const uri = '{{ BASE_URI }}{{ mutation_uri }}';
+  try {
+    const response = await fetch(`${uri}?t=${mutationTimestamp}`);
+    const d = await response.json();
+    const { configurations, variables, templates, styles } = d;
+    if (configurations.length || templates.length || styles.length) {
+      refreshPage();
+    } else if (variables.length) {
+      for (const variable of variables) {
+        refreshVariable(variable.id);
+      }
+    }
+    mutationTimestamp = d.mutation_timestamp;
+    pingInterval = {{ MINIMUM_PING_INTERVAL }};
+  } catch {
+    if (pingInterval < {{ MAXIMUM_PING_INTERVAL }}) {
+      pingInterval *= 2;
+    }
+  }
+  setTimeout(processMutations, pingInterval);
+}
+setTimeout(processMutations, pingInterval);
 {{ super() -}}
 {%- endblock %}

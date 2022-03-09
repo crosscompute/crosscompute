@@ -1,4 +1,8 @@
+from pyramid.httpexceptions import HTTPBadRequest
+from time import time
+
 from ..constants import (
+    MAXIMUM_MUTATION_AGE_IN_SECONDS,
     MUTATION_ROUTE)
 
 
@@ -16,37 +20,37 @@ class MutationRoutes():
             renderer='json')
 
     def see_mutation(self, request):
-        print(request.params)
-        print(request.matchdict)
-        print(self._infos_by_timestamp)
-        '''
         params = request.params
-        old_timestamp = float(params.get('timestamp', 0))
+        try:
+            old_timestamp = float(params.get('t', 0))
+        except ValueError:
+            raise HTTPBadRequest
+        matchdict = request.matchdict
+        uri = matchdict['uri']
         new_timestamp = time()
-        folder = self.get_folder_from(request)
-        packs = []
-        for t, ps in change_packs_by_timestamp.items():
-            if t > old_timestamp:
-                packs.extend(ps)
-        for file_code, file_path in packs:
-            # lookup definition for file path
-            # check whether this file path is relevant to this uri
-            template is associated with an automation definition and mode
-            variable is associated with an automation definition,
-            batch_definition and mode
-            # if the file path does not start with folder, ignore
-            if is configuration, style, template, trigger refresh
-            if is variable
-                get variable definition
-                get variable id
-                render the variable
-        # return variables or trigger refresh if necessary
+        infos_by_timestamp = self._infos_by_timestamp
+        configurations, variables, templates, styles = [], [], [], []
+        for timestamp, infos in infos_by_timestamp.copy().items():
+            if new_timestamp - timestamp > MAXIMUM_MUTATION_AGE_IN_SECONDS:
+                del infos_by_timestamp[timestamp]
+            if timestamp <= old_timestamp:
+                continue
+            for info in infos:
+                code = info['code']
+                if code == 'c':
+                    configurations.append({})
+                elif code == 'v':
+                    if uri == info['uri']:
+                        variables.append({'id': info['id']})
+                elif code == 't':
+                    if uri == info['uri']:
+                        templates.append({})
+                elif code == 's':
+                    styles.append({})
         return {
             'configurations': configurations,
-            'styles': styles,
-            'templates': templates,
             'variables': variables,
+            'templates': templates,
+            'styles': styles,
             'mutation_timestamp': new_timestamp,
         }
-        '''
-        return {}

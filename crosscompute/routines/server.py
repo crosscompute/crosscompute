@@ -10,8 +10,12 @@ from watchgod import watch
 
 from ..constants import (
     HOST,
-    PING_INTERVAL_IN_SECONDS,
-    PORT)
+    MAXIMUM_PING_INTERVAL_IN_SECONDS,
+    MINIMUM_PING_INTERVAL_IN_SECONDS,
+    MODE_CODE_BY_NAME,
+    MODE_ROUTE,
+    PORT,
+    RUN_ROUTE)
 from ..exceptions import (
     CrossComputeError)
 from ..macros.process import LoggableProcess, StoppableProcess
@@ -99,7 +103,8 @@ class DiskServer(Server):
                     continue
                 server_process.stop()
                 server_process, info_by_path = self._run()
-            self._infos_by_timestamp[time()] = changed_infos
+            if changed_infos:
+                self._infos_by_timestamp[time()] = changed_infos
 
     def _run(self):
         server_process = StoppableProcess(name='server', target=self.run)
@@ -130,7 +135,7 @@ def _get_app(
         config.include('pyramid_jinja2')
         config.include(automation_routes.includeme)
         if not is_static:
-            mutation_routes = MutationRoutes(infos_by_timestamp or {})
+            mutation_routes = MutationRoutes(infos_by_timestamp)
             config.include(mutation_routes.includeme)
         _configure_renderer_globals(
             config, is_static, is_production, base_uri, configuration)
@@ -151,7 +156,8 @@ def _configure_renderer_globals(
             'IS_STATIC': is_static,
             'IS_PRODUCTION': is_production,
             'BASE_URI': base_uri,
-            'PING_INTERVAL_IN_MILLISECONDS': PING_INTERVAL_IN_SECONDS * 1000,
+            'MAXIMUM_PING_INTERVAL': MAXIMUM_PING_INTERVAL_IN_SECONDS * 1000,
+            'MINIMUM_PING_INTERVAL': MINIMUM_PING_INTERVAL_IN_SECONDS * 1000,
         })
 
     config.action(None, update_renderer_globals)
@@ -194,9 +200,10 @@ def _get_info(configuration, path, info_by_path):
         if not is_path_in_folder(path, runs_folder):
             continue
         run_id = path.absolute().relative_to(runs_folder).parts[0]
-        expected_packs = _get_variable_packs_from_folder(
-            configuration, runs_folder / run_id)
-        for path, info in expected_packs:
+        run_uri = RUN_ROUTE.format(run_slug=run_id)
+        variable_packs = _get_variable_packs_from_folder(
+            configuration, runs_folder / run_id, run_uri)
+        for path, info in variable_packs:
             if real_path == path.resolve():
                 return info
     return info_by_path[real_path]
@@ -241,29 +248,33 @@ def _get_variable_packs(configuration):
     automation_definitions = configuration.automation_definitions
     for automation_definition in automation_definitions:
         automation_folder = automation_definition.folder
-        automation_uri = automation_definition.uri
         # Use computed batch definitions
         for batch_definition in automation_definition.batch_definitions:
             batch_uri = batch_definition.uri
             variable_packs = _get_variable_packs_from_folder(
                 configuration,
-                automation_folder / batch_definition.folder)
-            for path, info in variable_packs:
-                info['uri'] = automation_uri + batch_uri
+                automation_folder / batch_definition.folder,
+                batch_uri)
             packs.extend(variable_packs)
     return packs
 
 
-def _get_variable_packs_from_folder(configuration, absolute_batch_folder):
+def _get_variable_packs_from_folder(
+        configuration, absolute_batch_folder, batch_uri):
     packs = []
     automation_definitions = configuration.automation_definitions
     for automation_definition in automation_definitions:
+        automation_uri = automation_definition.uri
         d = automation_definition.variable_definitions_by_mode_name
         for mode_name, variable_definitions in d.items():
+            mode_code = MODE_CODE_BY_NAME[mode_name]
+            mode_uri = MODE_ROUTE.format(mode_code=mode_code)
             folder = absolute_batch_folder / mode_name
             for variable_definition in variable_definitions:
                 variable_id = variable_definition.id
-                info = {'id': variable_id}
+                info = {
+                    'id': variable_id,
+                    'uri': automation_uri + batch_uri + mode_uri}
                 variable_configuration = variable_definition.configuration
                 if 'path' in variable_configuration:
                     path = folder / variable_configuration['path']
