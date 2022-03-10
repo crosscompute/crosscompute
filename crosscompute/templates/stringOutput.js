@@ -1,3 +1,6 @@
 registerElement('$variable_id', function () {
-  refreshString('$element_id', 'textContent', '$data_uri');
+  try {
+    refreshString('$element_id', 'textContent', '$data_uri');
+  } catch {
+  }
 });

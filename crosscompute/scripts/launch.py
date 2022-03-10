@@ -93,7 +93,7 @@ def get_launch_mode_from(args):
         launch_mode = 'run'
     elif args.is_serve_only:
         launch_mode = 'serve'
-    elif args.prints_format:
+    elif args.print_format:
         launch_mode = 'print'
     '''
     elif args.is_debug_only:

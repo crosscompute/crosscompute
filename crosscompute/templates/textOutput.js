@@ -1,5 +1,8 @@
 function refreshText_$element_id() {
-  refreshString('$element_id', 'textContent', '$data_uri');
+  try {
+    refreshString('$element_id', 'textContent', '$data_uri');
+  } catch {
+  }
 }
 registerElement('$variable_id', function () {
   refreshText_$element_id();

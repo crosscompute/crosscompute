@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from invisibleroads_macros_disk import make_random_folder
+from invisibleroads_macros_disk import make_folder, make_random_folder
 from logging import getLogger
 
 from crosscompute.exceptions import (
@@ -43,19 +43,19 @@ def do(arguments=None):
 
 def configure_argument_parser_for_printing(a):
     a.add_argument(
-        '--print', metavar='X', dest='prints_format',
+        '--print', metavar='X', dest='print_format',
         help='print automations in specific format')
     a.add_argument(
-        '--prints-folder', metavar='X',
+        '--print-folder', metavar='X',
         help='print automations to this folder')
 
 
 def configure_printing_from(args):
-    prints_format = args.prints_format
-    if not prints_format:
+    print_format = args.print_format
+    if not print_format:
         return
     try:
-        PRINTER_BY_NAME[prints_format]
+        PRINTER_BY_NAME[print_format]
     except KeyError:
         printer_names = PRINTER_BY_NAME.keys()
         if printer_names:
@@ -63,13 +63,15 @@ def configure_printing_from(args):
         else:
             extra_message = 'install crosscompute-printers-pdf'
         raise CrossComputeError(
-            f'{prints_format} is not a supported printer; {extra_message}')
+            f'{print_format} is not a supported printer; {extra_message}')
     args.with_browser = False
     args.is_static = True
     args.is_production = True
-    prints_folder = args.prints_folder
-    if not prints_folder:
-        args.prints_folder = make_random_folder()
+    print_folder = args.print_folder
+    if print_folder:
+        make_folder(print_folder)
+    else:
+        args.print_folder = make_random_folder()
 
 
 def print_with(automation, args):
@@ -80,9 +82,9 @@ def print_with(automation, args):
         name='run', target=run_with, args=(automation, args))
     runner_process.start()
     runner_process.join()
-    prints_format = args.prints_format
-    prints_folder = args.prints_folder
-    Printer = PRINTER_BY_NAME[prints_format]
+    print_format = args.print_format
+    print_folder = args.print_folder
+    Printer = PRINTER_BY_NAME[print_format]
     batch_dictionaries = []
     for automation_definition in automation.definitions:
         automation_uri = automation_definition.uri
@@ -92,7 +94,7 @@ def print_with(automation, args):
             batch_dictionaries.append({'name': name, 'uri': uri})
     printer = Printer({
         'uri': f'http://127.0.0.1:{args.port}{args.base_uri}',
-        'folder': prints_folder})
+        'folder': print_folder})
     printer.render(batch_dictionaries)
     server_process.stop()
 
