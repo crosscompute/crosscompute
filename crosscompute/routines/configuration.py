@@ -76,6 +76,7 @@ class AutomationDefinition(Definition):
             validate_environment_variables,
             validate_display_styles,
             validate_display_templates,
+            validate_print,
         ]
 
     def get_variable_definitions(self, mode_name, with_all=False):
@@ -200,6 +201,14 @@ class StyleDefinition(Definition):
     def _initialize(self, kwargs):
         self._validation_functions = [
             validate_style_identifiers,
+        ]
+
+
+class PrintDefinition(Definition):
+
+    def _initialize(self, kwargs):
+        self._validation_functions = [
+            validate_page_number_settings,
         ]
 
 
@@ -451,14 +460,14 @@ def validate_scripts(configuration):
 
 
 def validate_display_styles(configuration):
-    display_configuration = get_dictionary(configuration, 'display')
+    display_dictionary = get_dictionary(configuration, 'display')
     automation_folder = configuration.folder
     automation_index = configuration.index
     automation_uri = configuration.uri
     reference_time = time()
     style_definitions = []
     for raw_style_definition in get_dictionaries(
-            display_configuration, 'styles'):
+            display_dictionary, 'styles'):
         style_definition = StyleDefinition(raw_style_definition)
         style_uri = style_definition.uri
         style_path = style_definition.path
@@ -483,15 +492,22 @@ def validate_display_styles(configuration):
 
 
 def validate_display_templates(configuration):
-    display_configuration = get_dictionary(configuration, 'display')
+    display_dictionary = get_dictionary(configuration, 'display')
     template_path_by_id = {}
     for raw_template_definition in get_dictionaries(
-            display_configuration, 'templates'):
+            display_dictionary, 'templates'):
         template_definition = TemplateDefinition(raw_template_definition)
         template_id = template_definition.id
         template_path_by_id[template_id] = template_definition.path
     return {
         'template_path_by_id': template_path_by_id,
+    }
+
+
+def validate_print(configuration):
+    print_dictionary = get_dictionary(configuration, 'print')
+    return {
+        'print_definition': PrintDefinition(print_dictionary),
     }
 
 
@@ -636,6 +652,25 @@ def validate_style_identifiers(style_definition):
         'uri': uri,
         'path': Path(path),
     }
+
+
+def validate_page_number_settings(print_dictionary):
+    key = 'page-number'
+    settings = get_dictionary(print_dictionary, key)
+    location = settings.get('location')
+    if location and location != 'footer':
+        raise CrossComputeConfigurationError(
+            f'{location} location not supported for {key}')
+    alignment = settings.get('alignment')
+    if alignment and alignment != 'right':
+        raise CrossComputeConfigurationError(
+            f'{alignment} alignment not supported for {key}')
+    # font_family = settings.get('font-family')
+    # font_size = settings.get('font-size')
+    # color = settings.get('color')
+    # padding = settings.get('padding')
+    settings['skip-first'] = bool(settings.get('skip-first'))
+    return {}
 
 
 def get_configuration_format(path):

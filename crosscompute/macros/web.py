@@ -38,10 +38,13 @@ def get_html_from_markdown(text):
     return html
 
 
-def is_port_in_use(port):
+def is_port_in_use(port, with_log=False):
     # https://stackoverflow.com/a/52872579
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        return s.connect_ex(('127.0.0.1', int(port))) == 0
+        is_in_use = s.connect_ex(('127.0.0.1', int(port))) == 0
+    if is_in_use and with_log:
+        L.error('port %s is in use', port)
+    return is_in_use
 
 
 def open_browser(uri, check_interval_in_seconds=1):

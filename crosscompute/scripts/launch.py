@@ -6,6 +6,7 @@ from crosscompute.exceptions import (
     CrossComputeConfigurationNotFoundError,
     CrossComputeError)
 from crosscompute.macros.process import LoggableProcess
+from crosscompute.macros.web import is_port_in_use
 from crosscompute.routines.automation import DiskAutomation
 from crosscompute.routines.log import (
     configure_argument_parser_for_logging,
@@ -54,6 +55,8 @@ def do(arguments=None):
         raise SystemExit
     processes = []
     if launch_mode in ['serve', 'all']:
+        if is_port_in_use(args.port, with_log=True):
+            raise SystemExit
         processes.append(LoggableProcess(
             name='serve', target=serve_with, args=(automation, args)))
     if launch_mode in ['run', 'all']:

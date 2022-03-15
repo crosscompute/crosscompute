@@ -31,6 +31,8 @@ def do(arguments=None):
     except CrossComputeError as e:
         L.error(e)
         return
+    if is_port_in_use(args.port, with_log=True):
+        raise SystemExit
     serve_with(automation, args)
 
 
@@ -97,9 +99,6 @@ def serve(
         disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
         disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS):
     try:
-        if is_port_in_use(port):
-            raise CrossComputeError(
-                f'port {port} is in use; cannot start server')
         if with_browser and 'DISPLAY' in environ:
             L.info('opening browser; set --no-browser to disable')
             open_browser(f'http://localhost:{port}{base_uri}')

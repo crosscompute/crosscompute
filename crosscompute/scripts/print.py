@@ -5,6 +5,7 @@ from logging import getLogger
 from crosscompute.exceptions import (
     CrossComputeError)
 from crosscompute.macros.process import LoggableProcess, StoppableProcess
+from crosscompute.macros.web import is_port_in_use
 from crosscompute.routines.automation import DiskAutomation
 from crosscompute.routines.log import (
     configure_argument_parser_for_logging,
@@ -75,6 +76,8 @@ def configure_printing_from(args):
 
 
 def print_with(automation, args):
+    if is_port_in_use(args.port, with_log=True):
+        raise SystemExit
     server_process = StoppableProcess(
         name='serve', target=serve_with, args=(automation, args))
     server_process.start()
@@ -92,10 +95,12 @@ def print_with(automation, args):
             name = batch_definition.name
             uri = automation_uri + batch_definition.uri
             batch_dictionaries.append({'name': name, 'uri': uri})
+    configuration = automation.configuration
+    print_definition = configuration.print_definition
     printer = Printer({
         'uri': f'http://127.0.0.1:{args.port}{args.base_uri}',
         'folder': print_folder})
-    printer.render(batch_dictionaries)
+    printer.render(batch_dictionaries, print_definition)
     server_process.stop()
 
 
