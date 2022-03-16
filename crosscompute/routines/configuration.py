@@ -208,7 +208,9 @@ class PrintDefinition(Definition):
 
     def _initialize(self, kwargs):
         self._validation_functions = [
-            validate_page_number_settings,
+            validate_print_configuration,
+            validate_header_footer_options,
+            validate_page_number_options,
         ]
 
 
@@ -654,22 +656,34 @@ def validate_style_identifiers(style_definition):
     }
 
 
-def validate_page_number_settings(print_dictionary):
+def validate_print_configuration(print_dictionary):
+    print_configuration = get_dictionary(
+        print_dictionary, 'configuration')
+    return {
+        'configuration': print_configuration,
+    }
+
+
+def validate_header_footer_options(print_dictionary):
+    print_configuration = print_dictionary.configuration
+    key = 'header-footer'
+    options = get_dictionary(print_configuration, key)
+    options['skip-first'] = bool(options.get('skip-first'))
+    return {}
+
+
+def validate_page_number_options(print_dictionary):
+    print_configuration = print_dictionary.configuration
     key = 'page-number'
-    settings = get_dictionary(print_dictionary, key)
-    location = settings.get('location')
-    if location and location != 'footer':
+    options = get_dictionary(print_configuration, key)
+    location = options.get('location')
+    if location and location not in ['header', 'footer']:
         raise CrossComputeConfigurationError(
             f'{location} location not supported for {key}')
-    alignment = settings.get('alignment')
-    if alignment and alignment != 'right':
+    alignment = options.get('alignment')
+    if alignment and alignment not in ['left', 'center', 'right']:
         raise CrossComputeConfigurationError(
             f'{alignment} alignment not supported for {key}')
-    # font_family = settings.get('font-family')
-    # font_size = settings.get('font-size')
-    # color = settings.get('color')
-    # padding = settings.get('padding')
-    settings['skip-first'] = bool(settings.get('skip-first'))
     return {}
 
 

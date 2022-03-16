@@ -6,6 +6,8 @@ from crosscompute.exceptions import (
     CrossComputeError)
 from crosscompute.routines.configuration import (
     validate_automation_identifiers,
+    validate_header_footer_options,
+    validate_page_number_options,
     validate_protocol,
     validate_templates,
     validate_variables)
@@ -89,3 +91,31 @@ def test_validate_templates(tmp_path):
     c['input']['templates'] = [{'path': 'x.md'}]
     d = validate_templates(c)
     assert len(d['template_definitions_by_mode_name']['input']) == 1
+
+
+def test_validate_header_footer_options():
+    c = DummyConfiguration()
+    c.configuration = {'header-footer': {}}
+    validate_header_footer_options(c)
+    assert c.configuration.get('header-footer')['skip-first'] is False
+    c.configuration = {'header-footer': {'skip-first': 'true'}}
+    validate_header_footer_options(c)
+    assert c.configuration['header-footer']['skip-first'] is True
+
+
+def test_validate_page_number_options():
+    c = DummyConfiguration()
+    c.configuration = {}
+    validate_page_number_options(c)
+
+    c.configuration = {'page-number': {'location': 'x'}}
+    with raises(CrossComputeConfigurationError):
+        validate_page_number_options(c)
+
+    c.configuration = {'page-number': {'alignment': 'x'}}
+    with raises(CrossComputeConfigurationError):
+        validate_page_number_options(c)
+
+    c.configuration = {'page-number': {
+        'location': 'footer', 'alignment': 'right'}}
+    validate_page_number_options(c)
