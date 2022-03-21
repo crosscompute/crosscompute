@@ -49,11 +49,11 @@ class DiskAutomation(Automation):
         return instance
 
     def run(self):
-        try:
-            for automation_definition in self.definitions:
+        for automation_definition in self.definitions:
+            try:
                 run_automation(automation_definition)
-        except CrossComputeError as e:
-            L.error(e)
+            except CrossComputeError as e:
+                L.error(e)
 
     def serve(
             self,
