@@ -6,7 +6,6 @@ from crosscompute.exceptions import (
     CrossComputeConfigurationNotFoundError,
     CrossComputeError)
 from crosscompute.macros.process import LoggableProcess
-from crosscompute.macros.web import is_port_in_use
 from crosscompute.routines.automation import DiskAutomation
 from crosscompute.routines.log import (
     configure_argument_parser_for_logging,
@@ -15,13 +14,12 @@ from crosscompute.scripts.configure import (
     configure_argument_parser_for_configuring,
     configure_with)
 from crosscompute.scripts.print import (
-    configure_argument_parser_for_printing,
-    configure_printing_from,
     print_with)
 from crosscompute.scripts.run import (
     configure_argument_parser_for_running,
     run_with)
 from crosscompute.scripts.serve import (
+    check_port,
     configure_argument_parser_for_serving,
     configure_serving_from,
     serve_with)
@@ -29,34 +27,18 @@ from crosscompute.scripts.serve import (
 
 def do(arguments=None):
     mp.set_start_method('fork')
-    a = ArgumentParser()
-    configure_argument_parser_for_logging(a)
-    configure_argument_parser_for_launching(a)
-    configure_argument_parser_for_configuring(a)
-    configure_argument_parser_for_serving(a)
-    configure_argument_parser_for_running(a)
-    configure_argument_parser_for_printing(a)
-    args = a.parse_args(arguments)
-    try:
-        configure_logging_from(args)
-        configure_serving_from(args)
-        configure_printing_from(args)
-    except CrossComputeError as e:
-        L.error(e)
-        return
+    args = _get_args(arguments)
     launch_mode = get_launch_mode_from(args)
-
     if launch_mode == 'configure':
         configure_with(args)
-        raise SystemExit
-    automation = get_automation_from(args)
+        return
+    automation = _get_automation_from(args)
     if launch_mode == 'print':
         print_with(automation, args)
-        raise SystemExit
+        return
     processes = []
     if launch_mode in ['serve', 'all']:
-        if is_port_in_use(args.port, with_log=True):
-            raise SystemExit
+        check_port(args.port)
         processes.append(LoggableProcess(
             name='serve', target=serve_with, args=(automation, args)))
     if launch_mode in ['run', 'all']:
@@ -81,6 +63,9 @@ def configure_argument_parser_for_launching(a):
     a.add_argument(
         '--run', dest='is_run_only', action='store_true',
         help='run only')
+    a.add_argument(
+        '--print', dest='is_print_only', action='store_true',
+        help='print only')
     '''
     a.add_argument(
         '--debug', dest='is_debug_only', action='store_true',
@@ -96,7 +81,7 @@ def get_launch_mode_from(args):
         launch_mode = 'run'
     elif args.is_serve_only:
         launch_mode = 'serve'
-    elif args.print_format:
+    elif args.is_print_only:
         launch_mode = 'print'
     '''
     elif args.is_debug_only:
@@ -105,7 +90,24 @@ def get_launch_mode_from(args):
     return launch_mode
 
 
-def get_automation_from(args):
+def _get_args(arguments):
+    a = ArgumentParser()
+    configure_argument_parser_for_logging(a)
+    configure_argument_parser_for_launching(a)
+    configure_argument_parser_for_configuring(a)
+    configure_argument_parser_for_serving(a)
+    configure_argument_parser_for_running(a)
+    args = a.parse_args(arguments)
+    try:
+        configure_logging_from(args)
+        configure_serving_from(args)
+    except CrossComputeError as e:
+        L.error(e)
+        raise SystemExit
+    return args
+
+
+def _get_automation_from(args):
     path_or_folder = args.path_or_folder
     try:
         automation = DiskAutomation.load(path_or_folder or '.')

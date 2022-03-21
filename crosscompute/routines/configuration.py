@@ -20,18 +20,22 @@ from ..constants import (
     AUTOMATION_VERSION,
     BATCH_ROUTE,
     MODE_NAMES,
+    PRINTER_BY_NAME,
     RUN_ROUTE,
-    STYLE_ROUTE)
+    STYLE_ROUTE,
+    VIEW_BY_NAME)
 from ..exceptions import (
     CrossComputeConfigurationError,
     CrossComputeConfigurationFormatError,
+    CrossComputeConfigurationNotImplementedError,
     CrossComputeError)
 from ..macros.package import is_equivalent_version
 from ..macros.web import format_slug
+from .printer import initialize_printer_by_name
 from .variable import (
     format_text,
     get_data_by_id_from_folder,
-    VARIABLE_VIEW_BY_NAME,
+    initialize_view_by_name,
     YIELD_DATA_BY_ID_BY_EXTENSION)
 
 
@@ -208,6 +212,7 @@ class PrintDefinition(Definition):
 
     def _initialize(self, kwargs):
         self._validation_functions = [
+            validate_print_identifiers,
             validate_print_configuration,
             validate_header_footer_options,
             validate_page_number_options,
@@ -340,10 +345,10 @@ def validate_imports(configuration):
         _ for _ in automation_configurations if 'output' in _]
     assert_unique_values(
         [_.name for _ in automation_definitions],
-        'duplicate automation name {{x}}')
+        'duplicate automation name {x}')
     assert_unique_values(
         [_.slug for _ in automation_definitions],
-        'duplicate automation slug {{x}}')
+        'duplicate automation slug {x}')
     return {
         'automation_definitions': automation_definitions,
     }
@@ -370,9 +375,10 @@ def validate_variables(configuration):
 
 
 def validate_variable_views(configuration):
+    initialize_view_by_name()
     for view_name in configuration.___view_names:
         try:
-            View = VARIABLE_VIEW_BY_NAME[view_name]
+            View = VIEW_BY_NAME[view_name]
         except KeyError:
             raise CrossComputeConfigurationError(f'{view_name} not installed')
         environment_variable_ids = get_environment_variable_ids(
@@ -415,13 +421,13 @@ def validate_batches(configuration):
             raw_batch_definition, automation_folder, variable_definitions))
     assert_unique_values(
         [_.folder for _ in batch_definitions],
-        'duplicate batch folder {{x}}')
+        'duplicate batch folder {x}')
     assert_unique_values(
         [_.name for _ in batch_definitions],
-        'duplicate batch name {{x}}')
+        'duplicate batch name {x}')
     assert_unique_values(
         [_.uri for _ in batch_definitions],
-        'duplicate batch uri {{x}}')
+        'duplicate batch uri {x}')
     return {
         'batch_definitions': batch_definitions,
         'run_definitions': [],
@@ -508,8 +514,9 @@ def validate_display_templates(configuration):
 
 def validate_print(configuration):
     print_dictionary = get_dictionary(configuration, 'print')
+    print_definition = PrintDefinition(print_dictionary)
     return {
-        'print_definition': PrintDefinition(print_dictionary),
+        'print_definition': print_definition,
     }
 
 
@@ -563,9 +570,11 @@ def validate_batch_identifiers(batch_definition):
     data_by_id = batch_definition.data_by_id
     if data_by_id and not is_run:
         try:
-            folder = format_text(str(folder), data_by_id)
+            folder = format_text(folder, data_by_id)
             name = format_text(name, data_by_id)
             slug = format_text(slug, data_by_id)
+        except CrossComputeConfigurationNotImplementedError:
+            raise
         except CrossComputeConfigurationError as e:
             batch_configuration = batch_definition.get('configuration', {})
             if 'path' in batch_configuration:
@@ -653,6 +662,29 @@ def validate_style_identifiers(style_definition):
     return {
         'uri': uri,
         'path': Path(path),
+    }
+
+
+def validate_print_identifiers(print_dictionary):
+    initialize_printer_by_name()
+    print_format = print_dictionary.get('format', '').strip()
+    if print_format:
+        try:
+            PRINTER_BY_NAME[print_format]
+        except KeyError:
+            printer_names = PRINTER_BY_NAME.keys()
+            if printer_names:
+                extra_message = 'try ' + ' '.join(printer_names)
+            else:
+                extra_message = 'install crosscompute-printers-pdf'
+            raise CrossComputeConfigurationError(
+                f'{print_format} is not a supported printer; {extra_message}')
+    print_folder = Path(print_dictionary.get('folder', '')).expanduser()
+    print_name = print_dictionary.get('name', '')
+    return {
+        'format': print_format,
+        'folder': print_folder,
+        'name': print_name,
     }
 
 

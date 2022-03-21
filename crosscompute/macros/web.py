@@ -3,10 +3,12 @@ import webbrowser
 from invisibleroads_macros_text import normalize_key
 from logging import getLogger
 from markdown import markdown
+from random import randint
 from time import sleep
 from urllib.error import HTTPError, URLError
 from urllib.request import urlopen as open_uri
 
+from ..constants import MAXIMUM_PORT, MINIMUM_PORT
 from .process import LoggableProcess
 
 
@@ -38,12 +40,25 @@ def get_html_from_markdown(text):
     return html
 
 
-def is_port_in_use(port, with_log=False):
+def find_open_port(minimum_port=MINIMUM_PORT, maximum_port=MAXIMUM_PORT):
+    port_count = maximum_port - minimum_port + 1
+    closed_ports = set()
+    while True:
+        port = randint(minimum_port, maximum_port)
+        if not is_port_in_use(port):
+            break
+        closed_ports.add(port)
+        if len(closed_ports) == port_count:
+            raise OSError(
+                'could not find an open port in '
+                f'[{minimum_port}, {maximum_port}]')
+    return port
+
+
+def is_port_in_use(port):
     # https://stackoverflow.com/a/52872579
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         is_in_use = s.connect_ex(('127.0.0.1', int(port))) == 0
-    if is_in_use and with_log:
-        L.error('port %s is in use', port)
     return is_in_use
 
 

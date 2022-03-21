@@ -31,8 +31,7 @@ def do(arguments=None):
     except CrossComputeError as e:
         L.error(e)
         return
-    if is_port_in_use(args.port, with_log=True):
-        raise SystemExit
+    check_port(args.port)
     serve_with(automation, args)
 
 
@@ -115,6 +114,12 @@ def serve(
         L.error(e)
     except KeyboardInterrupt:
         pass
+
+
+def check_port(port):
+    if is_port_in_use(port):
+        L.error('port %s is in use; could not start server', port)
+        raise SystemExit
 
 
 L = getLogger(__name__)

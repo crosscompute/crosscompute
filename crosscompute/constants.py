@@ -1,8 +1,7 @@
 import re
 from enum import IntEnum
+from os import getenv
 from pathlib import Path
-
-from .macros.web import format_slug
 
 
 class Error(IntEnum):
@@ -44,9 +43,13 @@ MAXIMUM_PING_INTERVAL_IN_SECONDS = 30
 MAXIMUM_MUTATION_AGE_IN_SECONDS = 60
 
 
-FUNCTION_BY_NAME = {
-    'slug': format_slug,
-    'title': str.title,
-}
 VARIABLE_ID_PATTERN = re.compile(r'{\s*([^}]+?)\s*}')
 MAXIMUM_FILE_CACHE_LENGTH = 256
+
+
+PRINTER_BY_NAME = {}
+VIEW_BY_NAME = {}
+
+
+MINIMUM_PORT = int(getenv('CROSSCOMPUTE_MINIMUM_PORT', 1024))
+MAXIMUM_PORT = int(getenv('CROSSCOMPUTE_MAXIMUM_PORT', 65535))

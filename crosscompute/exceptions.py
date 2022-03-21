@@ -23,6 +23,11 @@ class CrossComputeConfigurationNotFoundError(CrossComputeConfigurationError):
     pass
 
 
+class CrossComputeConfigurationNotImplementedError(
+        CrossComputeConfigurationError):
+    pass
+
+
 class CrossComputeConfigurationFormatError(CrossComputeError):
     pass
 

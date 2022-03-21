@@ -1,22 +1,25 @@
 from argparse import ArgumentParser
 from invisibleroads_macros_disk import make_folder, make_random_folder
+from invisibleroads_macros_log import get_timestamp
 from logging import getLogger
 
+from crosscompute.constants import PRINTER_BY_NAME
 from crosscompute.exceptions import (
+    CrossComputeConfigurationError,
     CrossComputeError)
-from crosscompute.macros.process import LoggableProcess, StoppableProcess
-from crosscompute.macros.web import is_port_in_use
-from crosscompute.routines.automation import DiskAutomation
+from crosscompute.macros.process import StoppableProcess
+from crosscompute.macros.web import find_open_port
+from crosscompute.routines.automation import DiskAutomation, run_automation
 from crosscompute.routines.log import (
     configure_argument_parser_for_logging,
     configure_logging_from)
-from crosscompute.routines.printer import (
-    PRINTER_BY_NAME)
+from crosscompute.routines.variable import (
+    format_text,
+    get_data_by_id_from_folder)
 from crosscompute.scripts.configure import (
     configure_argument_parser_for_configuring)
 from crosscompute.scripts.run import (
-    configure_argument_parser_for_running,
-    run_with)
+    configure_argument_parser_for_running)
 from crosscompute.scripts.serve import (
     configure_argument_parser_for_serving,
     configure_serving_from,
@@ -29,45 +32,18 @@ def do(arguments=None):
     configure_argument_parser_for_configuring(a)
     configure_argument_parser_for_serving(a)
     configure_argument_parser_for_running(a)
-    configure_argument_parser_for_printing(a)
     args = a.parse_args(arguments)
     try:
         configure_logging_from(args)
         configure_serving_from(args)
-        configure_printing_from(args)
         automation = DiskAutomation.load(args.path_or_folder)
+        print_with(automation, args)
     except CrossComputeError as e:
         L.error(e)
         return
-    print_with(automation, args)
-
-
-def configure_argument_parser_for_printing(a):
-    a.add_argument(
-        '--print', metavar='X', dest='print_format',
-        help='print automations in specific format')
-    a.add_argument(
-        '--print-folder', metavar='X',
-        help='print automations to this folder')
 
 
 def configure_printing_from(args):
-    print_format = args.print_format
-    if not print_format:
-        return
-    try:
-        PRINTER_BY_NAME[print_format]
-    except KeyError:
-        printer_names = PRINTER_BY_NAME.keys()
-        if printer_names:
-            extra_message = 'try ' + ' '.join(printer_names)
-        else:
-            extra_message = 'install crosscompute-printers-pdf'
-        raise CrossComputeError(
-            f'{print_format} is not a supported printer; {extra_message}')
-    args.with_browser = False
-    args.is_static = True
-    args.is_production = True
     print_folder = args.print_folder
     if print_folder:
         make_folder(print_folder)
@@ -76,32 +52,80 @@ def configure_printing_from(args):
 
 
 def print_with(automation, args):
-    if is_port_in_use(args.port, with_log=True):
-        raise SystemExit
+    try:
+        port = find_open_port()
+    except OSError as e:
+        raise CrossComputeError(e)
+    timestamp = get_timestamp(template='%Y%m%d-%H%M-%f')
+    print_packs = []
+    for automation_definition in get_selected_automation_definitions(
+            automation.definitions):
+        run_automation(automation_definition)
+        print_definition = automation_definition.print_definition
+        batch_dictionaries = get_batch_dictionaries(
+            automation_definition, print_definition, timestamp)
+        print_packs.append((print_definition, batch_dictionaries))
+    args.port = port
+    args.with_browser = False
+    args.is_static = True
+    args.is_production = True
     server_process = StoppableProcess(
         name='serve', target=serve_with, args=(automation, args))
     server_process.start()
-    runner_process = LoggableProcess(
-        name='run', target=run_with, args=(automation, args))
-    runner_process.start()
-    runner_process.join()
-    print_format = args.print_format
-    print_folder = args.print_folder
-    Printer = PRINTER_BY_NAME[print_format]
+    try:
+        for print_definition, batch_dictionaries in print_packs:
+            Printer = PRINTER_BY_NAME[print_definition.format]
+            printer = Printer(f'http://127.0.0.1:{port}{args.base_uri}')
+            printer.render(batch_dictionaries, print_definition)
+    finally:
+        server_process.stop()
+
+
+def get_selected_automation_definitions(automation_definitions):
+    selected_automation_definitions = []
+    for automation_definition in automation_definitions:
+        print_definition = automation_definition.print_definition
+        print_format = print_definition.format
+        if not print_format:
+            L.warning(
+                'print format not defined in %s %s',
+                automation_definition.name, automation_definition.version)
+            continue
+        selected_automation_definitions.append(automation_definition)
+    if not selected_automation_definitions:
+        raise CrossComputeConfigurationError(
+            'print format not defined in any automation definitions')
+    return selected_automation_definitions
+
+
+def get_batch_dictionaries(automation_definition, print_definition, timestamp):
     batch_dictionaries = []
-    for automation_definition in automation.definitions:
-        automation_uri = automation_definition.uri
-        for batch_definition in automation_definition.batch_definitions:
-            name = batch_definition.name
-            uri = automation_uri + batch_definition.uri
-            batch_dictionaries.append({'name': name, 'uri': uri})
-    configuration = automation.configuration
-    print_definition = configuration.print_definition
-    printer = Printer({
-        'uri': f'http://127.0.0.1:{args.port}{args.base_uri}',
-        'folder': print_folder})
-    printer.render(batch_dictionaries, print_definition)
-    server_process.stop()
+    automation_uri = automation_definition.uri
+    name = print_definition.name
+    folder = print_definition.folder
+    extra_data_by_id = {'timestamp': {'value': timestamp}}
+    for batch_definition in automation_definition.batch_definitions:
+        name_template = name or batch_definition.name
+        data_by_id = get_data_by_id(
+            automation_definition, batch_definition) | extra_data_by_id
+        path = format_text(folder / name_template, data_by_id)
+        batch_dictionaries.append({
+            'path': path,
+            'uri': automation_uri + batch_definition.uri})
+    return batch_dictionaries
+
+
+def get_data_by_id(automation_definition, batch_definition):
+    automation_folder = automation_definition.folder
+    batch_folder = batch_definition.folder
+    absolute_batch_folder = automation_folder / batch_folder
+    input_data_by_id = get_data_by_id_from_folder(
+        absolute_batch_folder / 'input',
+        automation_definition.get_variable_definitions('input'))
+    output_data_by_id = get_data_by_id_from_folder(
+        absolute_batch_folder / 'output',
+        automation_definition.get_variable_definitions('output'))
+    return input_data_by_id | output_data_by_id
 
 
 L = getLogger(__name__)

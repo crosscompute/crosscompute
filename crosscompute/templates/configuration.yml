@@ -202,6 +202,7 @@ version: 0.0.0
 
 # print configuration
 # print:
+#   format: pdf
 #   configuration:
 #     header-footer:
 #       font-family: sans-serif
@@ -212,3 +213,5 @@ version: 0.0.0
 #     page-number:
 #       location: footer
 #       alignment: right
+#   folder: ~/Documents/attachments/automation-x-{timestamp}
+#   name: '{y2 | slug}-{y3}.pdf'

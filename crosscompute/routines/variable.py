@@ -9,17 +9,20 @@ from os.path import basename, exists
 from string import Template
 
 from ..constants import (
-    FUNCTION_BY_NAME,
     MAXIMUM_FILE_CACHE_LENGTH,
     TEMPLATES_FOLDER,
-    VARIABLE_ID_PATTERN)
+    VARIABLE_ID_PATTERN,
+    VIEW_BY_NAME)
 from ..exceptions import (
     CrossComputeConfigurationError,
+    CrossComputeConfigurationNotImplementedError,
     CrossComputeDataError)
 from ..macros.disk import FileCache
 from ..macros.package import import_attribute
 from ..macros.web import (
-    escape_quotes_html, escape_quotes_js)
+    escape_quotes_html,
+    escape_quotes_js,
+    format_slug)
 from .interface import Batch
 
 
@@ -48,7 +51,7 @@ class VariableView():
     def get_from(Class, variable_definition):
         view_name = variable_definition.view_name
         try:
-            View = VARIABLE_VIEW_BY_NAME[view_name]
+            View = VIEW_BY_NAME[view_name]
         except KeyError:
             L.error('%s view not installed', view_name)
             View = Class
@@ -118,7 +121,9 @@ class StringView(VariableView):
 
     view_name = 'string'
     input_type = 'text'
-    function_by_name = FUNCTION_BY_NAME
+    function_by_name = {
+        'title': str.title,
+    }
 
     def get_value(self, b: Batch):
         variable_definition = self.variable_definition
@@ -360,6 +365,12 @@ class TableView(VariableView):
         }
 
 
+def initialize_view_by_name():
+    for entry_point in entry_points().select(group='crosscompute.views'):
+        VIEW_BY_NAME[entry_point.name] = import_attribute(entry_point.value)
+    return VIEW_BY_NAME
+
+
 def save_variable_data(target_path, data_by_id, variable_definitions):
     variable_data_by_id = get_variable_data_by_id(
         variable_definitions, data_by_id)
@@ -523,6 +534,7 @@ def get_variable_value_by_id(data_by_id):
 
 
 def format_text(text, data_by_id):
+    text = str(text)
     if not data_by_id:
         return text
 
@@ -535,14 +547,15 @@ def format_text(text, data_by_id):
         except KeyError:
             raise CrossComputeConfigurationError(
                 f'variable {variable_id} missing in batch configuration')
-        text = variable_data.get('value', '')
+        value = variable_data.get('value', '')
         try:
-            text = apply_functions(
-                text, expression_terms[1:], FUNCTION_BY_NAME)
+            value = apply_functions(value, expression_terms[1:], {
+                'slug': format_slug,
+                'title': str.title})
         except KeyError as e:
-            raise CrossComputeConfigurationError(
-                f'{e} function not supported in {text}')
-        return str(text)
+            raise CrossComputeConfigurationNotImplementedError(
+                f'{e} function not supported in "{text}"')
+        return str(value)
 
     return VARIABLE_ID_PATTERN.sub(f, text)
 
@@ -593,8 +606,6 @@ TABLE_HEADER = load_view_text('tableHeader.js')
 TABLE_OUTPUT = Template(load_view_text('tableOutput.js'))
 
 
-VARIABLE_VIEW_BY_NAME = {_.name: import_attribute(
-    _.value) for _ in entry_points().select(group='crosscompute.views')}
 YIELD_DATA_BY_ID_BY_EXTENSION = {
     '.csv': yield_data_by_id_from_csv,
     '.txt': yield_data_by_id_from_txt,

@@ -49,17 +49,11 @@ class DiskAutomation(Automation):
         return instance
 
     def run(self):
-        for automation_definition in self.definitions:
-            batch_definitions = automation_definition.batch_definitions
-            try:
-                automation_definition.update_datasets()
-                for batch_definition in batch_definitions:
-                    _run_automation(
-                        automation_definition, batch_definition,
-                        process_data=load_variable_data)
-            except CrossComputeError as e:
-                e.automation_definition = automation_definition
-                L.error(e)
+        try:
+            for automation_definition in self.definitions:
+                run_automation(automation_definition)
+        except CrossComputeError as e:
+            L.error(e)
 
     def serve(
             self,
@@ -139,7 +133,7 @@ def work(automation_queue):
             automation_definition, batch_definition = automation_pack
             try:
                 automation_definition.update_datasets()
-                _run_automation(
+                _run_batch(
                     automation_definition, batch_definition,
                     process_data=load_variable_data)
             except CrossComputeError as e:
@@ -149,8 +143,20 @@ def work(automation_queue):
         pass
 
 
-def _run_automation(
-        automation_definition, batch_definition, process_data):
+def run_automation(automation_definition):
+    batch_definitions = automation_definition.batch_definitions
+    try:
+        automation_definition.update_datasets()
+        for batch_definition in batch_definitions:
+            _run_batch(
+                automation_definition, batch_definition,
+                process_data=load_variable_data)
+    except CrossComputeError as e:
+        e.automation_definition = automation_definition
+        raise
+
+
+def _run_batch(automation_definition, batch_definition, process_data):
     d = automation_definition
     script_definitions = d.script_definitions
     if not script_definitions:
