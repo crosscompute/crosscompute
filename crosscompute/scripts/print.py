@@ -61,10 +61,10 @@ def print_with(automation, args):
     for automation_definition in get_selected_automation_definitions(
             automation.definitions):
         run_automation(automation_definition)
-        print_definition = automation_definition.print_definition
-        batch_dictionaries = get_batch_dictionaries(
-            automation_definition, print_definition, timestamp)
-        print_packs.append((print_definition, batch_dictionaries))
+        for print_definition in automation_definition.print_definitions:
+            batch_dictionaries = get_batch_dictionaries(
+                automation_definition, print_definition, timestamp)
+            print_packs.append((print_definition, batch_dictionaries))
     args.port = port
     args.with_browser = False
     args.is_static = True
@@ -84,11 +84,13 @@ def print_with(automation, args):
 def get_selected_automation_definitions(automation_definitions):
     selected_automation_definitions = []
     for automation_definition in automation_definitions:
-        print_definition = automation_definition.print_definition
-        print_format = print_definition.format
-        if not print_format:
+        for print_definition in automation_definition.print_definitions:
+            print_format = print_definition.format
+            if print_format:
+                break
+        else:
             L.warning(
-                'print format not defined in %s %s',
+                'no print formats defined for %s %s',
                 automation_definition.name, automation_definition.version)
             continue
         selected_automation_definitions.append(automation_definition)

@@ -513,10 +513,10 @@ def validate_display_templates(configuration):
 
 
 def validate_print(configuration):
-    print_dictionary = get_dictionary(configuration, 'print')
-    print_definition = PrintDefinition(print_dictionary)
+    print_definitions = [PrintDefinition(_) for _ in get_dictionaries(
+        configuration, 'prints')]
     return {
-        'print_definition': print_definition,
+        'print_definitions': print_definitions,
     }
 
 
