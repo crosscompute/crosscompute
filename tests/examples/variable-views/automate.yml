@@ -3,7 +3,7 @@
 # Forum: https://forum.crosscompute.com
 
 # version of crosscompute (required)
-crosscompute: 0.9.1.4
+crosscompute: 0.9.2
 
 # name of your automation
 name: Automation X
