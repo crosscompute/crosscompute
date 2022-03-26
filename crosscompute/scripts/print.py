@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
 from invisibleroads_macros_disk import make_folder, make_random_folder
-from invisibleroads_macros_log import get_timestamp
+from invisibleroads_macros_log import get_timestamp, LONGSTAMP_TEMPLATE
 from logging import getLogger
 
 from crosscompute.constants import PRINTER_BY_NAME
@@ -56,7 +56,7 @@ def print_with(automation, args):
         port = find_open_port()
     except OSError as e:
         raise CrossComputeError(e)
-    timestamp = get_timestamp(template='%Y%m%d-%H%M-%f')
+    timestamp = get_timestamp(template=LONGSTAMP_TEMPLATE)
     print_packs = []
     for automation_definition in get_selected_automation_definitions(
             automation.definitions):
