@@ -77,7 +77,7 @@ class AutomationDefinition(Definition):
             validate_batches,
             validate_datasets,
             validate_scripts,
-            validate_environment_variables,
+            validate_environment,
             validate_display_styles,
             validate_display_templates,
             validate_print,
@@ -188,7 +188,7 @@ class ScriptDefinition(Definition):
             old_path = folder / script_path
             script_path = '.' + str(script_path.with_suffix('.ipynb.py'))
             new_path = folder / script_path
-            L.info('exporting %s to %s', self.path, script_path)
+            L.info('exporting %s to %s in %s', self.path, script_path, folder)
             try:
                 script_text = PythonExporter().from_notebook_node(
                     load_notebook(old_path, NO_CONVERT))[0]
@@ -434,7 +434,7 @@ def validate_batches(configuration):
     }
 
 
-def validate_environment_variables(configuration):
+def validate_environment(configuration):
     environment_configuration = get_dictionary(configuration, 'environment')
     environment_variable_definitions = get_dictionaries(
         environment_configuration, 'variables')
@@ -442,8 +442,14 @@ def validate_environment_variables(configuration):
         environment_variable_definitions)
     if environment_variable_ids:
         L.debug('environment_variable_ids = %s', environment_variable_ids)
+    batch_concurrency_name = environment_configuration.get(
+        'batch', 'process').lower()
+    if batch_concurrency_name not in ('process', 'thread', 'single'):
+        raise CrossComputeConfigurationError(
+            f'"{batch_concurrency_name}" batch concurrency is not supported')
     return {
         'environment_variable_ids': environment_variable_ids,
+        'batch_concurrency_name': batch_concurrency_name,
     }
 
 

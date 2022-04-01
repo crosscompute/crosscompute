@@ -1,12 +1,15 @@
 # TODO: Watch multiple folders if not all under parent folder
 import shlex
 import subprocess
-from invisibleroads_macros_disk import make_folder
+from concurrent.futures import (
+    ProcessPoolExecutor, ThreadPoolExecutor, as_completed)
 from logging import getLogger
 from multiprocessing import Queue, Manager
 from os import environ, getenv
 from pathlib import Path
 from time import time
+
+from invisibleroads_macros_disk import make_folder
 
 from ..constants import (
     Error,
@@ -131,8 +134,8 @@ def work(automation_queue):
     try:
         while automation_pack := automation_queue.get():
             automation_definition, batch_definition = automation_pack
+            automation_definition.update_datasets()
             try:
-                automation_definition.update_datasets()
                 _run_batch(
                     automation_definition, batch_definition,
                     process_data=load_variable_data)
@@ -144,16 +147,55 @@ def work(automation_queue):
 
 
 def run_automation(automation_definition):
-    batch_definitions = automation_definition.batch_definitions
+    batch_concurrency_name = automation_definition.batch_concurrency_name
+    automation_definition.update_datasets()
     try:
-        automation_definition.update_datasets()
-        for batch_definition in batch_definitions:
-            _run_batch(
-                automation_definition, batch_definition,
-                process_data=load_variable_data)
+        if batch_concurrency_name == 'single':
+            ds = _run_automation_single(automation_definition)
+        else:
+            ds = _run_automation_multiple(
+                automation_definition, batch_concurrency_name)
     except CrossComputeError as e:
         e.automation_definition = automation_definition
         raise
+    return ds
+
+
+def _run_automation_single(automation_definition):
+    ds = []
+    batch_definitions = automation_definition.batch_definitions
+    process_data = load_variable_data
+    for batch_definition in batch_definitions:
+        ds.append(_run_batch(
+            automation_definition, batch_definition, process_data))
+    return ds
+
+
+def _run_automation_multiple(automation_definition, batch_concurrency_name):
+    ds = []
+    batch_definitions = automation_definition.batch_definitions
+    script_definitions = automation_definition.script_definitions
+    process_data = load_variable_data
+    with ThreadPoolExecutor() as executor:
+        futures = []
+        for script_definition in script_definitions:
+            futures.append(executor.submit(
+                script_definition.get_command_string))
+        for future in as_completed(futures):
+            future.result()
+    if batch_concurrency_name == 'process':
+        BatchExecutor = ProcessPoolExecutor
+    else:
+        BatchExecutor = ThreadPoolExecutor
+    with BatchExecutor() as executor:
+        futures = []
+        for batch_definition in batch_definitions:
+            futures.append(executor.submit(
+                _run_batch, automation_definition, batch_definition,
+                process_data))
+        for future in as_completed(futures):
+            ds.append(future.result())
+    return ds
 
 
 def _run_batch(automation_definition, batch_definition, process_data):
@@ -170,19 +212,20 @@ def _run_batch(automation_definition, batch_definition, process_data):
     script_environment = _prepare_script_environment(
         mode_folder_by_name, custom_environment)
     debug_folder = mode_folder_by_name['debug_folder']
-    o_path = debug_folder / 'stdout.txt'
-    e_path = debug_folder / 'stderr.txt'
+    o_path, e_path = debug_folder / 'stdout.txt', debug_folder / 'stderr.txt'
     try:
         with open(o_path, 'wt') as o_file, open(e_path, 'w+t') as e_file:
             for script_definition in script_definitions:
                 return_code = _run_script(
                     script_definition, mode_folder_by_name,
                     script_environment, o_file, e_file)
+    except CrossComputeConfigurationError as e:
+        e.automation_definition = d
+        raise
     except CrossComputeExecutionError as e:
         e.automation_definition = d
-        L.error(e)
-        return_code = e.return_code
-        L.info('%s failed', batch_identifier)
+        return_code = e.code
+        L.error('%s failed: %s', batch_identifier, e)
     else:
         L.info('%s done', batch_identifier)
     return _process_batch(d, batch_definition, [
@@ -218,15 +261,14 @@ def _run_command(
             stdout=o_file,
             stderr=e_file)
     except (IndexError, OSError):
-        e = CrossComputeExecutionError(
+        e = CrossComputeConfigurationError(
             f'could not run {shlex.quote(command_string)} in {command_folder}')
-        e.return_code = Error.COMMAND_NOT_FOUND
+        e.code = Error.COMMAND_NOT_FOUND
         raise e
     except subprocess.CalledProcessError as e:
         e_file.seek(0)
-        error_text = e_file.read().rstrip()
-        error = CrossComputeExecutionError(error_text)
-        error.return_code = e.returncode
+        error = CrossComputeExecutionError(e_file.read().rstrip())
+        error.code = e.returncode
         raise error
     return process.returncode
 
