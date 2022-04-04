@@ -94,19 +94,19 @@ class LinkView(VariableView):
         element_id = x.id
         data_uri = b.get_data_uri(variable_definition, x)
         c = b.get_variable_configuration(variable_definition)
-        name = c.get('name', basename(self.variable_path))
-        text = c.get('text', name)
+        file_name = c.get('file-name', basename(self.variable_path))
+        link_text = c.get('link-text', file_name)
         body_text = (
             f'<a id="{element_id}" href="{data_uri}" '
             f'class="{self.mode_name} {self.view_name} {variable_id}" '
-            f'download="{escape_quotes_html(name)}">'
-            f'{text}</a>')
+            f'download="{escape_quotes_html(file_name)}">'
+            f'{link_text}</a>')
         js_texts = [
             LINK_HEADER,
             LINK_OUTPUT.substitute({
                 'variable_id': variable_id,
                 'element_id': element_id,
-                'text': escape_quotes_js(text),
+                'link_text': escape_quotes_js(link_text),
             }),
         ]
         return {

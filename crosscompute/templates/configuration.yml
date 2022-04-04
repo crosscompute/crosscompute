@@ -70,8 +70,8 @@ version: 0.0.0
   #     view: link
   #     path: y1.pdf
   #     configuration:
-  #       name: YOUR-DOWNLOAD-NAME
-  #       text: YOUR-LINK-TEXT
+  #       link-text: LINK-TEXT
+  #       file-name: FILE-NAME
   #   - id: y2
   #     view: string
   #     path: variables.dictionary

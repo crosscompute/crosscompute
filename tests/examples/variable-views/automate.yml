@@ -69,8 +69,8 @@ output:
       view: link
       path: y1.txt
       configuration:
-        name: o"s
-        text: o's
+        link-text: y1'"y1
+        file-name: y1'"y1.txt
     - id: y2
       view: string
       path: variables.dictionary
