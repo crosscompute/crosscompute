@@ -10,6 +10,13 @@
 {% for css_uri in css_uris %}
 <link href="{{ css_uri if '//' in css_uri else BASE_URI + css_uri }}" rel="stylesheet">
 {% endfor %}
+{% if css_text %}
+<style>
+{% block head_css %}
+{{ css_text | safe }}
+{%- endblock %}
+</style>
+{% endif %}
 </head>
 <body>
 <header>
@@ -17,9 +24,11 @@
 {{ header_text | safe }}
 {%- endblock %}
 </header>
+<main>
 {% block body_html %}
 {{ body_text | safe }}
 {%- endblock %}
+</main>
 <footer>
 {% block footer_html %}
 {{ footer_text | safe }}
@@ -28,10 +37,12 @@
 {% for js_uri in js_uris %}
 <script src="{{ js_uri }}"></script>
 {% endfor %}
+{% if js_text %}
 <script>
 {% block body_js %}
 {{ js_text | safe }}
 {%- endblock %}
 </script>
+{% endif %}
 </body>
 </html>

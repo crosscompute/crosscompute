@@ -1,6 +1,5 @@
 import socket
 import webbrowser
-from invisibleroads_macros_text import normalize_key
 from logging import getLogger
 from markdown import markdown
 from random import randint
@@ -10,10 +9,6 @@ from urllib.request import urlopen as open_uri
 
 from ..constants import MAXIMUM_PORT, MINIMUM_PORT
 from .process import LoggableProcess
-
-
-def format_slug(text):
-    return normalize_key(text, word_separator='-')
 
 
 def escape_quotes_html(x):

@@ -2,11 +2,13 @@ import csv
 import json
 import shutil
 from dataclasses import dataclass
-from importlib_metadata import entry_points
-from invisibleroads_macros_log import format_path
 from logging import getLogger
 from os.path import basename, exists
 from string import Template
+
+from importlib_metadata import entry_points
+from invisibleroads_macros_log import format_path
+from invisibleroads_macros_text import format_name, format_slug
 
 from ..constants import (
     MAXIMUM_FILE_CACHE_LENGTH,
@@ -21,8 +23,7 @@ from ..macros.disk import FileCache
 from ..macros.package import import_attribute
 from ..macros.web import (
     escape_quotes_html,
-    escape_quotes_js,
-    format_slug)
+    escape_quotes_js)
 from .interface import Batch
 
 
@@ -102,8 +103,8 @@ class LinkView(VariableView):
             f'download="{escape_quotes_html(file_name)}">'
             f'{link_text}</a>')
         js_texts = [
-            LINK_HEADER,
-            LINK_OUTPUT.substitute({
+            LINK_JS_HEADER,
+            LINK_JS_OUTPUT.substitute({
                 'variable_id': variable_id,
                 'element_id': element_id,
                 'link_text': escape_quotes_js(link_text),
@@ -137,16 +138,21 @@ class StringView(VariableView):
         return value
 
     def render_input(self, b: Batch, x: Element):
-        view_name = self.view_name
+        variable_definition = self.variable_definition
         variable_id = self.variable_id
+        view_name = self.view_name
         value = self.get_value(b)
-        body_text = (
-            f'<input id="{x.id}" '
-            f'class="{self.mode_name} {view_name} {variable_id}" '
-            f'value="{escape_quotes_html(value)}" type="{self.input_type}" '
-            f'data-view="{view_name}" data-id="{variable_id}">')
+        c = b.get_variable_configuration(variable_definition)
+        body_text = add_label_html(STRING_HTML_INPUT.substitute({
+            'element_id': x.id,
+            'mode_name': self.mode_name,
+            'view_name': view_name,
+            'variable_id': variable_id,
+            'value': escape_quotes_html(value),
+            'input_type': self.input_type,
+        }), c, variable_id)
         js_texts = [
-            STRING_INPUT.substitute({
+            STRING_JS_INPUT.substitute({
                 'view_name': view_name,
             }),
         ]
@@ -173,8 +179,8 @@ class StringView(VariableView):
             f'class="{self.mode_name} {self.view_name} {self.variable_id}">'
             f'{value}</span>')
         js_texts = [
-            STRING_HEADER,
-            STRING_OUTPUT.substitute({
+            STRING_JS_HEADER,
+            STRING_JS_OUTPUT.substitute({
                 'variable_id': variable_id,
                 'element_id': element_id,
                 'data_uri': data_uri,
@@ -221,24 +227,23 @@ class TextView(StringView):
 
     def render_input(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
-        element_id = x.id
-        data_uri = b.get_data_uri(variable_definition, x)
-        view_name = self.view_name
         variable_id = self.variable_id
-        body_text = (
-            f'<textarea id="{x.id}" '
-            f'class="{self.mode_name} {view_name} {variable_id}" '
-            f'data-view="{view_name}" data-id="{variable_id}" disabled>'
-            '</textarea>')
+        view_name = self.view_name
+        element_id = x.id
+        c = b.get_variable_configuration(variable_definition)
+        body_text = add_label_html(TEXT_HTML_INPUT.substitute({
+            'element_id': element_id,
+            'mode_name': self.mode_name,
+            'view_name': view_name,
+            'variable_id': variable_id,
+        }), c, variable_id)
         js_texts = [
-            STRING_HEADER,
-            STRING_INPUT.substitute({
-                'view_name': view_name,
-            }),
-            TEXT_HEADER,
-            TEXT_INPUT.substitute({
+            STRING_JS_HEADER,
+            STRING_JS_INPUT.substitute({'view_name': view_name}),
+            TEXT_JS_HEADER,
+            TEXT_JS_INPUT.substitute({
                 'element_id': element_id,
-                'data_uri': data_uri,
+                'data_uri': b.get_data_uri(variable_definition, x),
             }),
         ]
         return {
@@ -258,8 +263,8 @@ class TextView(StringView):
             f'class="{self.mode_name} {self.view_name} {self.variable_id}">'
             '</span>')
         js_texts = [
-            STRING_HEADER,
-            TEXT_OUTPUT.substitute({
+            STRING_JS_HEADER,
+            TEXT_JS_OUTPUT.substitute({
                 'variable_id': variable_id,
                 'element_id': element_id,
                 'data_uri': data_uri,
@@ -290,9 +295,9 @@ class MarkdownView(TextView):
             f'class="{self.mode_name} {self.view_name} {self.variable_id}">'
             '</span>')
         js_texts = [
-            STRING_HEADER,
-            MARKDOWN_HEADER,
-            MARKDOWN_OUTPUT.substitute({
+            STRING_JS_HEADER,
+            MARKDOWN_JS_HEADER,
+            MARKDOWN_JS_OUTPUT.substitute({
                 'variable_id': variable_id,
                 'element_id': element_id,
                 'data_uri': data_uri,
@@ -321,8 +326,8 @@ class ImageView(VariableView):
             f'src="{data_uri}" alt="">')
         # TODO: Show spinner onerror
         js_texts = [
-            IMAGE_HEADER,
-            IMAGE_OUTPUT.substitute({
+            IMAGE_JS_HEADER,
+            IMAGE_JS_OUTPUT.substitute({
                 'variable_id': variable_id,
                 'element_id': element_id,
                 'data_uri': data_uri,
@@ -350,8 +355,8 @@ class TableView(VariableView):
             f'class="{self.mode_name} {self.view_name} {variable_id}">'
             '<thead/><tbody/></table>')
         js_texts = [
-            TABLE_HEADER,
-            TABLE_OUTPUT.substitute({
+            TABLE_JS_HEADER,
+            TABLE_JS_OUTPUT.substitute({
                 'variable_id': variable_id,
                 'element_id': element_id,
                 'data_uri': data_uri,
@@ -573,6 +578,21 @@ def apply_functions(value, function_names, function_by_name):
     return value
 
 
+def add_label_html(body_html, variable_configuration, variable_id):
+    label_text = get_label_text(variable_configuration, variable_id)
+    if label_text:
+        body_html = '<label>%s %s</label>' % (label_text, body_html)
+    return body_html
+
+
+def get_label_text(variable_configuration, variable_id):
+    if 'label-text' in variable_configuration:
+        label_text = variable_configuration['label-text'] or ''
+    else:
+        label_text = format_name(variable_id)
+    return label_text.strip()
+
+
 def load_view_text(file_name):
     return open(TEMPLATES_FOLDER / file_name).read().strip()
 
@@ -580,30 +600,32 @@ def load_view_text(file_name):
 L = getLogger(__name__)
 
 
-LINK_HEADER = load_view_text('linkHeader.js')
-LINK_OUTPUT = Template(load_view_text('linkOutput.js'))
+LINK_JS_HEADER = load_view_text('linkHeader.js')
+LINK_JS_OUTPUT = Template(load_view_text('linkOutput.js'))
 
 
-STRING_INPUT = Template(load_view_text('stringInput.js'))
-STRING_HEADER = load_view_text('stringHeader.js')
-STRING_OUTPUT = Template(load_view_text('stringOutput.js'))
+STRING_HTML_INPUT = Template(load_view_text('stringInput.html'))
+STRING_JS_INPUT = Template(load_view_text('stringInput.js'))
+STRING_JS_HEADER = load_view_text('stringHeader.js')
+STRING_JS_OUTPUT = Template(load_view_text('stringOutput.js'))
 
 
-TEXT_HEADER = load_view_text('textHeader.js')
-TEXT_INPUT = Template(load_view_text('textInput.js'))
-TEXT_OUTPUT = Template(load_view_text('textOutput.js'))
+TEXT_HTML_INPUT = Template(load_view_text('textInput.html'))
+TEXT_JS_HEADER = load_view_text('textHeader.js')
+TEXT_JS_INPUT = Template(load_view_text('textInput.js'))
+TEXT_JS_OUTPUT = Template(load_view_text('textOutput.js'))
 
 
-MARKDOWN_HEADER = load_view_text('markdownHeader.js')
-MARKDOWN_OUTPUT = Template(load_view_text('markdownOutput.js'))
+MARKDOWN_JS_HEADER = load_view_text('markdownHeader.js')
+MARKDOWN_JS_OUTPUT = Template(load_view_text('markdownOutput.js'))
 
 
-IMAGE_HEADER = load_view_text('imageHeader.js')
-IMAGE_OUTPUT = Template(load_view_text('imageOutput.js'))
+IMAGE_JS_HEADER = load_view_text('imageHeader.js')
+IMAGE_JS_OUTPUT = Template(load_view_text('imageOutput.js'))
 
 
-TABLE_HEADER = load_view_text('tableHeader.js')
-TABLE_OUTPUT = Template(load_view_text('tableOutput.js'))
+TABLE_JS_HEADER = load_view_text('tableHeader.js')
+TABLE_JS_OUTPUT = Template(load_view_text('tableOutput.js'))
 
 
 YIELD_DATA_BY_ID_BY_EXTENSION = {

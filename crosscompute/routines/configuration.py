@@ -1,17 +1,19 @@
 # TODO: Save to ini, toml
-import tomli
 from collections import Counter
 from configparser import ConfigParser
-from invisibleroads_macros_log import format_path
 from logging import getLogger
-from nbconvert import PythonExporter
-from nbformat import read as load_notebook, NO_CONVERT
 from os import environ, symlink
 from os.path import relpath, splitext
 from pathlib import Path
+from time import time
+
+import tomli
+from invisibleroads_macros_log import format_path
+from invisibleroads_macros_text import format_slug
+from nbconvert import PythonExporter
+from nbformat import read as load_notebook, NO_CONVERT
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
-from time import time
 
 from .. import __version__
 from ..constants import (
@@ -30,7 +32,6 @@ from ..exceptions import (
     CrossComputeConfigurationNotImplementedError,
     CrossComputeError)
 from ..macros.package import is_equivalent_version
-from ..macros.web import format_slug
 from .printer import initialize_printer_by_name
 from .variable import (
     format_text,
