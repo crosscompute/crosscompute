@@ -104,13 +104,13 @@ class AutomationDefinition(Definition):
             template_path = f'crosscompute:templates/{template_id}.jinja2'
         return template_path
 
-    def get_template_text(self, mode_name):
+    def get_template_pack(self, mode_name):
         automation_folder = self.folder
         variable_definitions = self.get_variable_definitions(
             mode_name)
         template_definitions = self.template_definitions_by_mode_name[
             mode_name]
-        return get_template_text(
+        return get_template_pack(
             template_definitions, automation_folder, variable_definitions)
 
     def update_datasets(self):
@@ -532,10 +532,15 @@ def validate_template_identifiers(template_definition):
         template_path = template_definition['path']
     except KeyError as e:
         raise CrossComputeConfigurationError(f'{e} required for each template')
-    template_id = template_definition.get('id', template_path)
+    template_path = Path(template_path)
+    mode_name = template_definition.mode_name
+    template_id = template_definition.get('id', template_path.stem)
+    class_text = template_definition.get(
+        'class', '_layout-vertical' if mode_name == 'input' else '') or ''
     return {
         'id': template_id,
-        'path': Path(template_path),
+        'path': template_path,
+        'class_text': class_text.strip(),
     }
 
 
@@ -743,20 +748,29 @@ def get_configuration_format(path):
     return configuration_format
 
 
-def get_template_text(
+def get_template_pack(
         template_definitions, automation_folder, variable_definitions):
     template_texts = []
+    class_names = set()
     for template_definition in template_definitions:
         path = automation_folder / template_definition.path
         with open(path, 'rt') as f:
             template_text = f.read().strip()
         if not template_text:
             continue
+        class_text = template_definition.class_text
+        template_text = _add_div_html(template_text, [
+            '_template', class_text])
         template_texts.append(template_text)
+        class_names.update(class_text.split())
     if not template_texts:
+        class_text = '_layout-vertical'
         variable_ids = [_.id for _ in variable_definitions]
-        template_texts = ['\n'.join('{%s}' % _ for _ in variable_ids)]
-    return '\n'.join(template_texts)
+        template_text = '\n'.join('{%s}' % _ for _ in variable_ids)
+        template_texts = [_add_div_html(template_text, [
+            '_template', class_text])]
+        class_names.update(class_text.split())
+    return '\n'.join(template_texts), class_names
 
 
 def get_environment_variable_ids(environment_variable_definitions):
@@ -853,6 +867,10 @@ def assert_unique_values(xs, message):
     for x, count in Counter(xs).items():
         if count > 1:
             raise CrossComputeConfigurationError(message.format(x=x))
+
+
+def _add_div_html(body_text, class_texts):
+    return '<div class="%s">\n%s\n</div>' % (' '.join(class_texts), body_text)
 
 
 L = getLogger(__name__)

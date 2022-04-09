@@ -291,7 +291,8 @@ class AutomationRoutes():
 def render_mode_dictionary(batch, base_uri, mode_name, for_print):
     automation_definition = batch.automation_definition
     css_uris = automation_definition.css_uris
-    template_text = automation_definition.get_template_text(mode_name)
+    template_text, class_names = automation_definition.get_template_pack(
+        mode_name)
     variable_definitions = automation_definition.get_variable_definitions(
         mode_name, with_all=True)
     m = {'css_uris': css_uris.copy(), 'js_uris': [], 'js_texts': []}
@@ -301,6 +302,7 @@ def render_mode_dictionary(batch, base_uri, mode_name, for_print):
         batch=batch, m=m, i=i, base_uri=base_uri, mode_name=mode_name,
         for_print=for_print)
     return m | {
+        'css_text': _get_css_text(class_names),
         'body_text': get_html_from_markdown(VARIABLE_ID_PATTERN.sub(
             render_html, template_text)),
         'js_text': '\n'.join(m['js_texts'])}
@@ -327,4 +329,16 @@ def _render_html(
     return rendered_element['body_text']
 
 
+def _get_css_text(class_names):
+    css_texts = []
+    if '_layout-vertical' in class_names:
+        css_texts.append(LAYOUT_VERTICAL_CSS)
+    return '\n'.join(css_texts)
+
+
+LAYOUT_VERTICAL_CSS = '''\
+._layout-vertical {
+  display: flex;
+  flex-direction: column;
+}'''
 L = getLogger(__name__)

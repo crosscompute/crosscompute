@@ -37,6 +37,8 @@ input:
     - id: x2
       view: number
       path: variables.dictionary
+      configuration:
+        label-text: xx
     - id: x3
       view: password
       path: ENVIRONMENT

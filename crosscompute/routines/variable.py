@@ -141,16 +141,17 @@ class StringView(VariableView):
         variable_definition = self.variable_definition
         variable_id = self.variable_id
         view_name = self.view_name
+        element_id = x.id
         value = self.get_value(b)
         c = b.get_variable_configuration(variable_definition)
         body_text = add_label_html(STRING_HTML_INPUT.substitute({
-            'element_id': x.id,
+            'element_id': element_id,
             'mode_name': self.mode_name,
             'view_name': view_name,
             'variable_id': variable_id,
             'value': escape_quotes_html(value),
             'input_type': self.input_type,
-        }), c, variable_id)
+        }), c, variable_id, element_id)
         js_texts = [
             STRING_JS_INPUT.substitute({
                 'view_name': view_name,
@@ -236,7 +237,7 @@ class TextView(StringView):
             'mode_name': self.mode_name,
             'view_name': view_name,
             'variable_id': variable_id,
-        }), c, variable_id)
+        }), c, variable_id, element_id)
         js_texts = [
             STRING_JS_HEADER,
             STRING_JS_INPUT.substitute({'view_name': view_name}),
@@ -578,11 +579,12 @@ def apply_functions(value, function_names, function_by_name):
     return value
 
 
-def add_label_html(body_html, variable_configuration, variable_id):
+def add_label_html(body_text, variable_configuration, variable_id, element_id):
     label_text = get_label_text(variable_configuration, variable_id)
     if label_text:
-        body_html = '<label>%s %s</label>' % (label_text, body_html)
-    return body_html
+        body_text = '<label for="%s">%s</label> %s' % (
+            element_id, label_text, body_text)
+    return body_text
 
 
 def get_label_text(variable_configuration, variable_id):

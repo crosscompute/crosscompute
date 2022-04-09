@@ -21,7 +21,7 @@
 const GET_DATA_BY_VIEW_NAME = {};
 document.getElementById('run').onclick = async () => {
   const dataById = {};
-  for (const x of document.getElementsByClassName('input')) {
+  for (const x of document.getElementsByClassName('_input')) {
     const { view: viewName, id: variableId } = x.dataset;
     dataById[variableId] = GET_DATA_BY_VIEW_NAME[viewName](x);
   }
