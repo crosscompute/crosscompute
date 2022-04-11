@@ -1,3 +1,7 @@
+._table th,td {
+  text-align: right;
+}
+
 ._map-mapbox {
   height: 300px;
 }

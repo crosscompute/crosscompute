@@ -81,6 +81,7 @@ class AutomationDefinition(Definition):
             validate_environment,
             validate_display_styles,
             validate_display_templates,
+            validate_display_pages,
             validate_print,
         ]
 
@@ -104,14 +105,21 @@ class AutomationDefinition(Definition):
             template_path = f'crosscompute:templates/{template_id}.jinja2'
         return template_path
 
-    def get_template_pack(self, mode_name):
+    def get_template_text(self, mode_name):
         automation_folder = self.folder
         variable_definitions = self.get_variable_definitions(
             mode_name)
         template_definitions = self.template_definitions_by_mode_name[
             mode_name]
-        return get_template_pack(
+        return get_template_text(
             template_definitions, automation_folder, variable_definitions)
+
+    def get_design_name(self, page_id):
+        design_name = DESIGN_NAMES_BY_PAGE_ID[page_id][0]
+        if page_id not in self.page_definition_by_id:
+            return design_name
+        page_definition = self.page_definition_by_id[page_id]
+        return page_definition.configuration.get('design', design_name)
 
     def update_datasets(self):
         automation_folder = self.folder
@@ -164,7 +172,7 @@ class DatasetDefinition(Definition):
         self.automation_folder = kwargs['automation_folder']
         self._validation_functions = [
             validate_dataset_identifiers,
-            validate_dataset_configuration,
+            validate_dataset_reference,
         ]
 
 
@@ -206,6 +214,15 @@ class StyleDefinition(Definition):
     def _initialize(self, kwargs):
         self._validation_functions = [
             validate_style_identifiers,
+        ]
+
+
+class PageDefinition(Definition):
+
+    def _initialize(self, kwargs):
+        self._validation_functions = [
+            validate_page_identifiers,
+            validate_page_configuration,
         ]
 
 
@@ -519,6 +536,16 @@ def validate_display_templates(configuration):
     }
 
 
+def validate_display_pages(configuration):
+    display_dictionary = get_dictionary(configuration, 'display')
+    page_definitions = [PageDefinition(_) for _ in get_dictionaries(
+        display_dictionary, 'pages')]
+    page_definition_by_id = {_.id: _ for _ in page_definitions}
+    return {
+        'page_definition_by_id': page_definition_by_id,
+    }
+
+
 def validate_print(configuration):
     print_definitions = [PrintDefinition(_) for _ in get_dictionaries(
         configuration, 'prints')]
@@ -527,29 +554,24 @@ def validate_print(configuration):
     }
 
 
-def validate_template_identifiers(template_definition):
+def validate_template_identifiers(template_dictionary):
     try:
-        template_path = template_definition['path']
+        template_path = template_dictionary['path']
     except KeyError as e:
         raise CrossComputeConfigurationError(f'{e} required for each template')
     template_path = Path(template_path)
-    mode_name = template_definition.mode_name
-    template_id = template_definition.get('id', template_path.stem)
-    class_text = template_definition.get(
-        'class', '_layout-vertical' if mode_name == 'input' else '') or ''
     return {
-        'id': template_id,
+        'id': template_dictionary.get('id', template_path.stem),
         'path': template_path,
-        'class_text': class_text.strip(),
     }
 
 
-def validate_variable_identifiers(variable_definition):
+def validate_variable_identifiers(variable_dictionary):
     # TODO: Check that variable_id does not have quotes
     try:
-        variable_id = variable_definition['id']
-        view_name = variable_definition['view']
-        variable_path = variable_definition['path']
+        variable_id = variable_dictionary['id']
+        view_name = variable_dictionary['view']
+        variable_path = variable_dictionary['path']
     except KeyError as e:
         raise CrossComputeConfigurationError(f'{e} required for each variable')
     if relpath(variable_path).startswith('..'):
@@ -563,23 +585,23 @@ def validate_variable_identifiers(variable_definition):
     }
 
 
-def validate_variable_configuration(variable_definition):
+def validate_variable_configuration(variable_dictionary):
     variable_configuration = get_dictionary(
-        variable_definition, 'configuration')
+        variable_dictionary, 'configuration')
     return {
         'configuration': variable_configuration,
     }
 
 
-def validate_batch_identifiers(batch_definition):
-    is_run = batch_definition.is_run
+def validate_batch_identifiers(batch_dictionary):
+    is_run = batch_dictionary.is_run
     try:
-        folder = Path(get_scalar_text(batch_definition, 'folder'))
+        folder = Path(get_scalar_text(batch_dictionary, 'folder'))
     except KeyError as e:
         raise CrossComputeConfigurationError(f'{e} required for each batch')
-    name = get_scalar_text(batch_definition, 'name', folder.name)
-    slug = get_scalar_text(batch_definition, 'slug', name)
-    data_by_id = batch_definition.data_by_id
+    name = get_scalar_text(batch_dictionary, 'name', folder.name)
+    slug = get_scalar_text(batch_dictionary, 'slug', name)
+    data_by_id = batch_dictionary.data_by_id
     if data_by_id and not is_run:
         try:
             folder = format_text(folder, data_by_id)
@@ -588,15 +610,15 @@ def validate_batch_identifiers(batch_definition):
         except CrossComputeConfigurationNotImplementedError:
             raise
         except CrossComputeConfigurationError as e:
-            batch_configuration = batch_definition.get('configuration', {})
+            batch_configuration = batch_dictionary.get('configuration', {})
             if 'path' in batch_configuration:
                 e.path = batch_configuration['path']
             raise
     d = {'folder': folder, 'name': name, 'slug': slug}
     if data_by_id:
         for k, v in d.items():
-            if k in batch_definition:
-                batch_definition[k] = v
+            if k in batch_dictionary:
+                batch_dictionary[k] = v
     if data_by_id is not None:
         if is_run:
             uri = RUN_ROUTE.format(run_slug=slug)
@@ -607,31 +629,31 @@ def validate_batch_identifiers(batch_definition):
     return d
 
 
-def validate_batch_configuration(batch_definition):
-    batch_reference = get_dictionary(batch_definition, 'reference')
-    batch_configuration = get_dictionary(batch_definition, 'configuration')
+def validate_batch_configuration(batch_dictionary):
+    batch_reference = get_dictionary(batch_dictionary, 'reference')
+    batch_configuration = get_dictionary(batch_dictionary, 'configuration')
     return {
         'reference': batch_reference,
         'configuration': batch_configuration,
     }
 
 
-def validate_dataset_identifiers(dataset_definition):
-    path = Path(dataset_definition.get('path', '').strip())
+def validate_dataset_identifiers(dataset_dictionary):
+    path = Path(dataset_dictionary.get('path', '').strip())
     return {
         'path': path,
     }
 
 
-def validate_dataset_configuration(dataset_definition):
-    automation_folder = dataset_definition.automation_folder
-    dataset_reference = get_dictionary(dataset_definition, 'reference')
+def validate_dataset_reference(dataset_dictionary):
+    automation_folder = dataset_dictionary.automation_folder
+    dataset_reference = get_dictionary(dataset_dictionary, 'reference')
     if 'path' in dataset_reference:
         source_path = Path(dataset_reference['path'].strip())
         if not (automation_folder / source_path).exists():
             raise CrossComputeConfigurationError(
                 f'could not find dataset reference path {source_path}')
-        target_path = dataset_definition.path
+        target_path = dataset_dictionary.path
         if target_path.exists() and not target_path.is_symlink():
             raise CrossComputeConfigurationError(
                 'refusing to overwrite existing dataset; please delete '
@@ -641,11 +663,11 @@ def validate_dataset_configuration(dataset_definition):
     }
 
 
-def validate_script_identifiers(script_definition):
-    folder = script_definition.get('folder', '.').strip()
+def validate_script_identifiers(script_dictionary):
+    folder = script_dictionary.get('folder', '.').strip()
 
-    if 'path' in script_definition:
-        path = Path(script_definition['path'].strip())
+    if 'path' in script_dictionary:
+        path = Path(script_dictionary['path'].strip())
         suffix = path.suffix
         if suffix not in ['.ipynb', '.py']:
             raise CrossComputeConfigurationError(
@@ -653,8 +675,8 @@ def validate_script_identifiers(script_definition):
     else:
         path = None
 
-    if 'command' in script_definition:
-        command = script_definition['command'].strip()
+    if 'command' in script_dictionary:
+        command = script_dictionary['command'].strip()
     else:
         command = None
 
@@ -665,15 +687,41 @@ def validate_script_identifiers(script_definition):
     }
 
 
-def validate_style_identifiers(style_definition):
-    uri = style_definition.get('uri', '').strip()
-    path = style_definition.get('path', '').strip()
+def validate_style_identifiers(style_dictionary):
+    uri = style_dictionary.get('uri', '').strip()
+    path = style_dictionary.get('path', '').strip()
     if not uri and not path:
         raise CrossComputeConfigurationError(
             'uri or path required for each style')
     return {
         'uri': uri,
         'path': Path(path),
+    }
+
+
+def validate_page_identifiers(page_dictionary):
+    try:
+        page_id = page_dictionary['id']
+    except KeyError as e:
+        raise CrossComputeConfigurationError(f'{e} required for each page')
+    if page_id not in DESIGN_NAMES_BY_PAGE_ID:
+        raise CrossComputeConfigurationError(
+            f'{page_id} page not supported for page configuration')
+    return {
+        'id': page_id,
+    }
+
+
+def validate_page_configuration(page_dictionary):
+    page_configuration = page_dictionary.get('configuration', {})
+    page_id = page_dictionary['id']
+    design_name = page_configuration.get('design')
+    design_names = DESIGN_NAMES_BY_PAGE_ID[page_id]
+    if design_name not in design_names:
+        raise CrossComputeConfigurationError(
+            f'"{design_name}" design not supported for {page_id} page')
+    return {
+        'configuration': page_configuration,
     }
 
 
@@ -748,29 +796,20 @@ def get_configuration_format(path):
     return configuration_format
 
 
-def get_template_pack(
+def get_template_text(
         template_definitions, automation_folder, variable_definitions):
     template_texts = []
-    class_names = set()
     for template_definition in template_definitions:
         path = automation_folder / template_definition.path
         with open(path, 'rt') as f:
             template_text = f.read().strip()
         if not template_text:
             continue
-        class_text = template_definition.class_text
-        template_text = _add_div_html(template_text, [
-            '_template', class_text])
         template_texts.append(template_text)
-        class_names.update(class_text.split())
     if not template_texts:
-        class_text = '_layout-vertical'
         variable_ids = [_.id for _ in variable_definitions]
-        template_text = '\n'.join('{%s}' % _ for _ in variable_ids)
-        template_texts = [_add_div_html(template_text, [
-            '_template', class_text])]
-        class_names.update(class_text.split())
-    return '\n'.join(template_texts), class_names
+        template_texts = ['\n'.join('{%s}' % _ for _ in variable_ids)]
+    return '\n'.join(template_texts)
 
 
 def get_environment_variable_ids(environment_variable_definitions):
@@ -869,8 +908,11 @@ def assert_unique_values(xs, message):
             raise CrossComputeConfigurationError(message.format(x=x))
 
 
-def _add_div_html(body_text, class_texts):
-    return '<div class="%s">\n%s\n</div>' % (' '.join(class_texts), body_text)
-
-
+DESIGN_NAMES_BY_PAGE_ID = {
+    'automation': ['input', 'output', 'none'],
+    'input': ['flex-vertical', 'none'],
+    'output': ['flex-vertical', 'none'],
+    'log': ['flex-vertical', 'none'],
+    'debug': ['flex-vertical', 'none'],
+}
 L = getLogger(__name__)

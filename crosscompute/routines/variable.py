@@ -33,6 +33,7 @@ class Element():
     id: str
     base_uri: str
     mode_name: str
+    design_name: str
     for_print: bool
     function_names: list[str]
 
@@ -66,13 +67,16 @@ class VariableView():
             render = self.render_input
         else:
             render = self.render_output
-        return render(b, x)
+        page_dictionary = render(b, x)
+        page_dictionary['main_text'] = '<span class="_view">%s</span>' % (
+            page_dictionary['main_text'])
+        return page_dictionary
 
     def render_input(self, b: Batch, x: Element):
         return {
             'css_uris': [],
             'js_uris': [],
-            'body_text': '',
+            'main_text': '',
             'js_texts': [],
         }
 
@@ -80,7 +84,7 @@ class VariableView():
         return {
             'css_uris': [],
             'js_uris': [],
-            'body_text': '',
+            'main_text': '',
             'js_texts': [],
         }
 
@@ -97,11 +101,13 @@ class LinkView(VariableView):
         c = b.get_variable_configuration(variable_definition)
         file_name = c.get('file-name', basename(self.variable_path))
         link_text = c.get('link-text', file_name)
-        body_text = (
+        main_text = (
             f'<a id="{element_id}" href="{data_uri}" '
-            f'class="{self.mode_name} {self.view_name} {variable_id}" '
+            f'class="_{self.mode_name} _{self.view_name} {variable_id}" '
             f'download="{escape_quotes_html(file_name)}">'
             f'{link_text}</a>')
+        if x.design_name not in ['none']:
+            main_text = add_label_html(main_text, c, variable_id, element_id)
         js_texts = [
             LINK_JS_HEADER,
             LINK_JS_OUTPUT.substitute({
@@ -113,7 +119,7 @@ class LinkView(VariableView):
         return {
             'css_uris': [],
             'js_uris': [],
-            'body_text': body_text,
+            'main_text': main_text,
             'js_texts': js_texts,
         }
 
@@ -144,23 +150,23 @@ class StringView(VariableView):
         element_id = x.id
         value = self.get_value(b)
         c = b.get_variable_configuration(variable_definition)
-        body_text = add_label_html(STRING_HTML_INPUT.substitute({
+        main_text = STRING_HTML_INPUT.substitute({
             'element_id': element_id,
             'mode_name': self.mode_name,
             'view_name': view_name,
             'variable_id': variable_id,
             'value': escape_quotes_html(value),
             'input_type': self.input_type,
-        }), c, variable_id, element_id)
+        })
+        if x.design_name not in ['none']:
+            main_text = add_label_html(main_text, c, variable_id, element_id)
         js_texts = [
-            STRING_JS_INPUT.substitute({
-                'view_name': view_name,
-            }),
+            STRING_JS_INPUT.substitute({'view_name': view_name}),
         ]
         return {
             'css_uris': [],
             'js_uris': [],
-            'body_text': body_text,
+            'main_text': main_text,
             'js_texts': js_texts,
         }
 
@@ -175,10 +181,13 @@ class StringView(VariableView):
         variable_id = self.variable_id
         element_id = x.id
         data_uri = b.get_data_uri(variable_definition, x)
-        body_text = (
+        c = b.get_variable_configuration(variable_definition)
+        main_text = (
             f'<span id="{x.id}" '
-            f'class="{self.mode_name} {self.view_name} {self.variable_id}">'
+            f'class="_{self.mode_name} _{self.view_name} {self.variable_id}">'
             f'{value}</span>')
+        if x.design_name not in ['none']:
+            main_text = add_label_html(main_text, c, variable_id, element_id)
         js_texts = [
             STRING_JS_HEADER,
             STRING_JS_OUTPUT.substitute({
@@ -190,7 +199,7 @@ class StringView(VariableView):
         return {
             'css_uris': [],
             'js_uris': [],
-            'body_text': body_text,
+            'main_text': main_text,
             'js_texts': js_texts,
         }
 
@@ -232,12 +241,14 @@ class TextView(StringView):
         view_name = self.view_name
         element_id = x.id
         c = b.get_variable_configuration(variable_definition)
-        body_text = add_label_html(TEXT_HTML_INPUT.substitute({
+        main_text = TEXT_HTML_INPUT.substitute({
             'element_id': element_id,
             'mode_name': self.mode_name,
             'view_name': view_name,
             'variable_id': variable_id,
-        }), c, variable_id, element_id)
+        })
+        if x.design_name not in ['none']:
+            main_text = add_label_html(main_text, c, variable_id, element_id)
         js_texts = [
             STRING_JS_HEADER,
             STRING_JS_INPUT.substitute({'view_name': view_name}),
@@ -250,7 +261,7 @@ class TextView(StringView):
         return {
             'css_uris': [],
             'js_uris': [],
-            'body_text': body_text,
+            'main_text': main_text,
             'js_texts': js_texts,
         }
 
@@ -259,10 +270,13 @@ class TextView(StringView):
         variable_id = self.variable_id
         element_id = x.id
         data_uri = b.get_data_uri(variable_definition, x)
-        body_text = (
+        c = b.get_variable_configuration(variable_definition)
+        main_text = (
             f'<span id="{x.id}" '
-            f'class="{self.mode_name} {self.view_name} {self.variable_id}">'
+            f'class="_{self.mode_name} _{self.view_name} {self.variable_id}">'
             '</span>')
+        if x.design_name not in ['none']:
+            main_text = add_label_html(main_text, c, variable_id, element_id)
         js_texts = [
             STRING_JS_HEADER,
             TEXT_JS_OUTPUT.substitute({
@@ -274,7 +288,7 @@ class TextView(StringView):
         return {
             'css_uris': [],
             'js_uris': [],
-            'body_text': body_text,
+            'main_text': main_text,
             'js_texts': js_texts,
         }
 
@@ -291,10 +305,13 @@ class MarkdownView(TextView):
         variable_id = self.variable_id
         element_id = x.id
         data_uri = b.get_data_uri(variable_definition, x)
-        body_text = (
+        c = b.get_variable_configuration(variable_definition)
+        main_text = (
             f'<span id="{x.id}" '
-            f'class="{self.mode_name} {self.view_name} {self.variable_id}">'
+            f'class="_{self.mode_name} _{self.view_name} {self.variable_id}">'
             '</span>')
+        if x.design_name not in ['none']:
+            main_text = add_label_html(main_text, c, variable_id, element_id)
         js_texts = [
             STRING_JS_HEADER,
             MARKDOWN_JS_HEADER,
@@ -307,7 +324,7 @@ class MarkdownView(TextView):
         return {
             'css_uris': [],
             'js_uris': self.js_uris,
-            'body_text': body_text,
+            'main_text': main_text,
             'js_texts': js_texts,
         }
 
@@ -321,11 +338,14 @@ class ImageView(VariableView):
         variable_id = self.variable_id
         element_id = x.id
         data_uri = b.get_data_uri(variable_definition, x)
-        body_text = (
+        c = b.get_variable_configuration(variable_definition)
+        main_text = (
             f'<img id="{x.id}" '
-            f'class="{self.mode_name} {self.view_name} {variable_id}" '
+            f'class="_{self.mode_name} _{self.view_name} {variable_id}" '
             f'src="{data_uri}" alt="">')
         # TODO: Show spinner onerror
+        if x.design_name not in ['none']:
+            main_text = add_label_html(main_text, c, variable_id, element_id)
         js_texts = [
             IMAGE_JS_HEADER,
             IMAGE_JS_OUTPUT.substitute({
@@ -337,7 +357,7 @@ class ImageView(VariableView):
         return {
             'css_uris': [],
             'js_uris': [],
-            'body_text': body_text,
+            'main_text': main_text,
             'js_texts': js_texts,
         }
 
@@ -351,10 +371,13 @@ class TableView(VariableView):
         variable_id = self.variable_id
         element_id = x.id
         data_uri = b.get_data_uri(variable_definition, x)
-        body_text = (
+        c = b.get_variable_configuration(variable_definition)
+        main_text = (
             f'<table id="{element_id}" '
-            f'class="{self.mode_name} {self.view_name} {variable_id}">'
+            f'class="_{self.mode_name} _{self.view_name} {variable_id}">'
             '<thead/><tbody/></table>')
+        if x.design_name not in ['none']:
+            main_text = add_label_html(main_text, c, variable_id, element_id)
         js_texts = [
             TABLE_JS_HEADER,
             TABLE_JS_OUTPUT.substitute({
@@ -366,7 +389,7 @@ class TableView(VariableView):
         return {
             'css_uris': [],
             'js_uris': [],
-            'body_text': body_text,
+            'main_text': main_text,
             'js_texts': js_texts,
         }
 
@@ -579,17 +602,17 @@ def apply_functions(value, function_names, function_by_name):
     return value
 
 
-def add_label_html(body_text, variable_configuration, variable_id, element_id):
+def add_label_html(main_text, variable_configuration, variable_id, element_id):
     label_text = get_label_text(variable_configuration, variable_id)
     if label_text:
-        body_text = '<label for="%s">%s</label> %s' % (
-            element_id, label_text, body_text)
-    return body_text
+        main_text = '<label for="%s">%s</label> %s' % (
+            element_id, label_text, main_text)
+    return main_text
 
 
 def get_label_text(variable_configuration, variable_id):
-    if 'label-text' in variable_configuration:
-        label_text = variable_configuration['label-text'] or ''
+    if 'label' in variable_configuration:
+        label_text = variable_configuration['label'] or ''
     else:
         label_text = format_name(variable_id)
     return label_text.strip()

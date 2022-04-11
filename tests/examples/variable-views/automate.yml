@@ -1,35 +1,9 @@
-# Examples: https://github.com/crosscompute/crosscompute-examples
-# Documentation: https://d.crosscompute.com
-# Forum: https://forum.crosscompute.com
-
-# version of crosscompute (required)
+---
 crosscompute: 0.9.2
-
-# name of your automation
 name: Automation X
-
-# slug for automation URI
-# slug: automation-x
-
-# version of your automation
 version: 0.0.0
 
-# imports configuration
-# - path to the configuration file that you want to import (required)
-# - id to use when referencing this import in your template
-# imports:
-#   - path: tools/automation-y/automate.yml
-#     id: automation-y
-
-# input configuration
 input:
-
-  # input variables
-  # - id to use when referencing your variable in the template (required)
-  # - view to use when rendering your variable on the display (required)
-  # - path where your script loads the variable, relative to the input folder;
-  #   specify ENVIRONMENT to prevent saving the variable to disk (required)
-  # - configuration of the view
   variables:
     - id: x1
       view: string
@@ -38,7 +12,7 @@ input:
       view: number
       path: variables.dictionary
       configuration:
-        label-text: xx
+        label: xx
     - id: x3
       view: password
       path: ENVIRONMENT
@@ -51,21 +25,10 @@ input:
     - id: x6
       view: markdown
       path: x6.md
-
-  # input templates
-  # - path to your markdown template or jupyter notebook form (required)
   templates:
     - path: form.md
 
-# output configuration
 output:
-
-  # output variables
-  # - id to use when referencing your variable in the template (required)
-  # - view to use when rendering your variable on the display (required)
-  # - path where your script saves the variable, relative to the output
-  #   folder (required)
-  # - configuration of the view
   variables:
     - id: y1
       view: link
@@ -107,94 +70,20 @@ output:
       configuration:
         style: mapbox://styles/mapbox/dark-v10
         path: y9-configuration.json
-
-  # output templates
-  # - path to your markdown template or jupyter notebook form (required)
   templates:
     - path: report-section1.md
     - path: report-section2.md
 
-# tests configuration
-# - folder that contains an input subfolder with paths for
-#   input variables that define a specific test (required)
-# tests:
-#   - folder: tests/test1
-#   - folder: tests/test2
-
-# batches configuration
-# - folder that contains an input subfolder with paths for
-#   input variables; can include variable ids and filters (required)
-# - name of the batch; can include variable ids and filters
-# - slug for batch URI; can include variable ids and filters
-# - reference batch to use to fill omitted variables in batch configuration
-# - configuration for batch template
 batches:
-
-  # case 0: use a batch folder to set values for input variables
   - folder: batches/standard
 
-  # case 1: use a batch configuration to vary values for input variables
-  # - folder: batches/{x1 | slug}-{x2}
-  #   name: '{x1 | title} {x2}'
-  #   slug: '{x1 | slug}-{x2}'
-  #   configuration:
-  #     path: datasets/batches.csv
-
-  # case 2: use a reference folder to set default values for missing variables
-  #         use a batch configuration to vary selected variables
-  # - folder: batches/{x1 | slug}-{x2}
-  #   name: '{x1 | title} {x2}'
-  #   slug: '{x1 | slug}-{x2}'
-  #   reference:
-  #     folder: batches/batch0
-  #   configuration:
-  #     path: datasets/batches.csv
-
-# datasets configuration
-# - path of a dataset expected by your script
-# - reference dataset if expected path does not exist
-# datasets:
-#   - path: datasets/abc.csv
-#     reference:
-#       path: datasets/abc-2022.csv
-
-# scripts configuration
-# - path to your script, relative to the script folder
-# - command to run your script, if path is not specified
-# - folder where your script should run
-# scripts:
-#   - path: run1.ipynb
-#     command: python run1.py {input_folder} {output_folder} {log_folder} {debug_folder}
-#     folder: .
-#   - path: run2.ipynb
-#     command: python run2.py {input_folder} {output_folder} {log_folder} {debug_folder}
-#     folder: .
-
-# environment configuration
-# environment:
-
-  # environment variables
-  # - id of the environment variable to make available to your script (required)
-  # variables:
-  #   - id: GOOGLE_KEY
-
-# display configuration
 display:
-
-  # styles configuration
-  # - path to CSS stylesheet that will be used to render your templates
-  # - uri to CSS stylesheet that will be used to render your templates
   styles:
     - path: report.css
-  #   - uri: https://fonts.googleapis.com/css?family=Tangerine
-
-  # templates configuration
-  # - path to template (required)
-  # - id of template
-  # templates:
-  #   - path: base.jinja2
-  #     id: base
-  #   - path: live.jinja2
-  #     id: live
-  #   - path: root.jinja2
-  #     id: root
+  pages:
+    - id: automation
+      configuration:
+        design: input
+    - id: output
+      configuration:
+        design: none

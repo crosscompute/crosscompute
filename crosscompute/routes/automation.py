@@ -212,13 +212,16 @@ class AutomationRoutes():
         for_print = 'p' in request.params
         return {
             'title_text': batch_definition.name,
+            'css_text': CSS_TEXT_BY_DESIGN_NAME[
+                automation_definition.get_design_name(mode_name)],
             'automation_definition': automation_definition,
             'batch_definition': batch_definition,
             'uri': uri,
             'mode_name': mode_name,
             'mutation_uri': MUTATION_ROUTE.format(uri=uri),
             'mutation_timestamp': time(),
-        } | render_mode_dictionary(batch, base_uri, mode_name, for_print)
+        } | render_page_dictionary_for_mode(
+            batch, base_uri, mode_name, for_print)
 
     def see_automation_batch_mode_variable(self, request):
         automation_definition = self.get_automation_definition_from(request)
@@ -288,29 +291,29 @@ class AutomationRoutes():
         return mode_name
 
 
-def render_mode_dictionary(batch, base_uri, mode_name, for_print):
+def render_page_dictionary_for_mode(batch, base_uri, mode_name, for_print):
     automation_definition = batch.automation_definition
     css_uris = automation_definition.css_uris
-    template_text, class_names = automation_definition.get_template_pack(
+    template_text = automation_definition.get_template_text(
         mode_name)
     variable_definitions = automation_definition.get_variable_definitions(
         mode_name, with_all=True)
+    design_name = automation_definition.get_design_name(mode_name)
     m = {'css_uris': css_uris.copy(), 'js_uris': [], 'js_texts': []}
     i = count()
     render_html = partial(
         _render_html, variable_definitions=variable_definitions,
         batch=batch, m=m, i=i, base_uri=base_uri, mode_name=mode_name,
-        for_print=for_print)
+        design_name=design_name, for_print=for_print)
     return m | {
-        'css_text': _get_css_text(class_names),
-        'body_text': get_html_from_markdown(VARIABLE_ID_PATTERN.sub(
+        'main_text': get_html_from_markdown(VARIABLE_ID_PATTERN.sub(
             render_html, template_text)),
         'js_text': '\n'.join(m['js_texts'])}
 
 
 def _render_html(
         match, variable_definitions, batch, m, i, base_uri, mode_name,
-        for_print):
+        design_name, for_print):
     matching_text = match.group(0)
     terms = match.group(1).split('|')
     variable_id = terms[0].strip()
@@ -322,23 +325,29 @@ def _render_html(
             '%s variable in template but not in configuration', variable_id)
         return matching_text
     view = VariableView.get_from(variable_definition)
-    element = Element(f'v{next(i)}', base_uri, mode_name, for_print, terms[1:])
-    rendered_element = view.render(batch, element)
+    element = Element(
+        f'v{next(i)}', base_uri, mode_name, design_name, for_print, terms[1:])
+    page_dictionary = view.render(batch, element)
     for k, v in m.items():
-        extend_uniquely(v, [_.strip() for _ in rendered_element[k]])
-    return rendered_element['body_text']
+        extend_uniquely(v, [_.strip() for _ in page_dictionary[k]])
+    return page_dictionary['main_text']
 
 
-def _get_css_text(class_names):
-    css_texts = []
-    if '_layout-vertical' in class_names:
-        css_texts.append(LAYOUT_VERTICAL_CSS)
-    return '\n'.join(css_texts)
-
-
-LAYOUT_VERTICAL_CSS = '''\
-._layout-vertical {
+FLEX_VERTICAL_CSS = '''\
+main {
   display: flex;
   flex-direction: column;
+}
+._view {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;
+}
+._run {
+  padding: 8px 0;
 }'''
+CSS_TEXT_BY_DESIGN_NAME = {
+    'flex-vertical': FLEX_VERTICAL_CSS,
+    'none': '',
+}
 L = getLogger(__name__)

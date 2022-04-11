@@ -39,7 +39,7 @@ version: 0.0.0
   #     view: number
   #     path: variables.dictionary
   #     configuration:
-  #       label-text: YOUR-LABEL-TEXT
+  #       label: YOUR-LABEL-TEXT
   #   - id: x3
   #     view: password
   #     path: ENVIRONMENT
@@ -55,10 +55,8 @@ version: 0.0.0
 
   # input templates
   # - path to your markdown template or jupyter notebook form (required)
-  # - css class to apply to your template (optional)
   # templates:
   #   - path: form1.md
-  #     class: YOUR-CSS-CLASS
   #   - path: form2.md
 
 # output configuration
@@ -207,6 +205,22 @@ version: 0.0.0
   #     id: live
   #   - path: root.jinja2
   #     id: root
+
+  # pages configuration
+  # - id of the page (required)
+  # - configuration of the page
+  # pages:
+  #   - id: automation
+  #     configuration:
+  #       design: input
+  #       design: output
+  #       design: none
+  #   - id: input
+  #     configuration:
+  #       design: flex-vertical
+  #   - id: output
+  #     configuration:
+  #       design: none
 
 # prints configuration
 # prints:
