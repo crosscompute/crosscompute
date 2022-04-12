@@ -9,41 +9,10 @@
 
 {% block main_html %}
 {{ super() }}
-{% if mode_name == 'input' %}
-<button class="_run" type="button">Run</button>
-{% endif %}
+{% include 'modeMainHtml.jinja2' %}
 {% endblock %}
 
 {% block body_js %}
-{% if mode_name == 'input' %}
-const GET_DATA_BY_VIEW_NAME = {};
-document.getElementsByClassName('_run').onclick = async () => {
-  const dataById = {};
-  for (const x of document.getElementsByClassName('_input')) {
-    const { view: viewName, id: variableId } = x.dataset;
-    dataById[variableId] = GET_DATA_BY_VIEW_NAME[viewName](x);
-  }
-  const uri = '{{ BASE_URI }}{{ automation_definition.uri }}.json';
-  const response = await fetch(uri, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(dataById)});
-  const d = await response.json();
-  window.location = '{{ BASE_URI }}{{ automation_definition.uri }}/r/' + d['id'] + '/o';
-}
-{% elif mode_name == 'output' %}
-const functionsByVariableId = {};
-function registerElement(variableId, refreshElement) {
-  if (functionsByVariableId[variableId] === undefined) {
-    functionsByVariableId[variableId] = [];
-  }
-  functionsByVariableId[variableId].push(refreshElement);
-}
-function refreshVariable(variableId) {
-  for (const f of functionsByVariableId[variableId]) {
-    f();
-  }
-}
-{% endif %}
+{% include 'modeBodyJs.jinja2' %}
 {{ super() }}
 {% endblock %}

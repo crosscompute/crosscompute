@@ -29,7 +29,8 @@ def escape_quotes_js(x):
 
 def get_html_from_markdown(text):
     html = markdown(text)
-    if '</p>\n<p>' not in html:
+    clipped_html = html[3:-4]
+    if '<p>' not in clipped_html and '</p>' not in clipped_html:
         html = html.removeprefix('<p>')
         html = html.removesuffix('</p>')
     return html

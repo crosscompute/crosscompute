@@ -188,15 +188,20 @@ class AutomationRoutes():
 
     def see_automation(self, request):
         automation_definition = self.get_automation_definition_from(request)
-        css_uris = automation_definition.css_uris
+        design_name = automation_definition.get_design_name('automation')
+        d = {} if design_name == 'none' else _get_mode_jinja_dictionary(
+            request,
+            automation_definition,
+            automation_definition.batch_definitions[0],
+            design_name)
+        extend_uniquely(d['css_uris'], automation_definition.css_uris)
         uri = automation_definition.uri
-        return {
+        return d | {
             'name': automation_definition.name,
             'uri': uri,
             'batches': automation_definition.batch_definitions,
             'runs': automation_definition.run_definitions,
             'title_text': automation_definition.name,
-            'css_uris': css_uris,
             'mutation_uri': MUTATION_ROUTE.format(uri=uri),
             'mutation_timestamp': time(),
         }
@@ -205,29 +210,15 @@ class AutomationRoutes():
         automation_definition = self.get_automation_definition_from(request)
         batch_definition = self.get_batch_definition_from(
             request, automation_definition)
-        batch = DiskBatch(automation_definition, batch_definition)
-        base_uri = request.registry.settings['base_uri']
-        mode_name = self.get_mode_name_from(request)
-        uri = request.path
-        for_print = 'p' in request.params
-        return {
-            'title_text': batch_definition.name,
-            'css_text': CSS_TEXT_BY_DESIGN_NAME[
-                automation_definition.get_design_name(mode_name)],
-            'automation_definition': automation_definition,
-            'batch_definition': batch_definition,
-            'uri': uri,
-            'mode_name': mode_name,
-            'mutation_uri': MUTATION_ROUTE.format(uri=uri),
-            'mutation_timestamp': time(),
-        } | render_base_dictionary_for_mode(
-            batch, base_uri, mode_name, for_print)
+        mode_name = _get_mode_name(request)
+        return _get_mode_jinja_dictionary(
+            request, automation_definition, batch_definition, mode_name)
 
     def see_automation_batch_mode_variable(self, request):
         automation_definition = self.get_automation_definition_from(request)
         batch_definition = self.get_batch_definition_from(
             request, automation_definition)
-        mode_name = self.get_mode_name_from(request)
+        mode_name = _get_mode_name(request)
         variable_definitions = automation_definition.get_variable_definitions(
             mode_name)
         matchdict = request.matchdict
@@ -281,17 +272,38 @@ class AutomationRoutes():
             raise HTTPNotFound
         return batch_definition
 
-    def get_mode_name_from(self, request):
-        matchdict = request.matchdict
-        mode_code = matchdict['mode_code']
-        try:
-            mode_name = MODE_NAME_BY_CODE[mode_code]
-        except KeyError:
-            raise HTTPNotFound
-        return mode_name
+
+def _get_mode_name(request):
+    matchdict = request.matchdict
+    mode_code = matchdict['mode_code']
+    try:
+        mode_name = MODE_NAME_BY_CODE[mode_code]
+    except KeyError:
+        raise HTTPNotFound
+    return mode_name
 
 
-def render_base_dictionary_for_mode(batch, base_uri, mode_name, for_print):
+def _get_mode_jinja_dictionary(
+        request, automation_definition, batch_definition, mode_name):
+    batch = DiskBatch(automation_definition, batch_definition)
+    base_uri = request.registry.settings['base_uri']
+    uri = request.path
+    for_print = 'p' in request.params
+    return {
+        'title_text': batch_definition.name,
+        'css_text': CSS_TEXT_BY_DESIGN_NAME[
+            automation_definition.get_design_name(mode_name)],
+        'automation_definition': automation_definition,
+        'batch_definition': batch_definition,
+        'uri': uri,
+        'mode_name': mode_name,
+        'mutation_uri': MUTATION_ROUTE.format(uri=uri),
+        'mutation_timestamp': time(),
+    } | __get_mode_jinja_dictionary(
+        batch, base_uri, mode_name, for_print)
+
+
+def __get_mode_jinja_dictionary(batch, base_uri, mode_name, for_print):
     automation_definition = batch.automation_definition
     css_uris = automation_definition.css_uris
     template_text = automation_definition.get_template_text(
@@ -305,9 +317,10 @@ def render_base_dictionary_for_mode(batch, base_uri, mode_name, for_print):
         _render_html, variable_definitions=variable_definitions,
         batch=batch, m=m, i=i, base_uri=base_uri, mode_name=mode_name,
         design_name=design_name, for_print=for_print)
+    main_text = get_html_from_markdown(VARIABLE_ID_PATTERN.sub(
+        render_html, template_text))
     return m | {
-        'main_text': get_html_from_markdown(VARIABLE_ID_PATTERN.sub(
-            render_html, template_text)),
+        'main_text': main_text,
         'js_text': '\n'.join(m['js_texts'])}
 
 
@@ -327,23 +340,30 @@ def _render_html(
     view = VariableView.get_from(variable_definition)
     element = Element(
         f'v{next(i)}', base_uri, mode_name, design_name, for_print, terms[1:])
-    base_dictionary = view.render(batch, element)
+    jinja_dictionary = view.render(batch, element)
     for k, v in m.items():
-        extend_uniquely(v, [_.strip() for _ in base_dictionary[k]])
-    return base_dictionary['main_text']
+        extend_uniquely(v, [_.strip() for _ in jinja_dictionary[k]])
+    return jinja_dictionary['main_text']
 
 
 FLEX_VERTICAL_CSS = '''\
 main {
   display: flex;
   flex-direction: column;
+  gap: 16px;
+}
+main > * {
+  margin: 0;
 }
 ._view {
   display: flex;
   flex-direction: column;
-  margin-bottom: 16px;
 }
-._run {
+._view img {
+  align-self: start;
+  max-width: 100%;
+}
+#_run {
   padding: 8px 0;
 }'''
 HEADER_CSS = '''\

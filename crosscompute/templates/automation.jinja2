@@ -6,25 +6,33 @@
 {% endblock %}
 
 {% block main_html %}
-<h1>{{ name }}</h1>
-<ul>
-{%- for batch in batches %}
+{% if mode_name != 'none' %}
+{{ super() }}
+{% include 'modeMainHtml.jinja2' %}
+{% endif %}
+<ul class="_batches">
+{% for batch in batches %}
 <li>
 {{ batch['name'] }}
 <a href="{{ BASE_URI }}{{ uri }}{{ batch['uri'] }}/i">[input]</a>
 <a href="{{ BASE_URI }}{{ uri }}{{ batch['uri'] }}/o">[output]</a>
 </li>
-{%- endfor %}
+{% endfor %}
 </ul>
 {#
-<ul>
-{%- for run in runs %}
+<ul class="_runs">
+{% for run in runs %}
 <li>
 {{ run['name'] }}
 <a href="{{ BASE_URI }}{{ uri }}{{ run['uri'] }}/i">[input]</a>
 <a href="{{ BASE_URI }}{{ uri }}{{ run['uri'] }}/o">[output]</a>
 </li>
-{%- endfor %}
+{% endfor %}
 </ul>
 #}
+{% endblock %}
+
+{% block body_js %}
+{% include 'modeBodyJs.jinja2' %}
+{{ super() }}
 {% endblock %}
