@@ -83,7 +83,7 @@ display:
   pages:
     - id: automation
       configuration:
-        design: input
+        design: none
     - id: output
       configuration:
         design: none

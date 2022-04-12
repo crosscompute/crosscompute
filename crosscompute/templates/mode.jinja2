@@ -1,23 +1,21 @@
 {% extends BASE_JINJA2 if IS_STATIC else LIVE_JINJA2 %}
 
-{#
 {% block header_html %}
 <a href="{{ BASE_URI if BASE_URI else '/' }}">Root</a> &gt;
 <a href="{{ BASE_URI }}{{ automation_definition.uri }}">{{ automation_definition.name }}</a> &gt;
 <a>{{ batch_definition.name }}</a> &gt;
-<a href="{{ BASE_URI }}{{ uri }}">{{ mode_name }}</a>
+<a href="{{ BASE_URI }}{{ uri }}">{{ mode_name.title() }}</a>
 {% endblock %}
-#}
 
-{% block main_html -%}
+{% block main_html %}
 {{ super() }}
 {% if mode_name == 'input' %}
 <button class="_run" type="button">Run</button>
-{% endif -%}
-{%- endblock %}
+{% endif %}
+{% endblock %}
 
-{%- block body_js -%}
-{%- if mode_name == 'input' -%}
+{% block body_js %}
+{% if mode_name == 'input' %}
 const GET_DATA_BY_VIEW_NAME = {};
 document.getElementsByClassName('_run').onclick = async () => {
   const dataById = {};
@@ -33,7 +31,7 @@ document.getElementsByClassName('_run').onclick = async () => {
   const d = await response.json();
   window.location = '{{ BASE_URI }}{{ automation_definition.uri }}/r/' + d['id'] + '/o';
 }
-{% elif mode_name == 'output' -%}
+{% elif mode_name == 'output' %}
 const functionsByVariableId = {};
 function registerElement(variableId, refreshElement) {
   if (functionsByVariableId[variableId] === undefined) {
@@ -46,6 +44,6 @@ function refreshVariable(variableId) {
     f();
   }
 }
-{% endif -%}
+{% endif %}
 {{ super() }}
-{%- endblock -%}
+{% endblock %}

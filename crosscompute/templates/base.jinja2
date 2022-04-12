@@ -10,13 +10,11 @@
 {% for css_uri in css_uris %}
 <link href="{{ css_uri if '//' in css_uri else BASE_URI + css_uri }}" rel="stylesheet">
 {% endfor %}
-{% if css_text %}
 <style>
 {% block head_css %}
 {{ css_text | safe }}
 {%- endblock %}
 </style>
-{% endif %}
 </head>
 <body>
 <header>

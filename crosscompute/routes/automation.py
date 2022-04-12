@@ -220,7 +220,7 @@ class AutomationRoutes():
             'mode_name': mode_name,
             'mutation_uri': MUTATION_ROUTE.format(uri=uri),
             'mutation_timestamp': time(),
-        } | render_page_dictionary_for_mode(
+        } | render_base_dictionary_for_mode(
             batch, base_uri, mode_name, for_print)
 
     def see_automation_batch_mode_variable(self, request):
@@ -291,7 +291,7 @@ class AutomationRoutes():
         return mode_name
 
 
-def render_page_dictionary_for_mode(batch, base_uri, mode_name, for_print):
+def render_base_dictionary_for_mode(batch, base_uri, mode_name, for_print):
     automation_definition = batch.automation_definition
     css_uris = automation_definition.css_uris
     template_text = automation_definition.get_template_text(
@@ -327,10 +327,10 @@ def _render_html(
     view = VariableView.get_from(variable_definition)
     element = Element(
         f'v{next(i)}', base_uri, mode_name, design_name, for_print, terms[1:])
-    page_dictionary = view.render(batch, element)
+    base_dictionary = view.render(batch, element)
     for k, v in m.items():
-        extend_uniquely(v, [_.strip() for _ in page_dictionary[k]])
-    return page_dictionary['main_text']
+        extend_uniquely(v, [_.strip() for _ in base_dictionary[k]])
+    return base_dictionary['main_text']
 
 
 FLEX_VERTICAL_CSS = '''\
@@ -346,8 +346,18 @@ main {
 ._run {
   padding: 8px 0;
 }'''
+HEADER_CSS = '''\
+header {
+  margin-bottom: 16px;
+}
+@media print {
+  header {
+    display: none;
+  }
+}'''
 CSS_TEXT_BY_DESIGN_NAME = {
-    'flex-vertical': FLEX_VERTICAL_CSS,
-    'none': '',
+    'flex-vertical': '\n'.join([
+        HEADER_CSS, FLEX_VERTICAL_CSS]),
+    'none': HEADER_CSS,
 }
 L = getLogger(__name__)
