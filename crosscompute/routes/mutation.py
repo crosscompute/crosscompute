@@ -21,6 +21,7 @@ class MutationRoutes():
             renderer='json')
 
     def see_mutation(self, request):
+        # TODO: Update automation page when template updates
         params = request.params
         try:
             old_timestamp = float(params.get('t', 0))

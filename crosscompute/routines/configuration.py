@@ -149,6 +149,7 @@ class VariableDefinition(Definition):
 class TemplateDefinition(Definition):
 
     def _initialize(self, kwargs):
+        self.automation_folder = kwargs['automation_folder']
         self.mode_name = kwargs.get('mode_name')
         self._validation_functions = [
             validate_template_identifiers,
@@ -413,13 +414,8 @@ def validate_templates(configuration):
     for mode_name in MODE_NAMES:
         mode_configuration = get_dictionary(configuration, mode_name)
         template_definitions = [TemplateDefinition(
-            _, mode_name=mode_name,
+            _, automation_folder=automation_folder, mode_name=mode_name,
         ) for _ in get_dictionaries(mode_configuration, 'templates')]
-        for template_definition in template_definitions:
-            template_path = template_definition.path
-            if not (automation_folder / template_path).exists():
-                raise CrossComputeConfigurationError(
-                    f'could not find template {template_path}')
         assert_unique_values(
             [_.id for _ in template_definitions],
             f'duplicate template id {{x}} in {mode_name}')
@@ -524,11 +520,13 @@ def validate_display_styles(configuration):
 
 
 def validate_display_templates(configuration):
-    display_dictionary = get_dictionary(configuration, 'display')
     template_path_by_id = {}
+    display_dictionary = get_dictionary(configuration, 'display')
+    automation_folder = configuration.folder
     for raw_template_definition in get_dictionaries(
             display_dictionary, 'templates'):
-        template_definition = TemplateDefinition(raw_template_definition)
+        template_definition = TemplateDefinition(
+            raw_template_definition, automation_folder=automation_folder)
         template_id = template_definition.id
         template_path_by_id[template_id] = template_definition.path
     return {
@@ -559,7 +557,11 @@ def validate_template_identifiers(template_dictionary):
         template_path = template_dictionary['path']
     except KeyError as e:
         raise CrossComputeConfigurationError(f'{e} required for each template')
+    automation_folder = template_dictionary.automation_folder
     template_path = Path(template_path)
+    if not (automation_folder / template_path).exists():
+        raise CrossComputeConfigurationError(
+            f'could not find template {template_path}')
     return {
         'id': template_dictionary.get('id', template_path.stem),
         'path': template_path,
