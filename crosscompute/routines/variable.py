@@ -67,16 +67,16 @@ class VariableView():
             render = self.render_input
         else:
             render = self.render_output
-        page_dictionary = render(b, x)
-        main_text = page_dictionary['main_text']
+        jinja_dictionary = render(b, x)
+        main_text = jinja_dictionary['main_text']
         if x.design_name != 'none':
             if main_text.endswith('</a>') or main_text.endswith('</span>'):
                 tag_name = 'span'
             else:
                 tag_name = 'div'
-            page_dictionary['main_text'] = '<%s class="_view">%s</%s>' % (
+            jinja_dictionary['main_text'] = '<%s class="_view">%s</%s>' % (
                 tag_name, main_text, tag_name)
-        return page_dictionary
+        return jinja_dictionary
 
     def render_input(self, b: Batch, x: Element):
         return {
