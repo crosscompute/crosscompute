@@ -1,6 +1,7 @@
 {% extends BASE_JINJA2 %}
 
 {% block body_js %}
+{{ super() }}
 let mutationTimestamp = {{ mutation_timestamp }};
 let pingInterval = {{ MINIMUM_PING_INTERVAL }};
 async function refreshPage() {
@@ -39,5 +40,4 @@ async function processMutations() {
   setTimeout(processMutations, pingInterval);
 }
 setTimeout(processMutations, pingInterval);
-{{ super() -}}
-{%- endblock %}
+{% endblock %}

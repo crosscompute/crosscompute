@@ -9,7 +9,8 @@ from crosscompute.constants import (
     PORT)
 from crosscompute.exceptions import (
     CrossComputeError)
-from crosscompute.macros.web import is_port_in_use, open_browser
+from crosscompute.macros.web import (
+    find_open_port, is_port_in_use, open_browser)
 from crosscompute.routines.automation import DiskAutomation
 from crosscompute.routines.log import (
     configure_argument_parser_for_logging,
@@ -42,7 +43,7 @@ def configure_argument_parser_for_serving(a):
         help='specify * to listen for requests from all ip addresses')
     a.add_argument(
         '--port', metavar='X',
-        default=PORT,
+        default=find_open_port(PORT),
         help='specify port to listen to for requests')
     a.add_argument(
         '--no-browser', dest='with_browser', action='store_false',

@@ -36,11 +36,14 @@ def get_html_from_markdown(text):
     return html
 
 
-def find_open_port(minimum_port=MINIMUM_PORT, maximum_port=MAXIMUM_PORT):
+def find_open_port(
+        default_port=None,
+        minimum_port=MINIMUM_PORT,
+        maximum_port=MAXIMUM_PORT):
+    port = default_port
     port_count = maximum_port - minimum_port + 1
     closed_ports = set()
     while True:
-        port = randint(minimum_port, maximum_port)
         if not is_port_in_use(port):
             break
         closed_ports.add(port)
@@ -48,6 +51,7 @@ def find_open_port(minimum_port=MINIMUM_PORT, maximum_port=MAXIMUM_PORT):
             raise OSError(
                 'could not find an open port in '
                 f'[{minimum_port}, {maximum_port}]')
+        port = randint(minimum_port, maximum_port)
     return port
 
 

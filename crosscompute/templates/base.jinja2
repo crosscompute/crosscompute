@@ -35,12 +35,10 @@
 {% for js_uri in js_uris %}
 <script src="{{ js_uri }}"></script>
 {% endfor %}
-{% if js_text %}
 <script>
 {% block body_js %}
-{{ js_text | safe }}
-{%- endblock %}
+{{ js_text | safe -}}
+{% endblock %}
 </script>
-{% endif %}
 </body>
 </html>
