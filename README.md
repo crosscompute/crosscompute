@@ -34,7 +34,7 @@ Here are some available views:
 
 ```bash
 # Upgrade package
-pip install crosscompute>=0.9.1 --upgrade
+pip install crosscompute>=0.9.2 --upgrade
 
 # Initialize configuration
 crosscompute
@@ -93,7 +93,7 @@ sudo dnf -y install python3.9
 python3.9 -m venv ~/.virtualenvs/crosscompute
 source ~/.virtualenvs/crosscompute/bin/activate
 
-pip install crosscompute>=0.9.1
+pip install crosscompute>=0.9.2
 ```
 
 ## Acknowledgments
