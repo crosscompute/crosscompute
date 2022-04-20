@@ -1,11 +1,12 @@
 import socket
 import webbrowser
 from logging import getLogger
-from markdown import markdown
 from random import randint
 from time import sleep
 from urllib.error import HTTPError, URLError
 from urllib.request import urlopen as open_uri
+
+from markdown import markdown
 
 from ..constants import MAXIMUM_PORT, MINIMUM_PORT
 from .process import LoggableProcess
@@ -40,7 +41,11 @@ def find_open_port(
         default_port=None,
         minimum_port=MINIMUM_PORT,
         maximum_port=MAXIMUM_PORT):
-    port = default_port
+
+    def get_new_port():
+        return randint(minimum_port, maximum_port)
+
+    port = default_port or get_new_port()
     port_count = maximum_port - minimum_port + 1
     closed_ports = set()
     while True:
@@ -51,7 +56,7 @@ def find_open_port(
             raise OSError(
                 'could not find an open port in '
                 f'[{minimum_port}, {maximum_port}]')
-        port = randint(minimum_port, maximum_port)
+        port = get_new_port()
     return port
 
 
