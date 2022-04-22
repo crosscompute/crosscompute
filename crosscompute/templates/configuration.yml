@@ -223,6 +223,35 @@ version: 0.0.0
   #     configuration:
   #       design: none
 
+# https://forum.crosscompute.com/t/authorization-configuration-design/176
+# authorization:
+#   groups:
+#     - id: visitors
+#     - id: managers
+#       expression: role == 'manager'
+#     - id: members
+#       expression: role == 'member'
+#   permissions:
+#     - id: default
+#       rules:
+#         - group: visitors
+#           action: drop
+#        - group: managers
+#           action: accept
+#         - group: members
+#           action: accept
+#     - id: see_root
+#     - id: see_automation
+#     - id: see_batch
+#       rules:
+#         - group: members
+#           action: match
+#     - id: see_run
+#     - id: run_automation
+#       rules:
+#         - group: members
+#           action: drop
+
 # prints configuration
 # prints:
 #   - format: pdf

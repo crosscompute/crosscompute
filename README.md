@@ -98,7 +98,7 @@ pip install crosscompute>=0.9.2
 
 ## Acknowledgments
 
-- [Olga Creutzburg](https://www.linkedin.com/in/olga-creutzburg)
+- [Olga Ryabtseva](https://www.linkedin.com/in/olga-creutzburg)
 - [Salah Ahmed](https://www.linkedin.com/in/salahspage)
 - [Rodrigo Guarachi](https://www.linkedin.com/in/rmguarachi)
 - [Polina Chernomaz](https://www.linkedin.com/in/polinac)
