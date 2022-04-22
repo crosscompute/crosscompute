@@ -236,10 +236,14 @@ version: 0.0.0
 #       rules:
 #         - group: visitors
 #           action: drop
-#        - group: managers
+#         - group: managers
 #           action: accept
 #         - group: members
 #           action: accept
+#     - id: get_token
+#       rules:
+#         - group: members
+#           action: drop
 #     - id: see_root
 #     - id: see_automation
 #     - id: see_batch
