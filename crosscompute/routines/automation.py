@@ -3,11 +3,12 @@ import shlex
 import subprocess
 from concurrent.futures import (
     ProcessPoolExecutor, ThreadPoolExecutor, as_completed)
+from datetime import datetime
 from logging import getLogger
 from multiprocessing import Queue, Manager
 from os import environ, getenv
 from pathlib import Path
-from time import time
+from time import sleep, time
 
 from invisibleroads_macros_disk import make_folder
 
@@ -52,11 +53,20 @@ class DiskAutomation(Automation):
         return instance
 
     def run(self):
+        recurring_definitions = []
         for automation_definition in self.definitions:
-            try:
-                run_automation(automation_definition)
-            except CrossComputeError as e:
-                L.error(e)
+            run_automation(automation_definition)
+            if automation_definition.interval_timedelta:
+                recurring_definitions.append(automation_definition)
+        if not recurring_definitions:
+            return
+        while True:
+            for automation_definition in recurring_definitions:
+                last = automation_definition.interval_datetime
+                delta = automation_definition.interval_timedelta
+                if datetime.now() > last + delta:
+                    run_automation(automation_definition)
+            sleep(1)
 
     def serve(
             self,
@@ -147,17 +157,19 @@ def work(automation_queue):
 
 
 def run_automation(automation_definition):
+    ds = []
     batch_concurrency_name = automation_definition.batch_concurrency_name
     automation_definition.update_datasets()
     try:
         if batch_concurrency_name == 'single':
-            ds = _run_automation_single(automation_definition)
+            ds.extend(_run_automation_single(automation_definition))
         else:
-            ds = _run_automation_multiple(
-                automation_definition, batch_concurrency_name)
+            ds.extend(_run_automation_multiple(
+                automation_definition, batch_concurrency_name))
     except CrossComputeError as e:
         e.automation_definition = automation_definition
-        raise
+        L.error(e)
+    automation_definition.interval_datetime = datetime.now()
     return ds
 
 

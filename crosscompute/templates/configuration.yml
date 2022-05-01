@@ -186,6 +186,9 @@ version: 0.0.0
   # batch concurrency, either process, thread or single
   # batch: process
 
+  # interval to wait before running your scripts again
+  # interval: 30 minutes
+
 # display configuration
 # display:
 

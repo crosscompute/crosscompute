@@ -1,6 +1,7 @@
 # TODO: Save to ini, toml
 from collections import Counter
 from configparser import ConfigParser
+from datetime import timedelta
 from logging import getLogger
 from os import environ, symlink
 from os.path import relpath, splitext
@@ -456,14 +457,19 @@ def validate_environment(configuration):
         environment_variable_definitions)
     if environment_variable_ids:
         L.debug('environment_variable_ids = %s', environment_variable_ids)
+
     batch_concurrency_name = environment_configuration.get(
         'batch', 'process').lower()
     if batch_concurrency_name not in ('process', 'thread', 'single'):
         raise CrossComputeConfigurationError(
             f'"{batch_concurrency_name}" batch concurrency is not supported')
+
+    interval_text = environment_configuration.get('interval', '').strip()
+    interval_timedelta = get_interval_timedelta(interval_text)
     return {
         'environment_variable_ids': environment_variable_ids,
         'batch_concurrency_name': batch_concurrency_name,
+        'interval_timedelta': interval_timedelta,
     }
 
 
@@ -831,6 +837,27 @@ def get_environment_variable_ids(environment_variable_definitions):
     return variable_ids
 
 
+def get_interval_timedelta(interval_text):
+    if not interval_text:
+        return
+    try:
+        count, name = interval_text.split()
+        count = int(count)
+    except ValueError:
+        raise CrossComputeConfigurationError(
+            f'unparseable interval "{interval_text}"; '
+            f'expected something like "30 minutes"')
+    for unit_name in INTERVAL_UNIT_NAMES:
+        if name.startswith(unit_name[:-1]):
+            break
+    else:
+        unit_names_text = ' '.join(INTERVAL_UNIT_NAMES)
+        raise CrossComputeConfigurationError(
+            f'unsupported interval unit "{name}" in "{interval_text}"; '
+            f'expected {unit_names_text}')
+    return timedelta(**{unit_name: count})
+
+
 def get_scalar_text(d, key, default=None):
     value = d.get(key) or default
     if value is None:
@@ -917,4 +944,5 @@ DESIGN_NAMES_BY_PAGE_ID = {
     'log': ['flex-vertical', 'none'],
     'debug': ['flex-vertical', 'none'],
 }
+INTERVAL_UNIT_NAMES = 'seconds', 'minutes', 'hours', 'days', 'weeks'
 L = getLogger(__name__)
