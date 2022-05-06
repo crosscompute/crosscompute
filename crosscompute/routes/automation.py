@@ -13,6 +13,7 @@ from ..constants import (
     AUTOMATION_ROUTE,
     BATCH_ROUTE,
     ID_LENGTH,
+    MODE_CODE_BY_NAME,
     MODE_NAME_BY_CODE,
     MODE_ROUTE,
     MUTATION_ROUTE,
@@ -189,20 +190,28 @@ class AutomationRoutes():
     def see_automation(self, request):
         automation_definition = self.get_automation_definition_from(request)
         design_name = automation_definition.get_design_name('automation')
-        d = {} if design_name == 'none' else _get_mode_jinja_dictionary(
-            request,
-            automation_definition,
-            automation_definition.batch_definitions[0],
-            design_name)
-        extend_uniquely(d['css_uris'], automation_definition.css_uris)
         uri = automation_definition.uri
+        if design_name == 'none':
+            d = {'css_uris': automation_definition.css_uris}
+            mutation_reference_uri = uri
+        else:
+            batch_definition = automation_definition.batch_definitions[0]
+            d = _get_mode_jinja_dictionary(
+                request,
+                automation_definition,
+                batch_definition,
+                design_name)
+            batch_uri = BATCH_ROUTE.format(batch_slug=batch_definition.slug)
+            mode_code = MODE_CODE_BY_NAME[design_name]
+            mode_uri = MODE_ROUTE.format(mode_code=mode_code)
+            mutation_reference_uri = uri + batch_uri + mode_uri
         return d | {
             'name': automation_definition.name,
             'uri': uri,
             'batches': automation_definition.batch_definitions,
             'runs': automation_definition.run_definitions,
             'title_text': automation_definition.name,
-            'mutation_uri': MUTATION_ROUTE.format(uri=uri),
+            'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri),
             'mutation_timestamp': time(),
         }
 

@@ -6,6 +6,7 @@ from logging import getLogger
 from os import environ, symlink
 from os.path import relpath, splitext
 from pathlib import Path
+from string import Template
 from time import time
 
 import tomli
@@ -190,23 +191,33 @@ class ScriptDefinition(Definition):
         command_string = self.command
         if command_string:
             return command_string
-        if 'path' not in self:
-            return
-        script_path = self.path
-        suffix = script_path.suffix
-        if suffix == '.ipynb':
-            folder = self.automation_folder / self.folder
-            old_path = folder / script_path
-            script_path = '.' + str(script_path.with_suffix('.ipynb.py'))
+        folder = self.automation_folder / self.folder
+        if 'path' in self:
+            script_path = self.path
+            suffix = script_path.suffix
+            if suffix == '.ipynb':
+                old_path = folder / script_path
+                script_path = '.' + str(script_path.with_suffix('.ipynb.py'))
+                new_path = folder / script_path
+                L.info(
+                    'exporting %s to %s in %s', self.path, script_path, folder)
+                try:
+                    script_text = PythonExporter().from_notebook_node(
+                        load_notebook(old_path, NO_CONVERT))[0]
+                    with new_path.open('wt') as script_file:
+                        script_file.write(script_text)
+                except Exception as e:
+                    raise CrossComputeConfigurationError(e)
+        elif 'function' in self:
+            script_path = '.run.py'
             new_path = folder / script_path
-            L.info('exporting %s to %s in %s', self.path, script_path, folder)
-            try:
-                script_text = PythonExporter().from_notebook_node(
-                    load_notebook(old_path, NO_CONVERT))[0]
-                with (new_path).open('wt') as script_file:
-                    script_file.write(script_text)
-            except Exception as e:
-                raise CrossComputeConfigurationError(e)
+            function_string = self['function']
+            with new_path.open('wt') as f:
+                f.write(RUN_PY.substitute({
+                    'module_name': function_string.split('.')[0],
+                    'function_string': function_string}))
+        else:
+            return
         self.command = command_string = f'python "{script_path}"'
         return command_string
 
@@ -945,4 +956,19 @@ DESIGN_NAMES_BY_PAGE_ID = {
     'debug': ['flex-vertical', 'none'],
 }
 INTERVAL_UNIT_NAMES = 'seconds', 'minutes', 'hours', 'days', 'weeks'
+RUN_PY = Template('''\
+import inspect
+from os import getenv
+from pathlib import Path
+
+import $module_name
+
+
+folder_by_name = {}
+for x in 'input_folder', 'output_folder', 'log_folder', 'debug_folder':
+    folder_by_name[x] = Path(getenv('CROSSCOMPUTE_' + x.upper()))
+d = {}
+for x in inspect.getargspec(run.plot).args:
+    d[x] = folder_by_name[x]
+$function_string(**d)''')
 L = getLogger(__name__)
