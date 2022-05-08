@@ -40,14 +40,6 @@ class TestResultRequest(object):
             result_request.prepare_arguments(tool_definition, raw_arguments)
         assert e.value.detail['x'] == 'required'
 
-    def test_ignore_reserved_argument_name(
-            self, result_request, tool_definition):
-        tool_definition['argument_names'] = ('target_folder',)
-        raw_arguments = MultiDict({'target_folder': '/tmp'})
-        result = result_request.prepare_arguments(
-            tool_definition, raw_arguments)
-        assert result.arguments == {}
-
     def test_reject_mismatched_data_type(
             self, result_request, tool_definition):
         tool_definition['argument_names'] = ('x_whee',)
