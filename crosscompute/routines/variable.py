@@ -432,6 +432,9 @@ def get_data_by_id_from_folder(folder, variable_definitions):
         variable_id = variable_definition.id
         variable_path = variable_definition.path
         variable_data = load_variable_data(folder / variable_path, variable_id)
+        # !!! QUICKFIX
+        if 'path' in variable_data and variable_data['path'].suffix == '.txt':
+            variable_data['value'] = open(variable_data['path'], 'rt').load()
         data_by_id[variable_id] = variable_data
     return data_by_id
 
