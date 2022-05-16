@@ -3,7 +3,6 @@ import json
 import shutil
 from dataclasses import dataclass
 from logging import getLogger
-from os.path import basename, exists
 from string import Template
 
 from importlib_metadata import entry_points
@@ -12,6 +11,7 @@ from invisibleroads_macros_text import format_name, format_slug
 
 from ..constants import (
     MAXIMUM_FILE_CACHE_LENGTH,
+    MAXIMUM_TEXT_CACHE_LENGTH,
     TEMPLATES_FOLDER,
     VARIABLE_ID_PATTERN,
     VIEW_BY_NAME)
@@ -105,7 +105,7 @@ class LinkView(VariableView):
         element_id = x.id
         data_uri = b.get_data_uri(variable_definition, x)
         c = b.get_variable_configuration(variable_definition)
-        file_name = c.get('file-name', basename(self.variable_path))
+        file_name = c.get('file-name', self.variable_path.name)
         link_text = c.get('link-text', file_name)
         main_text = (
             f'<a id="{element_id}" href="{data_uri}" '
@@ -144,7 +144,7 @@ class StringView(VariableView):
         if 'value' in data:
             value = data['value']
         elif 'path' in data:
-            value = FILE_TEXT_CACHE[data['path']]
+            value = load_file_text(data['path'])
         else:
             value = ''
         return value
@@ -237,7 +237,7 @@ class EmailView(StringView):
     input_type = 'email'
 
 
-class TextView(StringView):
+class TextView(VariableView):
 
     view_name = 'text'
 
@@ -432,9 +432,6 @@ def get_data_by_id_from_folder(folder, variable_definitions):
         variable_id = variable_definition.id
         variable_path = variable_definition.path
         variable_data = load_variable_data(folder / variable_path, variable_id)
-        # !!! QUICKFIX
-        if 'path' in variable_data and variable_data['path'].suffix == '.txt':
-            variable_data['value'] = open(variable_data['path'], 'rt').load()
         data_by_id[variable_id] = variable_data
     return data_by_id
 
@@ -499,15 +496,15 @@ def parse_data_by_id(data_by_id, variable_definitions):
 
 def update_variable_data(target_path, data_by_id):
     try:
-        if exists(target_path):
-            with open(target_path, 'r+t') as f:
+        if target_path.exists():
+            with target_path.open('r+t') as f:
                 d = json.load(f)
                 d.update(data_by_id)
                 f.seek(0)
                 f.truncate()
                 json.dump(d, f)
         else:
-            with open(target_path, 'wt') as f:
+            with target_path.open('wt') as f:
                 d = data_by_id
                 json.dump(d, f)
     except (json.JSONDecodeError, OSError) as e:
@@ -530,16 +527,37 @@ def load_variable_data(path, variable_id):
 
 
 def load_file_data(path):
-    if path.suffix == '.dictionary':
-        try:
-            value = json.load(path.open('rt'))
-        except (json.JSONDecodeError, OSError) as e:
-            raise CrossComputeDataError(
-                f'could not load {format_path(path)}: {e}')
-        return {'value': value}
     if not path.exists():
         raise CrossComputeDataError(f'could not find {format_path(path)}')
+    suffix = path.suffix
+    if suffix == '.dictionary':
+        return load_dictionary_data(path)
+    if suffix == '.txt':
+        return load_text_data(path)
     return {'path': path}
+
+
+def load_dictionary_data(path):
+    try:
+        value = json.load(path.open('rt'))
+    except (json.JSONDecodeError, OSError) as e:
+        raise CrossComputeDataError(
+            f'could not load {format_path(path)}: {e}')
+    if not isinstance(value, dict):
+        raise CrossComputeDataError(
+            f'expected dictionary in {format_path(path)}')
+    return {'value': value}
+
+
+def load_text_data(path):
+    if path.stat().st_size > MAXIMUM_TEXT_CACHE_LENGTH:
+        return {'path': path}
+    try:
+        value = load_file_text(path)
+    except OSError as e:
+        raise CrossComputeDataError(
+            f'could not load {format_path(path)}: {e}')
+    return {'value': value}
 
 
 def load_file_text(path):
@@ -670,7 +688,4 @@ YIELD_DATA_BY_ID_BY_EXTENSION = {
 
 FILE_DATA_CACHE = FileCache(
     load_file_data=load_file_data,
-    maximum_length=MAXIMUM_FILE_CACHE_LENGTH)
-FILE_TEXT_CACHE = FileCache(
-    load_file_data=load_file_text,
     maximum_length=MAXIMUM_FILE_CACHE_LENGTH)
