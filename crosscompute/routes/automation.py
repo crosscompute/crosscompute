@@ -296,7 +296,6 @@ def _get_mode_jinja_dictionary(
         request, automation_definition, batch_definition, mode_name):
     batch = DiskBatch(automation_definition, batch_definition)
     base_uri = request.registry.settings['base_uri']
-    uri = request.path
     for_print = 'p' in request.params
     return {
         'title_text': batch_definition.name,
@@ -304,7 +303,6 @@ def _get_mode_jinja_dictionary(
             automation_definition.get_design_name(mode_name)],
         'automation_definition': automation_definition,
         'batch_definition': batch_definition,
-        'uri': uri,
         'mode_name': mode_name,
         'mutation_uri': MUTATION_ROUTE.format(uri=uri),
         'mutation_timestamp': time(),

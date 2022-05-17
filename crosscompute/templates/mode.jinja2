@@ -4,7 +4,7 @@
 <a href="{{ BASE_URI if BASE_URI else '/' }}">Root</a> &gt;
 <a href="{{ BASE_URI }}{{ automation_definition.uri }}">{{ automation_definition.name }}</a> &gt;
 <a>{{ batch_definition.name }}</a> &gt;
-<a href="{{ BASE_URI }}{{ uri }}">{{ mode_name.title() }}</a>
+{{ mode_name.title() }}
 {% endblock %}
 
 {% block main_html %}
