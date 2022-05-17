@@ -5,7 +5,9 @@
 - Add views: table
 - Move map views into crosscompute-views-map: map-mapbox, map-deck-screengrid
 - Refresh variables without reloading page
+- Support script.function
 - Support display.pages > configuration.design
+- Support environment > interval for timed updates
 - Run batches with process or thread concurrency
 
 # 0.8
