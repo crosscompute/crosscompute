@@ -10,8 +10,8 @@ from invisibleroads_macros_log import format_path
 from invisibleroads_macros_text import format_name, format_slug
 
 from ..constants import (
+    MAXIMUM_CACHE_TEXT_LENGTH,
     MAXIMUM_FILE_CACHE_LENGTH,
-    MAXIMUM_TEXT_CACHE_LENGTH,
     TEMPLATES_FOLDER,
     VARIABLE_ID_PATTERN,
     VIEW_BY_NAME)
@@ -550,7 +550,7 @@ def load_dictionary_data(path):
 
 
 def load_text_data(path):
-    if path.stat().st_size > MAXIMUM_TEXT_CACHE_LENGTH:
+    if path.stat().st_size > MAXIMUM_CACHE_TEXT_LENGTH:
         return {'path': path}
     try:
         value = load_file_text(path)
