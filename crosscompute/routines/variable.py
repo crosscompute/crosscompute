@@ -10,7 +10,7 @@ from invisibleroads_macros_log import format_path
 from invisibleroads_macros_text import format_name, format_slug
 
 from ..constants import (
-    MAXIMUM_CACHE_TEXT_LENGTH,
+    CACHED_FILE_SIZE_LIMIT_IN_BYTES,
     MAXIMUM_FILE_CACHE_LENGTH,
     TEMPLATES_FOLDER,
     VARIABLE_ID_PATTERN,
@@ -550,9 +550,9 @@ def load_dictionary_data(path):
 
 
 def load_text_data(path):
-    if path.stat().st_size > MAXIMUM_CACHE_TEXT_LENGTH:
-        return {'path': path}
     try:
+        if path.stat().st_size > CACHED_FILE_SIZE_LIMIT_IN_BYTES:
+            return {'path': path}
         value = load_file_text(path)
     except OSError as e:
         raise CrossComputeDataError(
