@@ -201,10 +201,8 @@ class AutomationRoutes():
                 automation_definition,
                 batch_definition,
                 design_name)
-            batch_uri = BATCH_ROUTE.format(batch_slug=batch_definition.slug)
-            mode_code = MODE_CODE_BY_NAME[design_name]
-            mode_uri = MODE_ROUTE.format(mode_code=mode_code)
-            mutation_reference_uri = uri + batch_uri + mode_uri
+            mutation_reference_uri = _get_automation_batch_mode_uri(
+                automation_definition, batch_definition, design_name)
         return d | {
             'name': automation_definition.name,
             'uri': uri,
@@ -292,10 +290,21 @@ def _get_mode_name(request):
     return mode_name
 
 
+def _get_automation_batch_mode_uri(
+        automation_definition, batch_definition, mode_name):
+    automation_uri = automation_definition.uri
+    batch_uri = batch_definition.uri
+    mode_code = MODE_CODE_BY_NAME[mode_name]
+    mode_uri = MODE_ROUTE.format(mode_code=mode_code)
+    return automation_uri + batch_uri + mode_uri
+
+
 def _get_mode_jinja_dictionary(
         request, automation_definition, batch_definition, mode_name):
     batch = DiskBatch(automation_definition, batch_definition)
     base_uri = request.registry.settings['base_uri']
+    mutation_reference_uri = _get_automation_batch_mode_uri(
+        automation_definition, batch_definition, mode_name)
     for_print = 'p' in request.params
     return {
         'title_text': batch_definition.name,
@@ -304,7 +313,7 @@ def _get_mode_jinja_dictionary(
         'automation_definition': automation_definition,
         'batch_definition': batch_definition,
         'mode_name': mode_name,
-        'mutation_uri': MUTATION_ROUTE.format(uri=uri),
+        'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri),
         'mutation_timestamp': time(),
     } | __get_mode_jinja_dictionary(
         batch, base_uri, mode_name, for_print)
