@@ -1,7 +1,7 @@
 {% extends BASE_JINJA2 if IS_STATIC else LIVE_JINJA2 %}
 
 {% block header_html %}
-<a href="{{ BASE_URI if BASE_URI else '/' }}">Root</a> &gt;
+<a href="{{ BASE_URI or '/' }}">Root</a> &gt;
 <a href="{{ BASE_URI }}{{ automation_definition.uri }}">{{ automation_definition.name }}</a> &gt;
 <a>{{ batch_definition.name }}</a> &gt;
 {{ mode_name.title() }}

@@ -9,7 +9,7 @@ async function refreshPage() {
   if (response.ok) {
     location.reload();
   } else {
-    location.href = '/';
+    location.href = '{{ BASE_URI or '/' }}';
   }
 }
 async function processMutations() {
