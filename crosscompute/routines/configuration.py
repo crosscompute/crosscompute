@@ -260,18 +260,8 @@ class GroupDefinition(Definition):
 class PermissionDefinition(Definition):
 
     def _initialize(self, kwargs):
-        self.group_ids = kwargs['group_ids']
         self._validation_functions = [
             validate_permission_identifiers,
-        ]
-
-
-class RuleDefinition(Definition):
-
-    def _initialize(self, kwargs):
-        self.group_ids = kwargs['group_ids']
-        self._validation_functions = [
-            validate_rule_identifiers,
         ]
 
 
@@ -603,14 +593,9 @@ def validate_authorization(configuration):
         authorization_dictionary, 'tokens')]
     group_definitions = [GroupDefinition(_) for _ in get_dictionaries(
         authorization_dictionary, 'groups')]
-    group_ids = [_.id for _ in group_definitions]
-    permission_definitions = [PermissionDefinition(
-        _, group_ids=group_ids,
-    ) for _ in get_dictionaries(authorization_dictionary, 'permissions')]
     return {
         'token_definitions': token_definitions,
         'group_definitions': group_definitions,
-        'permission_definitions': permission_definitions,
     }
 
 
@@ -819,13 +804,14 @@ def validate_token_identifiers(token_dictionary):
 
 def validate_group_identifiers(group_dictionary):
     try:
-        group_id = group_dictionary['id']
+        group_expression = group_dictionary['expression']
     except KeyError as e:
         raise CrossComputeConfigurationError(f'{e} required for each group')
-    expression = group_dictionary.get('expression', '').strip()
+    group_permissions = [PermissionDefinition(_) for _ in get_dictionaries(
+        group_dictionary, 'permissions')]
     return {
-        'id': group_id,
-        'expression': expression,
+        'expression': group_expression,
+        'permissions': group_permissions,
     }
 
 
@@ -838,32 +824,13 @@ def validate_permission_identifiers(permission_dictionary):
     if permission_id not in PERMISSION_IDS:
         raise CrossComputeConfigurationError(
             f'"{permission_id}" permission not supported')
-    group_ids = permission_dictionary.group_ids
-    permission_rules = [RuleDefinition(
-        _, group_ids=group_ids,
-    ) for _ in get_dictionaries(permission_dictionary, 'rules')]
+    permission_action = permission_dictionary.get('action', 'accept')
+    if permission_action not in PERMISSION_ACTIONS:
+        raise CrossComputeConfigurationError(
+            f'"{permission_action}" action not supported')
     return {
         'id': permission_id,
-        'rules': permission_rules,
-    }
-
-
-def validate_rule_identifiers(rule_dictionary):
-    try:
-        rule_group = rule_dictionary['group']
-        rule_action = rule_dictionary['action']
-    except KeyError as e:
-        raise CrossComputeConfigurationError(
-            f'{e} required for each rule')
-    if rule_group not in rule_dictionary.group_ids:
-        raise CrossComputeConfigurationError(
-            f'{rule_group} group not defined')
-    if rule_action not in RULE_ACTIONS:
-        raise CrossComputeConfigurationError(
-            f'{rule_action} action not supported')
-    return {
-        'group': rule_group,
-        'action': rule_action,
+        'action': permission_action,
     }
 
 
@@ -1109,9 +1076,7 @@ PERMISSION_IDS = [
     'see_run',
     'run_automation',
 ]
-
-
-RULE_ACTIONS = [
+PERMISSION_ACTIONS = [
     'accept',
     'match',
     'reject',
