@@ -12,7 +12,8 @@ class Error(IntEnum):
 
 PACKAGE_FOLDER = Path(__file__).parent
 TEMPLATES_FOLDER = PACKAGE_FOLDER / 'templates'
-ID_LENGTH = 16
+ID_LENGTH = 32
+TOKEN_LENGTH = 32
 
 
 AUTOMATION_NAME = 'Automation X'

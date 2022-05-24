@@ -15,10 +15,13 @@ from ..constants import (
     MODE_CODE_BY_NAME,
     MODE_ROUTE,
     PORT,
-    RUN_ROUTE)
+    RUN_ROUTE,
+    TOKEN_LENGTH)
 from ..exceptions import (
     CrossComputeError)
 from ..macros.process import LoggableProcess, StoppableProcess
+from ..macros.security import DictionarySafe
+from ..routes.authorization import AuthorizationRoutes
 from ..routes.automation import AutomationRoutes
 from ..routes.mutation import MutationRoutes
 from .interface import Server
@@ -116,17 +119,9 @@ class DiskServer(Server):
 
 
 def _get_app(
-        configuration,
-        queue,
-        is_static,
-        is_production,
-        base_uri,
-        allowed_origins,
-        infos_by_timestamp):
+        configuration, queue, is_static, is_production, base_uri,
+        allowed_origins, infos_by_timestamp):
     server_timestamp = time()
-    automation_definitions = configuration.automation_definitions
-    automation_routes = AutomationRoutes(
-        configuration, automation_definitions, queue)
     settings = {
         'base_uri': base_uri,
         'jinja2.trim_blocks': True,
@@ -136,17 +131,35 @@ def _get_app(
         settings.update({'pyramid.reload_templates': True})
     with Configurator(settings=settings) as config:
         config.include('pyramid_jinja2')
-        config.include(automation_routes.includeme)
+        _configure_authorization_routes(config, configuration)
+        _configure_automation_routes(config, configuration, queue)
         if not is_static:
-            mutation_routes = MutationRoutes(
-                server_timestamp, infos_by_timestamp)
-            config.include(mutation_routes.includeme)
+            _configure_mutation_routes(
+                config, server_timestamp, infos_by_timestamp)
         _configure_renderer_globals(
             config, is_static, is_production, base_uri, server_timestamp,
             configuration)
         _configure_cache_headers(config, is_production)
         _configure_allowed_origins(config, allowed_origins)
     return config.make_wsgi_app()
+
+
+def _configure_authorization_routes(config, configuration):
+    safe = DictionarySafe(TOKEN_LENGTH)
+    authorization_routes = AuthorizationRoutes(safe)
+    config.include(authorization_routes.includeme)
+
+
+def _configure_automation_routes(config, configuration, queue):
+    automation_definitions = configuration.automation_definitions
+    automation_routes = AutomationRoutes(
+        configuration, automation_definitions, queue)
+    config.include(automation_routes.includeme)
+
+
+def _configure_mutation_routes(config, server_timestamp, infos_by_timestamp):
+    mutation_routes = MutationRoutes(server_timestamp, infos_by_timestamp)
+    config.include(mutation_routes.includeme)
 
 
 def _configure_renderer_globals(

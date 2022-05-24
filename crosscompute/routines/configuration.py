@@ -1,4 +1,5 @@
 # TODO: Save to ini, toml
+import json
 from collections import Counter
 from configparser import ConfigParser
 from datetime import timedelta
@@ -84,7 +85,8 @@ class AutomationDefinition(Definition):
             validate_display_styles,
             validate_display_templates,
             validate_display_pages,
-            validate_print,
+            validate_authorization,
+            validate_prints,
         ]
 
     def get_variable_definitions(self, mode_name, with_all=False):
@@ -236,6 +238,40 @@ class PageDefinition(Definition):
         self._validation_functions = [
             validate_page_identifiers,
             validate_page_configuration,
+        ]
+
+
+class TokenDefinition(Definition):
+
+    def _initialize(self, kwargs):
+        self._validation_functions = [
+            validate_token_identifiers,
+        ]
+
+
+class GroupDefinition(Definition):
+
+    def _initialize(self, kwargs):
+        self._validation_functions = [
+            validate_group_identifiers,
+        ]
+
+
+class PermissionDefinition(Definition):
+
+    def _initialize(self, kwargs):
+        self.group_ids = kwargs['group_ids']
+        self._validation_functions = [
+            validate_permission_identifiers,
+        ]
+
+
+class RuleDefinition(Definition):
+
+    def _initialize(self, kwargs):
+        self.group_ids = kwargs['group_ids']
+        self._validation_functions = [
+            validate_rule_identifiers,
         ]
 
 
@@ -561,7 +597,24 @@ def validate_display_pages(configuration):
     }
 
 
-def validate_print(configuration):
+def validate_authorization(configuration):
+    authorization_dictionary = get_dictionary(configuration, 'authorization')
+    token_definitions = [TokenDefinition(_) for _ in get_dictionaries(
+        authorization_dictionary, 'tokens')]
+    group_definitions = [GroupDefinition(_) for _ in get_dictionaries(
+        authorization_dictionary, 'groups')]
+    group_ids = [_.id for _ in group_definitions]
+    permission_definitions = [PermissionDefinition(
+        _, group_ids=group_ids,
+    ) for _ in get_dictionaries(authorization_dictionary, 'permissions')]
+    return {
+        'token_definitions': token_definitions,
+        'group_definitions': group_definitions,
+        'permission_definitions': permission_definitions,
+    }
+
+
+def validate_prints(configuration):
     print_definitions = [PrintDefinition(_) for _ in get_dictionaries(
         configuration, 'prints')]
     return {
@@ -741,6 +794,76 @@ def validate_page_configuration(page_dictionary):
             f'"{design_name}" design not supported for {page_id} page')
     return {
         'configuration': page_configuration,
+    }
+
+
+def validate_token_identifiers(token_dictionary):
+    try:
+        token_path = token_dictionary['path']
+    except KeyError as e:
+        raise CrossComputeConfigurationError(f'{e} required for each token')
+    token_path = Path(token_path)
+    suffix = token_path.suffix
+    if suffix == '.yml':
+        yaml = YAML()
+        payload_by_token = yaml.load(token_path)
+    elif suffix == '.json':
+        payload_by_token = json.load(token_path)
+    else:
+        raise CrossComputeConfigurationError(
+            f'{suffix} not supported for token paths')
+    return {
+        'payload_by_token': payload_by_token,
+    }
+
+
+def validate_group_identifiers(group_dictionary):
+    try:
+        group_id = group_dictionary['id']
+    except KeyError as e:
+        raise CrossComputeConfigurationError(f'{e} required for each group')
+    expression = group_dictionary.get('expression', '').strip()
+    return {
+        'id': group_id,
+        'expression': expression,
+    }
+
+
+def validate_permission_identifiers(permission_dictionary):
+    try:
+        permission_id = permission_dictionary['id']
+    except KeyError as e:
+        raise CrossComputeConfigurationError(
+            f'{e} required for each permission')
+    if permission_id not in PERMISSION_IDS:
+        raise CrossComputeConfigurationError(
+            f'"{permission_id}" permission not supported')
+    group_ids = permission_dictionary.group_ids
+    permission_rules = [RuleDefinition(
+        _, group_ids=group_ids,
+    ) for _ in get_dictionaries(permission_dictionary, 'rules')]
+    return {
+        'id': permission_id,
+        'rules': permission_rules,
+    }
+
+
+def validate_rule_identifiers(rule_dictionary):
+    try:
+        rule_group = rule_dictionary['group']
+        rule_action = rule_dictionary['action']
+    except KeyError as e:
+        raise CrossComputeConfigurationError(
+            f'{e} required for each rule')
+    if rule_group not in rule_dictionary.group_ids:
+        raise CrossComputeConfigurationError(
+            f'{rule_group} group not defined')
+    if rule_action not in RULE_ACTIONS:
+        raise CrossComputeConfigurationError(
+            f'{rule_action} action not supported')
+    return {
+        'group': rule_group,
+        'action': rule_action,
     }
 
 
@@ -955,7 +1078,11 @@ DESIGN_NAMES_BY_PAGE_ID = {
     'log': ['flex-vertical', 'none'],
     'debug': ['flex-vertical', 'none'],
 }
+
+
 INTERVAL_UNIT_NAMES = 'seconds', 'minutes', 'hours', 'days', 'weeks'
+
+
 RUN_PY = Template('''\
 import inspect
 from os import getenv
@@ -971,4 +1098,25 @@ d = {}
 for x in inspect.getargspec(run.plot).args:
     d[x] = folder_by_name[x]
 $function_string(**d)''')
+
+
+PERMISSION_IDS = [
+    'default',
+    'get_token',
+    'see_root',
+    'see_automation',
+    'see_batch',
+    'see_run',
+    'run_automation',
+]
+
+
+RULE_ACTIONS = [
+    'accept',
+    'match',
+    'reject',
+    'drop',
+]
+
+
 L = getLogger(__name__)

@@ -219,38 +219,22 @@ version: 0.0.0
   #     configuration:
   #       design: none
 
-# https://forum.crosscompute.com/t/authorization-configuration-design/176
+# authorization configuration
 # authorization:
+#   tokens:
+#     - path: tokens.yml
 #   groups:
-#     - id: visitors
-#     - id: managers
-#       expression: role == 'manager'
-#     - id: members
-#       expression: role == 'member'
-#   permissions:
-#     - id: default
-#       rules:
-#         - group: visitors
-#           action: drop
-#         - group: managers
-#           action: accept
-#         - group: members
-#           action: accept
-#     - id: get_token
-#       rules:
-#         - group: members
-#           action: drop
-#     - id: see_root
-#     - id: see_automation
-#     - id: see_batch
-#       rules:
-#         - group: members
+#     - expression: role_name == 'admin'
+#       permissions:
+#         - id: get_token
+#         - id: see_automation
+#         - id: see_batch
+#         - id: run_automation
+#     - expression: role_name == 'user'
+#       permissions:
+#         - id: see_automation
+#         - id: see_batch
 #           action: match
-#     - id: see_run
-#     - id: run_automation
-#       rules:
-#         - group: members
-#           action: drop
 
 # prints configuration
 # prints:
