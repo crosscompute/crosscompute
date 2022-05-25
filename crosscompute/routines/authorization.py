@@ -34,7 +34,7 @@ class AuthorizationGuard():
         return False
 
     def put(self, payload, time_in_seconds):
-        self.safe.put(payload, time_in_seconds)
+        return self.safe.put(payload, time_in_seconds)
 
 
 def get_token(request):
