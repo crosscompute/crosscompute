@@ -24,6 +24,7 @@ from ..macros.security import DictionarySafe
 from ..routes.authorization import AuthorizationRoutes
 from ..routes.automation import AutomationRoutes
 from ..routes.mutation import MutationRoutes
+from ..routines.authorization import AuthorizationGuard
 from .interface import Server
 
 
@@ -122,6 +123,7 @@ def _get_app(
         configuration, queue, is_static, is_production, base_uri,
         allowed_origins, infos_by_timestamp):
     server_timestamp = time()
+    guard = _get_authorization_guard(configuration, TOKEN_LENGTH)
     settings = {
         'base_uri': base_uri,
         'jinja2.trim_blocks': True,
@@ -131,8 +133,8 @@ def _get_app(
         settings.update({'pyramid.reload_templates': True})
     with Configurator(settings=settings) as config:
         config.include('pyramid_jinja2')
-        _configure_authorization_routes(config, configuration)
-        _configure_automation_routes(config, configuration, queue)
+        _configure_authorization_routes(config, guard)
+        _configure_automation_routes(config, configuration, queue, guard)
         if not is_static:
             _configure_mutation_routes(
                 config, server_timestamp, infos_by_timestamp)
@@ -144,16 +146,24 @@ def _get_app(
     return config.make_wsgi_app()
 
 
-def _configure_authorization_routes(config, configuration):
+def _get_authorization_guard(configuration, token_length):
     safe = DictionarySafe(TOKEN_LENGTH)
-    authorization_routes = AuthorizationRoutes(safe)
+    for token_definition in configuration.token_definitions:
+        payload_by_token = token_definition.payload_by_token
+        for token, payload in payload_by_token.items():
+            safe.set(token, payload)
+    return AuthorizationGuard(configuration, safe)
+
+
+def _configure_authorization_routes(config, guard):
+    authorization_routes = AuthorizationRoutes(guard)
     config.include(authorization_routes.includeme)
 
 
-def _configure_automation_routes(config, configuration, queue):
+def _configure_automation_routes(config, configuration, queue, guard):
     automation_definitions = configuration.automation_definitions
     automation_routes = AutomationRoutes(
-        configuration, automation_definitions, queue)
+        configuration, automation_definitions, queue, guard)
     config.include(automation_routes.includeme)
 
 

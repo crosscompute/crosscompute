@@ -5,7 +5,7 @@ from functools import partial
 from invisibleroads_macros_disk import make_random_folder
 from itertools import count
 from logging import getLogger
-from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
+from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPNotFound
 from pyramid.response import FileResponse, Response
 from time import time
 
@@ -35,10 +35,12 @@ from ..routines.variable import (
 class AutomationRoutes():
 
     def __init__(
-            self, configuration, automation_definitions, automation_queue):
+            self, configuration, automation_definitions, automation_queue,
+            authorization_guard):
         self.configuration = configuration
         self.automation_definitions = automation_definitions
         self.automation_queue = automation_queue
+        self.guard = authorization_guard
 
     def includeme(self, config):
         config.include(self.configure_root)
@@ -135,10 +137,12 @@ class AutomationRoutes():
 
     def see_root(self, request):
         'Render root with a list of available automations'
-        css_uris = self.configuration.css_uris
+        configuration = self.configuration
+        css_uris = configuration.css_uris
         return {
             'title_text': self.configuration.get('name', 'Automations'),
-            'automations': self.automation_definitions,
+            'automations': _select_automation_definitions(
+                configuration, self.guard, request),
             'css_uris': css_uris,
             'mutation_uri': MUTATION_ROUTE.format(uri=''),
             'mutation_timestamp': time(),
@@ -166,6 +170,9 @@ class AutomationRoutes():
 
     def run_automation(self, request):
         automation_definition = self.get_automation_definition_from(request)
+        if not self.guard.check(
+                request, 'run_automation', automation_definition):
+            raise HTTPForbidden
         variable_definitions = automation_definition.get_variable_definitions(
             'input')
         try:
@@ -189,6 +196,9 @@ class AutomationRoutes():
 
     def see_automation(self, request):
         automation_definition = self.get_automation_definition_from(request)
+        guard = self.guard
+        if not guard.check(request, 'see_automation', automation_definition):
+            raise HTTPForbidden
         design_name = automation_definition.get_design_name('automation')
         uri = automation_definition.uri
         if design_name == 'none':
@@ -196,17 +206,15 @@ class AutomationRoutes():
             mutation_reference_uri = uri
         else:
             batch_definition = automation_definition.batch_definitions[0]
-            d = _get_mode_jinja_dictionary(
-                request,
-                automation_definition,
-                batch_definition,
-                design_name)
+            batch = DiskBatch(automation_definition, batch_definition)
+            d = _get_mode_jinja_dictionary(request, batch, design_name)
             mutation_reference_uri = _get_automation_batch_mode_uri(
                 automation_definition, batch_definition, design_name)
         return d | {
             'name': automation_definition.name,
             'uri': uri,
-            'batches': automation_definition.batch_definitions,
+            'batches': _select_batch_definitions(
+                automation_definition, guard, request),
             'runs': automation_definition.run_definitions,
             'title_text': automation_definition.name,
             'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri),
@@ -215,35 +223,31 @@ class AutomationRoutes():
 
     def see_automation_batch_mode(self, request):
         automation_definition = self.get_automation_definition_from(request)
+        payload = self.guard.check(request, 'see_batch', automation_definition)
+        if not payload:
+            raise HTTPForbidden
         batch_definition = self.get_batch_definition_from(
             request, automation_definition)
+        batch = DiskBatch(automation_definition, batch_definition)
+        if isinstance(payload, dict) and not batch.is_match(payload):
+            raise HTTPForbidden
         mode_name = _get_mode_name(request)
-        return _get_mode_jinja_dictionary(
-            request, automation_definition, batch_definition, mode_name)
+        return _get_mode_jinja_dictionary(request, batch, mode_name)
 
     def see_automation_batch_mode_variable(self, request):
         automation_definition = self.get_automation_definition_from(request)
+        payload = self.guard.check(request, 'see_batch', automation_definition)
+        if not payload:
+            raise HTTPForbidden
         batch_definition = self.get_batch_definition_from(
             request, automation_definition)
-        mode_name = _get_mode_name(request)
-        variable_definitions = automation_definition.get_variable_definitions(
-            mode_name)
-        matchdict = request.matchdict
-        variable_id = matchdict['variable_id']
-        if mode_name == 'debug' and variable_id == 'return_code':
-            variable_definition = VariableDefinition({
-                'id': 'return_code',
-                'view': 'number',
-                'path': 'variables.dictionary',
-            }, mode_name='debug')
-        else:
-            try:
-                variable_definition = find_item(
-                    variable_definitions, 'id', variable_id,
-                    normalize=str.casefold)
-            except StopIteration:
-                raise HTTPNotFound
         batch = DiskBatch(automation_definition, batch_definition)
+        if isinstance(payload, dict) and not batch.is_match(payload):
+            raise HTTPForbidden
+        mode_name = _get_mode_name(request)
+        variable_id = request.matchdict['variable_id']
+        variable_definition = _get_variable_definition(
+            automation_definition, mode_name, variable_id)
         variable_data = batch.get_data(variable_definition)
         if 'path' in variable_data:
             return FileResponse(variable_data['path'], request=request)
@@ -280,6 +284,24 @@ class AutomationRoutes():
         return batch_definition
 
 
+def _select_automation_definitions(configuration, guard, request):
+    automation_definitions = configuration.automation_definitions
+    return filter(lambda _: guard.check(
+        request, 'see_automation', _,
+    ), automation_definitions)
+
+
+def _select_batch_definitions(automation_definition, guard, request):
+    payload = guard.check(request, 'see_batch', automation_definition)
+    if not payload:
+        return []
+    batch_definitions = automation_definition.batch_definitions
+    if not isinstance(payload, dict):
+        return batch_definitions
+    return filter(lambda _: DiskBatch(automation_definition, _).is_match(
+        payload), batch_definitions)
+
+
 def _get_mode_name(request):
     matchdict = request.matchdict
     mode_code = matchdict['mode_code']
@@ -288,6 +310,21 @@ def _get_mode_name(request):
     except KeyError:
         raise HTTPNotFound
     return mode_name
+
+
+def _get_variable_definition(automation_definition, mode_name, variable_id):
+    variable_definitions = automation_definition.get_variable_definitions(
+        mode_name)
+    if mode_name == 'debug' and variable_id == 'return_code':
+        variable_definition = RETURN_CODE_VARIABLE_DEFINITION
+    else:
+        try:
+            variable_definition = find_item(
+                variable_definitions, 'id', variable_id,
+                normalize=str.casefold)
+        except StopIteration:
+            raise HTTPNotFound
+    return variable_definition
 
 
 def _get_automation_batch_mode_uri(
@@ -299,9 +336,9 @@ def _get_automation_batch_mode_uri(
     return automation_uri + batch_uri + mode_uri
 
 
-def _get_mode_jinja_dictionary(
-        request, automation_definition, batch_definition, mode_name):
-    batch = DiskBatch(automation_definition, batch_definition)
+def _get_mode_jinja_dictionary(request, batch, mode_name):
+    automation_definition = batch.automation_definition
+    batch_definition = batch.batch_definition
     base_uri = request.registry.settings['base_uri']
     mutation_reference_uri = _get_automation_batch_mode_uri(
         automation_definition, batch_definition, mode_name)
@@ -397,3 +434,8 @@ CSS_TEXT_BY_DESIGN_NAME = {
     'none': HEADER_CSS,
 }
 L = getLogger(__name__)
+RETURN_CODE_VARIABLE_DEFINITION = VariableDefinition({
+    'id': 'return_code',
+    'view': 'number',
+    'path': 'variables.dictionary',
+}, mode_name='debug')

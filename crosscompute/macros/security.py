@@ -8,23 +8,25 @@ class DictionarySafe(dict):
     def __init__(self, key_length):
         self.key_length = key_length
 
-    def set(self, payload, time_in_seconds=None):
+    def put(self, value, time_in_seconds=None):
         while True:
             key = make_random_string(self.key_length)
             try:
                 self[key]
             except KeyError:
                 break
-        expiration_datetime = get_expiration_datetime(time_in_seconds)
-        self[key] = payload, expiration_datetime
+        self.set(key, value, time_in_seconds)
         return key
 
+    def set(self, key, value, time_in_seconds=None):
+        self[key] = value, get_expiration_datetime(time_in_seconds)
+
     def get(self, key):
-        payload, expiration_datetime = self[key]
+        value, expiration_datetime = self[key]
         if datetime.now() > expiration_datetime:
             del self[key]
             raise KeyError
-        return payload
+        return value
 
 
 def get_expiration_datetime(time_in_seconds):

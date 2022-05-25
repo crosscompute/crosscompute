@@ -8,6 +8,7 @@ from ..constants import (
     VARIABLE_ROUTE)
 from ..exceptions import (
     CrossComputeDataError)
+from ..macros.iterable import find_item
 from .interface import Batch
 from .variable import (
     load_variable_data)
@@ -58,6 +59,24 @@ class DiskBatch(Batch):
         variable_uri = VARIABLE_ROUTE.format(
             variable_id=variable_definition.id)
         return base_uri + automation_uri + batch_uri + mode_uri + variable_uri
+
+    def is_match(self, payload):
+        variable_definitions = self.automation_definition.variable_definitions
+        for name, value in payload.items():
+            try:
+                variable_definition = find_item(
+                    variable_definitions, 'id', name)
+            except StopIteration:
+                continue
+            data = self.get_data(variable_definition)
+            variable_value = data.get('value')
+            if isinstance(value, list):
+                if variable_value not in value:
+                    return False
+            else:
+                if variable_value != value:
+                    return False
+        return True
 
 
 L = getLogger(__name__)

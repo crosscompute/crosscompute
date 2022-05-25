@@ -1068,12 +1068,9 @@ $function_string(**d)''')
 
 
 PERMISSION_IDS = [
-    'default',
-    'get_token',
-    'see_root',
+    'add_authorization',
     'see_automation',
     'see_batch',
-    'see_run',
     'run_automation',
 ]
 PERMISSION_ACTIONS = [

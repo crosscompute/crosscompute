@@ -226,7 +226,7 @@ version: 0.0.0
 #   groups:
 #     - expression: role_name == 'admin'
 #       permissions:
-#         - id: get_token
+#         - id: add_authorization
 #         - id: see_automation
 #         - id: see_batch
 #         - id: run_automation

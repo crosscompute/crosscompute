@@ -1,10 +1,10 @@
-from pyramid.httpexceptions import HTTPBadRequest
+from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden
 
 
 class AuthorizationRoutes():
 
-    def __init__(self, safe):
-        self.safe = safe
+    def __init__(self, authorization_guard):
+        self.guard = authorization_guard
 
     def includeme(self, config):
         config.include(self.configure_authorizations)
@@ -20,11 +20,14 @@ class AuthorizationRoutes():
             renderer='json')
 
     def add_authorization(self, request):
+        guard = self.guard
+        if not guard.check(request, 'add_authorization'):
+            raise HTTPForbidden
         params = request.params or request.json_body
         try:
             payload = params['payload']
             time_in_seconds = int(params['time_in_seconds'])
         except (KeyError, ValueError):
             raise HTTPBadRequest
-        token = self.safe.set(payload, time_in_seconds)
+        token = guard.put(payload, time_in_seconds)
         return {'token': token}
