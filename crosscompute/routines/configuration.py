@@ -28,6 +28,7 @@ from ..constants import (
     PRINTER_BY_NAME,
     RUN_ROUTE,
     STYLE_ROUTE,
+    VARIABLE_ID_PATTERN,
     VIEW_BY_NAME)
 from ..exceptions import (
     CrossComputeConfigurationError,
@@ -791,12 +792,25 @@ def validate_token_identifiers(token_dictionary):
     suffix = token_path.suffix
     if suffix == '.yml':
         yaml = YAML()
-        payload_by_token = yaml.load(token_path)
+        d = yaml.load(token_path)
     elif suffix == '.json':
-        payload_by_token = json.load(token_path)
+        d = json.load(token_path)
     else:
         raise CrossComputeConfigurationError(
             f'{suffix} not supported for token paths')
+    payload_by_token = {}
+    for token, payload in d.items():
+        variable_match = VARIABLE_ID_PATTERN.match(token)
+        if variable_match:
+            variable_id = variable_match.group(1)
+            try:
+                token = environ[variable_id]
+            except KeyError:
+                e = CrossComputeConfigurationError(
+                    f'{variable_id} is missing in the environment')
+                e.path = token_path
+                raise e
+        payload_by_token[token] = payload
     return {
         'payload_by_token': payload_by_token,
     }
