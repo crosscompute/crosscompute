@@ -1,3 +1,6 @@
+from logging import getLogger
+
+from ..macros.iterable import find_item
 from ..macros.security import evaluate_expression
 
 
@@ -29,8 +32,9 @@ class AuthorizationGuard():
         for permission_definition in group_definition.permissions:
             if permission_definition.id != permission_id:
                 continue
-            if permission_definition.action == 'match':
-                return payload
+            expression = permission_definition.expression
+            if expression:
+                return define_is_match(expression, payload)
             else:
                 return True
         return False
@@ -55,3 +59,35 @@ def get_token(request):
     else:
         token = ''
     return token
+
+
+def define_is_match(expression, payload):
+
+    def is_match(batch):
+        automation_definition = batch.automation_definition
+        variable_definitions = automation_definition.get_variable_definitions(
+            'input')
+
+        def get_value(name):
+            if name in payload:
+                return payload[name]
+            try:
+                variable_definition = find_item(
+                    variable_definitions, 'id', name)
+            except StopIteration:
+                raise KeyError
+            data = batch.get_data(variable_definition)
+            return data.get('value')
+
+        try:
+            is_match = evaluate_expression(expression, get_value)
+        except NameError as e:
+            L.error('"%s" failed because "%s" is not defined', expression, e)
+            is_match = False
+        except SyntaxError:
+            L.error('"%s" failed because of a syntax error', expression)
+            is_match = False
+        return is_match
+
+
+L = getLogger(__name__)

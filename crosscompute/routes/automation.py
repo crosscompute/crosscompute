@@ -8,6 +8,7 @@ from logging import getLogger
 from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPNotFound
 from pyramid.response import FileResponse, Response
 from time import time
+from types import FunctionType
 
 from ..constants import (
     AUTOMATION_ROUTE,
@@ -223,26 +224,28 @@ class AutomationRoutes():
 
     def see_automation_batch_mode(self, request):
         automation_definition = self.get_automation_definition_from(request)
-        payload = self.guard.check(request, 'see_batch', automation_definition)
-        if not payload:
+        is_match = self.guard.check(
+            request, 'see_batch', automation_definition)
+        if not is_match:
             raise HTTPForbidden
         batch_definition = self.get_batch_definition_from(
             request, automation_definition)
         batch = DiskBatch(automation_definition, batch_definition)
-        if isinstance(payload, dict) and not batch.is_match(payload):
+        if isinstance(is_match, FunctionType) and not is_match(batch):
             raise HTTPForbidden
         mode_name = _get_mode_name(request)
         return _get_mode_jinja_dictionary(request, batch, mode_name)
 
     def see_automation_batch_mode_variable(self, request):
         automation_definition = self.get_automation_definition_from(request)
-        payload = self.guard.check(request, 'see_batch', automation_definition)
-        if not payload:
+        is_match = self.guard.check(
+            request, 'see_batch', automation_definition)
+        if not is_match:
             raise HTTPForbidden
         batch_definition = self.get_batch_definition_from(
             request, automation_definition)
         batch = DiskBatch(automation_definition, batch_definition)
-        if isinstance(payload, dict) and not batch.is_match(payload):
+        if isinstance(is_match, FunctionType) and not is_match(batch):
             raise HTTPForbidden
         mode_name = _get_mode_name(request)
         variable_id = request.matchdict['variable_id']

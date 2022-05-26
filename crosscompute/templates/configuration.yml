@@ -224,13 +224,17 @@ version: 0.0.0
 #   tokens:
 #     - path: tokens.yml
 #   groups:
-#     - expression: role_name == 'admin'
+#     - match:
+#         role_name: admin
 #       permissions:
 #         - id: add_authorization
 #         - id: see_automation
 #         - id: see_batch
 #         - id: run_automation
-#     - expression: role_name == 'user'
+#     - match:
+#         role_name:
+#           - leader
+#           - member
 #       permissions:
 #         - id: see_automation
 #         - id: see_batch

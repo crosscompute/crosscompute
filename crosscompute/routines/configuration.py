@@ -838,13 +838,10 @@ def validate_permission_identifiers(permission_dictionary):
     if permission_id not in PERMISSION_IDS:
         raise CrossComputeConfigurationError(
             f'"{permission_id}" permission not supported')
-    permission_action = permission_dictionary.get('action', 'accept')
-    if permission_action not in PERMISSION_ACTIONS:
-        raise CrossComputeConfigurationError(
-            f'"{permission_action}" action not supported')
+    permission_expression = permission_dictionary.get('expression', '')
     return {
         'id': permission_id,
-        'action': permission_action,
+        'expression': permission_expression,
     }
 
 
@@ -1086,12 +1083,6 @@ PERMISSION_IDS = [
     'see_automation',
     'see_batch',
     'run_automation',
-]
-PERMISSION_ACTIONS = [
-    'accept',
-    'match',
-    'reject',
-    'drop',
 ]
 
 
