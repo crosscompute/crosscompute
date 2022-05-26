@@ -14,6 +14,8 @@ class AuthorizationGuard():
         if not group_definitions:
             return True
         token = get_token(request)
+        if not token:
+            return False
         try:
             payload = self.safe.get(token)
         except KeyError:
@@ -50,4 +52,6 @@ def get_token(request):
             token = ''
     elif 'crosscompute' in cookies:
         token = cookies['crosscompute']
+    else:
+        token = ''
     return token
