@@ -38,7 +38,7 @@ class AuthorizationGuard():
 
 
 def get_token(request):
-    params = request.params or request.json_body
+    params = request.params
     headers = request.headers
     cookies = request.cookies
     if '_token' in params:
