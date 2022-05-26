@@ -23,7 +23,7 @@ class DictionarySafe(dict):
 
     def get(self, key):
         value, expiration_datetime = self[key]
-        if datetime.now() > expiration_datetime:
+        if expiration_datetime and datetime.now() > expiration_datetime:
             del self[key]
             raise KeyError
         return value
