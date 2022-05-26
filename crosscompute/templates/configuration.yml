@@ -224,14 +224,14 @@ version: 0.0.0
 #   tokens:
 #     - path: tokens.yml
 #   groups:
-#     - match:
+#     - configuration:
 #         role_name: admin
 #       permissions:
 #         - id: add_authorization
 #         - id: see_automation
 #         - id: see_batch
 #         - id: run_automation
-#     - match:
+#     - configuration:
 #         role_name:
 #           - leader
 #           - member

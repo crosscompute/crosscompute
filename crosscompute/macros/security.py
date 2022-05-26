@@ -33,20 +33,3 @@ def get_expiration_datetime(time_in_seconds):
     if not time_in_seconds:
         return
     return datetime.now() + timedelta(seconds=time_in_seconds)
-
-
-def evaluate_expression(expression_string, get_value):
-    if isinstance(get_value, dict):
-        def get(name):
-            return get_value[name]
-    else:
-        get = get_value
-    # https://realpython.com/python-eval-function
-    code = compile(expression_string, '<string>', 'eval')
-    value_by_name = {}
-    for name in code.co_names:
-        try:
-            value_by_name[name] = get(name)
-        except KeyError:
-            continue
-    return eval(code, {'__builtins__': {}}, value_by_name)

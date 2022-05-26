@@ -818,13 +818,13 @@ def validate_token_identifiers(token_dictionary):
 
 def validate_group_identifiers(group_dictionary):
     try:
-        group_expression = group_dictionary['expression']
+        group_configuration = group_dictionary['configuration']
     except KeyError as e:
         raise CrossComputeConfigurationError(f'{e} required for each group')
     group_permissions = [PermissionDefinition(_) for _ in get_dictionaries(
         group_dictionary, 'permissions')]
     return {
-        'expression': group_expression,
+        'configuration': group_configuration,
         'permissions': group_permissions,
     }
 
@@ -838,10 +838,13 @@ def validate_permission_identifiers(permission_dictionary):
     if permission_id not in PERMISSION_IDS:
         raise CrossComputeConfigurationError(
             f'"{permission_id}" permission not supported')
-    permission_expression = permission_dictionary.get('expression', '')
+    permission_action = permission_dictionary.get('action', '')
+    if permission_action not in PERMISSION_ACTIONS:
+        raise CrossComputeConfigurationError(
+            f'"{permission_action}" action not supported')
     return {
         'id': permission_id,
-        'expression': permission_expression,
+        'action': permission_action,
     }
 
 
@@ -1083,6 +1086,10 @@ PERMISSION_IDS = [
     'see_automation',
     'see_batch',
     'run_automation',
+]
+PERMISSION_ACTIONS = [
+    'accept',
+    'match',
 ]
 
 
