@@ -61,7 +61,9 @@ class DiskBatch(Batch):
         return base_uri + automation_uri + batch_uri + mode_uri + variable_uri
 
     def is_match(self, payload):
-        variable_definitions = self.automation_definition.variable_definitions
+        automation_definition = self.automation_definition
+        variable_definitions = automation_definition.get_variable_definitions(
+            'input')
         for name, value in payload.items():
             try:
                 variable_definition = find_item(
