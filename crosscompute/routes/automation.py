@@ -5,8 +5,7 @@ from functools import partial
 from invisibleroads_macros_disk import make_random_folder
 from itertools import count
 from logging import getLogger
-from pyramid.httpexceptions import (
-    HTTPBadRequest, HTTPForbidden, HTTPNotFound)
+from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPNotFound
 from pyramid.response import FileResponse, Response
 from time import time
 from types import FunctionType
@@ -199,26 +198,19 @@ class AutomationRoutes():
     def see_automation(self, request):
         automation_definition = self.get_automation_definition_from(request)
         guard = self.guard
-        L.info('1')
         if not guard.check(request, 'see_automation', automation_definition):
             raise HTTPForbidden
-        L.info('2')
         design_name = automation_definition.get_design_name('automation')
         uri = automation_definition.uri
-        L.info('3')
         if design_name == 'none':
-            L.info('4')
             d = {'css_uris': automation_definition.css_uris}
             mutation_reference_uri = uri
         else:
-            L.info('5')
             batch_definition = automation_definition.batch_definitions[0]
             batch = DiskBatch(automation_definition, batch_definition)
             d = _get_mode_jinja_dictionary(request, batch, design_name)
             mutation_reference_uri = _get_automation_batch_mode_uri(
                 automation_definition, batch_definition, design_name)
-        print('test')
-        L.info('6')
         return d | {
             'name': automation_definition.name,
             'uri': uri,
@@ -234,17 +226,13 @@ class AutomationRoutes():
         automation_definition = self.get_automation_definition_from(request)
         is_match = self.guard.check(
             request, 'see_batch', automation_definition)
-        print(1)
-        print('is_match', is_match)
         if not is_match:
             raise HTTPForbidden
         batch_definition = self.get_batch_definition_from(
             request, automation_definition)
-        print(2)
         batch = DiskBatch(automation_definition, batch_definition)
         if isinstance(is_match, FunctionType) and not is_match(batch):
             raise HTTPForbidden
-        print(3)
         mode_name = _get_mode_name(request)
         return _get_mode_jinja_dictionary(request, batch, mode_name)
 
@@ -311,16 +299,11 @@ def _select_batch_definitions(automation_definition, guard, request):
     if not is_match:
         return []
     batch_definitions = automation_definition.batch_definitions
-    # !!!
-    L.info('batch_definitions', batch_definitions)
     if not isinstance(is_match, FunctionType):
         return batch_definitions
-    xs = filter(
+    return filter(
         lambda _: is_match(DiskBatch(automation_definition, _)),
         batch_definitions)
-    L.info(xs)
-    print(xs)
-    return xs
 
 
 def _get_mode_name(request):
