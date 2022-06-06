@@ -217,6 +217,7 @@ class AutomationRoutes():
             d = _get_mode_jinja_dictionary(request, batch, design_name)
             mutation_reference_uri = _get_automation_batch_mode_uri(
                 automation_definition, batch_definition, design_name)
+        print('test')
         L.info('6')
         return d | {
             'name': automation_definition.name,
@@ -307,17 +308,19 @@ def _select_automation_definitions(configuration, guard, request):
 
 def _select_batch_definitions(automation_definition, guard, request):
     is_match = guard.check(request, 'see_batch', automation_definition)
-    # !!!
-    L.info('is_match', is_match)
     if not is_match:
         return []
     batch_definitions = automation_definition.batch_definitions
+    # !!!
     L.info('batch_definitions', batch_definitions)
     if not isinstance(is_match, FunctionType):
         return batch_definitions
-    return filter(
+    xs = filter(
         lambda _: is_match(DiskBatch(automation_definition, _)),
         batch_definitions)
+    L.info(xs)
+    print(xs)
+    return xs
 
 
 def _get_mode_name(request):
