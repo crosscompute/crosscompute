@@ -5,13 +5,13 @@ document.getElementById('_run').onclick = async () => {
     const { view: viewName, id: variableId } = x.dataset;
     dataById[variableId] = GET_DATA_BY_VIEW_NAME[viewName](x);
   }
-  const uri = '{{ BASE_URI }}{{ automation_definition.uri }}.json';
+  const uri = '{{ ROOT_URI }}{{ automation_definition.uri }}.json';
   const response = await fetch(uri, {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(dataById)});
   const d = await response.json();
-  window.location = '{{ BASE_URI }}{{ automation_definition.uri }}/r/' + d['id'] + '/o';
+  window.location = '{{ ROOT_URI }}{{ automation_definition.uri }}/r/' + d['id'] + '/o';
 };
 const GET_DATA_BY_VIEW_NAME = {};
 {% elif mode_name == 'output' %}

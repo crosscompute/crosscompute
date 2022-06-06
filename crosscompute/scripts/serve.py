@@ -55,9 +55,9 @@ def configure_argument_parser_for_serving(a):
         '--production', dest='is_production', action='store_true',
         help='disable server restart on file change')
     a.add_argument(
-        '--base-uri', metavar='X',
+        '--root-uri', metavar='X',
         default='',
-        help='specify base uri for all routes')
+        help='specify root uri for all routes')
     a.add_argument(
         '--origins', metavar='X', nargs='+', dest='allowed_origins',
         default=[],
@@ -73,41 +73,46 @@ def configure_argument_parser_for_serving(a):
 
 
 def configure_serving_from(args):
-    base_uri = args.base_uri
-    if base_uri and not base_uri.startswith('/'):
-        args.base_uri = '/' + base_uri
+    root_uri = args.root_uri
+    if root_uri and not root_uri.startswith('/'):
+        args.root_uri = '/' + root_uri
 
 
 def serve_with(automation, args):
     return serve(
         automation,
-        args.host,
-        args.port,
-        args.with_browser,
-        args.is_static,
-        args.is_production,
-        args.base_uri,
-        args.allowed_origins,
-        args.disk_poll,
-        args.disk_debounce)
+        host=args.host,
+        port=args.port,
+        with_browser=args.with_browser,
+        is_static=args.is_static,
+        is_production=args.is_production,
+        root_uri=args.root_uri,
+        allowed_origins=args.allowed_origins,
+        disk_poll_in_milliseconds=args.disk_poll,
+        disk_debounce_in_milliseconds=args.disk_debounce)
 
 
 def serve(
-        automation, host=HOST, port=PORT, with_browser=True,
-        is_static=False, is_production=False,
-        base_uri='', allowed_origins=None,
+        automation,
+        host=HOST,
+        port=PORT,
+        with_browser=True,
+        is_static=False,
+        is_production=False,
+        root_uri='',
+        allowed_origins=None,
         disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
         disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS):
     try:
         if with_browser and 'DISPLAY' in environ:
             L.info('opening browser; set --no-browser to disable')
-            open_browser(f'http://localhost:{port}{base_uri}')
+            open_browser(f'http://localhost:{port}{root_uri}')
         automation.serve(
             host=host,
             port=port,
             is_static=is_static,
             is_production=is_production,
-            base_uri=base_uri,
+            root_uri=root_uri,
             allowed_origins=allowed_origins,
             disk_poll_in_milliseconds=disk_poll_in_milliseconds,
             disk_debounce_in_milliseconds=disk_debounce_in_milliseconds)

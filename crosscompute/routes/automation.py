@@ -342,7 +342,7 @@ def _get_automation_batch_mode_uri(
 def _get_mode_jinja_dictionary(request, batch, mode_name):
     automation_definition = batch.automation_definition
     batch_definition = batch.batch_definition
-    base_uri = request.registry.settings['base_uri']
+    root_uri = request.registry.settings['root_uri']
     mutation_reference_uri = _get_automation_batch_mode_uri(
         automation_definition, batch_definition, mode_name)
     for_print = 'p' in request.params
@@ -356,10 +356,10 @@ def _get_mode_jinja_dictionary(request, batch, mode_name):
         'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri),
         'mutation_timestamp': time(),
     } | __get_mode_jinja_dictionary(
-        batch, base_uri, mode_name, for_print)
+        batch, root_uri, mode_name, for_print)
 
 
-def __get_mode_jinja_dictionary(batch, base_uri, mode_name, for_print):
+def __get_mode_jinja_dictionary(batch, root_uri, mode_name, for_print):
     automation_definition = batch.automation_definition
     css_uris = automation_definition.css_uris
     template_text = automation_definition.get_template_text(
@@ -371,7 +371,7 @@ def __get_mode_jinja_dictionary(batch, base_uri, mode_name, for_print):
     i = count()
     render_html = partial(
         _render_html, variable_definitions=variable_definitions,
-        batch=batch, m=m, i=i, base_uri=base_uri, mode_name=mode_name,
+        batch=batch, m=m, i=i, root_uri=root_uri, mode_name=mode_name,
         design_name=design_name, for_print=for_print)
     main_text = get_html_from_markdown(VARIABLE_ID_PATTERN.sub(
         render_html, template_text))
@@ -381,7 +381,7 @@ def __get_mode_jinja_dictionary(batch, base_uri, mode_name, for_print):
 
 
 def _render_html(
-        match, variable_definitions, batch, m, i, base_uri, mode_name,
+        match, variable_definitions, batch, m, i, root_uri, mode_name,
         design_name, for_print):
     matching_text = match.group(0)
     terms = match.group(1).split('|')
@@ -395,7 +395,7 @@ def _render_html(
         return matching_text
     view = VariableView.get_from(variable_definition)
     element = Element(
-        f'v{next(i)}', base_uri, mode_name, design_name, for_print, terms[1:])
+        f'v{next(i)}', root_uri, mode_name, design_name, for_print, terms[1:])
     jinja_dictionary = view.render(batch, element)
     for k, v in m.items():
         extend_uniquely(v, [_.strip() for _ in jinja_dictionary[k]])

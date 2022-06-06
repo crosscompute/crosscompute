@@ -74,7 +74,7 @@ class DiskAutomation(Automation):
             port=PORT,
             is_static=False,
             is_production=False,
-            base_uri='',
+            root_uri='',
             allowed_origins=None,
             disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
             disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS,
@@ -87,7 +87,7 @@ class DiskAutomation(Automation):
                 'port': port,
                 'is_static': is_static,
                 'is_production': is_production,
-                'base_uri': base_uri,
+                'root_uri': root_uri,
                 'allowed_origins': allowed_origins,
                 'infos_by_timestamp': manager.dict(),
             }

@@ -8,7 +8,7 @@
 {{ head_text | safe }}
 {%- endblock %}
 {% for css_uri in css_uris %}
-<link href="{{ css_uri if '//' in css_uri else BASE_URI + css_uri }}" rel="stylesheet">
+<link href="{{ css_uri if '//' in css_uri else ROOT_URI + css_uri }}" rel="stylesheet">
 {% endfor %}
 <style>
 {% block head_css %}

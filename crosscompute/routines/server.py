@@ -41,7 +41,7 @@ class DiskServer(Server):
         self._port = settings.get('port', PORT)
         self._is_static = settings.get('is_static', False)
         self._is_production = settings.get('is_production', False)
-        self._base_uri = settings.get('base_uri', '')
+        self._root_uri = settings.get('root_uri', '')
         self._allowed_origins = settings.get('allowed_origins')
         self._infos_by_timestamp = settings.get('infos_by_timestamp', {})
 
@@ -55,22 +55,22 @@ class DiskServer(Server):
         # TODO: Decouple from pyramid and waitress
         host = self._host
         port = self._port
-        base_uri = self._base_uri
+        root_uri = self._root_uri
         app = _get_app(
             configuration,
             self._queue,
             self._is_static,
             self._is_production,
-            base_uri,
+            root_uri,
             self._allowed_origins,
             self._infos_by_timestamp)
-        L.info('serving at http://%s:%s%s', host, port, base_uri)
+        L.info('serving at http://%s:%s%s', host, port, root_uri)
         try:
             serve(
                 app,
                 host=host,
                 port=port,
-                url_prefix=base_uri)
+                url_prefix=root_uri)
         except OSError as e:
             L.error(e)
 
@@ -120,12 +120,12 @@ class DiskServer(Server):
 
 
 def _get_app(
-        configuration, queue, is_static, is_production, base_uri,
+        configuration, queue, is_static, is_production, root_uri,
         allowed_origins, infos_by_timestamp):
     server_timestamp = time()
     guard = _get_authorization_guard(configuration, TOKEN_LENGTH)
     settings = {
-        'base_uri': base_uri,
+        'root_uri': root_uri,
         'jinja2.trim_blocks': True,
         'jinja2.lstrip_blocks': True,
     }
@@ -139,7 +139,7 @@ def _get_app(
             _configure_mutation_routes(
                 config, server_timestamp, infos_by_timestamp)
         _configure_renderer_globals(
-            config, is_static, is_production, base_uri, server_timestamp,
+            config, is_static, is_production, root_uri, server_timestamp,
             configuration)
         _configure_cache_headers(config, is_production)
         _configure_allowed_origins(config, allowed_origins)
@@ -173,7 +173,7 @@ def _configure_mutation_routes(config, server_timestamp, infos_by_timestamp):
 
 
 def _configure_renderer_globals(
-        config, is_static, is_production, base_uri, server_timestamp,
+        config, is_static, is_production, root_uri, server_timestamp,
         configuration):
     if configuration.template_path_by_id:
         config.add_jinja2_search_path(str(configuration.folder), prepend=True)
@@ -184,7 +184,7 @@ def _configure_renderer_globals(
             'LIVE_JINJA2': configuration.get_template_path('live'),
             'IS_STATIC': is_static,
             'IS_PRODUCTION': is_production,
-            'BASE_URI': base_uri,
+            'ROOT_URI': root_uri,
             'MAXIMUM_PING_INTERVAL': MAXIMUM_PING_INTERVAL_IN_SECONDS * 1000,
             'MINIMUM_PING_INTERVAL': MINIMUM_PING_INTERVAL_IN_SECONDS * 1000,
             'SERVER_TIMESTAMP': server_timestamp,
