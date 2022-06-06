@@ -1,8 +1,8 @@
 {% extends BASE_JINJA2 if IS_STATIC else LIVE_JINJA2 %}
 
 {% block header_html %}
-<a href="{{ BASE_URI or '/' }}">Root</a> &gt;
-<a href="{{ BASE_URI }}{{ uri }}">{{ name }}</a>
+<a href="{{ ROOT_URI or '/' }}">Root</a> &gt;
+<a href="{{ ROOT_URI }}{{ uri }}">{{ name }}</a>
 {% endblock %}
 
 {% block main_html %}
@@ -14,8 +14,8 @@
 {% for batch in batches %}
 <li>
 {{ batch['name'] }}
-<a href="{{ BASE_URI }}{{ uri }}{{ batch['uri'] }}/i">[input]</a>
-<a href="{{ BASE_URI }}{{ uri }}{{ batch['uri'] }}/o">[output]</a>
+<a href="{{ ROOT_URI }}{{ uri }}{{ batch['uri'] }}/i">[input]</a>
+<a href="{{ ROOT_URI }}{{ uri }}{{ batch['uri'] }}/o">[output]</a>
 </li>
 {% endfor %}
 </ul>
@@ -24,8 +24,8 @@
 {% for run in runs %}
 <li>
 {{ run['name'] }}
-<a href="{{ BASE_URI }}{{ uri }}{{ run['uri'] }}/i">[input]</a>
-<a href="{{ BASE_URI }}{{ uri }}{{ run['uri'] }}/o">[output]</a>
+<a href="{{ ROOT_URI }}{{ uri }}{{ run['uri'] }}/i">[input]</a>
+<a href="{{ ROOT_URI }}{{ uri }}{{ run['uri'] }}/o">[output]</a>
 </li>
 {% endfor %}
 </ul>

@@ -75,7 +75,7 @@ def print_with(automation, args):
     try:
         for print_definition, batch_dictionaries in print_packs:
             Printer = PRINTER_BY_NAME[print_definition.format]
-            printer = Printer(f'http://127.0.0.1:{port}{args.base_uri}')
+            printer = Printer(f'http://127.0.0.1:{port}{args.root_uri}')
             printer.render(batch_dictionaries, print_definition)
     finally:
         server_process.stop()

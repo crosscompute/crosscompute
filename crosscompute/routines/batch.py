@@ -50,14 +50,14 @@ class DiskBatch(Batch):
         return variable_data
 
     def get_data_uri(self, variable_definition, element):
-        base_uri = element.base_uri
+        root_uri = element.root_uri
         automation_uri = self.automation_definition.uri
         batch_uri = self.batch_definition.uri
         mode_code = MODE_CODE_BY_NAME[variable_definition.mode_name]
         mode_uri = MODE_ROUTE.format(mode_code=mode_code)
         variable_uri = VARIABLE_ROUTE.format(
             variable_id=variable_definition.id)
-        return base_uri + automation_uri + batch_uri + mode_uri + variable_uri
+        return root_uri + automation_uri + batch_uri + mode_uri + variable_uri
 
 
 L = getLogger(__name__)

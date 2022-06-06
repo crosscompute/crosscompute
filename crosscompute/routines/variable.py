@@ -31,7 +31,7 @@ from .interface import Batch
 class Element():
 
     id: str
-    base_uri: str
+    root_uri: str
     mode_name: str
     design_name: str
     for_print: bool
