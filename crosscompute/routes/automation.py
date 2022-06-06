@@ -226,13 +226,17 @@ class AutomationRoutes():
         automation_definition = self.get_automation_definition_from(request)
         is_match = self.guard.check(
             request, 'see_batch', automation_definition)
+        print(1)
+        print('is_match', is_match)
         if not is_match:
             raise HTTPForbidden
         batch_definition = self.get_batch_definition_from(
             request, automation_definition)
+        print(2)
         batch = DiskBatch(automation_definition, batch_definition)
         if isinstance(is_match, FunctionType) and not is_match(batch):
             raise HTTPForbidden
+        print(3)
         mode_name = _get_mode_name(request)
         return _get_mode_jinja_dictionary(request, batch, mode_name)
 

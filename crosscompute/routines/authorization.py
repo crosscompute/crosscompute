@@ -66,15 +66,22 @@ def define_is_match(payload):
         automation_definition = batch.automation_definition
         variable_definitions = automation_definition.get_variable_definitions(
             'input')
+        print('a')
         for name, value in payload.items():
+            print('name', name)
+            print('value', value)
             try:
                 variable_definition = find_item(
                     variable_definitions, 'id', name)
             except StopIteration:
                 continue
+            print(variable_definition)
             data = batch.get_data(variable_definition)
+            print(data)
             if not has_match(value, data.get('value')):
+                print('b')
                 return False
+        print('c')
         return True
 
 
