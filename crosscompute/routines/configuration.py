@@ -472,6 +472,9 @@ def validate_batches(configuration):
     for raw_batch_definition in raw_batch_definitions:
         batch_definitions.extend(get_batch_definitions(
             raw_batch_definition, automation_folder, variable_definitions))
+    if not(batch_definitions):
+        raise CrossComputeConfigurationError(
+            'no batches configured; please define at least one batch')
     assert_unique_values(
         [_.folder for _ in batch_definitions],
         'duplicate batch folder {x}')
