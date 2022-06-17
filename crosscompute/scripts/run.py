@@ -19,6 +19,7 @@ def do(arguments=None):
     args = a.parse_args(arguments)
     try:
         configure_logging_from(args)
+        configure_running_from(args)
         automation = DiskAutomation.load(args.path_or_folder)
     except CrossComputeError as e:
         L.error(e)
@@ -27,12 +28,16 @@ def do(arguments=None):
 
 
 def configure_argument_parser_for_running(a):
-    # TODO: Implement clean
-    '''
     a.add_argument(
-        '--clean', dest='with_clean', action='store_true',
-        help='delete batch folders before running')
-    '''
+        '--engine', metavar='X',
+        default='raw',
+        help='specify engine used to run scripts')
+
+
+def configure_running_from(args):
+    engine = args.engine
+    if engine == 'raw':
+        L.warning('engine=raw is unsafe; use engine=podman for untrusted code')
 
 
 def run_with(automation, args):

@@ -69,7 +69,7 @@ def configure_argument_parser_for_serving(a):
     a.add_argument(
         '--disk-debounce', metavar='X', type=int,
         default=DISK_DEBOUNCE_IN_MILLISECONDS,
-        help='interval in milliseconds to wait until the disk stops changing')
+        help='interval in milliseconds to wait until changes stop')
 
 
 def configure_serving_from(args):
