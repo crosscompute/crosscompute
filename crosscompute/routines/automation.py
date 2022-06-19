@@ -52,7 +52,9 @@ class DiskAutomation(Automation):
             instance._initialize_from_path(path_or_folder)
         return instance
 
-    def run(self):
+    def run(
+            self,
+            engine=None):
         recurring_definitions = []
         for automation_definition in self.definitions:
             run_automation(automation_definition)
@@ -78,7 +80,8 @@ class DiskAutomation(Automation):
             allowed_origins=None,
             disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
             disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS,
-            automation_queue=None):
+            automation_queue=None,
+            engine=None):
         if automation_queue is None:
             automation_queue = Queue()
         with Manager() as manager:
@@ -140,15 +143,19 @@ class DiskAutomation(Automation):
         self.definitions = configuration.automation_definitions
 
 
-def work(automation_queue):
+def get_automation_engine(engine_name='unsafe'):
+    pass
+
+
+def work(automation_queue, run_batch):
     try:
         while automation_pack := automation_queue.get():
             automation_definition, batch_definition = automation_pack
             automation_definition.update_datasets()
             try:
-                _run_batch(
+                run_batch(
                     automation_definition, batch_definition,
-                    process_data=load_variable_data)
+                    load_variable_data)
             except CrossComputeError as e:
                 e.automation_definition = automation_definition
                 L.error(e)
@@ -156,16 +163,16 @@ def work(automation_queue):
         pass
 
 
-def run_automation(automation_definition):
+def run_automation(automation_definition, run_batch):
     ds = []
     batch_concurrency_name = automation_definition.batch_concurrency_name
     automation_definition.update_datasets()
     try:
         if batch_concurrency_name == 'single':
-            ds.extend(_run_automation_single(automation_definition))
+            ds.extend(_run_automation_single(automation_definition, run_batch))
         else:
             ds.extend(_run_automation_multiple(
-                automation_definition, batch_concurrency_name))
+                automation_definition, batch_concurrency_name, run_batch))
     except CrossComputeError as e:
         e.automation_definition = automation_definition
         L.error(e)
@@ -173,21 +180,19 @@ def run_automation(automation_definition):
     return ds
 
 
-def _run_automation_single(automation_definition):
+def _run_automation_single(automation_definition, run_batch):
     ds = []
-    batch_definitions = automation_definition.batch_definitions
-    process_data = load_variable_data
-    for batch_definition in batch_definitions:
-        ds.append(_run_batch(
-            automation_definition, batch_definition, process_data))
+    for batch_definition in automation_definition.batch_definitions:
+        ds.append(run_batch(
+            automation_definition, batch_definition, load_variable_data))
     return ds
 
 
-def _run_automation_multiple(automation_definition, batch_concurrency_name):
+def _run_automation_multiple(
+        automation_definition, batch_concurrency_name, run_batch):
     ds = []
     batch_definitions = automation_definition.batch_definitions
     script_definitions = automation_definition.script_definitions
-    process_data = load_variable_data
     with ThreadPoolExecutor() as executor:
         futures = []
         for script_definition in script_definitions:
@@ -203,8 +208,8 @@ def _run_automation_multiple(automation_definition, batch_concurrency_name):
         futures = []
         for batch_definition in batch_definitions:
             futures.append(executor.submit(
-                _run_batch, automation_definition, batch_definition,
-                process_data))
+                run_batch, automation_definition, batch_definition,
+                load_variable_data))
         for future in as_completed(futures):
             ds.append(future.result())
     return ds

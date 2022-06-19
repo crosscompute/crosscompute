@@ -67,11 +67,6 @@ def configure_argument_parser_for_launching(a):
     a.add_argument(
         '--print', dest='is_print_only', action='store_true',
         help='print only')
-    '''
-    a.add_argument(
-        '--debug', dest='is_debug_only', action='store_true',
-        help='debug only')
-    '''
 
 
 def get_launch_mode_from(args):
@@ -84,10 +79,6 @@ def get_launch_mode_from(args):
         launch_mode = 'serve'
     elif args.is_print_only:
         launch_mode = 'print'
-    '''
-    elif args.is_debug_only:
-        launch_mode = 'debug'
-    '''
     return launch_mode
 
 

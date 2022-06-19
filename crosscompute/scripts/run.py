@@ -3,7 +3,9 @@ from logging import getLogger
 
 from crosscompute.exceptions import (
     CrossComputeError)
-from crosscompute.routines.automation import DiskAutomation
+from crosscompute.routines.automation import (
+    DiskAutomation,
+    get_automation_engine)
 from crosscompute.routines.log import (
     configure_argument_parser_for_logging,
     configure_logging_from)
@@ -30,23 +32,29 @@ def do(arguments=None):
 def configure_argument_parser_for_running(a):
     a.add_argument(
         '--engine', metavar='X',
-        default='raw',
+        default='unsafe', choices={'unsafe', 'podman'},
         help='specify engine used to run scripts')
 
 
 def configure_running_from(args):
-    engine = args.engine
-    if engine == 'raw':
-        L.warning('engine=raw is unsafe; use engine=podman for untrusted code')
+    engine_name = args.engine
+    if engine_name == 'unsafe':
+        L.warning(
+            'using engine=unsafe; use engine=podman for untrusted code')
 
 
 def run_with(automation, args):
-    return run(automation)
+    return run(
+        automation,
+        engine_name=args.engine)
 
 
-def run(automation):
+def run(
+        automation,
+        engine_name='unsafe'):
+    automation_engine = get_automation_engine(engine_name)
     try:
-        automation.run()
+        automation_engine.run(automation)
     except CrossComputeError as e:
         L.error(e)
     except KeyboardInterrupt:

@@ -36,6 +36,7 @@ def do(arguments=None):
     try:
         configure_logging_from(args)
         configure_serving_from(args)
+        configure_running_from(args)
         automation = DiskAutomation.load(args.path_or_folder)
         print_with(automation, args)
     except CrossComputeError as e:

@@ -17,6 +17,9 @@ from crosscompute.routines.log import (
     configure_logging_from)
 from crosscompute.scripts.configure import (
     configure_argument_parser_for_configuring)
+from crosscompute.scripts.run import (
+    configure_argument_parser_for_running,
+    configure_running_from)
 
 
 def do(arguments=None):
@@ -24,10 +27,12 @@ def do(arguments=None):
     configure_argument_parser_for_logging(a)
     configure_argument_parser_for_configuring(a)
     configure_argument_parser_for_serving(a)
+    configure_argument_parser_for_running(a)
     args = a.parse_args(arguments)
     try:
         configure_logging_from(args)
         configure_serving_from(args)
+        configure_running_from(args)
         automation = DiskAutomation.load(args.path_or_folder)
     except CrossComputeError as e:
         L.error(e)
@@ -89,7 +94,8 @@ def serve_with(automation, args):
         root_uri=args.root_uri,
         allowed_origins=args.allowed_origins,
         disk_poll_in_milliseconds=args.disk_poll,
-        disk_debounce_in_milliseconds=args.disk_debounce)
+        disk_debounce_in_milliseconds=args.disk_debounce,
+        engine=args.engine)
 
 
 def serve(
@@ -102,7 +108,8 @@ def serve(
         root_uri='',
         allowed_origins=None,
         disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
-        disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS):
+        disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS,
+        engine=None):
     try:
         if with_browser and 'DISPLAY' in environ:
             L.info('opening browser; set --no-browser to disable')
@@ -115,7 +122,8 @@ def serve(
             root_uri=root_uri,
             allowed_origins=allowed_origins,
             disk_poll_in_milliseconds=disk_poll_in_milliseconds,
-            disk_debounce_in_milliseconds=disk_debounce_in_milliseconds)
+            disk_debounce_in_milliseconds=disk_debounce_in_milliseconds,
+            engine=engine)
     except CrossComputeError as e:
         L.error(e)
     except KeyboardInterrupt:
