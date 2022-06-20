@@ -52,24 +52,6 @@ class DiskAutomation(Automation):
             instance._initialize_from_path(path_or_folder)
         return instance
 
-    def run(
-            self,
-            engine=None):
-        recurring_definitions = []
-        for automation_definition in self.definitions:
-            run_automation(automation_definition)
-            if automation_definition.interval_timedelta:
-                recurring_definitions.append(automation_definition)
-        if not recurring_definitions:
-            return
-        while True:
-            for automation_definition in recurring_definitions:
-                last = automation_definition.interval_datetime
-                delta = automation_definition.interval_timedelta
-                if datetime.now() > last + delta:
-                    run_automation(automation_definition)
-            sleep(1)
-
     def serve(
             self,
             host=HOST,
@@ -143,8 +125,80 @@ class DiskAutomation(Automation):
         self.definitions = configuration.automation_definitions
 
 
-def get_automation_engine(engine_name='unsafe'):
-    pass
+class AbstractEngine():
+
+    def run_configuration(self, configuration):
+        recurring_definitions = []
+        for automation_definition in configuration.definitions:
+            run_automation(automation_definition, self.run_batch)
+            if automation_definition.interval_timedelta:
+                recurring_definitions.append(automation_definition)
+        if not recurring_definitions:
+            return
+        while True:
+            for automation_definition in recurring_definitions:
+                last = automation_definition.interval_datetime
+                delta = automation_definition.interval_timedelta
+                if datetime.now() > last + delta:
+                    run_automation(automation_definition, self.run_batch)
+            sleep(1)
+
+
+class UnsafeEngine(AbstractEngine):
+
+    def run_batch(self, automation_definition, batch_definition, process_data):
+        d = automation_definition
+        script_definitions = d.script_definitions
+        if not script_definitions:
+            return
+        reference_time = time()
+        batch_folder, custom_environment = _prepare_batch(d, batch_definition)
+        batch_identifier = ' '.join([d.name, d.version, str(batch_folder)])
+        L.info('%s running', batch_identifier)
+        mode_folder_by_name = {_ + '_folder': make_folder(
+            d.folder / batch_folder / _) for _ in MODE_NAMES}
+        script_environment = _prepare_script_environment(
+            mode_folder_by_name, custom_environment)
+        debug_folder = mode_folder_by_name['debug_folder']
+        o_path = debug_folder / 'stdout.txt'
+        e_path = debug_folder / 'stderr.txt'
+        try:
+            with open(o_path, 'wt') as o_file, open(e_path, 'w+t') as e_file:
+                for script_definition in script_definitions:
+                    return_code = _run_script(
+                        script_definition, mode_folder_by_name,
+                        script_environment, o_file, e_file)
+        except CrossComputeConfigurationError as e:
+            e.automation_definition = d
+            raise
+        except CrossComputeExecutionError as e:
+            e.automation_definition = d
+            return_code = e.code
+            L.error('%s failed: %s', batch_identifier, e)
+        else:
+            L.info('%s done', batch_identifier)
+        return _process_batch(d, batch_definition, [
+            'output', 'log', 'debug',
+        ], {'debug': {
+            'execution_time_in_seconds': time() - reference_time,
+            'return_code': return_code}}, process_data)
+
+
+class PodmanEngine(AbstractEngine):
+
+    def run_batch(self, automation_definition, batch_definition, process_data):
+        print('hey')
+
+
+def get_script_engine(engine_name='unsafe'):
+    try:
+        ScriptEngine = {
+            'unsafe': UnsafeEngine,
+            'podman': PodmanEngine,
+        }[engine_name]
+    except KeyError:
+        raise CrossComputeExecutionError(f'unsupported engine "{engine_name}"')
+    return ScriptEngine()
 
 
 def work(automation_queue, run_batch):
@@ -213,43 +267,6 @@ def _run_automation_multiple(
         for future in as_completed(futures):
             ds.append(future.result())
     return ds
-
-
-def _run_batch(automation_definition, batch_definition, process_data):
-    d = automation_definition
-    script_definitions = d.script_definitions
-    if not script_definitions:
-        return
-    reference_time = time()
-    batch_folder, custom_environment = _prepare_batch(d, batch_definition)
-    batch_identifier = ' '.join([d.name, d.version, str(batch_folder)])
-    L.info('%s running', batch_identifier)
-    mode_folder_by_name = {_ + '_folder': make_folder(
-        d.folder / batch_folder / _) for _ in MODE_NAMES}
-    script_environment = _prepare_script_environment(
-        mode_folder_by_name, custom_environment)
-    debug_folder = mode_folder_by_name['debug_folder']
-    o_path, e_path = debug_folder / 'stdout.txt', debug_folder / 'stderr.txt'
-    try:
-        with open(o_path, 'wt') as o_file, open(e_path, 'w+t') as e_file:
-            for script_definition in script_definitions:
-                return_code = _run_script(
-                    script_definition, mode_folder_by_name,
-                    script_environment, o_file, e_file)
-    except CrossComputeConfigurationError as e:
-        e.automation_definition = d
-        raise
-    except CrossComputeExecutionError as e:
-        e.automation_definition = d
-        return_code = e.code
-        L.error('%s failed: %s', batch_identifier, e)
-    else:
-        L.info('%s done', batch_identifier)
-    return _process_batch(d, batch_definition, [
-        'output', 'log', 'debug',
-    ], {'debug': {
-        'execution_time_in_seconds': time() - reference_time,
-        'return_code': return_code}}, process_data)
 
 
 def _run_script(

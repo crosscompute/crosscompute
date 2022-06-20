@@ -5,7 +5,7 @@ from crosscompute.exceptions import (
     CrossComputeError)
 from crosscompute.routines.automation import (
     DiskAutomation,
-    get_automation_engine)
+    get_script_engine)
 from crosscompute.routines.log import (
     configure_argument_parser_for_logging,
     configure_logging_from)
@@ -52,9 +52,9 @@ def run_with(automation, args):
 def run(
         automation,
         engine_name='unsafe'):
-    automation_engine = get_automation_engine(engine_name)
+    script_engine = get_script_engine(engine_name)
     try:
-        automation_engine.run(automation)
+        script_engine.run_configuration(automation)
     except CrossComputeError as e:
         L.error(e)
     except KeyboardInterrupt:
