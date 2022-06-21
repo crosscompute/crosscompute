@@ -187,7 +187,7 @@ class UnsafeEngine(AbstractEngine):
 class PodmanEngine(AbstractEngine):
 
     def run_batch(self, automation_definition, batch_definition, process_data):
-        print('hey')
+        automation_folder = automation_definition.folder
 
 
 def get_script_engine(engine_name='unsafe'):
@@ -384,6 +384,16 @@ def _process_batch(
                 mode_folder / 'variables.dictionary', extra_data_by_id)
             variable_data_by_id.update(extra_data_by_id)
     return variable_data_by_id_by_mode_name
+
+
+CONTAINER_IGNORE_TEXT = '''\
+.containerfile
+.containerignore
+.gitignore
+.ipynb_checkpoints
+batches/
+runs/
+tests/'''
 
 
 L = getLogger(__name__)
