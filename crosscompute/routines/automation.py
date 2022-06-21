@@ -4,6 +4,7 @@ import subprocess
 from concurrent.futures import (
     ProcessPoolExecutor, ThreadPoolExecutor, as_completed)
 from datetime import datetime
+from jinja2 import Template
 from logging import getLogger
 from multiprocessing import Queue, Manager
 from os import environ, getenv
@@ -187,7 +188,60 @@ class UnsafeEngine(AbstractEngine):
 class PodmanEngine(AbstractEngine):
 
     def run_batch(self, automation_definition, batch_definition, process_data):
+        # TODO: Get base_image_name from container_definition
+        # TODO: Prepare batch folder
+        # TODO: Get batch folder from batch_definition
+        # TODO: Store execution_time_in_seconds
+        # TODO: Render log information
+        # TODO: Pass script environment variables
+        # TODO: Catch case when script command is not found
+        # TODO: Catch case when script command has error return code
+        # TODO: Process batch
+        # TODO: Add container package installation to .run.sh
+
         automation_folder = automation_definition.folder
+
+        # container_definition = automation_definition.container_definition
+        # base_image_name = container_definition.image_name
+        base_image_name = automation_definition['environment']['container'][
+            'image']
+        (automation_folder / CONTAINER_FILE_NAME).open('wt').write(
+            CONTAINER_FILE_TEXT.render(base_image_name=base_image_name))
+
+        (automation_folder / '.containerignore').open('wt').write(
+            CONTAINER_IGNORE_TEXT)
+
+        mode_folder_by_name = {
+            _ + '_folder': 'runs/next/' + _ for _ in MODE_NAMES}
+        command_texts = [
+            _.get_command_string().format(**mode_folder_by_name)
+            for _ in automation_definition.script_definitions]
+        bash_script_text = '\n'.join([
+            _ + CONTAINER_PIPE_TEXT for _ in command_texts])
+        (automation_folder / '.run.sh').open('wt').write(bash_script_text)
+
+        automation_slug = automation_definition.slug
+        automation_version = automation_definition.version
+        image_name = f'{automation_slug}:{automation_version}'
+        subprocess.run([
+            'podman', 'build', '-t', image_name, '-f', CONTAINER_FILE_NAME,
+        ], cwd=automation_folder)
+        process = subprocess.run([
+            'podman', 'run', '-d', image_name,
+        ], capture_output=True)
+        container_id = process.stdout.decode().strip()
+        subprocess.run([
+            'podman', 'cp', 'runs/2-3/input', container_id + ':runs/next/',
+        ], cwd=automation_folder)
+        subprocess.run([
+            'podman', 'exec', container_id, 'bash', '.run.sh',
+        ], cwd=automation_folder)
+        subprocess.run([
+            'podman', 'cp', container_id + ':runs/next/.', 'runs/2-3',
+        ], cwd=automation_folder)
+        subprocess.run(['podman', 'kill', container_id])
+
+        return {}
 
 
 def get_script_engine(engine_name='unsafe'):
@@ -394,6 +448,18 @@ CONTAINER_IGNORE_TEXT = '''\
 batches/
 runs/
 tests/'''
+CONTAINER_FILE_NAME = '.containerfile'
+CONTAINER_FILE_TEXT = Template('''\
+FROM {{ base_image_name }}
+RUN useradd user
+USER user
+WORKDIR /home/user
+COPY --chown=user:user . .
+RUN mkdir runs/next/input runs/next/log runs/next/debug runs/next/output -p
+CMD ["sleep", "infinity"]''')
+CONTAINER_PIPE_TEXT = (
+    ' 1>>runs/next/debug/stdout.txt '
+    ' 2>>runs/next/debug/stderr.txt')
 
 
 L = getLogger(__name__)

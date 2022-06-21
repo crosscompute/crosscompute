@@ -171,6 +171,13 @@ version: 0.0.0
 # environment configuration
 # environment:
 
+  # container configuration
+  # container:
+  #   image: fedora
+  #   packages:
+  #     - id: chromium
+  #       manager: dnf
+
   # environment variables
   # - id of the environment variable to make available to your script (required)
   # variables:

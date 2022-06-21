@@ -510,6 +510,7 @@ def validate_environment(configuration):
     return {
         'environment_variable_ids': environment_variable_ids,
         'batch_concurrency_name': batch_concurrency_name,
+        'container_definition': {},
         'interval_timedelta': interval_timedelta,
     }
 
