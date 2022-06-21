@@ -171,14 +171,15 @@ version: 0.0.0
 # environment configuration
 # environment:
 
-  # container configuration
-  # container:
-  #   image: fedora
-  #   packages:
-  #     - id: chromium
-  #       manager: dnf
+  # image to use to initialize your container
+  # image: python
 
-  # environment variables
+  # packages needed by your scripts
+  # packages:
+  #   - id: chromium
+  #     manager: apt
+
+  # environment variables needed by your scripts
   # - id of the environment variable to make available to your script (required)
   # variables:
   #   - id: GOOGLE_KEY

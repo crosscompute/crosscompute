@@ -7,7 +7,7 @@ from pathlib import Path
 class Error(IntEnum):
 
     CONFIGURATION_NOT_FOUND = -100
-    COMMAND_NOT_FOUND = -10
+    COMMAND_NOT_RUNNABLE = -10
 
 
 PACKAGE_FOLDER = Path(__file__).parent

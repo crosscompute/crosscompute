@@ -144,73 +144,78 @@ class AbstractEngine():
                     run_automation(automation_definition, self.run_batch)
             sleep(1)
 
+    def run_batch(self, automation_definition, batch_definition, process_data):
+        if not automation_definition.script_definitions:
+            return
+        reference_time = time()
+        batch_folder, custom_environment = _prepare_batch(
+            automation_definition, batch_definition)
+        batch_identifier = ' '.join([
+            automation_definition.name,
+            automation_definition.version,
+            str(batch_folder)])
+        L.info('%s running', batch_identifier)
+        try:
+            return_code = self.run(
+                automation_definition, batch_folder, custom_environment,
+                process_data)
+        except CrossComputeConfigurationError as e:
+            e.automation_definition = automation_definition
+            raise
+        except CrossComputeExecutionError as e:
+            e.automation_definition = automation_definition
+            return_code = e.code
+            L.error('%s failed: %s', batch_identifier, e)
+        else:
+            L.info('%s done', batch_identifier)
+        return _process_batch(automation_definition, batch_definition, [
+            'output', 'log', 'debug',
+        ], {
+            'debug': {
+                'execution_time_in_seconds': time() - reference_time,
+                'return_code': return_code,
+            },
+        }, process_data)
+
 
 class UnsafeEngine(AbstractEngine):
 
-    def run_batch(self, automation_definition, batch_definition, process_data):
-        d = automation_definition
-        script_definitions = d.script_definitions
-        if not script_definitions:
-            return
-        reference_time = time()
-        batch_folder, custom_environment = _prepare_batch(d, batch_definition)
-        batch_identifier = ' '.join([d.name, d.version, str(batch_folder)])
-        L.info('%s running', batch_identifier)
+    def run(
+            self, automation_definition, batch_folder, custom_environment,
+            process_data):
+        automation_folder = automation_definition.folder
         mode_folder_by_name = {_ + '_folder': make_folder(
-            d.folder / batch_folder / _) for _ in MODE_NAMES}
+            automation_folder / batch_folder / _
+        ) for _ in MODE_NAMES}
         script_environment = _prepare_script_environment(
             mode_folder_by_name, custom_environment)
         debug_folder = mode_folder_by_name['debug_folder']
         o_path = debug_folder / 'stdout.txt'
         e_path = debug_folder / 'stderr.txt'
-        try:
-            with open(o_path, 'wt') as o_file, open(e_path, 'w+t') as e_file:
-                for script_definition in script_definitions:
-                    return_code = _run_script(
-                        script_definition, mode_folder_by_name,
-                        script_environment, o_file, e_file)
-        except CrossComputeConfigurationError as e:
-            e.automation_definition = d
-            raise
-        except CrossComputeExecutionError as e:
-            e.automation_definition = d
-            return_code = e.code
-            L.error('%s failed: %s', batch_identifier, e)
-        else:
-            L.info('%s done', batch_identifier)
-        return _process_batch(d, batch_definition, [
-            'output', 'log', 'debug',
-        ], {'debug': {
-            'execution_time_in_seconds': time() - reference_time,
-            'return_code': return_code}}, process_data)
+        with open(o_path, 'wt') as o_file, open(e_path, 'w+t') as e_file:
+            for script_definition in automation_definition.script_definitions:
+                return_code = _run_script(
+                    script_definition, mode_folder_by_name,
+                    script_environment, o_file, e_file)
+        return return_code
 
 
 class PodmanEngine(AbstractEngine):
 
-    def run_batch(self, automation_definition, batch_definition, process_data):
-        # TODO: Get base_image_name from container_definition
-        # TODO: Prepare batch folder
-        # TODO: Get batch folder from batch_definition
-        # TODO: Store execution_time_in_seconds
-        # TODO: Render log information
-        # TODO: Pass script environment variables
+    def run(
+            self, automation_definition, batch_folder, custom_environment,
+            process_data):
         # TODO: Catch case when script command is not found
         # TODO: Catch case when script command has error return code
-        # TODO: Process batch
+        # TODO: Get return code
+        # TODO: Pass script environment variables
         # TODO: Add container package installation to .run.sh
-
         automation_folder = automation_definition.folder
-
-        # container_definition = automation_definition.container_definition
-        # base_image_name = container_definition.image_name
-        base_image_name = automation_definition['environment']['container'][
-            'image']
+        parent_image_name = automation_definition.parent_image_name
         (automation_folder / CONTAINER_FILE_NAME).open('wt').write(
-            CONTAINER_FILE_TEXT.render(base_image_name=base_image_name))
-
+            CONTAINER_FILE_TEXT.render(parent_image_name=parent_image_name))
         (automation_folder / '.containerignore').open('wt').write(
             CONTAINER_IGNORE_TEXT)
-
         mode_folder_by_name = {
             _ + '_folder': 'runs/next/' + _ for _ in MODE_NAMES}
         command_texts = [
@@ -219,7 +224,6 @@ class PodmanEngine(AbstractEngine):
         bash_script_text = '\n'.join([
             _ + CONTAINER_PIPE_TEXT for _ in command_texts])
         (automation_folder / '.run.sh').open('wt').write(bash_script_text)
-
         automation_slug = automation_definition.slug
         automation_version = automation_definition.version
         image_name = f'{automation_slug}:{automation_version}'
@@ -230,18 +234,19 @@ class PodmanEngine(AbstractEngine):
             'podman', 'run', '-d', image_name,
         ], capture_output=True)
         container_id = process.stdout.decode().strip()
+        container_batch_folder = container_id + ':runs/next/'
         subprocess.run([
-            'podman', 'cp', 'runs/2-3/input', container_id + ':runs/next/',
+            'podman', 'cp', batch_folder / 'input', container_batch_folder,
         ], cwd=automation_folder)
-        subprocess.run([
+        process = subprocess.run([
             'podman', 'exec', container_id, 'bash', '.run.sh',
         ], cwd=automation_folder)
+        return_code = process.returncode
+        # if return_code == 127:
         subprocess.run([
-            'podman', 'cp', container_id + ':runs/next/.', 'runs/2-3',
+            'podman', 'cp', container_batch_folder + '.', batch_folder,
         ], cwd=automation_folder)
         subprocess.run(['podman', 'kill', container_id])
-
-        return {}
 
 
 def get_script_engine(engine_name='unsafe'):
@@ -351,7 +356,7 @@ def _run_command(
     except (IndexError, OSError):
         e = CrossComputeConfigurationError(
             f'could not run {shlex.quote(command_string)} in {command_folder}')
-        e.code = Error.COMMAND_NOT_FOUND
+        e.code = Error.COMMAND_NOT_RUNNABLE
         raise e
     except subprocess.CalledProcessError as e:
         e_file.seek(0)
@@ -450,7 +455,7 @@ runs/
 tests/'''
 CONTAINER_FILE_NAME = '.containerfile'
 CONTAINER_FILE_TEXT = Template('''\
-FROM {{ base_image_name }}
+FROM {{ parent_image_name }}
 RUN useradd user
 USER user
 WORKDIR /home/user

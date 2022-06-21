@@ -5,7 +5,7 @@ from configparser import ConfigParser
 from datetime import timedelta
 from logging import getLogger
 from os import environ, symlink
-from os.path import relpath, splitext
+from os.path import basename, relpath, splitext
 from pathlib import Path
 from string import Template
 from time import time
@@ -223,6 +223,14 @@ class ScriptDefinition(Definition):
             return
         self.command = command_string = f'python "{script_path}"'
         return command_string
+
+
+class PackageDefinition(Definition):
+
+    def _initialize(self, kwargs):
+        self._validation_functions = [
+            validate_package_identifiers,
+        ]
 
 
 class StyleDefinition(Definition):
@@ -492,6 +500,18 @@ def validate_batches(configuration):
 
 def validate_environment(configuration):
     environment_configuration = get_dictionary(configuration, 'environment')
+
+    parent_image_name = environment_configuration.get('image', 'python')
+    '''
+    if parent_image_name not in PARENT_IMAGE_NAMES:
+        raise CrossComputeConfigurationError(
+            f'"{parent_image_name}" image is not supported')
+    '''
+
+    package_definitions = [PackageDefinition(
+        _
+    ) for _ in get_dictionaries(environment_configuration, 'packages')]
+
     environment_variable_definitions = get_dictionaries(
         environment_configuration, 'variables')
     environment_variable_ids = get_environment_variable_ids(
@@ -508,9 +528,10 @@ def validate_environment(configuration):
     interval_text = environment_configuration.get('interval', '').strip()
     interval_timedelta = get_interval_timedelta(interval_text)
     return {
+        'parent_image_name': parent_image_name,
+        'package_definitions': package_definitions,
         'environment_variable_ids': environment_variable_ids,
         'batch_concurrency_name': batch_concurrency_name,
-        'container_definition': {},
         'interval_timedelta': interval_timedelta,
     }
 
@@ -658,10 +679,10 @@ def validate_variable_configuration(variable_dictionary):
 def validate_batch_identifiers(batch_dictionary):
     is_run = batch_dictionary.is_run
     try:
-        folder = Path(get_scalar_text(batch_dictionary, 'folder'))
+        folder = get_scalar_text(batch_dictionary, 'folder')
     except KeyError as e:
         raise CrossComputeConfigurationError(f'{e} required for each batch')
-    name = get_scalar_text(batch_dictionary, 'name', folder.name)
+    name = get_scalar_text(batch_dictionary, 'name', basename(folder))
     slug = get_scalar_text(batch_dictionary, 'slug', name)
     data_by_id = batch_dictionary.data_by_id
     if data_by_id and not is_run:
@@ -676,7 +697,7 @@ def validate_batch_identifiers(batch_dictionary):
             if 'path' in batch_configuration:
                 e.path = batch_configuration['path']
             raise
-    d = {'folder': folder, 'name': name, 'slug': slug}
+    d = {'folder': Path(folder), 'name': name, 'slug': slug}
     if data_by_id:
         for k, v in d.items():
             if k in batch_dictionary:
@@ -746,6 +767,21 @@ def validate_script_identifiers(script_dictionary):
         'folder': Path(folder),
         'path': path,
         'command': command,
+    }
+
+
+def validate_package_identifiers(package_dictionary):
+    try:
+        package_id = package_dictionary['id']
+        manager_name = package_dictionary['manager']
+    except KeyError as e:
+        raise CrossComputeConfigurationError(f'{e} required for each package')
+    if manager_name not in PACKAGE_MANAGER_NAMES:
+        raise CrossComputeConfigurationError(
+            f'"{manager_name}" manager is not supported')
+    return {
+        'id': package_id,
+        'manager_name': manager_name,
     }
 
 
@@ -1054,6 +1090,10 @@ def assert_unique_values(xs, message):
     for x, count in Counter(xs).items():
         if count > 1:
             raise CrossComputeConfigurationError(message.format(x=x))
+
+
+PACKAGE_MANAGER_NAMES = [
+]
 
 
 DESIGN_NAMES_BY_PAGE_ID = {

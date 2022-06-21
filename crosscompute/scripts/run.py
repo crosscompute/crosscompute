@@ -34,6 +34,12 @@ def configure_argument_parser_for_running(a):
         '--engine', metavar='X',
         default='unsafe', choices={'unsafe', 'podman'},
         help='specify engine used to run scripts')
+    '''
+    a.add_argument(
+        '--images', metavar='X', nargs='+', dest='allowed_images',
+        default=[],
+        help='specify allowed images')
+    '''
 
 
 def configure_running_from(args):
