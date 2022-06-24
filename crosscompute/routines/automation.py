@@ -145,11 +145,11 @@ class AbstractEngine():
             sleep(1)
 
     def run_batch(self, automation_definition, batch_definition, process_data):
-        if not automation_definition.script_definitions:
-            return
         reference_time = time()
         batch_folder, custom_environment = _prepare_batch(
             automation_definition, batch_definition)
+        if not automation_definition.script_definitions:
+            return
         batch_identifier = ' '.join([
             automation_definition.name,
             automation_definition.version,
@@ -241,7 +241,7 @@ class PodmanEngine(AbstractEngine):
         process = subprocess.run([
             'podman', 'exec', container_id, 'bash', '.run.sh',
         ], cwd=automation_folder)
-        return_code = process.returncode
+        # return_code = process.returncode
         # if return_code == 127:
         subprocess.run([
             'podman', 'cp', container_batch_folder + '.', batch_folder,
