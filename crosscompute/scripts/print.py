@@ -9,7 +9,8 @@ from crosscompute.exceptions import (
     CrossComputeError)
 from crosscompute.macros.process import StoppableProcess
 from crosscompute.macros.web import find_open_port
-from crosscompute.routines.automation import DiskAutomation, run_automation
+from crosscompute.routines.automation import (
+    DiskAutomation, get_script_engine, run_automation)
 from crosscompute.routines.log import (
     configure_argument_parser_for_logging,
     configure_logging_from)
@@ -36,7 +37,6 @@ def do(arguments=None):
     try:
         configure_logging_from(args)
         configure_serving_from(args)
-        configure_running_from(args)
         automation = DiskAutomation.load(args.path_or_folder)
         print_with(automation, args)
     except CrossComputeError as e:
@@ -59,17 +59,19 @@ def print_with(automation, args):
         raise CrossComputeError(e)
     timestamp = get_timestamp(template=LONGSTAMP_TEMPLATE)
     print_packs = []
+    engine = get_script_engine()
     for automation_definition in get_selected_automation_definitions(
             automation.definitions):
-        run_automation(automation_definition)
+        # TODO: Consider using ds returned from run_automation
+        run_automation(automation_definition, engine.run_batch)
         for print_definition in automation_definition.print_definitions:
             batch_dictionaries = get_batch_dictionaries(
                 automation_definition, print_definition, timestamp)
             print_packs.append((print_definition, batch_dictionaries))
     args.port = port
     args.with_browser = False
-    args.is_static = True
-    args.is_production = True
+    args.with_refresh = False
+    args.with_restart = False
     server_process = StoppableProcess(
         name='serve', target=serve_with, args=(automation, args))
     server_process.start()

@@ -1,10 +1,12 @@
 # TODO: Watch multiple folders if not all under parent folder
 import shlex
+import shutil
 import subprocess
 from collections import defaultdict
 from concurrent.futures import (
     ProcessPoolExecutor, ThreadPoolExecutor, as_completed)
 from datetime import datetime
+from functools import partial
 from jinja2 import Template
 from logging import getLogger
 from multiprocessing import Queue, Manager
@@ -54,40 +56,46 @@ class DiskAutomation(Automation):
             instance._initialize_from_path(path_or_folder)
         return instance
 
+    def run(self):
+        engine = get_script_engine()
+        engine.run_configuration(self)
+
     def serve(
             self,
             host=HOST,
             port=PORT,
-            is_static=False,
-            is_production=False,
+            with_refresh=False,
+            with_restart=False,
             root_uri='',
             allowed_origins=None,
             disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
             disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS,
             automation_queue=None,
-            engine=None):
+            engine_name=None):
         if automation_queue is None:
             automation_queue = Queue()
+        script_engine = get_script_engine(engine_name)
         with Manager() as manager:
             server_options = {
                 'host': host,
                 'port': port,
-                'is_static': is_static,
-                'is_production': is_production,
+                'with_refresh': with_refresh,
+                'with_restart': with_restart,
                 'root_uri': root_uri,
                 'allowed_origins': allowed_origins,
                 'infos_by_timestamp': manager.dict(),
             }
+            work = partial(_work, run_batch=script_engine.run_batch)
             server = DiskServer(work, automation_queue, server_options)
             configuration = self.configuration
-            if is_static and is_production:
-                server.run(configuration)
-                return
-            server.watch(
-                configuration,
-                disk_poll_in_milliseconds,
-                disk_debounce_in_milliseconds,
-                self._reload)
+            if not with_refresh and not with_restart:
+                server.serve(configuration)
+            else:
+                server.watch(
+                    configuration,
+                    disk_poll_in_milliseconds,
+                    disk_debounce_in_milliseconds,
+                    self._reload)
 
     def _reload(self):
         path = self.path
@@ -128,6 +136,9 @@ class DiskAutomation(Automation):
 
 
 class AbstractEngine():
+
+    def __init__(self, with_rebuild=True):
+        self.with_rebuild = with_rebuild
 
     def run_configuration(self, configuration):
         recurring_definitions = []
@@ -213,7 +224,12 @@ class PodmanEngine(AbstractEngine):
         return return_code
 
 
-def get_script_engine(engine_name='unsafe'):
+def get_script_engine(engine_name=None, with_rebuild=True):
+    if not engine_name:
+        engine_name = 'podman' if shutil.which('podman') else 'unsafe'
+    if engine_name == 'unsafe':
+        L.warning(
+            'using engine=unsafe; use engine=podman for untrusted code')
     try:
         ScriptEngine = {
             'unsafe': UnsafeEngine,
@@ -221,35 +237,22 @@ def get_script_engine(engine_name='unsafe'):
         }[engine_name]
     except KeyError:
         raise CrossComputeExecutionError(f'unsupported engine "{engine_name}"')
-    return ScriptEngine()
+    return ScriptEngine(
+        with_rebuild=with_rebuild)
 
 
-def work(automation_queue, run_batch):
-    try:
-        while automation_pack := automation_queue.get():
-            automation_definition, batch_definition = automation_pack
-            automation_definition.update_datasets()
-            try:
-                run_batch(
-                    automation_definition, batch_definition,
-                    load_variable_data)
-            except CrossComputeError as e:
-                e.automation_definition = automation_definition
-                L.error(e)
-    except KeyboardInterrupt:
-        pass
-
-
-def run_automation(automation_definition, run_batch):
+def run_automation(automation_definition, run_batch, with_rebuild=True):
     ds = []
-    batch_concurrency_name = automation_definition.batch_concurrency_name
+    concurrency_name = automation_definition.batch_concurrency_name
     automation_definition.update_datasets()
     try:
-        if batch_concurrency_name == 'single':
-            ds.extend(_run_automation_single(automation_definition, run_batch))
+        if concurrency_name == 'single':
+            ds.extend(_run_automation_single(
+                automation_definition, run_batch, with_rebuild))
         else:
             ds.extend(_run_automation_multiple(
-                automation_definition, batch_concurrency_name, run_batch))
+                automation_definition, run_batch, with_rebuild,
+                concurrency_name))
     except CrossComputeError as e:
         e.automation_definition = automation_definition
         L.error(e)
@@ -257,16 +260,19 @@ def run_automation(automation_definition, run_batch):
     return ds
 
 
-def _run_automation_single(automation_definition, run_batch):
+def _run_automation_single(automation_definition, run_batch, with_rebuild):
     ds = []
     for batch_definition in automation_definition.batch_definitions:
+        # !!!
+        if not with_rebuild and batch_definition.get_return_code() is not None:
+            continue
         ds.append(run_batch(
             automation_definition, batch_definition, load_variable_data))
     return ds
 
 
 def _run_automation_multiple(
-        automation_definition, batch_concurrency_name, run_batch):
+        automation_definition, run_batch, with_rebuild, concurrency_name):
     ds = []
     batch_definitions = automation_definition.batch_definitions
     script_definitions = automation_definition.script_definitions
@@ -277,7 +283,7 @@ def _run_automation_multiple(
                 script_definition.get_command_string))
         for future in as_completed(futures):
             future.result()
-    if batch_concurrency_name == 'process':
+    if concurrency_name == 'process':
         BatchExecutor = ProcessPoolExecutor
     else:
         BatchExecutor = ThreadPoolExecutor
@@ -331,6 +337,7 @@ def _run_command(
 
 
 def _run_podman(automation_folder, batch_folder, image_name):
+    # TODO: skip build if no rebuild
     subprocess.run([
         'podman', 'build', '-t', image_name, '-f', CONTAINER_FILE_NAME,
     ], cwd=automation_folder)
@@ -365,6 +372,22 @@ def _run_podman(automation_folder, batch_folder, image_name):
         error.code = return_code
         raise error
     return return_code
+
+
+def _work(automation_queue, run_batch):
+    try:
+        while automation_pack := automation_queue.get():
+            automation_definition, batch_definition = automation_pack
+            automation_definition.update_datasets()
+            try:
+                run_batch(
+                    automation_definition, batch_definition,
+                    load_variable_data)
+            except CrossComputeError as e:
+                e.automation_definition = automation_definition
+                L.error(e)
+    except KeyboardInterrupt:
+        pass
 
 
 def _prepare_batch(automation_definition, batch_definition):

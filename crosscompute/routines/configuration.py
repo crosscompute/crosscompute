@@ -171,6 +171,13 @@ class BatchDefinition(Definition):
             validate_batch_configuration,
         ]
 
+    def get_return_code(self):
+        path = self.folder / 'debug' / 'variables.dictionary'
+        if not path.exists():
+            return
+        d = json.load(path.open('rt'))
+        return d['return_code']
+
 
 class DatasetDefinition(Definition):
 
@@ -828,7 +835,7 @@ def validate_token_identifiers(token_dictionary):
         yaml = YAML()
         d = yaml.load(token_path)
     elif suffix == '.json':
-        d = json.load(token_path)
+        d = json.load(token_path.open('rt'))
     else:
         raise CrossComputeConfigurationError(
             f'{suffix} not supported for token paths')

@@ -18,8 +18,7 @@ from crosscompute.routines.log import (
 from crosscompute.scripts.configure import (
     configure_argument_parser_for_configuring)
 from crosscompute.scripts.run import (
-    configure_argument_parser_for_running,
-    configure_running_from)
+    configure_argument_parser_for_running)
 
 
 def do(arguments=None):
@@ -32,7 +31,6 @@ def do(arguments=None):
     try:
         configure_logging_from(args)
         configure_serving_from(args)
-        configure_running_from(args)
         automation = DiskAutomation.load(args.path_or_folder)
     except CrossComputeError as e:
         L.error(e)
@@ -54,11 +52,11 @@ def configure_argument_parser_for_serving(a):
         '--no-browser', dest='with_browser', action='store_false',
         help='do not open browser')
     a.add_argument(
-        '--static', dest='is_static', action='store_true',
-        help='disable page update on file change')
+        '--no-refresh', dest='with_refresh', action='store_false',
+        help='do not refresh page on file change')
     a.add_argument(
-        '--production', dest='is_production', action='store_true',
-        help='disable server restart on file change')
+        '--no-restart', dest='with_restart', action='store_false',
+        help='do not restart server on file change')
     a.add_argument(
         '--root-uri', metavar='X',
         default='',
@@ -89,27 +87,27 @@ def serve_with(automation, args):
         host=args.host,
         port=args.port,
         with_browser=args.with_browser,
-        is_static=args.is_static,
-        is_production=args.is_production,
+        with_refresh=args.with_refresh,
+        with_restart=args.with_restart,
         root_uri=args.root_uri,
         allowed_origins=args.allowed_origins,
         disk_poll_in_milliseconds=args.disk_poll,
         disk_debounce_in_milliseconds=args.disk_debounce,
-        engine=args.engine)
+        engine_name=args.engine_name)
 
 
 def serve(
         automation,
         host=HOST,
         port=PORT,
-        with_browser=True,
-        is_static=False,
-        is_production=False,
+        with_browser=False,
+        with_refresh=False,
+        with_restart=False,
         root_uri='',
         allowed_origins=None,
         disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
         disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS,
-        engine=None):
+        engine_name=None):
     try:
         if with_browser and 'DISPLAY' in environ:
             L.info('opening browser; set --no-browser to disable')
@@ -117,13 +115,13 @@ def serve(
         automation.serve(
             host=host,
             port=port,
-            is_static=is_static,
-            is_production=is_production,
+            with_refresh=with_refresh,
+            with_restart=with_restart,
             root_uri=root_uri,
             allowed_origins=allowed_origins,
             disk_poll_in_milliseconds=disk_poll_in_milliseconds,
             disk_debounce_in_milliseconds=disk_debounce_in_milliseconds,
-            engine=engine)
+            engine_name=engine_name)
     except CrossComputeError as e:
         L.error(e)
     except KeyboardInterrupt:

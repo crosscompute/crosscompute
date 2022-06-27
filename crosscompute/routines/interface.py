@@ -41,7 +41,7 @@ class Server(ABC):
     def __init__(self, configuration, work=None, queue=None, settings=None):
         pass
 
-    def run(self):
+    def serve(self):
         pass
 
     def watch(self):

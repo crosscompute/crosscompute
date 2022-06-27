@@ -39,13 +39,13 @@ class DiskServer(Server):
         self._queue = queue
         self._host = settings.get('host', HOST)
         self._port = settings.get('port', PORT)
-        self._is_static = settings.get('is_static', False)
-        self._is_production = settings.get('is_production', False)
+        self._with_refresh = settings.get('with_refresh', False)
+        self._with_restart = settings.get('with_restart', False)
         self._root_uri = settings.get('root_uri', '')
         self._allowed_origins = settings.get('allowed_origins')
         self._infos_by_timestamp = settings.get('infos_by_timestamp', {})
 
-    def run(self, configuration):
+    def serve(self, configuration):
         if L.getEffectiveLevel() > DEBUG:
             getLogger('waitress').setLevel(ERROR)
         worker_process = LoggableProcess(
@@ -59,8 +59,8 @@ class DiskServer(Server):
         app = _get_app(
             configuration,
             self._queue,
-            self._is_static,
-            self._is_production,
+            self._with_refresh,
+            self._with_restart,
             root_uri,
             self._allowed_origins,
             self._infos_by_timestamp)
@@ -82,7 +82,7 @@ class DiskServer(Server):
             reload):
         if L.getEffectiveLevel() > DEBUG:
             getLogger('watchgod.watcher').setLevel(ERROR)
-        server_process, info_by_path = self._run(configuration)
+        server_process, info_by_path = self._serve(configuration)
         automation_folder = configuration.folder
         for changes in watch(
                 automation_folder,
@@ -107,20 +107,20 @@ class DiskServer(Server):
                     L.error(e)
                     continue
                 server_process.stop()
-                server_process, info_by_path = self._run(configuration)
+                server_process, info_by_path = self._serve(configuration)
             if changed_infos:
                 self._infos_by_timestamp[time()] = changed_infos
 
-    def _run(self, configuration):
+    def _serve(self, configuration):
         server_process = StoppableProcess(
-            name='server', target=self.run, args=(configuration,))
+            name='server', target=self.serve, args=(configuration,))
         server_process.start()
         info_by_path = _get_info_by_path(configuration)
         return server_process, info_by_path
 
 
 def _get_app(
-        configuration, queue, is_static, is_production, root_uri,
+        configuration, queue, with_refresh, with_restart, root_uri,
         allowed_origins, infos_by_timestamp):
     server_timestamp = time()
     guard = _get_authorization_guard(configuration, TOKEN_LENGTH)
@@ -129,19 +129,19 @@ def _get_app(
         'jinja2.trim_blocks': True,
         'jinja2.lstrip_blocks': True,
     }
-    if not is_static and not is_production:
+    if with_refresh and with_restart:
         settings.update({'pyramid.reload_templates': True})
     with Configurator(settings=settings) as config:
         config.include('pyramid_jinja2')
         _configure_authorization_routes(config, guard)
         _configure_automation_routes(config, configuration, queue, guard)
-        if not is_static:
+        if with_refresh:
             _configure_mutation_routes(
                 config, server_timestamp, infos_by_timestamp)
         _configure_renderer_globals(
-            config, is_static, is_production, root_uri, server_timestamp,
+            config, with_refresh, with_restart, root_uri, server_timestamp,
             configuration)
-        _configure_cache_headers(config, is_production)
+        _configure_cache_headers(config, with_restart)
         _configure_allowed_origins(config, allowed_origins)
     return config.make_wsgi_app()
 
@@ -173,7 +173,7 @@ def _configure_mutation_routes(config, server_timestamp, infos_by_timestamp):
 
 
 def _configure_renderer_globals(
-        config, is_static, is_production, root_uri, server_timestamp,
+        config, with_refresh, with_restart, root_uri, server_timestamp,
         configuration):
     if configuration.template_path_by_id:
         config.add_jinja2_search_path(str(configuration.folder), prepend=True)
@@ -182,8 +182,7 @@ def _configure_renderer_globals(
         config.get_jinja2_environment().globals.update({
             'BASE_JINJA2': configuration.get_template_path('base'),
             'LIVE_JINJA2': configuration.get_template_path('live'),
-            'IS_STATIC': is_static,
-            'IS_PRODUCTION': is_production,
+            'WITH_REFRESH': with_refresh,
             'ROOT_URI': root_uri,
             'MAXIMUM_PING_INTERVAL': MAXIMUM_PING_INTERVAL_IN_SECONDS * 1000,
             'MINIMUM_PING_INTERVAL': MINIMUM_PING_INTERVAL_IN_SECONDS * 1000,
@@ -193,8 +192,8 @@ def _configure_renderer_globals(
     config.action(None, update_renderer_globals)
 
 
-def _configure_cache_headers(config, is_production):
-    if is_production:
+def _configure_cache_headers(config, with_restart):
+    if not with_restart:
         return
 
     def update_cache_headers(e):

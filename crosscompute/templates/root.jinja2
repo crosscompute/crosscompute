@@ -1,4 +1,4 @@
-{% extends BASE_JINJA2 if IS_STATIC else LIVE_JINJA2 %}
+{% extends LIVE_JINJA2 if WITH_REFRESH else BASE_JINJA2 %}
 
 {% block main_html -%}
 <h1>{{ title_text }}</h1>

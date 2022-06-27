@@ -21,7 +21,6 @@ def do(arguments=None):
     args = a.parse_args(arguments)
     try:
         configure_logging_from(args)
-        configure_running_from(args)
         automation = DiskAutomation.load(args.path_or_folder)
     except CrossComputeError as e:
         L.error(e)
@@ -31,28 +30,18 @@ def do(arguments=None):
 
 def configure_argument_parser_for_running(a):
     a.add_argument(
-        '--engine', metavar='X',
-        default='unsafe', choices={'unsafe', 'podman'},
+        '--engine', metavar='X', dest='engine_name',
+        choices={'unsafe', 'podman'},
         help='specify engine used to run scripts')
-    '''
     a.add_argument(
-        '--images', metavar='X', nargs='+', dest='allowed_images',
-        default=[],
-        help='specify allowed images')
-    '''
-
-
-def configure_running_from(args):
-    engine_name = args.engine
-    if engine_name == 'unsafe':
-        L.warning(
-            'using engine=unsafe; use engine=podman for untrusted code')
+        '--no-rebuild', dest='with_rebuild', action='store_false',
+        help='do not rebuild batches and container images')
 
 
 def run_with(automation, args):
     return run(
         automation,
-        engine_name=args.engine)
+        engine_name=args.engine_name)
 
 
 def run(
