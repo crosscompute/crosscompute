@@ -165,7 +165,7 @@ class AbstractEngine():
         except CrossComputeExecutionError as e:
             e.automation_definition = automation_definition
             return_code = e.code
-            L.error('%s failed: %s', batch_identifier, e)
+            L.error('%s failed; %s', batch_identifier, e)
         else:
             L.info('%s done', batch_identifier)
         return _process_batch(automation_definition, batch_definition, [
@@ -210,6 +210,7 @@ class PodmanEngine(AbstractEngine):
         # TODO: Get return code
         # TODO: Pass script environment variables
         # TODO: Add container package installation to .run.sh
+        # TODO: Fit method in one screen
         automation_folder = automation_definition.folder
         parent_image_name = automation_definition.parent_image_name
         (automation_folder / CONTAINER_FILE_NAME).open('wt').write(
@@ -223,7 +224,8 @@ class PodmanEngine(AbstractEngine):
             for _ in automation_definition.script_definitions]
         bash_script_text = '\n'.join([
             _ + CONTAINER_PIPE_TEXT for _ in command_texts])
-        (automation_folder / '.run.sh').open('wt').write(bash_script_text)
+        (automation_folder / CONTAINER_SCRIPT_NAME).open('wt').write(
+            bash_script_text)
         automation_slug = automation_definition.slug
         automation_version = automation_definition.version
         image_name = f'{automation_slug}:{automation_version}'
@@ -239,14 +241,27 @@ class PodmanEngine(AbstractEngine):
             'podman', 'cp', batch_folder / 'input', container_batch_folder,
         ], cwd=automation_folder)
         process = subprocess.run([
-            'podman', 'exec', container_id, 'bash', '.run.sh',
+            'podman', 'exec', container_id, 'bash', CONTAINER_SCRIPT_NAME,
         ], cwd=automation_folder)
-        # return_code = process.returncode
-        # if return_code == 127:
+        return_code = process.returncode
         subprocess.run([
             'podman', 'cp', container_batch_folder + '.', batch_folder,
         ], cwd=automation_folder)
         subprocess.run(['podman', 'kill', container_id])
+        if return_code in [126, 127]:
+            error_text = (
+                'permission denied' if return_code == 126 else 'not found')
+            error = CrossComputeConfigurationError(
+                f'command {error_text} in container; please check script '
+                'definitions')
+            error.code = Error.COMMAND_NOT_RUNNABLE
+            raise error
+        elif return_code > 0:
+            error_text = (batch_folder / 'debug' / 'stderr.txt').read_text()
+            error = CrossComputeExecutionError(error_text.rstrip())
+            error.code = return_code
+            raise error
+        return return_code
 
 
 def get_script_engine(engine_name='unsafe'):
@@ -354,10 +369,10 @@ def _run_command(
             stdout=o_file,
             stderr=e_file)
     except (IndexError, OSError):
-        e = CrossComputeConfigurationError(
+        error = CrossComputeConfigurationError(
             f'could not run {shlex.quote(command_string)} in {command_folder}')
-        e.code = Error.COMMAND_NOT_RUNNABLE
-        raise e
+        error.code = Error.COMMAND_NOT_RUNNABLE
+        raise error
     except subprocess.CalledProcessError as e:
         e_file.seek(0)
         error = CrossComputeExecutionError(e_file.read().rstrip())
@@ -463,8 +478,9 @@ COPY --chown=user:user . .
 RUN mkdir runs/next/input runs/next/log runs/next/debug runs/next/output -p
 CMD ["sleep", "infinity"]''')
 CONTAINER_PIPE_TEXT = (
-    ' 1>>runs/next/debug/stdout.txt '
+    ' 1>>runs/next/debug/stdout.txt'
     ' 2>>runs/next/debug/stderr.txt')
+CONTAINER_SCRIPT_NAME = '.run.sh'
 
 
 L = getLogger(__name__)
