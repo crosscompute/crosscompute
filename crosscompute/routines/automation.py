@@ -1,6 +1,7 @@
 # TODO: Watch multiple folders if not all under parent folder
 import shlex
 import subprocess
+from collections import defaultdict
 from concurrent.futures import (
     ProcessPoolExecutor, ThreadPoolExecutor, as_completed)
 from datetime import datetime
@@ -205,12 +206,12 @@ class PodmanEngine(AbstractEngine):
     def run(
             self, automation_definition, batch_folder, custom_environment,
             process_data):
-        # TODO: Add container package installation to .run.sh
         # TODO: Fit method in one screen
         automation_folder = automation_definition.folder
-        parent_image_name = automation_definition.parent_image_name
+        container_file_text = _prepare_container_file_text(
+            automation_definition)
         (automation_folder / CONTAINER_FILE_NAME).write_text(
-            CONTAINER_FILE_TEXT.render(parent_image_name=parent_image_name))
+            container_file_text)
         (automation_folder / '.containerignore').write_text(
             CONTAINER_IGNORE_TEXT)
         mode_folder_by_name = {
@@ -402,6 +403,36 @@ def _prepare_batch(automation_definition, batch_definition):
     return batch_folder, custom_environment
 
 
+def _prepare_container_file_text(automation_definition):
+    package_ids_by_manager_name = defaultdict(set)
+    for package_definition in automation_definition.package_definitions:
+        package_id = package_definition.id
+        manager_name = package_definition.manager_name
+        package_ids_by_manager_name[manager_name].add(package_id)
+    root_package_commands = []
+    user_package_commands = []
+    if 'apt' in package_ids_by_manager_name:
+        package_ids_string = ' '.join(package_ids_by_manager_name['apt'])
+        root_package_commands.append(
+            f'apt update && apt -y install {package_ids_string} && apt clean')
+    if 'dnf' in package_ids_by_manager_name:
+        package_ids_string = ' '.join(package_ids_by_manager_name['dnf'])
+        root_package_commands.append(
+            f'dnf -y install {package_ids_string} && dnf clean all')
+    if 'npm' in package_ids_by_manager_name:
+        package_ids_string = ' '.join(package_ids_by_manager_name['npm'])
+        user_package_commands.append(
+            f'npm install {package_ids_string} && npm cache clean --force')
+    if 'pip' in package_ids_by_manager_name:
+        package_ids_string = ' '.join(package_ids_by_manager_name['pip'])
+        user_package_commands.append(
+            f'pip install {package_ids_string} --user && pip cache purge')
+    return CONTAINER_FILE_TEXT.render(
+        root_package_commands=root_package_commands,
+        user_package_commands=user_package_commands,
+        parent_image_name=automation_definition.parent_image_name)
+
+
 def _prepare_script_environment(
         mode_folder_by_name, custom_environment, with_path=False):
     script_environment = {
@@ -475,12 +506,20 @@ tests/'''
 CONTAINER_FILE_NAME = '.containerfile'
 CONTAINER_FILE_TEXT = Template('''\
 FROM {{ parent_image_name }}
-RUN useradd user
+RUN \
+{% if root_package_commands %}
+{{ ' && '.join(root_package_commands) }} && \
+{% endif %}
+useradd user
 USER user
 WORKDIR /home/user
 COPY --chown=user:user . .
-RUN mkdir runs/next/input runs/next/log runs/next/debug runs/next/output -p
-CMD ["sleep", "infinity"]''')
+RUN \
+{% if user_package_commands %}
+{{ ' && '.join(user_package_commands) }} && \
+{% endif %}
+mkdir runs/next/input runs/next/log runs/next/debug runs/next/output -p
+CMD ["sleep", "infinity"]''', trim_blocks=True)
 CONTAINER_PIPE_TEXT = (
     ' 1>>runs/next/debug/stdout.txt'
     ' 2>>runs/next/debug/stderr.txt')

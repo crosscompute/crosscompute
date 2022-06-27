@@ -502,12 +502,6 @@ def validate_environment(configuration):
     environment_configuration = get_dictionary(configuration, 'environment')
 
     parent_image_name = environment_configuration.get('image', 'python')
-    '''
-    if parent_image_name not in PARENT_IMAGE_NAMES:
-        raise CrossComputeConfigurationError(
-            f'"{parent_image_name}" image is not supported')
-    '''
-
     package_definitions = [PackageDefinition(
         _
     ) for _ in get_dictionaries(environment_configuration, 'packages')]
@@ -1093,6 +1087,10 @@ def assert_unique_values(xs, message):
 
 
 PACKAGE_MANAGER_NAMES = [
+    'apt',
+    'dnf',
+    'npm',
+    'pip',
 ]
 
 
