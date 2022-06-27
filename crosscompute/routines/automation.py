@@ -188,7 +188,7 @@ class UnsafeEngine(AbstractEngine):
             automation_folder / batch_folder / _
         ) for _ in MODE_NAMES}
         script_environment = _prepare_script_environment(
-            mode_folder_by_name, custom_environment)
+            mode_folder_by_name, custom_environment, with_path=True)
         debug_folder = mode_folder_by_name['debug_folder']
         o_path = debug_folder / 'stdout.txt'
         e_path = debug_folder / 'stderr.txt'
@@ -205,26 +205,26 @@ class PodmanEngine(AbstractEngine):
     def run(
             self, automation_definition, batch_folder, custom_environment,
             process_data):
-        # TODO: Catch case when script command is not found
-        # TODO: Catch case when script command has error return code
-        # TODO: Get return code
-        # TODO: Pass script environment variables
         # TODO: Add container package installation to .run.sh
         # TODO: Fit method in one screen
         automation_folder = automation_definition.folder
         parent_image_name = automation_definition.parent_image_name
-        (automation_folder / CONTAINER_FILE_NAME).open('wt').write(
+        (automation_folder / CONTAINER_FILE_NAME).write_text(
             CONTAINER_FILE_TEXT.render(parent_image_name=parent_image_name))
-        (automation_folder / '.containerignore').open('wt').write(
+        (automation_folder / '.containerignore').write_text(
             CONTAINER_IGNORE_TEXT)
         mode_folder_by_name = {
             _ + '_folder': 'runs/next/' + _ for _ in MODE_NAMES}
+        script_environment = _prepare_script_environment(
+            mode_folder_by_name, custom_environment, with_path=False)
+        (automation_folder / CONTAINER_ENV_NAME).write_text('\n'.join(
+            f'{k}={v}' for k, v in script_environment.items()))
         command_texts = [
             _.get_command_string().format(**mode_folder_by_name)
             for _ in automation_definition.script_definitions]
         bash_script_text = '\n'.join([
             _ + CONTAINER_PIPE_TEXT for _ in command_texts])
-        (automation_folder / CONTAINER_SCRIPT_NAME).open('wt').write(
+        (automation_folder / CONTAINER_SCRIPT_NAME).write_text(
             bash_script_text)
         automation_slug = automation_definition.slug
         automation_version = automation_definition.version
@@ -241,7 +241,8 @@ class PodmanEngine(AbstractEngine):
             'podman', 'cp', batch_folder / 'input', container_batch_folder,
         ], cwd=automation_folder)
         process = subprocess.run([
-            'podman', 'exec', container_id, 'bash', CONTAINER_SCRIPT_NAME,
+            'podman', 'exec', '--env-file', CONTAINER_ENV_NAME, container_id,
+            'bash', CONTAINER_SCRIPT_NAME,
         ], cwd=automation_folder)
         return_code = process.returncode
         subprocess.run([
@@ -401,10 +402,13 @@ def _prepare_batch(automation_definition, batch_definition):
     return batch_folder, custom_environment
 
 
-def _prepare_script_environment(mode_folder_by_name, custom_environment):
+def _prepare_script_environment(
+        mode_folder_by_name, custom_environment, with_path=False):
     script_environment = {
         'CROSSCOMPUTE_' + k.upper(): v for k, v in mode_folder_by_name.items()
-    } | {'PATH': getenv('PATH', '')} | custom_environment
+    } | custom_environment
+    if with_path:
+        script_environment['PATH'] = getenv('PATH', '')
     L.debug('environment = %s', script_environment)
     return script_environment
 
@@ -481,6 +485,7 @@ CONTAINER_PIPE_TEXT = (
     ' 1>>runs/next/debug/stdout.txt'
     ' 2>>runs/next/debug/stderr.txt')
 CONTAINER_SCRIPT_NAME = '.run.sh'
+CONTAINER_ENV_NAME = '.run.env'
 
 
 L = getLogger(__name__)
