@@ -206,63 +206,10 @@ class PodmanEngine(AbstractEngine):
     def run(
             self, automation_definition, batch_folder, custom_environment,
             process_data):
-        # TODO: Fit method in one screen
         automation_folder = automation_definition.folder
-        container_file_text = _prepare_container_file_text(
-            automation_definition)
-        (automation_folder / CONTAINER_FILE_NAME).write_text(
-            container_file_text)
-        (automation_folder / '.containerignore').write_text(
-            CONTAINER_IGNORE_TEXT)
-        mode_folder_by_name = {
-            _ + '_folder': 'runs/next/' + _ for _ in MODE_NAMES}
-        script_environment = _prepare_script_environment(
-            mode_folder_by_name, custom_environment, with_path=False)
-        (automation_folder / CONTAINER_ENV_NAME).write_text('\n'.join(
-            f'{k}={v}' for k, v in script_environment.items()))
-        command_texts = [
-            _.get_command_string().format(**mode_folder_by_name)
-            for _ in automation_definition.script_definitions]
-        bash_script_text = '\n'.join([
-            _ + CONTAINER_PIPE_TEXT for _ in command_texts])
-        (automation_folder / CONTAINER_SCRIPT_NAME).write_text(
-            bash_script_text)
-        automation_slug = automation_definition.slug
-        automation_version = automation_definition.version
-        image_name = f'{automation_slug}:{automation_version}'
-        subprocess.run([
-            'podman', 'build', '-t', image_name, '-f', CONTAINER_FILE_NAME,
-        ], cwd=automation_folder)
-        process = subprocess.run([
-            'podman', 'run', '-d', image_name,
-        ], capture_output=True)
-        container_id = process.stdout.decode().strip()
-        container_batch_folder = container_id + ':runs/next/'
-        subprocess.run([
-            'podman', 'cp', batch_folder / 'input', container_batch_folder,
-        ], cwd=automation_folder)
-        process = subprocess.run([
-            'podman', 'exec', '--env-file', CONTAINER_ENV_NAME, container_id,
-            'bash', CONTAINER_SCRIPT_NAME,
-        ], cwd=automation_folder)
-        return_code = process.returncode
-        subprocess.run([
-            'podman', 'cp', container_batch_folder + '.', batch_folder,
-        ], cwd=automation_folder)
-        subprocess.run(['podman', 'kill', container_id])
-        if return_code in [126, 127]:
-            error_text = (
-                'permission denied' if return_code == 126 else 'not found')
-            error = CrossComputeConfigurationError(
-                f'command {error_text} in container; please check script '
-                'definitions')
-            error.code = Error.COMMAND_NOT_RUNNABLE
-            raise error
-        elif return_code > 0:
-            error_text = (batch_folder / 'debug' / 'stderr.txt').read_text()
-            error = CrossComputeExecutionError(error_text.rstrip())
-            error.code = return_code
-            raise error
+        image_name = _prepare_container_information(
+            automation_definition, custom_environment)
+        return_code = _run_podman(automation_folder, batch_folder, image_name)
         return return_code
 
 
@@ -383,6 +330,43 @@ def _run_command(
     return process.returncode
 
 
+def _run_podman(automation_folder, batch_folder, image_name):
+    subprocess.run([
+        'podman', 'build', '-t', image_name, '-f', CONTAINER_FILE_NAME,
+    ], cwd=automation_folder)
+    process = subprocess.run([
+        'podman', 'run', '-d', image_name,
+    ], capture_output=True)
+    container_id = process.stdout.decode().strip()
+    container_batch_folder = container_id + ':runs/next/'
+    subprocess.run([
+        'podman', 'cp', batch_folder / 'input', container_batch_folder,
+    ], cwd=automation_folder)
+    process = subprocess.run([
+        'podman', 'exec', '--env-file', CONTAINER_ENV_NAME, container_id,
+        'bash', CONTAINER_SCRIPT_NAME,
+    ], cwd=automation_folder)
+    return_code = process.returncode
+    subprocess.run([
+        'podman', 'cp', container_batch_folder + '.', batch_folder,
+    ], cwd=automation_folder)
+    subprocess.run(['podman', 'kill', container_id])
+    if return_code in [126, 127]:
+        error_text = (
+            'permission denied' if return_code == 126 else 'not found')
+        error = CrossComputeConfigurationError(
+            f'command {error_text} in container; please check script '
+            'definitions')
+        error.code = Error.COMMAND_NOT_RUNNABLE
+        raise error
+    elif return_code > 0:
+        error_text = (batch_folder / 'debug' / 'stderr.txt').read_text()
+        error = CrossComputeExecutionError(error_text.rstrip())
+        error.code = return_code
+        raise error
+    return return_code
+
+
 def _prepare_batch(automation_definition, batch_definition):
     variable_definitions = automation_definition.get_variable_definitions(
         'input')
@@ -401,6 +385,32 @@ def _prepare_batch(automation_definition, batch_definition):
         input_path = input_folder / path
         save_variable_data(input_path, data_by_id, variable_definitions)
     return batch_folder, custom_environment
+
+
+def _prepare_container_information(automation_definition, custom_environment):
+    automation_folder = automation_definition.folder
+    container_file_text = _prepare_container_file_text(automation_definition)
+    (automation_folder / CONTAINER_FILE_NAME).write_text(
+        container_file_text)
+    (automation_folder / '.containerignore').write_text(
+        CONTAINER_IGNORE_TEXT)
+    mode_folder_by_name = {
+        _ + '_folder': 'runs/next/' + _ for _ in MODE_NAMES}
+    script_environment = _prepare_script_environment(
+        mode_folder_by_name, custom_environment, with_path=False)
+    (automation_folder / CONTAINER_ENV_NAME).write_text('\n'.join(
+        f'{k}={v}' for k, v in script_environment.items()))
+    command_texts = [
+        _.get_command_string().format(**mode_folder_by_name)
+        for _ in automation_definition.script_definitions]
+    bash_script_text = '\n'.join([
+        _ + CONTAINER_PIPE_TEXT for _ in command_texts])
+    (automation_folder / CONTAINER_SCRIPT_NAME).write_text(
+        bash_script_text)
+    automation_slug = automation_definition.slug
+    automation_version = automation_definition.version
+    image_name = f'{automation_slug}:{automation_version}'
+    return image_name
 
 
 def _prepare_container_file_text(automation_definition):
