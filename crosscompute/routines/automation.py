@@ -141,6 +141,13 @@ class AbstractEngine():
         self.with_rebuild = with_rebuild
 
     def run_configuration(self, configuration):
+        with ThreadPoolExecutor() as executor:
+            futures = []
+            for automation_definition in configuration.definitions:
+                futures.append(executor.submit(
+                    self.prepare, automation_definition))
+            for future in as_completed(futures):
+                future.result()
         recurring_definitions = []
         for automation_definition in configuration.definitions:
             run_automation(
@@ -193,6 +200,15 @@ class AbstractEngine():
 
 class UnsafeEngine(AbstractEngine):
 
+    def prepare(self, automation_definition):
+        with ThreadPoolExecutor() as executor:
+            futures = []
+            for script_definition in automation_definition.script_definitions:
+                futures.append(executor.submit(
+                    script_definition.get_command_string))
+            for future in as_completed(futures):
+                future.result()
+
     def run(
             self, automation_definition, batch_folder, custom_environment,
             process_data):
@@ -215,20 +231,32 @@ class UnsafeEngine(AbstractEngine):
 
 class PodmanEngine(AbstractEngine):
 
-    def run(
-            self, automation_definition, batch_folder, custom_environment,
-            process_data):
+    def prepare(self, automation_definition):
         automation_folder = automation_definition.folder
         automation_slug = automation_definition.slug
         automation_version = automation_definition.version
         image_name = f'{automation_slug}:{automation_version}'
         container_file_path = automation_folder / CONTAINER_FILE_NAME
         if self.with_rebuild or not container_file_path.exists():
-            _prepare_container_information(
-                automation_definition, custom_environment)
+            _prepare_container_information(automation_definition)
             subprocess.run([
                 'podman', 'build', '-t', image_name, '-f', CONTAINER_FILE_NAME,
             ], cwd=automation_folder)
+        automation_definition.image_name = image_name
+
+    def run(
+            self, automation_definition, batch_folder, custom_environment,
+            process_data):
+        automation_folder = automation_definition.folder
+        try:
+            image_name = automation_definition.image_name
+        except AttributeError:
+            self.prepare(automation_definition)
+            image_name = automation_definition.image_name
+        script_environment = _prepare_script_environment(
+            CONTAINER_MODE_FOLDER_BY_NAME, custom_environment, with_path=False)
+        (automation_folder / CONTAINER_ENV_NAME).write_text('\n'.join(
+            f'{k}={v}' for k, v in script_environment.items()))
         return_code = _run_podman(automation_folder, batch_folder, image_name)
         return return_code
 
@@ -283,22 +311,13 @@ def _run_automation_single(automation_definition, run_batch, with_rebuild):
 def _run_automation_multiple(
         automation_definition, run_batch, with_rebuild, concurrency_name):
     ds = []
-    batch_definitions = automation_definition.batch_definitions
-    script_definitions = automation_definition.script_definitions
-    with ThreadPoolExecutor() as executor:
-        futures = []
-        for script_definition in script_definitions:
-            futures.append(executor.submit(
-                script_definition.get_command_string))
-        for future in as_completed(futures):
-            future.result()
     if concurrency_name == 'process':
         BatchExecutor = ProcessPoolExecutor
     else:
         BatchExecutor = ThreadPoolExecutor
     with BatchExecutor() as executor:
         futures = []
-        for batch_definition in batch_definitions:
+        for batch_definition in automation_definition.batch_definitions:
             batch_status = batch_definition.get_status()
             if not with_rebuild and batch_status != Status.NEW:
                 continue
@@ -418,21 +437,15 @@ def _prepare_batch(automation_definition, batch_definition):
     return batch_folder, custom_environment
 
 
-def _prepare_container_information(automation_definition, custom_environment):
+def _prepare_container_information(automation_definition):
     automation_folder = automation_definition.folder
     container_file_text = _prepare_container_file_text(automation_definition)
     (automation_folder / CONTAINER_FILE_NAME).write_text(
         container_file_text)
     (automation_folder / '.containerignore').write_text(
         CONTAINER_IGNORE_TEXT)
-    mode_folder_by_name = {
-        _ + '_folder': 'runs/next/' + _ for _ in MODE_NAMES}
-    script_environment = _prepare_script_environment(
-        mode_folder_by_name, custom_environment, with_path=False)
-    (automation_folder / CONTAINER_ENV_NAME).write_text('\n'.join(
-        f'{k}={v}' for k, v in script_environment.items()))
     command_texts = [
-        _.get_command_string().format(**mode_folder_by_name)
+        _.get_command_string().format(**CONTAINER_MODE_FOLDER_BY_NAME)
         for _ in automation_definition.script_definitions]
     bash_script_text = '\n'.join([
         _ + CONTAINER_PIPE_TEXT for _ in command_texts])
@@ -562,6 +575,8 @@ CONTAINER_PIPE_TEXT = (
     ' 2>>runs/next/debug/stderr.txt')
 CONTAINER_SCRIPT_NAME = '.run.sh'
 CONTAINER_ENV_NAME = '.run.env'
+CONTAINER_MODE_FOLDER_BY_NAME = {
+    _ + '_folder': 'runs/next/' + _ for _ in MODE_NAMES}
 
 
 L = getLogger(__name__)
