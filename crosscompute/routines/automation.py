@@ -10,7 +10,7 @@ from functools import partial
 from jinja2 import Template
 from logging import getLogger
 from multiprocessing import Queue, Manager
-from os import environ, getenv
+from os import environ, getenv, symlink
 from pathlib import Path
 from time import sleep, time
 
@@ -55,6 +55,14 @@ class DiskAutomation(Automation):
             instance._initialize_from_folder(path_or_folder)
         else:
             instance._initialize_from_path(path_or_folder)
+        with ThreadPoolExecutor() as executor:
+            futures = []
+            for automation_definition in instance.definitions:
+                futures.extend(executor.submit(
+                    _.get_command_string
+                ) for _ in automation_definition.script_definitions)
+            for future in as_completed(futures):
+                future.result()
         return instance
 
     def run(self, engine_name=None, with_rebuild=True):
@@ -201,13 +209,7 @@ class AbstractEngine():
 class UnsafeEngine(AbstractEngine):
 
     def prepare(self, automation_definition):
-        with ThreadPoolExecutor() as executor:
-            futures = []
-            for script_definition in automation_definition.script_definitions:
-                futures.append(executor.submit(
-                    script_definition.get_command_string))
-            for future in as_completed(futures):
-                future.result()
+        pass
 
     def run(
             self, automation_definition, batch_folder, custom_environment,
@@ -233,26 +235,32 @@ class PodmanEngine(AbstractEngine):
 
     def prepare(self, automation_definition):
         automation_folder = automation_definition.folder
-        automation_slug = automation_definition.slug
-        automation_version = automation_definition.version
-        image_name = f'{automation_slug}:{automation_version}'
         container_file_path = automation_folder / CONTAINER_FILE_NAME
-        if self.with_rebuild or not container_file_path.exists():
-            _prepare_container_information(automation_definition)
-            subprocess.run([
-                'podman', 'build', '-t', image_name, '-f', CONTAINER_FILE_NAME,
-            ], cwd=automation_folder)
-        automation_definition.image_name = image_name
+        if not self.with_rebuild and container_file_path.exists():
+            return
+        (automation_folder / CONTAINER_FILE_NAME).write_text(
+            _prepare_container_file_text(automation_definition))
+        (automation_folder / '.containerignore').write_text(
+            CONTAINER_IGNORE_TEXT)
+        command_texts = [
+            _.get_command_string().format(**CONTAINER_MODE_FOLDER_BY_NAME)
+            for _ in automation_definition.script_definitions]
+        (automation_folder / CONTAINER_SCRIPT_NAME).write_text(
+            '\n'.join([_ + CONTAINER_PIPE_TEXT for _ in command_texts]))
+        image_name = _get_image_name(automation_definition)
+        subprocess.run([
+            'podman', 'build', '-t', image_name, '-f', CONTAINER_FILE_NAME,
+        ], cwd=automation_folder)
 
     def run(
             self, automation_definition, batch_folder, custom_environment,
             process_data):
         automation_folder = automation_definition.folder
-        try:
-            image_name = automation_definition.image_name
-        except AttributeError:
+        image_name = _get_image_name(automation_definition)
+        if subprocess.run([
+            'podman', 'image', 'exists', image_name,
+        ]).returncode != 0:
             self.prepare(automation_definition)
-            image_name = automation_definition.image_name
         script_environment = _prepare_script_environment(
             CONTAINER_MODE_FOLDER_BY_NAME, custom_environment, with_path=False)
         (automation_folder / CONTAINER_ENV_NAME).write_text('\n'.join(
@@ -278,10 +286,25 @@ def get_script_engine(engine_name=None, with_rebuild=True):
         with_rebuild=with_rebuild)
 
 
+def update_datasets(automation_definition):
+    automation_folder = automation_definition.folder
+    for dataset_definition in automation_definition.dataset_definitions:
+        if 'path' in dataset_definition.reference:
+            reference_path = dataset_definition.reference['path']
+            source_path = automation_folder / reference_path
+            target_path = automation_folder / dataset_definition.path
+            if target_path.is_symlink():
+                target_path.unlink()
+            elif target_path.exists():
+                continue
+            target_folder = target_path.parent
+            symlink(source_path.relative_to(target_folder), target_path)
+
+
 def run_automation(automation_definition, run_batch, with_rebuild=True):
     ds = []
     concurrency_name = automation_definition.batch_concurrency_name
-    automation_definition.update_datasets()
+    update_datasets(automation_definition)
     try:
         if concurrency_name == 'single':
             ds.extend(_run_automation_single(
@@ -405,7 +428,7 @@ def _work(automation_queue, run_batch):
     try:
         while automation_pack := automation_queue.get():
             automation_definition, batch_definition = automation_pack
-            automation_definition.update_datasets()
+            update_datasets(automation_definition)
             try:
                 run_batch(
                     automation_definition, batch_definition,
@@ -435,22 +458,6 @@ def _prepare_batch(automation_definition, batch_definition):
         input_path = input_folder / path
         save_variable_data(input_path, data_by_id, variable_definitions)
     return batch_folder, custom_environment
-
-
-def _prepare_container_information(automation_definition):
-    automation_folder = automation_definition.folder
-    container_file_text = _prepare_container_file_text(automation_definition)
-    (automation_folder / CONTAINER_FILE_NAME).write_text(
-        container_file_text)
-    (automation_folder / '.containerignore').write_text(
-        CONTAINER_IGNORE_TEXT)
-    command_texts = [
-        _.get_command_string().format(**CONTAINER_MODE_FOLDER_BY_NAME)
-        for _ in automation_definition.script_definitions]
-    bash_script_text = '\n'.join([
-        _ + CONTAINER_PIPE_TEXT for _ in command_texts])
-    (automation_folder / CONTAINER_SCRIPT_NAME).write_text(
-        bash_script_text)
 
 
 def _prepare_container_file_text(automation_definition):
@@ -543,6 +550,12 @@ def _process_batch(
                 mode_folder / 'variables.dictionary', extra_data_by_id)
             variable_data_by_id.update(extra_data_by_id)
     return variable_data_by_id_by_mode_name
+
+
+def _get_image_name(automation_definition):
+    automation_slug = automation_definition.slug
+    automation_version = automation_definition.version
+    return f'{automation_slug}:{automation_version}'
 
 
 CONTAINER_IGNORE_TEXT = '''\

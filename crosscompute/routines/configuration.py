@@ -4,7 +4,7 @@ from collections import Counter
 from configparser import ConfigParser
 from datetime import timedelta
 from logging import getLogger
-from os import environ, symlink
+from os import environ
 from os.path import basename, relpath, splitext
 from pathlib import Path
 from string import Template
@@ -126,20 +126,6 @@ class AutomationDefinition(Definition):
             return design_name
         page_definition = self.page_definition_by_id[page_id]
         return page_definition.configuration.get('design', design_name)
-
-    def update_datasets(self):
-        automation_folder = self.folder
-        for dataset_definition in self.dataset_definitions:
-            if 'path' in dataset_definition.reference:
-                reference_path = dataset_definition.reference['path']
-                source_path = automation_folder / reference_path
-                target_path = automation_folder / dataset_definition.path
-                if target_path.is_symlink():
-                    target_path.unlink()
-                elif target_path.exists():
-                    continue
-                target_folder = target_path.parent
-                symlink(source_path.relative_to(target_folder), target_path)
 
 
 class VariableDefinition(Definition):
