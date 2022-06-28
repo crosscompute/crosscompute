@@ -18,6 +18,7 @@ from invisibleroads_macros_disk import make_folder
 
 from ..constants import (
     Error,
+    Status,
     AUTOMATION_PATH,
     DISK_DEBOUNCE_IN_MILLISECONDS,
     DISK_POLL_IN_MILLISECONDS,
@@ -56,12 +57,13 @@ class DiskAutomation(Automation):
             instance._initialize_from_path(path_or_folder)
         return instance
 
-    def run(self):
-        engine = get_script_engine()
+    def run(self, engine_name=None, with_rebuild=True):
+        engine = get_script_engine(engine_name, with_rebuild)
         engine.run_configuration(self)
 
     def serve(
             self,
+            engine,
             host=HOST,
             port=PORT,
             with_refresh=False,
@@ -70,11 +72,9 @@ class DiskAutomation(Automation):
             allowed_origins=None,
             disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
             disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS,
-            automation_queue=None,
-            engine_name=None):
+            automation_queue=None):
         if automation_queue is None:
             automation_queue = Queue()
-        script_engine = get_script_engine(engine_name)
         with Manager() as manager:
             server_options = {
                 'host': host,
@@ -85,7 +85,7 @@ class DiskAutomation(Automation):
                 'allowed_origins': allowed_origins,
                 'infos_by_timestamp': manager.dict(),
             }
-            work = partial(_work, run_batch=script_engine.run_batch)
+            work = partial(_work, run_batch=engine.run_batch)
             server = DiskServer(work, automation_queue, server_options)
             configuration = self.configuration
             if not with_refresh and not with_restart:
@@ -143,7 +143,8 @@ class AbstractEngine():
     def run_configuration(self, configuration):
         recurring_definitions = []
         for automation_definition in configuration.definitions:
-            run_automation(automation_definition, self.run_batch)
+            run_automation(
+                automation_definition, self.run_batch, self.with_rebuild)
             if automation_definition.interval_timedelta:
                 recurring_definitions.append(automation_definition)
         if not recurring_definitions:
@@ -218,8 +219,16 @@ class PodmanEngine(AbstractEngine):
             self, automation_definition, batch_folder, custom_environment,
             process_data):
         automation_folder = automation_definition.folder
-        image_name = _prepare_container_information(
-            automation_definition, custom_environment)
+        automation_slug = automation_definition.slug
+        automation_version = automation_definition.version
+        image_name = f'{automation_slug}:{automation_version}'
+        container_file_path = automation_folder / CONTAINER_FILE_NAME
+        if self.with_rebuild or not container_file_path.exists():
+            _prepare_container_information(
+                automation_definition, custom_environment)
+            subprocess.run([
+                'podman', 'build', '-t', image_name, '-f', CONTAINER_FILE_NAME,
+            ], cwd=automation_folder)
         return_code = _run_podman(automation_folder, batch_folder, image_name)
         return return_code
 
@@ -263,8 +272,8 @@ def run_automation(automation_definition, run_batch, with_rebuild=True):
 def _run_automation_single(automation_definition, run_batch, with_rebuild):
     ds = []
     for batch_definition in automation_definition.batch_definitions:
-        # !!!
-        if not with_rebuild and batch_definition.get_return_code() is not None:
+        batch_status = batch_definition.get_status()
+        if not with_rebuild and batch_status != Status.NEW:
             continue
         ds.append(run_batch(
             automation_definition, batch_definition, load_variable_data))
@@ -290,6 +299,9 @@ def _run_automation_multiple(
     with BatchExecutor() as executor:
         futures = []
         for batch_definition in batch_definitions:
+            batch_status = batch_definition.get_status()
+            if not with_rebuild and batch_status != Status.NEW:
+                continue
             futures.append(executor.submit(
                 run_batch, automation_definition, batch_definition,
                 load_variable_data))
@@ -337,10 +349,6 @@ def _run_command(
 
 
 def _run_podman(automation_folder, batch_folder, image_name):
-    # TODO: skip build if no rebuild
-    subprocess.run([
-        'podman', 'build', '-t', image_name, '-f', CONTAINER_FILE_NAME,
-    ], cwd=automation_folder)
     process = subprocess.run([
         'podman', 'run', '-d', image_name,
     ], capture_output=True)
@@ -430,10 +438,6 @@ def _prepare_container_information(automation_definition, custom_environment):
         _ + CONTAINER_PIPE_TEXT for _ in command_texts])
     (automation_folder / CONTAINER_SCRIPT_NAME).write_text(
         bash_script_text)
-    automation_slug = automation_definition.slug
-    automation_version = automation_definition.version
-    image_name = f'{automation_slug}:{automation_version}'
-    return image_name
 
 
 def _prepare_container_file_text(automation_definition):

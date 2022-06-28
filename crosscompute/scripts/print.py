@@ -38,7 +38,8 @@ def do(arguments=None):
         configure_logging_from(args)
         configure_serving_from(args)
         automation = DiskAutomation.load(args.path_or_folder)
-        print_with(automation, args)
+        engine = get_script_engine(args.engine_name, args.with_rebuild)
+        print_with(automation, engine, args)
     except CrossComputeError as e:
         L.error(e)
         return
@@ -52,14 +53,13 @@ def configure_printing_from(args):
         args.print_folder = make_random_folder()
 
 
-def print_with(automation, args):
+def print_with(automation, engine, args):
     try:
         port = find_open_port()
     except OSError as e:
         raise CrossComputeError(e)
     timestamp = get_timestamp(template=LONGSTAMP_TEMPLATE)
     print_packs = []
-    engine = get_script_engine()
     for automation_definition in get_selected_automation_definitions(
             automation.definitions):
         # TODO: Consider using ds returned from run_automation

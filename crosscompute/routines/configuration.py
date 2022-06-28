@@ -20,6 +20,7 @@ from ruamel.yaml.error import YAMLError
 
 from .. import __version__
 from ..constants import (
+    Status,
     AUTOMATION_NAME,
     AUTOMATION_ROUTE,
     AUTOMATION_VERSION,
@@ -171,12 +172,14 @@ class BatchDefinition(Definition):
             validate_batch_configuration,
         ]
 
-    def get_return_code(self):
+    def get_status(self):
+        status = Status.NEW
         path = self.folder / 'debug' / 'variables.dictionary'
-        if not path.exists():
-            return
-        d = json.load(path.open('rt'))
-        return d['return_code']
+        if path.exists():
+            d = json.load(path.open('rt'))
+            return_code = d['return_code']
+            status = Status.DONE if return_code == 0 else Status.FAILED
+        return status
 
 
 class DatasetDefinition(Definition):

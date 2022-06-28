@@ -10,6 +10,13 @@ class Error(IntEnum):
     COMMAND_NOT_RUNNABLE = -10
 
 
+class Status(IntEnum):
+
+    NEW = 0
+    FAILED = -1
+    DONE = 100
+
+
 PACKAGE_FOLDER = Path(__file__).parent
 TEMPLATES_FOLDER = PACKAGE_FOLDER / 'templates'
 ID_LENGTH = 32

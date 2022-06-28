@@ -45,7 +45,7 @@ class DiskBatch(Batch):
         try:
             variable_data = load_variable_data(path, variable_id)
         except CrossComputeDataError as e:
-            L.error(e)
+            # L.warning(e)
             return {'error': e}
         return variable_data
 

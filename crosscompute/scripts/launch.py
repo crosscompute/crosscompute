@@ -6,7 +6,9 @@ from crosscompute.exceptions import (
     CrossComputeConfigurationNotFoundError,
     CrossComputeError)
 from crosscompute.macros.process import LoggableProcess
-from crosscompute.routines.automation import DiskAutomation
+from crosscompute.routines.automation import (
+    DiskAutomation,
+    get_script_engine)
 from crosscompute.routines.log import (
     configure_argument_parser_for_logging,
     configure_logging_from)
@@ -33,17 +35,18 @@ def do(arguments=None):
         configure_with(args)
         return
     automation = _get_automation_from(args)
+    engine = get_script_engine(args.engine_name, args.with_rebuild)
     if launch_mode == 'print':
-        print_with(automation, args)
+        print_with(automation, engine, args)
         return
     processes = []
     if launch_mode in ['serve', 'all']:
         check_port(args.port)
         processes.append(LoggableProcess(
-            name='serve', target=serve_with, args=(automation, args)))
+            name='serve', target=serve_with, args=(automation, engine, args)))
     if launch_mode in ['run', 'all']:
         processes.append(LoggableProcess(
-            name='run', target=run_with, args=(automation, args)))
+            name='run', target=run_with, args=(automation, engine, args)))
     try:
         for process in processes:
             process.start()

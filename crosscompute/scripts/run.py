@@ -25,7 +25,8 @@ def do(arguments=None):
     except CrossComputeError as e:
         L.error(e)
         return
-    run_with(automation, args)
+    engine = get_script_engine(args.engine_name, args.with_rebuild)
+    run_with(automation, engine, args)
 
 
 def configure_argument_parser_for_running(a):
@@ -38,18 +39,13 @@ def configure_argument_parser_for_running(a):
         help='do not rebuild batches and container images')
 
 
-def run_with(automation, args):
-    return run(
-        automation,
-        engine_name=args.engine_name)
+def run_with(automation, engine, args):
+    return run(automation, engine)
 
 
-def run(
-        automation,
-        engine_name='unsafe'):
-    script_engine = get_script_engine(engine_name)
+def run(automation, engine):
     try:
-        script_engine.run_configuration(automation)
+        engine.run_configuration(automation)
     except CrossComputeError as e:
         L.error(e)
     except KeyboardInterrupt:

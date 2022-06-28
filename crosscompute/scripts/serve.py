@@ -11,7 +11,9 @@ from crosscompute.exceptions import (
     CrossComputeError)
 from crosscompute.macros.web import (
     find_open_port, is_port_in_use, open_browser)
-from crosscompute.routines.automation import DiskAutomation
+from crosscompute.routines.automation import (
+    DiskAutomation,
+    get_script_engine)
 from crosscompute.routines.log import (
     configure_argument_parser_for_logging,
     configure_logging_from)
@@ -36,7 +38,8 @@ def do(arguments=None):
         L.error(e)
         return
     check_port(args.port)
-    serve_with(automation, args)
+    engine = get_script_engine(args.engine_name, args.with_rebuild)
+    serve_with(automation, engine, args)
 
 
 def configure_argument_parser_for_serving(a):
@@ -81,9 +84,10 @@ def configure_serving_from(args):
         args.root_uri = '/' + root_uri
 
 
-def serve_with(automation, args):
+def serve_with(automation, engine, args):
     return serve(
         automation,
+        engine,
         host=args.host,
         port=args.port,
         with_browser=args.with_browser,
@@ -92,12 +96,12 @@ def serve_with(automation, args):
         root_uri=args.root_uri,
         allowed_origins=args.allowed_origins,
         disk_poll_in_milliseconds=args.disk_poll,
-        disk_debounce_in_milliseconds=args.disk_debounce,
-        engine_name=args.engine_name)
+        disk_debounce_in_milliseconds=args.disk_debounce)
 
 
 def serve(
         automation,
+        engine,
         host=HOST,
         port=PORT,
         with_browser=False,
@@ -106,13 +110,13 @@ def serve(
         root_uri='',
         allowed_origins=None,
         disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
-        disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS,
-        engine_name=None):
+        disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS):
     try:
         if with_browser and 'DISPLAY' in environ:
             L.info('opening browser; set --no-browser to disable')
             open_browser(f'http://localhost:{port}{root_uri}')
         automation.serve(
+            engine,
             host=host,
             port=port,
             with_refresh=with_refresh,
@@ -120,8 +124,7 @@ def serve(
             root_uri=root_uri,
             allowed_origins=allowed_origins,
             disk_poll_in_milliseconds=disk_poll_in_milliseconds,
-            disk_debounce_in_milliseconds=disk_debounce_in_milliseconds,
-            engine_name=engine_name)
+            disk_debounce_in_milliseconds=disk_debounce_in_milliseconds)
     except CrossComputeError as e:
         L.error(e)
     except KeyboardInterrupt:
