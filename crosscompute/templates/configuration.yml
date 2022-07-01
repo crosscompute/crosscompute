@@ -165,7 +165,11 @@ version: 0.0.0
 #   - path: run2.py
 #     folder: scripts
 #   - path: run3.ipynb
-#   - command: python run4.py {input_folder} {output_folder} {log_folder} {debug_folder}
+#   - command: python run4.py {input_folder} {output_folder}
+#   - command: >
+#       python run5.py
+#       {input_folder} {output_folder}
+#       {log_folder} {debug_folder}
 
 # environment configuration
 # environment:
