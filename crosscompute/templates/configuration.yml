@@ -157,16 +157,15 @@ version: 0.0.0
 #       path: datasets/abc-2022.csv
 
 # scripts configuration
-# - path to your script, relative to the script folder
+# - path to your script or notebook, relative to the script folder
 # - command to run your script, if path is not specified
 # - folder where your script should run
 # scripts:
-#   - path: run.ipynb
-#     command: python run.py {input_folder} {output_folder} {log_folder} {debug_folder}
-#     folder: .
-#   - path: run2.ipynb
-#     command: python run2.py {input_folder} {output_folder} {log_folder} {debug_folder}
-#     folder: .
+#   - path: run1.py
+#   - path: run2.py
+#     folder: scripts
+#   - path: run3.ipynb
+#   - command: python run4.py {input_folder} {output_folder} {log_folder} {debug_folder}
 
 # environment configuration
 # environment:
