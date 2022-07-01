@@ -1,8 +1,7 @@
 ---
-crosscompute: 0.9.2
+crosscompute: 0.9.3
 name: Automation X
 version: 0.0.0
-
 input:
   variables:
     - id: x1
@@ -27,7 +26,6 @@ input:
       path: x6.md
   templates:
     - path: form.md
-
 output:
   variables:
     - id: y1
@@ -73,10 +71,8 @@ output:
   templates:
     - path: report-section1.md
     - path: report-section2.md
-
 batches:
   - folder: batches/standard
-
 display:
   styles:
     - path: report.css
