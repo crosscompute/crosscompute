@@ -149,13 +149,8 @@ class AbstractEngine():
         self.with_rebuild = with_rebuild
 
     def run_configuration(self, configuration):
-        with ThreadPoolExecutor() as executor:
-            futures = []
-            for automation_definition in configuration.definitions:
-                futures.append(executor.submit(
-                    self.prepare, automation_definition))
-            for future in as_completed(futures):
-                future.result()
+        for automation_definition in configuration.definitions:
+            self.prepare(automation_definition)
         recurring_definitions = []
         for automation_definition in configuration.definitions:
             run_automation(
@@ -211,6 +206,9 @@ class UnsafeEngine(AbstractEngine):
     def prepare(self, automation_definition):
         pass
 
+    def update(self, automation_definition):
+        pass
+
     def run(
             self, automation_definition, batch_folder, custom_environment,
             process_data):
@@ -220,6 +218,7 @@ class UnsafeEngine(AbstractEngine):
         ) for _ in MODE_NAMES}
         script_environment = _prepare_script_environment(
             mode_folder_by_name, custom_environment, with_path=True)
+        # TODO: Update datasets here
         debug_folder = mode_folder_by_name['debug_folder']
         o_path = debug_folder / 'stdout.txt'
         e_path = debug_folder / 'stderr.txt'
@@ -252,15 +251,18 @@ class PodmanEngine(AbstractEngine):
             'podman', 'build', '-t', image_name, '-f', CONTAINER_FILE_NAME,
         ], cwd=automation_folder)
 
+    def update(self, automation_definition):
+        pass
+
     def run(
             self, automation_definition, batch_folder, custom_environment,
             process_data):
-        automation_folder = automation_definition.folder
         image_name = _get_image_name(automation_definition)
         if subprocess.run([
             'podman', 'image', 'exists', image_name,
         ]).returncode != 0:
             self.prepare(automation_definition)
+        automation_folder = automation_definition.folder
         script_environment = _prepare_script_environment(
             CONTAINER_MODE_FOLDER_BY_NAME, custom_environment, with_path=False)
         (automation_folder / CONTAINER_ENV_NAME).write_text('\n'.join(
@@ -291,14 +293,18 @@ def update_datasets(automation_definition):
     for dataset_definition in automation_definition.dataset_definitions:
         if 'path' in dataset_definition.reference:
             reference_path = dataset_definition.reference['path']
-            source_path = automation_folder / reference_path
             target_path = automation_folder / dataset_definition.path
+            source_path = (automation_folder / reference_path).relative_to(
+                target_path.parent)
             if target_path.is_symlink():
+                if target_path.resolve() == source_path.resolve():
+                    continue
+                # TODO: Acquire lock here
                 target_path.unlink()
             elif target_path.exists():
                 continue
-            target_folder = target_path.parent
-            symlink(source_path.relative_to(target_folder), target_path)
+            symlink(source_path, target_path)
+            # TODO: Release lock here
 
 
 def run_automation(automation_definition, run_batch, with_rebuild=True):
@@ -395,6 +401,7 @@ def _run_podman(automation_folder, batch_folder, image_name):
         'podman', 'run', '-d', image_name,
     ], capture_output=True)
     container_id = process.stdout.decode().strip()
+    # TODO: Update datasets here
     container_batch_folder = container_id + ':runs/next/'
     subprocess.run([
         'podman', 'cp', batch_folder / 'input', container_batch_folder,
@@ -564,6 +571,7 @@ CONTAINER_IGNORE_TEXT = '''\
 .gitignore
 .ipynb_checkpoints
 batches/
+datasets/
 runs/
 tests/'''
 CONTAINER_FILE_NAME = '.containerfile'
