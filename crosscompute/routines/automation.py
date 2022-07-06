@@ -40,7 +40,7 @@ from .server import DiskServer
 from .variable import (
     get_variable_data_by_id,
     get_variable_value_by_id,
-    load_variable_data,
+    process_variable_data,
     save_variable_data,
     update_variable_data)
 
@@ -167,7 +167,7 @@ class AbstractEngine():
                     run_automation(automation_definition, self.run_batch)
             sleep(1)
 
-    def run_batch(self, automation_definition, batch_definition, process_data):
+    def run_batch(self, automation_definition, batch_definition):
         reference_time = time()
         batch_folder, custom_environment = _prepare_batch(
             automation_definition, batch_definition)
@@ -180,8 +180,7 @@ class AbstractEngine():
         L.info('%s running', batch_identifier)
         try:
             return_code = self.run(
-                automation_definition, batch_folder, custom_environment,
-                process_data)
+                automation_definition, batch_folder, custom_environment)
         except CrossComputeConfigurationError as e:
             e.automation_definition = automation_definition
             raise
@@ -198,7 +197,7 @@ class AbstractEngine():
                 'execution_time_in_seconds': time() - reference_time,
                 'return_code': return_code,
             },
-        }, process_data)
+        })
 
 
 class UnsafeEngine(AbstractEngine):
@@ -210,8 +209,7 @@ class UnsafeEngine(AbstractEngine):
         pass
 
     def run(
-            self, automation_definition, batch_folder, custom_environment,
-            process_data):
+            self, automation_definition, batch_folder, custom_environment):
         automation_folder = automation_definition.folder
         mode_folder_by_name = {_ + '_folder': make_folder(
             automation_folder / batch_folder / _
@@ -255,8 +253,7 @@ class PodmanEngine(AbstractEngine):
         pass
 
     def run(
-            self, automation_definition, batch_folder, custom_environment,
-            process_data):
+            self, automation_definition, batch_folder, custom_environment):
         image_name = _get_image_name(automation_definition)
         if subprocess.run([
             'podman', 'image', 'exists', image_name,
@@ -332,8 +329,7 @@ def _run_automation_single(automation_definition, run_batch, with_rebuild):
         batch_status = batch_definition.get_status()
         if not with_rebuild and batch_status != Status.NEW:
             continue
-        ds.append(run_batch(
-            automation_definition, batch_definition, load_variable_data))
+        ds.append(run_batch(automation_definition, batch_definition))
     return ds
 
 
@@ -351,8 +347,7 @@ def _run_automation_multiple(
             if not with_rebuild and batch_status != Status.NEW:
                 continue
             futures.append(executor.submit(
-                run_batch, automation_definition, batch_definition,
-                load_variable_data))
+                run_batch, automation_definition, batch_definition))
         for future in as_completed(futures):
             ds.append(future.result())
     return ds
@@ -437,9 +432,7 @@ def _work(automation_queue, run_batch):
             automation_definition, batch_definition = automation_pack
             update_datasets(automation_definition)
             try:
-                run_batch(
-                    automation_definition, batch_definition,
-                    load_variable_data)
+                run_batch(automation_definition, batch_definition)
             except CrossComputeError as e:
                 e.automation_definition = automation_definition
                 L.error(e)
@@ -529,7 +522,7 @@ def _prepare_custom_environment(
 
 def _process_batch(
         automation_definition, batch_definition, mode_names,
-        extra_data_by_id_by_mode_name, process_data):
+        extra_data_by_id_by_mode_name):
     variable_data_by_id_by_mode_name = {}
     automation_folder = automation_definition.folder
     batch_folder = batch_definition.folder
@@ -546,7 +539,8 @@ def _process_batch(
                 continue
             path = mode_folder / variable_path
             try:
-                variable_data = process_data(path, variable_id)
+                variable_data = process_variable_data(
+                    path, variable_definition)
             except CrossComputeDataError as e:
                 e.automation_definitions = automation_definition
                 L.error(e)

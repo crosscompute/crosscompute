@@ -4,6 +4,7 @@ import shutil
 from dataclasses import dataclass
 from logging import getLogger
 from string import Template
+from urllib.request import urlretrieve as download_uri
 
 from importlib_metadata import entry_points
 from invisibleroads_macros_log import format_path
@@ -20,6 +21,7 @@ from ..exceptions import (
     CrossComputeConfigurationNotImplementedError,
     CrossComputeDataError)
 from ..macros.disk import FileCache
+from ..macros.iterable import find_item
 from ..macros.package import import_attribute
 from ..macros.web import (
     escape_quotes_html,
@@ -61,6 +63,9 @@ class VariableView():
 
     def parse(self, data):
         return data
+
+    def process(self, path):
+        pass
 
     def render(self, b: Batch, x: Element):
         if x.mode_name == 'input':
@@ -418,12 +423,17 @@ def save_variable_data(target_path, data_by_id, variable_definitions):
         raise CrossComputeConfigurationError(
             'use file extension .dictionary for multiple variables')
     else:
-        variable_data = list(variable_data_by_id.values())[0]
+        variable_id, variable_data = list(variable_data_by_id.items())[0]
         if 'value' in variable_data:
             open(target_path, 'wt').write(variable_data['value'])
         elif 'path' in variable_data:
             shutil.copy(variable_data['path'], target_path)
-        # TODO: Download variable_data['uri']
+        elif 'uri' in variable_data:
+            download_uri(variable_data['uri'], target_path)
+        variable_definition = find_item(
+            variable_definitions, 'id', variable_id)
+        variable_view = VariableView.get_from(variable_definition)
+        variable_view.process(target_path)
 
 
 def get_data_by_id_from_folder(folder, variable_definitions):
@@ -509,6 +519,13 @@ def update_variable_data(target_path, data_by_id):
                 json.dump(d, f)
     except (json.JSONDecodeError, OSError) as e:
         raise CrossComputeDataError(e)
+
+
+def process_variable_data(path, variable_definition):
+    variable_id = variable_definition.id
+    variable_view = VariableView.get_from(variable_definition)
+    variable_view.process(path)
+    return load_variable_data(path, variable_id)
 
 
 def load_variable_data(path, variable_id):

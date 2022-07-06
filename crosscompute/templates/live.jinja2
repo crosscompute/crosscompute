@@ -32,7 +32,8 @@ async function processMutations() {
     }
     mutationTimestamp = d.mutation_timestamp;
     pingInterval = {{ MINIMUM_PING_INTERVAL }};
-  } catch {
+  } catch (error) {
+    console.error(error);
     if (pingInterval < {{ MAXIMUM_PING_INTERVAL }}) {
       pingInterval *= 1.1;
     }

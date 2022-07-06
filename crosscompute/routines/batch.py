@@ -21,18 +21,26 @@ class DiskBatch(Batch):
         self.folder = automation_definition.folder / batch_definition.folder
 
     def get_variable_configuration(self, variable_definition):
+        folder = self.folder
         variable_configuration = variable_definition.configuration
         if 'path' in variable_configuration:
-            mode_name = variable_definition.mode_name
-            path = self.folder / mode_name / variable_configuration['path']
-            try:
-                variable_configuration.update(json.load(open(path, 'rt')))
-            except OSError:
-                L.error('path not found %s', format_path(path))
-            except json.JSONDecodeError:
-                L.error('must be json %s', format_path(path))
-            except TypeError:
-                L.error('must contain a dictionary %s', format_path(path))
+            relative_path = variable_configuration['path']
+            is_customized = True
+        else:
+            relative_path = str(variable_definition.path) + '.configuration'
+            is_customized = False
+        mode_name = variable_definition.mode_name
+        path = folder / mode_name / relative_path
+        if not is_customized and not path.exists():
+            return variable_configuration
+        try:
+            variable_configuration.update(json.load(open(path, 'rt')))
+        except OSError:
+            L.error('path not found %s', format_path(path))
+        except json.JSONDecodeError:
+            L.error('must be json %s', format_path(path))
+        except TypeError:
+            L.error('must contain a dictionary %s', format_path(path))
         return variable_configuration
 
     def get_data(self, variable_definition):
