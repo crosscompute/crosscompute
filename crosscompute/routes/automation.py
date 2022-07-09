@@ -343,31 +343,31 @@ def _get_automation_batch_mode_uri(
 def _get_mode_jinja_dictionary(request, batch, mode_name):
     automation_definition = batch.automation_definition
     batch_definition = batch.batch_definition
+    design_name = automation_definition.get_design_name(mode_name)
     root_uri = request.registry.settings['root_uri']
     mutation_reference_uri = _get_automation_batch_mode_uri(
         automation_definition, batch_definition, mode_name)
     for_print = 'p' in request.params
     return {
         'title_text': batch_definition.name,
-        'css_text': CSS_TEXT_BY_DESIGN_NAME[
-            automation_definition.get_design_name(mode_name)],
+        'css_text': CSS_TEXT_BY_DESIGN_NAME[design_name],
         'automation_definition': automation_definition,
         'batch_definition': batch_definition,
         'mode_name': mode_name,
         'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri),
         'mutation_timestamp': time(),
     } | __get_mode_jinja_dictionary(
-        batch, root_uri, mode_name, for_print)
+        batch, root_uri, mode_name, design_name, for_print)
 
 
-def __get_mode_jinja_dictionary(batch, root_uri, mode_name, for_print):
+def __get_mode_jinja_dictionary(
+        batch, root_uri, mode_name, design_name, for_print):
     automation_definition = batch.automation_definition
     css_uris = automation_definition.css_uris
     template_text = automation_definition.get_template_text(
         mode_name)
     variable_definitions = automation_definition.get_variable_definitions(
         mode_name, with_all=True)
-    design_name = automation_definition.get_design_name(mode_name)
     m = {'css_uris': css_uris.copy(), 'js_uris': [], 'js_texts': []}
     i = count()
     render_html = partial(

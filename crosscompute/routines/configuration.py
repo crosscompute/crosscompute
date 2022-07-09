@@ -122,10 +122,16 @@ class AutomationDefinition(Definition):
 
     def get_design_name(self, page_id):
         design_name = DESIGN_NAMES_BY_PAGE_ID[page_id][0]
-        if page_id not in self.page_definition_by_id:
-            return design_name
-        page_definition = self.page_definition_by_id[page_id]
-        return page_definition.configuration.get('design', design_name)
+        if page_id in self.page_definition_by_id:
+            page_definition = self.page_definition_by_id[page_id]
+            design_name = page_definition.configuration.get(
+                'design', design_name)
+        elif page_id in MODE_NAMES:
+            variable_definitions = self.variable_definitions_by_mode_name.get(
+                page_id, [])
+            if not variable_definitions:
+                design_name = 'none'
+        return design_name
 
 
 class VariableDefinition(Definition):
