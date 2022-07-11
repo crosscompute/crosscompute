@@ -2,7 +2,7 @@
 document.getElementById('_run').onclick = async () => {
   const dataById = {};
   for (const x of document.getElementsByClassName('_input')) {
-    const { view: viewName, id: variableId } = x.dataset;
+    const { view: viewName, variable: variableId } = x.dataset;
     dataById[variableId] = GET_DATA_BY_VIEW_NAME[viewName](x);
   }
   const uri = '{{ ROOT_URI }}{{ automation_definition.uri }}.json';
