@@ -228,7 +228,7 @@ def _get_info(configuration, path, info_by_path):
         runs_folder = automation_folder / 'runs'
         if not is_path_in_folder(path, runs_folder):
             continue
-        run_id = path.absolute().relative_to(runs_folder).parts[0]
+        run_id = path.resolve().relative_to(runs_folder).parts[0]
         run_uri = RUN_ROUTE.format(run_slug=run_id)
         variable_packs = _get_variable_packs_from_folder(
             configuration, runs_folder / run_id, run_uri)

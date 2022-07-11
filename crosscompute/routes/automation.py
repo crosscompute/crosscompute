@@ -14,6 +14,7 @@ from ..constants import (
     AUTOMATION_ROUTE,
     BATCH_ROUTE,
     ID_LENGTH,
+    IMAGES_FOLDER,
     MODE_CODE_BY_NAME,
     MODE_NAME_BY_CODE,
     MODE_ROUTE,
@@ -53,12 +54,17 @@ class AutomationRoutes():
     def configure_root(self, config):
         configuration = self.configuration
         config.add_route('root', '/')
+        config.add_route('icon', '/favicon.ico')
 
         config.add_view(
             self.see_root,
             request_method='GET',
             route_name='root',
             renderer=configuration.get_template_path('root'))
+        config.add_view(
+            self.see_icon,
+            request_method='GET',
+            route_name='icon')
 
     def configure_styles(self, config):
         config.add_route(
@@ -148,6 +154,9 @@ class AutomationRoutes():
             'mutation_uri': MUTATION_ROUTE.format(uri=''),
             'mutation_timestamp': time(),
         }
+
+    def see_icon(self, request):
+        return FileResponse(IMAGES_FOLDER / 'favicon.ico')
 
     def see_style(self, request):
         matchdict = request.matchdict

@@ -19,6 +19,7 @@ class Status(IntEnum):
 
 PACKAGE_FOLDER = Path(__file__).parent
 TEMPLATES_FOLDER = PACKAGE_FOLDER / 'templates'
+IMAGES_FOLDER = PACKAGE_FOLDER / 'images'
 ID_LENGTH = 32
 TOKEN_LENGTH = 32
 
