@@ -378,11 +378,13 @@ def validate_protocol(configuration):
 def validate_automation_identifiers(configuration):
     index = configuration.index
     name = configuration.get('name', make_automation_name(index))
+    description = configuration.get('description', '')
     version = configuration.get('version', AUTOMATION_VERSION)
     slug = configuration.get('slug', format_slug(name))
     uri = AUTOMATION_ROUTE.format(automation_slug=slug)
     return {
         'name': name,
+        'description': description,
         'version': version,
         'slug': slug,
         'uri': uri,

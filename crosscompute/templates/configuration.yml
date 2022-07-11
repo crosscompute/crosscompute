@@ -10,6 +10,9 @@ crosscompute: 0.0.0
 # name of your automation
 name: Automation X
 
+# description of your automation
+description: Improve health, safety, quality of life in our communities
+
 # slug for automation URI
 # slug: automation-x
 

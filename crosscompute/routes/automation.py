@@ -210,10 +210,10 @@ class AutomationRoutes():
         if not guard.check(request, 'see_automation', automation_definition):
             raise HTTPForbidden
         design_name = automation_definition.get_design_name('automation')
-        uri = automation_definition.uri
+        automation_uri = automation_definition.uri
         if design_name == 'none':
             d = {'css_uris': automation_definition.css_uris}
-            mutation_reference_uri = uri
+            mutation_reference_uri = automation_uri
         else:
             batch_definition = automation_definition.batch_definitions[0]
             batch = DiskBatch(automation_definition, batch_definition)
@@ -222,7 +222,9 @@ class AutomationRoutes():
                 automation_definition, batch_definition, design_name)
         return d | {
             'name': automation_definition.name,
-            'uri': uri,
+            'description': automation_definition.description,
+            'host_uri': request.host_url,
+            'uri': automation_uri,
             'batches': _select_batch_definitions(
                 automation_definition, guard, request),
             'runs': automation_definition.run_definitions,
