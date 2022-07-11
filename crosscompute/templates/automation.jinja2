@@ -2,11 +2,13 @@
 
 {% block head_html %}
 {{ super() -}}
-<meta property="og:title" content="{{ name }}" />
-<meta property="og:type" content="website" />
+<meta name="description" content="{{ description }}">
 <meta property="og:url" content="{{ host_uri }}{{ ROOT_URI }}{{ uri }}" />
-<meta property="og:image" content="{{ host_uri }}{{ ROOT_URI }}/favicon.ico" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="{{ name }}" />
 <meta property="og:description" content="{{ description }}" />
+<meta property="og:image" content="{{ host_uri }}{{ ROOT_URI }}/favicon.ico" />
+<meta name="twitter:card" content="summary">
 {% endblock %}
 
 {% block header_html %}
