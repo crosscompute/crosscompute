@@ -4,9 +4,8 @@
 {{ super() -}}
 <meta name="title" property="og:title" content="{{ name }}" />
 <meta name="description" property="og:description" content="{{ description }}">
+<meta name="image" property="og:image" content="{{ host_uri }}{{ ROOT_URI }}/favicon.ico" />
 <meta property="og:url" content="{{ host_uri }}{{ ROOT_URI }}{{ uri }}" />
-<meta property="og:type" content="website" />
-<meta property="og:image" content="{{ host_uri }}{{ ROOT_URI }}/favicon.ico" />
 <meta name="twitter:card" content="summary">
 {% endblock %}
 
