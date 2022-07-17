@@ -21,7 +21,7 @@ from ..constants import (
     MUTATION_ROUTE,
     RUN_ROUTE,
     STYLE_ROUTE,
-    VARIABLE_ID_PATTERN,
+    VARIABLE_ID_TEMPLATE_PATTERN,
     VARIABLE_ROUTE)
 from ..exceptions import CrossComputeDataError
 from ..macros.iterable import extend_uniquely, find_item
@@ -385,7 +385,7 @@ def __get_mode_jinja_dictionary(
         _render_html, variable_definitions=variable_definitions,
         batch=batch, m=m, i=i, root_uri=root_uri, mode_name=mode_name,
         design_name=design_name, for_print=for_print)
-    main_text = get_html_from_markdown(VARIABLE_ID_PATTERN.sub(
+    main_text = get_html_from_markdown(VARIABLE_ID_TEMPLATE_PATTERN.sub(
         render_html, template_text))
     return m | {
         'main_text': main_text,

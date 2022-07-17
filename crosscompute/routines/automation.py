@@ -11,6 +11,7 @@ from jinja2 import Template
 from logging import getLogger
 from multiprocessing import Queue, Manager
 from os import environ, getenv, symlink
+from os.path import relpath
 from pathlib import Path
 from time import sleep, time
 
@@ -34,6 +35,7 @@ from ..exceptions import (
     CrossComputeExecutionError)
 from ..macros.iterable import group_by
 from .configuration import (
+    get_folder_plus_path,
     load_configuration)
 from .interface import Automation
 from .server import DiskServer
@@ -199,14 +201,11 @@ class AbstractEngine():
             },
         })
 
-
-class UnsafeEngine(AbstractEngine):
-
     def prepare(self, automation_definition):
         pass
 
-    def update(self, automation_definition):
-        pass
+
+class UnsafeEngine(AbstractEngine):
 
     def run(
             self, automation_definition, batch_folder, custom_environment):
@@ -216,7 +215,6 @@ class UnsafeEngine(AbstractEngine):
         ) for _ in MODE_NAMES}
         script_environment = _prepare_script_environment(
             mode_folder_by_name, custom_environment, with_path=True)
-        # TODO: Update datasets here
         debug_folder = mode_folder_by_name['debug_folder']
         o_path = debug_folder / 'stdout.txt'
         e_path = debug_folder / 'stderr.txt'
@@ -249,9 +247,6 @@ class PodmanEngine(AbstractEngine):
             'podman', 'build', '-t', image_name, '-f', CONTAINER_FILE_NAME,
         ], cwd=automation_folder)
 
-    def update(self, automation_definition):
-        pass
-
     def run(
             self, automation_definition, batch_folder, custom_environment):
         image_name = _get_image_name(automation_definition)
@@ -264,7 +259,9 @@ class PodmanEngine(AbstractEngine):
             CONTAINER_MODE_FOLDER_BY_NAME, custom_environment, with_path=False)
         (automation_folder / CONTAINER_ENV_NAME).write_text('\n'.join(
             f'{k}={v}' for k, v in script_environment.items()))
-        return_code = _run_podman(automation_folder, batch_folder, image_name)
+        return_code = _run_podman(
+            automation_folder, batch_folder, image_name,
+            automation_definition.dataset_definitions)
         return return_code
 
 
@@ -286,22 +283,22 @@ def get_script_engine(engine_name=None, with_rebuild=True):
 
 
 def update_datasets(automation_definition):
+    # TODO: Download from URL
     automation_folder = automation_definition.folder
     for dataset_definition in automation_definition.dataset_definitions:
-        if 'path' in dataset_definition.reference:
-            reference_path = dataset_definition.reference['path']
-            target_path = automation_folder / dataset_definition.path
-            source_path = (automation_folder / reference_path).relative_to(
-                target_path.parent)
+        reference_path = get_folder_plus_path(dataset_definition.reference)
+        if reference_path:
+            source_path = (automation_folder / reference_path).resolve()
+            target_path = (
+                automation_folder / dataset_definition.path).resolve()
             if target_path.is_symlink():
-                if target_path.resolve() == source_path.resolve():
+                if target_path == source_path:
                     continue
-                # TODO: Acquire lock here
                 target_path.unlink()
             elif target_path.exists():
                 continue
-            symlink(source_path, target_path)
-            # TODO: Release lock here
+            target_folder = make_folder(target_path.parent)
+            symlink(relpath(source_path, target_folder), target_path)
 
 
 def run_automation(automation_definition, run_batch, with_rebuild=True):
@@ -391,25 +388,26 @@ def _run_command(
     return process.returncode
 
 
-def _run_podman(automation_folder, batch_folder, image_name):
-    process = subprocess.run([
-        'podman', 'run', '-d', image_name,
-    ], capture_output=True)
-    container_id = process.stdout.decode().strip()
-    # TODO: Update datasets here
-    container_batch_folder = container_id + ':runs/next/'
-    subprocess.run([
-        'podman', 'cp', batch_folder / 'input', container_batch_folder,
-    ], cwd=automation_folder)
-    process = subprocess.run([
-        'podman', 'exec', '--env-file', CONTAINER_ENV_NAME, container_id,
-        'bash', CONTAINER_SCRIPT_NAME,
-    ], cwd=automation_folder)
-    return_code = process.returncode
-    subprocess.run([
-        'podman', 'cp', container_batch_folder + '.', batch_folder,
-    ], cwd=automation_folder)
-    subprocess.run(['podman', 'kill', container_id])
+def _run_podman(
+        automation_folder, batch_folder, image_name, dataset_definitions):
+    container_id = _run_podman_command({'capture_output': True}, [
+        'run', '-d', image_name]).stdout.decode().rstrip()
+    for dataset_definition in dataset_definitions:
+        dataset_path = dataset_definition.path
+        _run_podman_command({}, [
+            'exec', container_id, 'mkdir', dataset_path.parent, '-p'])
+        _run_podman_command({'cwd': automation_folder}, [
+            'cp', dataset_path, f'{container_id}:{dataset_path}'])
+    container_batch_folder = f'{container_id}:runs/next/'
+    _run_podman_command({'cwd': automation_folder}, [
+        'cp', batch_folder / 'input', container_batch_folder])
+    return_code = _run_podman_command({'cwd': automation_folder}, [
+        'exec', '--env-file', CONTAINER_ENV_NAME, container_id, 'bash',
+        CONTAINER_SCRIPT_NAME,
+    ]).returncode
+    _run_podman_command({'cwd': automation_folder}, [
+        'cp', container_batch_folder + '.', batch_folder])
+    _run_podman_command({}, ['kill', container_id])
     if return_code in [126, 127]:
         error_text = (
             'permission denied' if return_code == 126 else 'not found')
@@ -424,6 +422,10 @@ def _run_podman(automation_folder, batch_folder, image_name):
         error.code = return_code
         raise error
     return return_code
+
+
+def _run_podman_command(options, terms):
+    return subprocess.run(['podman'] + terms, **options)
 
 
 def _work(automation_queue, run_batch):
@@ -560,30 +562,33 @@ def _get_image_name(automation_definition):
 
 
 CONTAINER_IGNORE_TEXT = '''\
+**/.git
+**/.gitignore
+**/.gitmodules
+**/.ipynb_checkpoints
+**/batches
+**/datasets
+**/runs
+**/tests
 .containerfile
-.containerignore
-.gitignore
-.ipynb_checkpoints
-batches/
-datasets/
-runs/
-tests/'''
+.containerignore'''
 CONTAINER_FILE_NAME = '.containerfile'
 CONTAINER_FILE_TEXT = Template('''\
 FROM {{ parent_image_name }}
+WORKDIR /home/user
 RUN \
 {% if root_package_commands %}
 {{ ' && '.join(root_package_commands) }} && \
 {% endif %}
-useradd user
+useradd user && \
+chown user:user /home/user -R
 USER user
-WORKDIR /home/user
-COPY --chown=user:user . .
 RUN \
 {% if user_package_commands %}
 {{ ' && '.join(user_package_commands) }} && \
 {% endif %}
 mkdir runs/next/input runs/next/log runs/next/debug runs/next/output -p
+COPY --chown=user:user . .
 CMD ["sleep", "infinity"]''', trim_blocks=True)
 CONTAINER_PIPE_TEXT = (
     ' 1>>runs/next/debug/stdout.txt'

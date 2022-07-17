@@ -30,6 +30,7 @@ from ..constants import (
     RUN_ROUTE,
     STYLE_ROUTE,
     VARIABLE_ID_PATTERN,
+    VARIABLE_ID_TEMPLATE_PATTERN,
     VIEW_BY_NAME)
 from ..exceptions import (
     CrossComputeConfigurationError,
@@ -648,13 +649,16 @@ def validate_template_identifiers(template_dictionary):
 
 
 def validate_variable_identifiers(variable_dictionary):
-    # TODO: Check that variable_id does not have quotes
     try:
         variable_id = variable_dictionary['id']
         view_name = variable_dictionary['view']
         variable_path = variable_dictionary['path']
     except KeyError as e:
         raise CrossComputeConfigurationError(f'{e} required for each variable')
+    if not VARIABLE_ID_PATTERN.match(variable_id):
+        raise CrossComputeConfigurationError(
+            f'{variable_id} is not a valid variable id; please use only '
+            'lowercase, uppercase, numbers, hyphens, underscores and spaces')
     if relpath(variable_path).startswith('..'):
         raise CrossComputeConfigurationError(
             f'path {variable_path} for variable {variable_id} must be within '
@@ -720,20 +724,19 @@ def validate_batch_configuration(batch_dictionary):
 
 
 def validate_dataset_identifiers(dataset_dictionary):
-    path = Path(dataset_dictionary.get('path', '').strip())
     return {
-        'path': path,
+        'path': get_folder_plus_path(dataset_dictionary),
     }
 
 
 def validate_dataset_reference(dataset_dictionary):
     automation_folder = dataset_dictionary.automation_folder
     dataset_reference = get_dictionary(dataset_dictionary, 'reference')
-    if 'path' in dataset_reference:
-        source_path = Path(dataset_reference['path'].strip())
-        if not (automation_folder / source_path).exists():
+    reference_path = get_folder_plus_path(dataset_reference)
+    if reference_path:
+        if not (automation_folder / reference_path).exists():
             raise CrossComputeConfigurationError(
-                f'could not find dataset reference path {source_path}')
+                f'could not find dataset reference {reference_path}')
         target_path = dataset_dictionary.path
         if target_path.exists() and not target_path.is_symlink():
             raise CrossComputeConfigurationError(
@@ -838,7 +841,7 @@ def validate_token_identifiers(token_dictionary):
             f'{suffix} not supported for token paths')
     payload_by_token = {}
     for token, payload in d.items():
-        variable_match = VARIABLE_ID_PATTERN.match(token)
+        variable_match = VARIABLE_ID_TEMPLATE_PATTERN.match(token)
         if variable_match:
             variable_id = variable_match.group(1)
             try:
@@ -1082,6 +1085,14 @@ def get_list(d, key):
     if not isinstance(value, list):
         raise CrossComputeConfigurationError(f'{key} must be a list')
     return value
+
+
+def get_folder_plus_path(d):
+    folder = d.get('folder', '').strip()
+    path = d.get('path', '').strip()
+    if not folder and not path:
+        return
+    return Path(folder, path)
 
 
 def assert_unique_values(xs, message):

@@ -14,7 +14,7 @@ from ..constants import (
     CACHED_FILE_SIZE_LIMIT_IN_BYTES,
     MAXIMUM_FILE_CACHE_LENGTH,
     TEMPLATES_FOLDER,
-    VARIABLE_ID_PATTERN,
+    VARIABLE_ID_TEMPLATE_PATTERN,
     VIEW_BY_NAME)
 from ..exceptions import (
     CrossComputeConfigurationError,
@@ -630,7 +630,7 @@ def format_text(text, data_by_id):
                 f'{e} function not supported in "{text}"')
         return str(value)
 
-    return VARIABLE_ID_PATTERN.sub(f, text)
+    return VARIABLE_ID_TEMPLATE_PATTERN.sub(f, text)
 
 
 def apply_functions(value, function_names, function_by_name):
