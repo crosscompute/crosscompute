@@ -229,6 +229,8 @@ class UnsafeEngine(AbstractEngine):
 class PodmanEngine(AbstractEngine):
 
     def prepare(self, automation_definition):
+        if not automation_definition.script_definitions:
+            return
         automation_folder = automation_definition.folder
         container_file_path = automation_folder / CONTAINER_FILE_NAME
         if not self.with_rebuild and container_file_path.exists():
@@ -243,9 +245,10 @@ class PodmanEngine(AbstractEngine):
         (automation_folder / CONTAINER_SCRIPT_NAME).write_text(
             '\n'.join([_ + CONTAINER_PIPE_TEXT for _ in command_texts]))
         image_name = _get_image_name(automation_definition)
-        subprocess.run([
+        if subprocess.run([
             'podman', 'build', '-t', image_name, '-f', CONTAINER_FILE_NAME,
-        ], cwd=automation_folder)
+        ], cwd=automation_folder).returncode != 0:
+            raise CrossComputeExecutionError(f'could not build "{image_name}"')
 
     def run(
             self, automation_definition, batch_folder, custom_environment):
@@ -580,7 +583,8 @@ RUN \
 {% if root_package_commands %}
 {{ ' && '.join(root_package_commands) }} && \
 {% endif %}
-useradd user && \
+if command -v useradd > /dev/null; then useradd user; \
+else addgroup -S user && adduser -G user -S user; fi && \
 chown user:user /home/user -R
 USER user
 RUN \
