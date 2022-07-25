@@ -14,6 +14,8 @@ from os import environ, getenv, symlink
 from os.path import relpath
 from pathlib import Path
 from time import sleep, time
+from urllib.error import URLError
+from urllib.request import urlretrieve as download_url
 
 from invisibleroads_macros_disk import make_folder
 
@@ -289,19 +291,25 @@ def update_datasets(automation_definition):
     # TODO: Download from URL
     automation_folder = automation_definition.folder
     for dataset_definition in automation_definition.dataset_definitions:
-        reference_path = get_folder_plus_path(dataset_definition.reference)
+        target_path = (automation_folder / dataset_definition.path).resolve()
+        target_folder = make_folder(target_path.parent)
+        reference_configuration = dataset_definition.reference
+        reference_path = get_folder_plus_path(reference_configuration)
         if reference_path:
             source_path = (automation_folder / reference_path).resolve()
-            target_path = (
-                automation_folder / dataset_definition.path).resolve()
             if target_path.is_symlink():
                 if target_path == source_path:
                     continue
                 target_path.unlink()
             elif target_path.exists():
                 continue
-            target_folder = make_folder(target_path.parent)
             symlink(relpath(source_path, target_folder), target_path)
+        elif 'url' in reference_configuration:
+            reference_url = reference_configuration['url']
+            try:
+                download_url(reference_url, target_path)
+            except URLError:
+                L.error(f'could not download dataset from {reference_url}')
 
 
 def run_automation(automation_definition, run_batch, with_rebuild=True):
