@@ -524,8 +524,9 @@ def update_variable_data(target_path, data_by_id):
 def process_variable_data(path, variable_definition):
     variable_id = variable_definition.id
     variable_view = VariableView.get_from(variable_definition)
+    variable_data = load_variable_data(path, variable_id)
     variable_view.process(path)
-    return load_variable_data(path, variable_id)
+    return variable_data
 
 
 def load_variable_data(path, variable_id):

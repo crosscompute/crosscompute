@@ -555,7 +555,7 @@ def _process_batch(
                 variable_data = process_variable_data(
                     path, variable_definition)
             except CrossComputeDataError as e:
-                e.automation_definitions = automation_definition
+                e.automation_definition = automation_definition
                 L.error(e)
                 continue
             variable_data_by_id[variable_id] = variable_data
