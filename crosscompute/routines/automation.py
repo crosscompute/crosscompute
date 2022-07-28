@@ -9,7 +9,7 @@ from datetime import datetime
 from functools import partial
 from jinja2 import Template
 from logging import getLogger
-from multiprocessing import Queue, Manager
+from multiprocessing import Manager
 from os import environ, getenv, symlink
 from os.path import relpath
 from pathlib import Path
@@ -74,31 +74,17 @@ class DiskAutomation(Automation):
         engine.run_configuration(self)
 
     def serve(
-            self,
-            engine,
-            host=HOST,
-            port=PORT,
-            with_refresh=False,
-            with_restart=False,
-            root_uri='',
+            self, safe, queue, engine, host=HOST, port=PORT,
+            with_refresh=False, with_restart=False, root_uri='',
             allowed_origins=None,
             disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
-            disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS,
-            automation_queue=None):
-        if automation_queue is None:
-            automation_queue = Queue()
+            disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS):
+        work = partial(_work, run_batch=engine.run_batch)
         with Manager() as manager:
-            server_options = {
-                'host': host,
-                'port': port,
-                'with_refresh': with_refresh,
-                'with_restart': with_restart,
-                'root_uri': root_uri,
-                'allowed_origins': allowed_origins,
-                'infos_by_timestamp': manager.dict(),
-            }
-            work = partial(_work, run_batch=engine.run_batch)
-            server = DiskServer(work, automation_queue, server_options)
+            infos_by_timestamp = manager.dict()
+            server = DiskServer(
+                safe, queue, work, infos_by_timestamp, host, port,
+                with_refresh, with_restart, root_uri, allowed_origins)
             configuration = self.configuration
             if not with_refresh and not with_restart:
                 server.serve(configuration)

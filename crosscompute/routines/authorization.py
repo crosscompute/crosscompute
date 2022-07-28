@@ -1,13 +1,21 @@
 from logging import getLogger
 
+from ..constants import TOKEN_LENGTH
 from ..macros.iterable import find_item
+from ..macros.security import DictionarySafe
 
 
 class AuthorizationGuard():
 
     def __init__(self, configuration, safe):
+        constant_safe = DictionarySafe(TOKEN_LENGTH)
+        for token_definition in configuration.token_definitions:
+            payload_by_token = token_definition.payload_by_token
+            for token, payload in payload_by_token.items():
+                constant_safe.set(token, payload)
         self.configuration = configuration
-        self.safe = safe
+        self.constant_safe = constant_safe
+        self.variable_safe = safe
 
     def check(self, request, permission_id, automation_definition=None):
         if not automation_definition:
@@ -18,8 +26,9 @@ class AuthorizationGuard():
         token = get_token(request)
         if not token:
             return False
+        safe = self.constant_safe | self.variable_safe
         try:
-            payload = self.safe.get(token)
+            payload = safe.get(token)
         except KeyError:
             return False
         value_by_name = dict(payload, ip_address=request.remote_addr)
@@ -39,7 +48,7 @@ class AuthorizationGuard():
         return False
 
     def put(self, payload, time_in_seconds):
-        return self.safe.put(payload, time_in_seconds)
+        return self.variable_safe.put(payload, time_in_seconds)
 
 
 def get_token(request):

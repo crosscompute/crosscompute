@@ -1,14 +1,18 @@
 from argparse import ArgumentParser
 from logging import getLogger
+from multiprocessing import Queue
 from os import environ
 
 from crosscompute.constants import (
     DISK_DEBOUNCE_IN_MILLISECONDS,
     DISK_POLL_IN_MILLISECONDS,
     HOST,
-    PORT)
+    PORT,
+    TOKEN_LENGTH)
 from crosscompute.exceptions import (
     CrossComputeError)
+from crosscompute.macros.security import (
+    DictionarySafe)
 from crosscompute.macros.web import (
     find_open_port, is_port_in_use, open_browser)
 from crosscompute.routines.automation import (
@@ -116,6 +120,8 @@ def serve(
             L.info('opening browser; set --no-browser to disable')
             open_browser(f'http://localhost:{port}{root_uri}')
         automation.serve(
+            DictionarySafe(TOKEN_LENGTH),
+            Queue(),
             engine,
             host=host,
             port=port,

@@ -1,6 +1,5 @@
 from invisibleroads_macros_disk import is_path_in_folder
 from logging import getLogger, DEBUG, ERROR
-from multiprocessing import Queue
 from pathlib import Path
 from pyramid.config import Configurator
 from pyramid.events import NewResponse
@@ -15,12 +14,10 @@ from ..constants import (
     MODE_CODE_BY_NAME,
     MODE_ROUTE,
     PORT,
-    RUN_ROUTE,
-    TOKEN_LENGTH)
+    RUN_ROUTE)
 from ..exceptions import (
     CrossComputeError)
 from ..macros.process import LoggableProcess, StoppableProcess
-from ..macros.security import DictionarySafe
 from ..routes.authorization import AuthorizationRoutes
 from ..routes.automation import AutomationRoutes
 from ..routes.mutation import MutationRoutes
@@ -30,20 +27,20 @@ from .interface import Server
 
 class DiskServer(Server):
 
-    def __init__(self, work, queue=None, settings=None):
-        if not queue:
-            queue = Queue()
-        if not settings:
-            settings = {}
-        self._work = work
+    def __init__(
+            self, safe, queue, work, infos_by_timestamp, host=HOST, port=PORT,
+            with_refresh=False, with_restart=False, root_uri='',
+            allowed_origins=None):
+        self._safe = safe
         self._queue = queue
-        self._host = settings.get('host', HOST)
-        self._port = settings.get('port', PORT)
-        self._with_refresh = settings.get('with_refresh', False)
-        self._with_restart = settings.get('with_restart', False)
-        self._root_uri = settings.get('root_uri', '')
-        self._allowed_origins = settings.get('allowed_origins')
-        self._infos_by_timestamp = settings.get('infos_by_timestamp', {})
+        self._work = work
+        self._infos_by_timestamp = infos_by_timestamp
+        self._host = host
+        self._port = port
+        self._with_refresh = with_refresh
+        self._with_restart = with_restart
+        self._root_uri = root_uri
+        self._allowed_origins = allowed_origins
 
     def serve(self, configuration):
         if L.getEffectiveLevel() > DEBUG:
@@ -57,20 +54,12 @@ class DiskServer(Server):
         port = self._port
         root_uri = self._root_uri
         app = _get_app(
-            configuration,
-            self._queue,
-            self._with_refresh,
-            self._with_restart,
-            root_uri,
-            self._allowed_origins,
+            configuration, self._safe, self._queue, self._with_refresh,
+            self._with_restart, root_uri, self._allowed_origins,
             self._infos_by_timestamp)
         L.info('serving at http://%s:%s%s', host, port, root_uri)
         try:
-            serve(
-                app,
-                host=host,
-                port=port,
-                url_prefix=root_uri)
+            serve(app, host=host, port=port, url_prefix=root_uri)
         except OSError as e:
             L.error(e)
 
@@ -120,10 +109,10 @@ class DiskServer(Server):
 
 
 def _get_app(
-        configuration, queue, with_refresh, with_restart, root_uri,
+        configuration, safe, queue, with_refresh, with_restart, root_uri,
         allowed_origins, infos_by_timestamp):
     server_timestamp = time()
-    guard = _get_authorization_guard(configuration, TOKEN_LENGTH)
+    guard = AuthorizationGuard(configuration, safe)
     settings = {
         'root_uri': root_uri,
         'jinja2.trim_blocks': True,
@@ -144,15 +133,6 @@ def _get_app(
         _configure_cache_headers(config, with_restart)
         _configure_allowed_origins(config, allowed_origins)
     return config.make_wsgi_app()
-
-
-def _get_authorization_guard(configuration, token_length):
-    safe = DictionarySafe(TOKEN_LENGTH)
-    for token_definition in configuration.token_definitions:
-        payload_by_token = token_definition.payload_by_token
-        for token, payload in payload_by_token.items():
-            safe.set(token, payload)
-    return AuthorizationGuard(configuration, safe)
 
 
 def _configure_authorization_routes(config, guard):
