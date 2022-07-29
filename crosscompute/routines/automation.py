@@ -27,7 +27,8 @@ from ..constants import (
     DISK_POLL_IN_MILLISECONDS,
     HOST,
     MODE_NAMES,
-    PORT)
+    PORT,
+    TOKEN_LENGTH)
 from ..exceptions import (
     CrossComputeConfigurationError,
     CrossComputeConfigurationFormatError,
@@ -36,6 +37,7 @@ from ..exceptions import (
     CrossComputeError,
     CrossComputeExecutionError)
 from ..macros.iterable import group_by
+from ..macros.security import DictionarySafe
 from .configuration import (
     get_folder_plus_path,
     load_configuration)
@@ -74,7 +76,7 @@ class DiskAutomation(Automation):
         engine.run_configuration(self)
 
     def serve(
-            self, safe, queue, engine, host=HOST, port=PORT,
+            self, queue, engine, host=HOST, port=PORT,
             with_refresh=False, with_restart=False, root_uri='',
             allowed_origins=None,
             disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
@@ -82,6 +84,7 @@ class DiskAutomation(Automation):
         work = partial(_work, run_batch=engine.run_batch)
         with Manager() as manager:
             infos_by_timestamp = manager.dict()
+            safe = DictionarySafe({}, manager.dict(), TOKEN_LENGTH)
             server = DiskServer(
                 safe, queue, work, infos_by_timestamp, host, port,
                 with_refresh, with_restart, root_uri, allowed_origins)

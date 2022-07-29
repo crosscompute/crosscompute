@@ -616,10 +616,13 @@ def validate_authorization(configuration):
     authorization_dictionary = get_dictionary(configuration, 'authorization')
     token_definitions = [TokenDefinition(_) for _ in get_dictionaries(
         authorization_dictionary, 'tokens')]
+    payload_by_token = {
+        token: payload for _ in token_definitions
+        for token, payload in _.payload_by_token.items()}
     group_definitions = [GroupDefinition(_) for _ in get_dictionaries(
         authorization_dictionary, 'groups')]
     return {
-        'token_definitions': token_definitions,
+        'payload_by_token': payload_by_token,
         'group_definitions': group_definitions,
     }
 

@@ -1,21 +1,14 @@
 from logging import getLogger
 
-from ..constants import TOKEN_LENGTH
 from ..macros.iterable import find_item
-from ..macros.security import DictionarySafe
 
 
 class AuthorizationGuard():
 
     def __init__(self, configuration, safe):
-        constant_safe = DictionarySafe(TOKEN_LENGTH)
-        for token_definition in configuration.token_definitions:
-            payload_by_token = token_definition.payload_by_token
-            for token, payload in payload_by_token.items():
-                constant_safe.set(token, payload)
+        safe.constant_value_by_key = configuration.payload_by_token
         self.configuration = configuration
-        self.constant_safe = constant_safe
-        self.variable_safe = safe
+        self.safe = safe
 
     def check(self, request, permission_id, automation_definition=None):
         if not automation_definition:
@@ -26,9 +19,8 @@ class AuthorizationGuard():
         token = get_token(request)
         if not token:
             return False
-        safe = self.constant_safe | self.variable_safe
         try:
-            payload = safe.get(token)
+            payload = self.safe.get(token)
         except KeyError:
             return False
         value_by_name = dict(payload, ip_address=request.remote_addr)
@@ -48,7 +40,7 @@ class AuthorizationGuard():
         return False
 
     def put(self, payload, time_in_seconds):
-        return self.variable_safe.put(payload, time_in_seconds)
+        return self.safe.put(payload, time_in_seconds)
 
 
 def get_token(request):
@@ -58,7 +50,8 @@ def get_token(request):
     if '_token' in params:
         token = params['_token']
         request.response.set_cookie(
-            'crosscompute', value=token, secure=True, httponly=True)
+            'crosscompute', value=token, secure=True, httponly=True,
+            samesite='strict')
     elif 'Authorization' in headers:
         try:
             token = headers['Authorization'].split(maxsplit=1)[1]

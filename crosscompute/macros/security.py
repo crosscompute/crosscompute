@@ -3,28 +3,40 @@ from datetime import datetime, timedelta
 from invisibleroads_macros_security import make_random_string
 
 
-class DictionarySafe(dict):
+class DictionarySafe():
 
-    def __init__(self, key_length):
-        self.key_length = key_length
+    def __init__(
+            self, constant_value_by_key, variable_pack_by_key,
+            variable_key_length):
+        self.constant_value_by_key = constant_value_by_key
+        self.variable_pack_by_key = variable_pack_by_key
+        self.variable_key_length = variable_key_length
 
     def put(self, value, time_in_seconds=None):
+        # Use keys() until https://github.com/python/cpython/pull/17333
+        keys = set(
+            self.constant_value_by_key.keys()
+        ) | set(
+            self.variable_pack_by_key.keys())
         while True:
-            key = make_random_string(self.key_length)
-            try:
-                self[key]
-            except KeyError:
+            key = make_random_string(self.variable_key_length)
+            if key not in keys:
                 break
         self.set(key, value, time_in_seconds)
         return key
 
     def set(self, key, value, time_in_seconds=None):
-        self[key] = value, get_expiration_datetime(time_in_seconds)
+        expiration_datetime = get_expiration_datetime(time_in_seconds)
+        self.variable_pack_by_key[key] = value, expiration_datetime
 
     def get(self, key):
-        value, expiration_datetime = self[key]
+        try:
+            value, expiration_datetime = self.variable_pack_by_key[key]
+        except KeyError:
+            value = self.constant_value_by_key[key]
+            return value
         if expiration_datetime and datetime.now() > expiration_datetime:
-            del self[key]
+            del self.variable_pack_by_key[key]
             raise KeyError
         return value
 

@@ -1,4 +1,5 @@
 from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden
+from simplejson.errors import JSONDecodeError
 
 
 class AuthorizationRoutes():
@@ -23,11 +24,11 @@ class AuthorizationRoutes():
         guard = self.guard
         if not guard.check(request, 'add_authorization'):
             raise HTTPForbidden
-        params = request.params or request.json_body
         try:
+            params = request.params or request.json_body
             payload = params['payload']
             time_in_seconds = int(params['time_in_seconds'])
-        except (KeyError, ValueError):
+        except (KeyError, ValueError, JSONDecodeError):
             raise HTTPBadRequest
         token = guard.put(payload, time_in_seconds)
         return {'token': token}
