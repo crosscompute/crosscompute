@@ -13,7 +13,7 @@ class DictionarySafe():
         self.variable_key_length = variable_key_length
 
     def put(self, value, time_in_seconds=None):
-        # Use keys() until https://github.com/python/cpython/pull/17333
+        # Use keys() until https://github.com/python/cpython/pull/17333 merges
         keys = set(
             self.constant_value_by_key.keys()
         ) | set(
