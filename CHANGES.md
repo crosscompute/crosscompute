@@ -8,6 +8,8 @@
 - Support script.function
 - Support display.pages > configuration.design
 - Support environment > interval for timed updates
+- Support authorization configuration
+- Support podman engine
 - Run batches with process or thread concurrency
 
 # 0.8
