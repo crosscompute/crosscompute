@@ -230,13 +230,12 @@ def _get_info_by_path(configuration):
 
 def _get_configuration_packs(configuration):
     packs = []
-    automation_definitions = configuration.automation_definitions
     # Get automation configuration paths
     packs.append((configuration.path, {}))
-    for automation_definition in automation_definitions:
-        packs.append((automation_definition.path, {}))
+    for import_configuration in configuration.import_configurations:
+        packs.append((import_configuration['path'], {}))
     # Get batch configuration paths
-    for automation_definition in automation_definitions:
+    for automation_definition in configuration.automation_definitions:
         automation_folder = automation_definition.folder
         # Use raw batch definitions
         raw_batch_definitions = automation_definition.get('batches', [])

@@ -395,27 +395,26 @@ def validate_automation_identifiers(configuration):
 
 
 def validate_imports(configuration):
-    automation_configurations = []
-    remaining_configurations = [configuration]
-    while remaining_configurations:
-        c = remaining_configurations.pop(0)
-        folder = c.folder
-        group_definitions = getattr(c, 'group_definitions', [])
-        import_configurations = get_dictionaries(c, 'imports')
-        for i, import_configuration in enumerate(import_configurations, 1):
-            if 'path' in import_configuration:
-                path = import_configuration['path']
-                try:
-                    automation_configuration = load_configuration(
-                        folder / path, index=i,
-                        group_definitions=group_definitions)
-                except CrossComputeConfigurationFormatError as e:
-                    raise CrossComputeConfigurationError(e)
-            else:
-                raise CrossComputeConfigurationError(
-                    'path required for each import')
-            remaining_configurations.append(automation_configuration)
-        automation_configurations.append(c)
+    automation_configurations = [configuration]
+    folder = configuration.folder
+    group_definitions = getattr(configuration, 'group_definitions', [])
+    import_configurations = get_dictionaries(configuration, 'imports')
+    for i, import_configuration in enumerate(import_configurations.copy(), 1):
+        if 'path' in import_configuration:
+            path = folder / import_configuration['path']
+            try:
+                automation_configuration = load_configuration(
+                    path, index=i, group_definitions=group_definitions)
+            except CrossComputeConfigurationFormatError as e:
+                raise CrossComputeConfigurationError(e)
+            import_configuration['path'] = path
+        else:
+            raise CrossComputeConfigurationError(
+                'path required for each import')
+        import_configurations.extend(
+            automation_configuration.import_configurations)
+        automation_configurations.extend(
+            automation_configuration.automation_definitions)
     automation_definitions = [
         _ for _ in automation_configurations if 'output' in _]
     assert_unique_values(
@@ -425,6 +424,7 @@ def validate_imports(configuration):
         [_.slug for _ in automation_definitions],
         'duplicate automation slug {x}')
     return {
+        'import_configurations': import_configurations,
         'automation_definitions': automation_definitions,
     }
 
