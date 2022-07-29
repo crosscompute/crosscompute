@@ -74,6 +74,7 @@ class AutomationDefinition(Definition):
         self.path = path = Path(kwargs['path'])
         self.folder = path.parents[0]
         self.index = kwargs['index']
+        self.group_definitions = kwargs['group_definitions']
         self._validation_functions = [
             validate_protocol,
             validate_automation_identifiers,
@@ -306,14 +307,15 @@ def save_raw_configuration_yaml(configuration_path, configuration):
     return configuration_path
 
 
-def load_configuration(configuration_path, index=0):
+def load_configuration(configuration_path, index=0, group_definitions=[]):
     configuration_path = Path(configuration_path).absolute()
     configuration = load_raw_configuration(configuration_path)
     try:
         configuration = AutomationDefinition(
             configuration,
             path=configuration_path,
-            index=index)
+            index=index,
+            group_definitions=group_definitions)
     except CrossComputeConfigurationError as e:
         if not hasattr(e, 'path'):
             e.path = configuration_path
@@ -398,13 +400,15 @@ def validate_imports(configuration):
     while remaining_configurations:
         c = remaining_configurations.pop(0)
         folder = c.folder
+        group_definitions = getattr(c, 'group_definitions', [])
         import_configurations = get_dictionaries(c, 'imports')
         for i, import_configuration in enumerate(import_configurations, 1):
             if 'path' in import_configuration:
                 path = import_configuration['path']
                 try:
                     automation_configuration = load_configuration(
-                        folder / path, index=i)
+                        folder / path, index=i,
+                        group_definitions=group_definitions)
                 except CrossComputeConfigurationFormatError as e:
                     raise CrossComputeConfigurationError(e)
             else:
@@ -621,6 +625,9 @@ def validate_authorization(configuration):
         for token, payload in _.payload_by_token.items()}
     group_definitions = [GroupDefinition(_) for _ in get_dictionaries(
         authorization_dictionary, 'groups')]
+    if not group_definitions:
+        # Inherit group definitions from parent
+        group_definitions = getattr(configuration, 'group_definitions', [])
     return {
         'payload_by_token': payload_by_token,
         'group_definitions': group_definitions,
