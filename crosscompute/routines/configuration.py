@@ -1,5 +1,6 @@
 # TODO: Save to ini, toml
 import json
+import shutil
 from collections import Counter
 from configparser import ConfigParser
 from datetime import timedelta
@@ -417,12 +418,10 @@ def validate_imports(configuration):
             automation_configuration.automation_definitions)
     automation_definitions = [
         _ for _ in automation_configurations if 'output' in _]
-    assert_unique_values(
-        [_.name for _ in automation_definitions],
-        'duplicate automation name {x}')
-    assert_unique_values(
-        [_.slug for _ in automation_definitions],
-        'duplicate automation slug {x}')
+    assert_unique_values([
+        _.name for _ in automation_definitions], 'duplicate name {x}')
+    assert_unique_values([
+        _.slug for _ in automation_definitions], 'duplicate slug {x}')
     return {
         'import_configurations': import_configurations,
         'automation_definitions': automation_definitions,
@@ -437,8 +436,8 @@ def validate_variables(configuration):
         variable_definitions = [VariableDefinition(
             _, mode_name=mode_name,
         ) for _ in get_dictionaries(mode_configuration, 'variables')]
-        assert_unique_values(
-            [_.id for _ in variable_definitions],
+        assert_unique_values([
+            _.id for _ in variable_definitions],
             f'duplicate variable id {{x}} in {mode_name}')
         variable_definitions_by_mode_name[mode_name] = variable_definitions
         view_names.update(_.view_name for _ in variable_definitions)
@@ -472,8 +471,8 @@ def validate_templates(configuration):
         template_definitions = [TemplateDefinition(
             _, automation_folder=automation_folder, mode_name=mode_name,
         ) for _ in get_dictionaries(mode_configuration, 'templates')]
-        assert_unique_values(
-            [_.id for _ in template_definitions],
+        assert_unique_values([
+            _.id for _ in template_definitions],
             f'duplicate template id {{x}} in {mode_name}')
         template_definitions_by_mode_name[mode_name] = template_definitions
     return {
@@ -492,15 +491,12 @@ def validate_batches(configuration):
     if 'output' in configuration and not(batch_definitions):
         raise CrossComputeConfigurationError(
             'no batches configured; please define at least one batch')
-    assert_unique_values(
-        [_.folder for _ in batch_definitions],
-        'duplicate batch folder {x}')
-    assert_unique_values(
-        [_.name for _ in batch_definitions],
-        'duplicate batch name {x}')
-    assert_unique_values(
-        [_.uri for _ in batch_definitions],
-        'duplicate batch uri {x}')
+    assert_unique_values([
+        _.folder for _ in batch_definitions], 'duplicate batch folder {x}')
+    assert_unique_values([
+        _.name for _ in batch_definitions], 'duplicate batch name {x}')
+    assert_unique_values([
+        _.uri for _ in batch_definitions], 'duplicate batch uri {x}')
     return {
         'batch_definitions': batch_definitions,
         'run_definitions': [],
@@ -508,29 +504,30 @@ def validate_batches(configuration):
 
 
 def validate_environment(configuration):
-    environment_configuration = get_dictionary(configuration, 'environment')
+    d = get_dictionary(configuration, 'environment')
+    engine_name = d.get('engine', 'unsafe').strip()
+    assert_engine_name(engine_name)
 
-    parent_image_name = environment_configuration.get('image', 'python')
-    package_definitions = [PackageDefinition(
-        _
-    ) for _ in get_dictionaries(environment_configuration, 'packages')]
+    parent_image_name = d.get('image', 'python').strip()
+    package_definitions = [PackageDefinition(_) for _ in get_dictionaries(
+        d, 'packages')]
 
     environment_variable_definitions = get_dictionaries(
-        environment_configuration, 'variables')
+        d, 'variables')
     environment_variable_ids = get_environment_variable_ids(
         environment_variable_definitions)
     if environment_variable_ids:
         L.debug('environment_variable_ids = %s', environment_variable_ids)
 
-    batch_concurrency_name = environment_configuration.get(
-        'batch', 'process').lower()
+    batch_concurrency_name = d.get('batch', 'process').lower()
     if batch_concurrency_name not in ('process', 'thread', 'single'):
         raise CrossComputeConfigurationError(
             f'"{batch_concurrency_name}" batch concurrency is not supported')
 
-    interval_text = environment_configuration.get('interval', '').strip()
+    interval_text = d.get('interval', '').strip()
     interval_timedelta = get_interval_timedelta(interval_text)
     return {
+        'engine_name': engine_name,
         'parent_image_name': parent_image_name,
         'package_definitions': package_definitions,
         'environment_variable_ids': environment_variable_ids,
@@ -1075,6 +1072,14 @@ def make_automation_name(automation_index):
     return AUTOMATION_NAME.replace('X', str(automation_index))
 
 
+def get_folder_plus_path(d):
+    folder = d.get('folder', '').strip()
+    path = d.get('path', '').strip()
+    if not folder and not path:
+        return
+    return Path(folder, path)
+
+
 def get_dictionaries(d, key):
     values = get_list(d, key)
     for value in values:
@@ -1097,12 +1102,16 @@ def get_list(d, key):
     return value
 
 
-def get_folder_plus_path(d):
-    folder = d.get('folder', '').strip()
-    path = d.get('path', '').strip()
-    if not folder and not path:
-        return
-    return Path(folder, path)
+def assert_engine_name(engine_name):
+    if engine_name == 'podman':
+        if not shutil.which('podman'):
+            L.warning('podman is not available on this machine')
+    elif engine_name == 'unsafe':
+        L.warning(
+            'using engine=unsafe; use engine=podman for untrusted code')
+    else:
+        raise CrossComputeConfigurationError(
+            f'"{engine_name}" engine is not supported')
 
 
 def assert_unique_values(xs, message):

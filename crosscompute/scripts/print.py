@@ -10,7 +10,7 @@ from crosscompute.exceptions import (
 from crosscompute.macros.process import StoppableProcess
 from crosscompute.macros.web import find_open_port
 from crosscompute.routines.automation import (
-    DiskAutomation, get_script_engine, run_automation)
+    DiskAutomation, run_automation)
 from crosscompute.routines.log import (
     configure_argument_parser_for_logging,
     configure_logging_from)
@@ -38,8 +38,7 @@ def do(arguments=None):
         configure_logging_from(args)
         configure_serving_from(args)
         automation = DiskAutomation.load(args.path_or_folder)
-        engine = get_script_engine(args.engine_name, args.with_rebuild)
-        print_with(automation, engine, args)
+        print_with(automation, args)
     except CrossComputeError as e:
         L.error(e)
         return
@@ -53,7 +52,7 @@ def configure_printing_from(args):
         args.print_folder = make_random_folder()
 
 
-def print_with(automation, engine, args):
+def print_with(automation, args):
     try:
         port = find_open_port()
     except OSError as e:

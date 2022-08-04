@@ -176,6 +176,9 @@ version: 0.0.0
 # environment configuration
 # environment:
 
+  # engine to use to run your script
+  # engine: podman
+
   # image to use to initialize your container
   # image: python
 

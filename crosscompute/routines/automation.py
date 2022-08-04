@@ -1,12 +1,11 @@
+# TODO: Return unvalidated configuration when there is an exception
 # TODO: Watch multiple folders if not all under parent folder
 import shlex
-import shutil
 import subprocess
 from collections import defaultdict
 from concurrent.futures import (
     ProcessPoolExecutor, ThreadPoolExecutor, as_completed)
 from datetime import datetime
-from functools import partial
 from jinja2 import Template
 from logging import getLogger
 from multiprocessing import Manager
@@ -71,17 +70,29 @@ class DiskAutomation(Automation):
                 future.result()
         return instance
 
-    def run(self, engine_name=None, with_rebuild=True):
-        engine = get_script_engine(engine_name, with_rebuild)
-        engine.run_configuration(self)
+    def run(self, with_rebuild=True):
+        for automation_definition in self.definitions:
+            prepare_automation(automation_definition, with_rebuild)
+        recurring_definitions = []
+        for automation_definition in self.definitions:
+            run_automation(automation_definition, with_rebuild)
+            if automation_definition.interval_timedelta:
+                recurring_definitions.append(automation_definition)
+        if not recurring_definitions:
+            return
+        while True:
+            for automation_definition in recurring_definitions:
+                last = automation_definition.interval_datetime
+                delta = automation_definition.interval_timedelta
+                if datetime.now() > last + delta:
+                    run_automation(automation_definition, with_rebuild=False)
+            sleep(1)
 
     def serve(
-            self, queue, engine, host=HOST, port=PORT,
-            with_refresh=False, with_restart=False, root_uri='',
-            allowed_origins=None,
+            self, queue, work, host=HOST, port=PORT, with_refresh=False,
+            with_restart=False, root_uri='', allowed_origins=None,
             disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
             disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS):
-        work = partial(_work, run_batch=engine.run_batch)
         with Manager() as manager:
             infos_by_timestamp = manager.dict()
             safe = DictionarySafe({}, manager.dict(), TOKEN_LENGTH)
@@ -141,25 +152,6 @@ class AbstractEngine():
     def __init__(self, with_rebuild=True):
         self.with_rebuild = with_rebuild
 
-    def run_configuration(self, configuration):
-        for automation_definition in configuration.definitions:
-            self.prepare(automation_definition)
-        recurring_definitions = []
-        for automation_definition in configuration.definitions:
-            run_automation(
-                automation_definition, self.run_batch, self.with_rebuild)
-            if automation_definition.interval_timedelta:
-                recurring_definitions.append(automation_definition)
-        if not recurring_definitions:
-            return
-        while True:
-            for automation_definition in recurring_definitions:
-                last = automation_definition.interval_datetime
-                delta = automation_definition.interval_timedelta
-                if datetime.now() > last + delta:
-                    run_automation(automation_definition, self.run_batch)
-            sleep(1)
-
     def run_batch(self, automation_definition, batch_definition):
         reference_time = time()
         batch_folder, custom_environment = _prepare_batch(
@@ -167,8 +159,7 @@ class AbstractEngine():
         if not automation_definition.script_definitions:
             return
         batch_identifier = ' '.join([
-            automation_definition.name,
-            automation_definition.version,
+            automation_definition.name, automation_definition.version,
             str(batch_folder)])
         L.info('%s running', batch_identifier)
         try:
@@ -188,9 +179,7 @@ class AbstractEngine():
         ], {
             'debug': {
                 'execution_time_in_seconds': time() - reference_time,
-                'return_code': return_code,
-            },
-        })
+                'return_code': return_code}})
 
     def prepare(self, automation_definition):
         pass
@@ -198,8 +187,7 @@ class AbstractEngine():
 
 class UnsafeEngine(AbstractEngine):
 
-    def run(
-            self, automation_definition, batch_folder, custom_environment):
+    def run(self, automation_definition, batch_folder, custom_environment):
         automation_folder = automation_definition.folder
         mode_folder_by_name = {_ + '_folder': make_folder(
             automation_folder / batch_folder / _
@@ -241,8 +229,7 @@ class PodmanEngine(AbstractEngine):
         ], cwd=automation_folder).returncode != 0:
             raise CrossComputeExecutionError(f'could not build "{image_name}"')
 
-    def run(
-            self, automation_definition, batch_folder, custom_environment):
+    def run(self, automation_definition, batch_folder, custom_environment):
         image_name = _get_image_name(automation_definition)
         if subprocess.run([
             'podman', 'image', 'exists', image_name,
@@ -259,12 +246,7 @@ class PodmanEngine(AbstractEngine):
         return return_code
 
 
-def get_script_engine(engine_name=None, with_rebuild=True):
-    if not engine_name:
-        engine_name = 'podman' if shutil.which('podman') else 'unsafe'
-    if engine_name == 'unsafe':
-        L.warning(
-            'using engine=unsafe; use engine=podman for untrusted code')
+def get_script_engine(engine_name, with_rebuild=True):
     try:
         ScriptEngine = {
             'unsafe': UnsafeEngine,
@@ -272,12 +254,10 @@ def get_script_engine(engine_name=None, with_rebuild=True):
         }[engine_name]
     except KeyError:
         raise CrossComputeExecutionError(f'unsupported engine "{engine_name}"')
-    return ScriptEngine(
-        with_rebuild=with_rebuild)
+    return ScriptEngine(with_rebuild=with_rebuild)
 
 
 def update_datasets(automation_definition):
-    # TODO: Download from URL
     automation_folder = automation_definition.folder
     for dataset_definition in automation_definition.dataset_definitions:
         target_path = (automation_folder / dataset_definition.path).resolve()
@@ -299,6 +279,11 @@ def update_datasets(automation_definition):
                 download_url(reference_url, target_path)
             except URLError:
                 L.error(f'could not download dataset from {reference_url}')
+
+
+def prepare_automation(automation_definition, with_rebuild=True):
+    engine = get_script_engine(automation_definition.engine_name, with_rebuild)
+    engine.prepare(automation_definition)
 
 
 def run_automation(automation_definition, run_batch, with_rebuild=True):
@@ -429,12 +414,14 @@ def _run_podman_command(options, terms):
 
 
 def _work(automation_queue, run_batch):
+    # TODO: load engine
     try:
         while automation_pack := automation_queue.get():
             automation_definition, batch_definition = automation_pack
+            engine = get_script_engine()
             update_datasets(automation_definition)
             try:
-                run_batch(automation_definition, batch_definition)
+                engine.run_batch(automation_definition, batch_definition)
             except CrossComputeError as e:
                 e.automation_definition = automation_definition
                 L.error(e)
