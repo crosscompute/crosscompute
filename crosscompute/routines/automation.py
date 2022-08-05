@@ -8,7 +8,7 @@ from concurrent.futures import (
 from datetime import datetime
 from jinja2 import Template
 from logging import getLogger
-from multiprocessing import Manager
+from multiprocessing import Manager, Queue
 from os import environ, getenv, symlink
 from os.path import relpath
 from pathlib import Path
@@ -89,15 +89,16 @@ class DiskAutomation(Automation):
             sleep(1)
 
     def serve(
-            self, queue, work, host=HOST, port=PORT, with_refresh=False,
+            self, host=HOST, port=PORT, with_refresh=False,
             with_restart=False, root_uri='', allowed_origins=None,
             disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
             disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS):
+        queue = Queue()
         with Manager() as manager:
             infos_by_timestamp = manager.dict()
             safe = DictionarySafe({}, manager.dict(), TOKEN_LENGTH)
             server = DiskServer(
-                safe, queue, work, infos_by_timestamp, host, port,
+                safe, queue, _work, infos_by_timestamp, host, port,
                 with_refresh, with_restart, root_uri, allowed_origins)
             configuration = self.configuration
             if not with_refresh and not with_restart:
@@ -286,8 +287,10 @@ def prepare_automation(automation_definition, with_rebuild=True):
     engine.prepare(automation_definition)
 
 
-def run_automation(automation_definition, run_batch, with_rebuild=True):
+def run_automation(automation_definition, with_rebuild=True):
     ds = []
+    run_batch = get_script_engine(
+        automation_definition.engine_name, with_rebuild).run_batch
     concurrency_name = automation_definition.batch_concurrency_name
     update_datasets(automation_definition)
     try:
@@ -413,12 +416,12 @@ def _run_podman_command(options, terms):
     return subprocess.run(['podman'] + terms, **options)
 
 
-def _work(automation_queue, run_batch):
-    # TODO: load engine
+def _work(automation_queue):
     try:
         while automation_pack := automation_queue.get():
             automation_definition, batch_definition = automation_pack
-            engine = get_script_engine()
+            engine = get_script_engine(
+                automation_definition.engine_name, with_rebuild=False)
             update_datasets(automation_definition)
             try:
                 engine.run_batch(automation_definition, batch_definition)

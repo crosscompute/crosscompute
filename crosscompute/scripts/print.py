@@ -62,7 +62,7 @@ def print_with(automation, args):
     for automation_definition in get_selected_automation_definitions(
             automation.definitions):
         # TODO: Consider using ds returned from run_automation
-        run_automation(automation_definition, engine.run_batch)
+        run_automation(automation_definition, with_rebuild=True)
         for print_definition in automation_definition.print_definitions:
             batch_dictionaries = get_batch_dictionaries(
                 automation_definition, print_definition, timestamp)
@@ -72,7 +72,7 @@ def print_with(automation, args):
     args.with_refresh = False
     args.with_restart = False
     server_process = StoppableProcess(
-        name='serve', target=serve_with, args=(automation, engine, args))
+        name='serve', target=serve_with, args=(automation, args))
     server_process.start()
     try:
         for print_definition, batch_dictionaries in print_packs:

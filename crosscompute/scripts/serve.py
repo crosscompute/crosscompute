@@ -1,6 +1,5 @@
 from argparse import ArgumentParser
 from logging import getLogger
-from multiprocessing import Queue
 from os import environ
 
 from crosscompute.constants import (
@@ -13,8 +12,7 @@ from crosscompute.exceptions import (
 from crosscompute.macros.web import (
     find_open_port, is_port_in_use, open_browser)
 from crosscompute.routines.automation import (
-    DiskAutomation,
-    get_script_engine)
+    DiskAutomation)
 from crosscompute.routines.log import (
     configure_argument_parser_for_logging,
     configure_logging_from)
@@ -39,8 +37,7 @@ def do(arguments=None):
         L.error(e)
         return
     check_port(args.port)
-    engine = get_script_engine(args.engine_name, args.with_rebuild)
-    serve_with(automation, engine, args)
+    serve_with(automation, args)
 
 
 def configure_argument_parser_for_serving(a):
@@ -85,10 +82,9 @@ def configure_serving_from(args):
         args.root_uri = '/' + root_uri
 
 
-def serve_with(automation, engine, args):
+def serve_with(automation, args):
     return serve(
         automation,
-        engine,
         host=args.host,
         port=args.port,
         with_browser=args.with_browser,
@@ -102,7 +98,6 @@ def serve_with(automation, engine, args):
 
 def serve(
         automation,
-        engine,
         host=HOST,
         port=PORT,
         with_browser=False,
@@ -117,8 +112,6 @@ def serve(
             L.info('opening browser; set --no-browser to disable')
             open_browser(f'http://localhost:{port}{root_uri}')
         automation.serve(
-            Queue(),
-            engine,
             host=host,
             port=port,
             with_refresh=with_refresh,
