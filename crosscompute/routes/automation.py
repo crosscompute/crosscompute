@@ -27,7 +27,7 @@ from ..exceptions import CrossComputeDataError
 from ..macros.iterable import extend_uniquely, find_item
 from ..macros.web import get_html_from_markdown
 from ..routines.batch import DiskBatch
-from ..routines.configuration import BatchDefinition, VariableDefinition
+from ..routines.configuration import BatchDefinition
 from ..routines.variable import (
     Element,
     VariableView,
@@ -200,9 +200,9 @@ class AutomationRoutes():
         }, data_by_id=data_by_id, is_run=True)
         self.automation_queue.put((automation_definition, batch_definition))
         automation_definition.run_definitions.append(batch_definition)
-        run_id = batch_definition.name
-        # TODO: Change target page depending on definition
-        return {'id': run_id}
+        mode_code = 'l' if automation_definition.get_variable_definitions(
+            'log') else 'o'
+        return {'run_id': batch_definition.name, 'mode_code': mode_code}
 
     def see_automation(self, request):
         automation_definition = self.get_automation_definition_from(request)
@@ -330,15 +330,12 @@ def _get_mode_name(request):
 def _get_variable_definition(automation_definition, mode_name, variable_id):
     variable_definitions = automation_definition.get_variable_definitions(
         mode_name)
-    if mode_name == 'debug' and variable_id == 'return_code':
-        variable_definition = RETURN_CODE_VARIABLE_DEFINITION
-    else:
-        try:
-            variable_definition = find_item(
-                variable_definitions, 'id', variable_id,
-                normalize=str.casefold)
-        except StopIteration:
-            raise HTTPNotFound
+    try:
+        variable_definition = find_item(
+            variable_definitions, 'id', variable_id,
+            normalize=str.casefold)
+    except StopIteration:
+        raise HTTPNotFound
     return variable_definition
 
 
@@ -449,8 +446,3 @@ CSS_TEXT_BY_DESIGN_NAME = {
     'none': HEADER_CSS,
 }
 L = getLogger(__name__)
-RETURN_CODE_VARIABLE_DEFINITION = VariableDefinition({
-    'id': 'return_code',
-    'view': 'number',
-    'path': 'variables.dictionary',
-}, mode_name='debug')

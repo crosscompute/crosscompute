@@ -11,10 +11,10 @@ document.getElementById('_run').onclick = async () => {
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(dataById)});
   const d = await response.json();
-  window.location = '{{ ROOT_URI }}{{ automation_definition.uri }}/r/' + d['id'] + '/o';
+  window.location = '{{ ROOT_URI }}{{ automation_definition.uri }}/r/' + d['run_id'] + '/' + d['mode_code'];
 };
 const GET_DATA_BY_VIEW_NAME = {};
-{% elif mode_name == 'output' %}
+{% else %}
 const functionsByVariableId = {};
 function registerElement(variableId, refreshElement) {
   if (functionsByVariableId[variableId] === undefined) {
@@ -23,8 +23,14 @@ function registerElement(variableId, refreshElement) {
   functionsByVariableId[variableId].push(refreshElement);
 }
 function refreshVariable(variableId) {
-  for (const f of functionsByVariableId[variableId]) {
+  const fs = functionsByVariableId[variableId] || [];
+  for (const f of fs) {
     f();
   }
 }
+{% if mode_name == 'log' %}
+registerElement('return_code', function() {
+  console.log('whee');
+});
+{% endif %}
 {% endif %}

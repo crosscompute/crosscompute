@@ -17,14 +17,18 @@ async function processMutations() {
   try {
     const response = await fetch(`${uri}?t=${mutationTimestamp}`);
     const d = await response.json();
-    const { variables } = d;
+    const { styles, variables } = d;
     if (
       d.server_timestamp != {{ SERVER_TIMESTAMP }} ||
       d.configurations.length ||
-      d.templates.length ||
-      d.styles.length
+      d.templates.length
     ) {
       refreshPage();
+    } else if (styles.length) {
+      // https://stackoverflow.com/a/43161591/192092
+      for (var l of document.getElementsByTagName('link')) {
+        if (l.rel === 'stylesheet') l.href += '';
+      }
     } else if (variables.length) {
       for (const variable of variables) {
         refreshVariable(variable.id);

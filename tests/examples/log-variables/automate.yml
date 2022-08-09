@@ -1,0 +1,29 @@
+---
+crosscompute: 0.9.2
+name: Test Log Variables
+version: 0.0.0
+input:
+  variables:
+    - id: iteration_count
+      view: number
+      path: variables.dictionary
+    - id: delay_in_seconds
+      view: number
+      path: variables.dictionary
+log:
+  variables:
+    - id: live_info
+      view: markdown
+      path: log.md
+output:
+  variables:
+    - id: time_in_seconds
+      view: number
+      path: variables.dictionary
+batches:
+  - folder: batches/standard
+scripts:
+  - path: run.py
+environment:
+  engine: podman
+  image: python

@@ -56,6 +56,9 @@ version: 0.0.0
   #   - id: x6
   #     view: markdown
   #     path: x6.md
+  #   - id: x7
+  #     view: map-mapbox-location
+  #     path: variables.dictionary
 
   # input templates
   # - path to your markdown template or jupyter notebook form (required)
@@ -98,8 +101,11 @@ version: 0.0.0
   #     view: table
   #     path: y7.json
   #   - id: y8
+  #     view: frame
+  #     path: variables.dictionary
+  #   - id: y9
   #     view: map-mapbox
-  #     path: y8.geojson
+  #     path: y9.geojson
   #     configuration:
   #       style: mapbox://styles/mapbox/dark-v10
   #       layers:
@@ -108,13 +114,11 @@ version: 0.0.0
   #           paint:
   #             fill-color: blue
   #             circle-color: red
-  #       path: y8-configuration.json
-  #   - id: y9
+  #   - id: y10
   #     view: map-deck-screengrid
-  #     path: y9.json
+  #     path: y10.json
   #     configuration:
   #       style: mapbox://styles/mapbox/dark-v10
-  #       path: y9-configuration.json
 
   # output templates
   # - path to your markdown template or jupyter notebook form (required)

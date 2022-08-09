@@ -26,6 +26,7 @@ from ..constants import (
     DISK_POLL_IN_MILLISECONDS,
     HOST,
     MODE_NAMES,
+    PODMAN_UPDATE_INTERVAL_IN_SECONDS,
     PORT,
     TOKEN_LENGTH)
 from ..exceptions import (
@@ -180,7 +181,8 @@ class AbstractEngine():
         ], {
             'debug': {
                 'execution_time_in_seconds': time() - reference_time,
-                'return_code': return_code}})
+                'return_code': return_code,
+            }})
 
     def prepare(self, automation_definition):
         pass
@@ -389,12 +391,9 @@ def _run_podman(
     container_batch_folder = f'{container_id}:runs/next/'
     _run_podman_command({'cwd': automation_folder}, [
         'cp', batch_folder / 'input', container_batch_folder])
-    return_code = _run_podman_command({'cwd': automation_folder}, [
-        'exec', '--env-file', CONTAINER_ENV_NAME, container_id, 'bash',
-        CONTAINER_SCRIPT_NAME,
-    ]).returncode
-    _run_podman_command({'cwd': automation_folder}, [
-        'cp', container_batch_folder + '.', batch_folder])
+    return_code = _run_podman_script(
+        automation_folder, batch_folder, container_batch_folder, container_id,
+        PODMAN_UPDATE_INTERVAL_IN_SECONDS)
     _run_podman_command({}, ['kill', container_id])
     if return_code in [126, 127]:
         error_text = (
@@ -410,6 +409,21 @@ def _run_podman(
         error.code = return_code
         raise error
     return return_code
+
+
+def _run_podman_script(
+        automation_folder, batch_folder, container_batch_folder, container_id,
+        update_interval_in_seconds):
+    p = subprocess.Popen([
+        'podman', 'exec', '--env-file', CONTAINER_ENV_NAME, container_id,
+        'bash', CONTAINER_SCRIPT_NAME], cwd=automation_folder)
+    while p.poll() is None:
+        _run_podman_command({'cwd': automation_folder}, [
+            'cp', container_batch_folder + '.', batch_folder])
+        sleep(update_interval_in_seconds)
+    _run_podman_command({'cwd': automation_folder}, [
+        'cp', container_batch_folder + '.', batch_folder])
+    return p.returncode
 
 
 def _run_podman_command(options, terms):

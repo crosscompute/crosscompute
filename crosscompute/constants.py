@@ -64,3 +64,15 @@ VIEW_BY_NAME = {}
 
 MINIMUM_PORT = int(getenv('CROSSCOMPUTE_MINIMUM_PORT', 1024))
 MAXIMUM_PORT = int(getenv('CROSSCOMPUTE_MAXIMUM_PORT', 65535))
+
+
+DEBUG_VARIABLE_DICTIONARIES = [{
+    'id': 'execution_time_in_seconds',
+    'view': 'number',
+    'path': 'variables.dictionary',
+}, {
+    'id': 'return_code',
+    'view': 'number',
+    'path': 'variables.dictionary',
+}]
+PODMAN_UPDATE_INTERVAL_IN_SECONDS = 3

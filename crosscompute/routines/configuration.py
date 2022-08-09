@@ -26,6 +26,7 @@ from ..constants import (
     AUTOMATION_ROUTE,
     AUTOMATION_VERSION,
     BATCH_ROUTE,
+    DEBUG_VARIABLE_DICTIONARIES,
     MODE_NAMES,
     PRINTER_BY_NAME,
     RUN_ROUTE,
@@ -433,12 +434,16 @@ def validate_variables(configuration):
     view_names = set()
     for mode_name in MODE_NAMES:
         mode_configuration = get_dictionary(configuration, mode_name)
+        variable_dictionaries = get_dictionaries(
+            mode_configuration, 'variables')
+        if mode_name == 'debug':
+            variable_dictionaries[:0] = DEBUG_VARIABLE_DICTIONARIES
         variable_definitions = [VariableDefinition(
             _, mode_name=mode_name,
-        ) for _ in get_dictionaries(mode_configuration, 'variables')]
+        ) for _ in variable_dictionaries]
         assert_unique_values([
-            _.id for _ in variable_definitions],
-            f'duplicate variable id {{x}} in {mode_name}')
+            _.id for _ in variable_definitions
+        ], f'duplicate variable id {{x}} in {mode_name}')
         variable_definitions_by_mode_name[mode_name] = variable_definitions
         view_names.update(_.view_name for _ in variable_definitions)
     L.debug('view_names = %s', list(view_names))

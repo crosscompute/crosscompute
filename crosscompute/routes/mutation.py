@@ -42,6 +42,7 @@ class MutationRoutes():
                     configurations.append({})
                 elif code == 'v':
                     if uri.startswith(info['uri']):
+                        # TODO: Send value or diff if authorized
                         variables.append({'id': info['id']})
                 elif code == 't':
                     if uri.startswith(info['uri']):

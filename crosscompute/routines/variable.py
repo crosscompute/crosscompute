@@ -405,6 +405,35 @@ class TableView(VariableView):
         }
 
 
+class FrameView(VariableView):
+
+    view_name = 'frame'
+
+    def render_output(self, b: Batch, x: Element):
+        variable_definition = self.variable_definition
+        variable_id = self.variable_id
+        element_id = x.id
+        c = b.get_variable_configuration(variable_definition)
+        data = b.get_data(variable_definition)
+        if 'value' in data:
+            value = data['value']
+        else:
+            value = ''
+        main_text = (
+            f'<iframe id="{element_id}" '
+            f'class="_{self.mode_name} _{self.view_name} {variable_id}" '
+            f'src="{escape_quotes_html(value)}" frameborder="0">'
+            '</iframe>')
+        if x.design_name not in ['none']:
+            main_text = add_label_html(main_text, c, variable_id, element_id)
+        return {
+            'css_uris': [],
+            'js_uris': [],
+            'main_text': main_text,
+            'js_texts': [],
+        }
+
+
 def initialize_view_by_name():
     for entry_point in entry_points().select(group='crosscompute.views'):
         VIEW_BY_NAME[entry_point.name] = import_attribute(entry_point.value)
