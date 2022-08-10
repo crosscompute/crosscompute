@@ -239,6 +239,14 @@ class PackageDefinition(Definition):
         ]
 
 
+class PortDefinition(Definition):
+
+    def _initialize(self, kwargs):
+        self._validation_functions = [
+            validate_port_identifiers,
+        ]
+
+
 class StyleDefinition(Definition):
 
     def _initialize(self, kwargs):
@@ -512,29 +520,24 @@ def validate_environment(configuration):
     d = get_dictionary(configuration, 'environment')
     engine_name = d.get('engine', 'unsafe').strip()
     assert_engine_name(engine_name)
-
     parent_image_name = d.get('image', 'python').strip()
     package_definitions = [PackageDefinition(_) for _ in get_dictionaries(
         d, 'packages')]
-
-    environment_variable_definitions = get_dictionaries(
-        d, 'variables')
-    environment_variable_ids = get_environment_variable_ids(
-        environment_variable_definitions)
-    if environment_variable_ids:
-        L.debug('environment_variable_ids = %s', environment_variable_ids)
-
+    port_definitions = [PortDefinition(_) for _ in get_dictionaries(
+        d, 'ports')]
+    environment_variable_ids = get_environment_variable_ids(get_dictionaries(
+        d, 'variables'))
     batch_concurrency_name = d.get('batch', 'process').lower()
     if batch_concurrency_name not in ('process', 'thread', 'single'):
         raise CrossComputeConfigurationError(
             f'"{batch_concurrency_name}" batch concurrency is not supported')
-
     interval_text = d.get('interval', '').strip()
     interval_timedelta = get_interval_timedelta(interval_text)
     return {
         'engine_name': engine_name,
         'parent_image_name': parent_image_name,
         'package_definitions': package_definitions,
+        'port_definitions': port_definitions,
         'environment_variable_ids': environment_variable_ids,
         'batch_concurrency_name': batch_concurrency_name,
         'interval_timedelta': interval_timedelta,
@@ -795,6 +798,23 @@ def validate_package_identifiers(package_dictionary):
     return {
         'id': package_id,
         'manager_name': manager_name,
+    }
+
+
+def validate_port_identifiers(port_dictionary):
+    try:
+        port_id = port_dictionary['id']
+        port_number = port_dictionary['number']
+    except KeyError as e:
+        raise CrossComputeConfigurationError(f'{e} required for each port')
+    try:
+        port_number = int(port_number)
+    except ValueError:
+        raise CrossComputeConfigurationError(
+            f'{port_number} must be an integer')
+    return {
+        'id': port_id,
+        'number': port_number,
     }
 
 

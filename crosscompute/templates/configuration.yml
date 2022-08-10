@@ -191,6 +191,11 @@ version: 0.0.0
   #   - id: chromium
   #     manager: apt
 
+  # ports needed by your scripts
+  # ports:
+  #   - id: session_url
+  #     number: 8888
+
   # environment variables needed by your scripts
   # - id of the environment variable to make available to your script (required)
   # variables:
