@@ -30,7 +30,7 @@ function refreshVariable(variableId) {
 }
 {% if mode_name == 'log' %}
 registerElement('return_code', function() {
-  console.log('whee');
+  window.location = window.location.href.slice(0, -1) + 'o';
 });
 {% endif %}
 {% endif %}
