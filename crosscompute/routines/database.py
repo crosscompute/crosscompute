@@ -42,6 +42,7 @@ class DiskDatabase():
             add_variable_infos_from_folder(
                 memory, configuration, runs_folder / run_id, run_uri)
             infos = memory.get(path)
+            break
         else:
             infos = self._memory.get(path)
         return infos

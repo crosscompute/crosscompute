@@ -5,9 +5,9 @@ function formatMarkdown(text) {
   }
   return html;
 }
-function refreshMarkdownOutput(elementId, dataUri) {
+async function refreshMarkdownOutput(elementId, dataUri) {
   try {
-    refreshString(elementId, 'innerHTML', dataUri, formatMarkdown);
+    await refreshString(elementId, 'innerHTML', dataUri, formatMarkdown);
   } catch {
   }
 }

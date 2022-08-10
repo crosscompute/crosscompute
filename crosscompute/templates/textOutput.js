@@ -1,6 +1,6 @@
-function refreshText_$element_id() {
+async function refreshText_$element_id() {
   try {
-    refreshString('$element_id', 'textContent', '$data_uri');
+    await refreshString('$element_id', 'textContent', '$data_uri');
   } catch {
   }
 }
