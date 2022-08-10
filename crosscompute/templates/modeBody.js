@@ -11,7 +11,7 @@ document.getElementById('_run').onclick = async () => {
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(dataById)});
   const d = await response.json();
-  window.location = '{{ ROOT_URI }}{{ automation_definition.uri }}/r/' + d['run_id'] + '/' + d['mode_code'];
+  location = '{{ ROOT_URI }}{{ automation_definition.uri }}/r/' + d['run_id'] + '/' + d['mode_code'];
 };
 const GET_DATA_BY_VIEW_NAME = {};
 {% else %}
@@ -30,7 +30,7 @@ function refreshVariable(variableId) {
 }
 {% if mode_name == 'log' %}
 registerElement('return_code', function() {
-  window.location = window.location.href.slice(0, -1) + 'o';
+  location = location.href.slice(0, -1) + 'o';
 });
 {% endif %}
 {% endif %}

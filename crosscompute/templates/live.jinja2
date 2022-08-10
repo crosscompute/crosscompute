@@ -25,9 +25,12 @@ async function processMutations() {
     ) {
       refreshPage();
     } else if (styles.length) {
-      // https://stackoverflow.com/a/43161591/192092
-      for (var l of document.getElementsByTagName('link')) {
-        if (l.rel === 'stylesheet') l.href += '';
+      const { origin } = location;
+      for (var e of document.getElementsByTagName('link')) {
+        if (e.rel !== 'stylesheet' || new URL(e.href).origin !== origin) {
+          continue;
+        }
+        e.href += '?' + Date.now();
       }
     } else if (variables.length) {
       for (const variable of variables) {

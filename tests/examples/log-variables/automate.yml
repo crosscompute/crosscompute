@@ -25,5 +25,5 @@ batches:
 scripts:
   - path: run.py
 environment:
-  engine: podman
+  # engine: podman
   image: python
