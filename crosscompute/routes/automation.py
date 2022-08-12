@@ -37,10 +37,10 @@ from ..routines.variable import (
 class AutomationRoutes():
 
     def __init__(
-            self, configuration, automation_definitions, automation_queue,
+            self, configuration, environment, automation_queue,
             authorization_guard):
         self.configuration = configuration
-        self.automation_definitions = automation_definitions
+        self.environment = environment
         self.automation_queue = automation_queue
         self.guard = authorization_guard
 
@@ -198,7 +198,8 @@ class AutomationRoutes():
         batch_definition = BatchDefinition({
             'folder': folder,
         }, data_by_id=data_by_id, is_run=True)
-        self.automation_queue.put((automation_definition, batch_definition))
+        self.automation_queue.put((
+            automation_definition, batch_definition, self.environment))
         automation_definition.run_definitions.append(batch_definition)
         mode_code = 'l' if automation_definition.get_variable_definitions(
             'log') else 'o'
@@ -273,10 +274,11 @@ class AutomationRoutes():
 
     def get_automation_definition_from(self, request):
         matchdict = request.matchdict
+        automation_definitions = self.configuration.automation_definitions
         automation_slug = matchdict['automation_slug']
         try:
             automation_definition = find_item(
-                self.automation_definitions, 'slug', automation_slug,
+                automation_definitions, 'slug', automation_slug,
                 normalize=str.casefold)
         except StopIteration:
             raise HTTPNotFound

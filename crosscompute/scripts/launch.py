@@ -18,6 +18,7 @@ from crosscompute.scripts.print import (
     print_with)
 from crosscompute.scripts.run import (
     configure_argument_parser_for_running,
+    configure_running_from,
     run_with)
 from crosscompute.scripts.serve import (
     check_port,
@@ -93,6 +94,7 @@ def _get_args(arguments):
     try:
         configure_logging_from(args)
         configure_serving_from(args)
+        configure_running_from(args)
     except CrossComputeError as e:
         L.error(e)
         raise SystemExit

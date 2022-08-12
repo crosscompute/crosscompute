@@ -413,6 +413,7 @@ class FrameView(VariableView):
         variable_definition = self.variable_definition
         variable_id = self.variable_id
         element_id = x.id
+        data_uri = b.get_data_uri(variable_definition, x)
         c = b.get_variable_configuration(variable_definition)
         data = b.get_data(variable_definition)
         if 'value' in data:
@@ -426,11 +427,20 @@ class FrameView(VariableView):
             '</iframe>')
         if x.design_name not in ['none']:
             main_text = add_label_html(main_text, c, variable_id, element_id)
+
+        js_texts = [
+            FRAME_JS_HEADER,
+            FRAME_JS_OUTPUT.substitute({
+                'variable_id': variable_id,
+                'element_id': element_id,
+                'data_uri': data_uri,
+            }),
+        ]
         return {
             'css_uris': [],
             'js_uris': [],
             'main_text': main_text,
-            'js_texts': [],
+            'js_texts': js_texts,
         }
 
 
@@ -441,6 +451,7 @@ def initialize_view_by_name():
 
 
 def save_variable_data(target_path, data_by_id, variable_definitions):
+    target_path.parent.mkdir(parents=True, exist_ok=True)
     variable_data_by_id = get_variable_data_by_id(
         variable_definitions, data_by_id)
     if target_path.suffix == '.dictionary':
@@ -534,18 +545,23 @@ def parse_data_by_id(data_by_id, variable_definitions):
 
 
 def update_variable_data(target_path, data_by_id):
+    target_path.parent.mkdir(parents=True, exist_ok=True)
     try:
-        if target_path.exists():
-            with target_path.open('r+t') as f:
-                d = json.load(f)
-                d.update(data_by_id)
-                f.seek(0)
-                f.truncate()
-                json.dump(d, f)
+        if target_path.suffix == '.dictionary':
+            if target_path.exists():
+                with target_path.open('r+t') as f:
+                    d = json.load(f)
+                    d.update(data_by_id)
+                    f.seek(0)
+                    f.truncate()
+                    json.dump(d, f)
+            else:
+                with target_path.open('wt') as f:
+                    d = data_by_id
+                    json.dump(d, f)
         else:
             with target_path.open('wt') as f:
-                d = data_by_id
-                json.dump(d, f)
+                f.write(data_by_id.values()[0])
     except (json.JSONDecodeError, OSError) as e:
         raise CrossComputeDataError(e)
 
@@ -725,6 +741,10 @@ IMAGE_JS_OUTPUT = Template(load_view_text('imageOutput.js'))
 
 TABLE_JS_HEADER = load_view_text('tableHeader.js')
 TABLE_JS_OUTPUT = Template(load_view_text('tableOutput.js'))
+
+
+FRAME_JS_HEADER = load_view_text('frameHeader.js')
+FRAME_JS_OUTPUT = Template(load_view_text('frameOutput.js'))
 
 
 YIELD_DATA_BY_ID_BY_EXTENSION = {

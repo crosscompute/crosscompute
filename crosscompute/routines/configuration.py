@@ -39,6 +39,7 @@ from ..exceptions import (
     CrossComputeConfigurationFormatError,
     CrossComputeConfigurationNotImplementedError,
     CrossComputeError)
+from ..macros.iterable import find_item
 from ..macros.package import is_equivalent_version
 from .printer import initialize_printer_by_name
 from .variable import (
@@ -96,8 +97,8 @@ class AutomationDefinition(Definition):
         ]
 
     def get_variable_definitions(self, mode_name, with_all=False):
-        variable_definitions = self.variable_definitions_by_mode_name[
-            mode_name]
+        variable_definitions = self.variable_definitions_by_mode_name.get(
+            mode_name, [])
         if with_all:
             variable_definitions = variable_definitions.copy()
             for MODE_NAME in MODE_NAMES:
@@ -131,8 +132,7 @@ class AutomationDefinition(Definition):
             design_name = page_definition.configuration.get(
                 'design', design_name)
         elif page_id in MODE_NAMES:
-            variable_definitions = self.variable_definitions_by_mode_name.get(
-                page_id, [])
+            variable_definitions = self.get_variable_definitions(page_id)
             if not variable_definitions:
                 design_name = 'none'
         return design_name
@@ -518,13 +518,12 @@ def validate_batches(configuration):
 
 def validate_environment(configuration):
     d = get_dictionary(configuration, 'environment')
-    engine_name = d.get('engine', 'unsafe').strip()
-    assert_engine_name(engine_name)
+    engine_name = get_engine_name(d)
     parent_image_name = d.get('image', 'python').strip()
     package_definitions = [PackageDefinition(_) for _ in get_dictionaries(
         d, 'packages')]
-    port_definitions = [PortDefinition(_) for _ in get_dictionaries(
-        d, 'ports')]
+    port_definitions = get_port_definitions(
+        d, configuration.get_variable_definitions('log', with_all=True))
     environment_variable_ids = get_environment_variable_ids(get_dictionaries(
         d, 'variables'))
     batch_concurrency_name = d.get('batch', 'process').lower()
@@ -1008,6 +1007,40 @@ def get_template_text(
     return '\n'.join(template_texts)
 
 
+def get_engine_name(environment_dictionary):
+    engine_name = environment_dictionary.get('engine', 'unsafe').strip()
+    if engine_name == 'podman':
+        if not shutil.which('podman'):
+            L.warning('podman is not available on this machine')
+    elif engine_name == 'unsafe':
+        L.warning(
+            'using engine=unsafe; use engine=podman for untrusted code')
+    else:
+        raise CrossComputeConfigurationError(
+            f'"{engine_name}" engine is not supported')
+    return engine_name
+
+
+def get_port_definitions(environment_dictionary, variable_definitions):
+    port_definitions = [PortDefinition(_) for _ in get_dictionaries(
+        environment_dictionary, 'ports')]
+    for port_definition in port_definitions:
+        port_id = port_definition.id
+        try:
+            variable_definition = find_item(
+                variable_definitions, 'id', port_id)
+        except StopIteration:
+            raise CrossComputeConfigurationError(
+                f'{port_id} port must have a matching variable definition')
+        mode_name = variable_definition.mode_name
+        if mode_name not in ['log', 'debug']:
+            raise CrossComputeConfigurationError(
+                f'{port_id} port must correspond to a log or debug variable')
+        port_definition.mode_name = mode_name
+        port_definition.variable_path = variable_definition.path
+    return port_definitions
+
+
 def get_environment_variable_ids(environment_variable_definitions):
     variable_ids = set()
     for environment_variable_definition in environment_variable_definitions:
@@ -1125,18 +1158,6 @@ def get_list(d, key):
     if not isinstance(value, list):
         raise CrossComputeConfigurationError(f'{key} must be a list')
     return value
-
-
-def assert_engine_name(engine_name):
-    if engine_name == 'podman':
-        if not shutil.which('podman'):
-            L.warning('podman is not available on this machine')
-    elif engine_name == 'unsafe':
-        L.warning(
-            'using engine=unsafe; use engine=podman for untrusted code')
-    else:
-        raise CrossComputeConfigurationError(
-            f'"{engine_name}" engine is not supported')
 
 
 def assert_unique_values(xs, message):

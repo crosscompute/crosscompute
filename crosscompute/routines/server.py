@@ -25,9 +25,10 @@ from .interface import Server
 class DiskServer(Server):
 
     def __init__(
-            self, safe, queue, work, infos_by_timestamp, host=HOST, port=PORT,
-            with_refresh=False, with_restart=False, root_uri='',
-            allowed_origins=None):
+            self, environment, safe, queue, work, infos_by_timestamp,
+            host=HOST, port=PORT, with_refresh=False,
+            with_restart=False, root_uri='', allowed_origins=None):
+        self._environment = environment
         self._safe = safe
         self._queue = queue
         self._work = work
@@ -51,9 +52,9 @@ class DiskServer(Server):
         port = self._port
         root_uri = self._root_uri
         app = _get_app(
-            configuration, self._safe, self._queue, self._with_refresh,
-            self._with_restart, root_uri, self._allowed_origins,
-            self._infos_by_timestamp)
+            configuration, self._environment, self._safe, self._queue,
+            self._with_refresh, self._with_restart, root_uri,
+            self._allowed_origins, self._infos_by_timestamp)
         L.info('serving at http://%s:%s%s', host, port, root_uri)
         try:
             serve(app, host=host, port=port, url_prefix=root_uri)
@@ -94,8 +95,8 @@ class DiskServer(Server):
 
 
 def _get_app(
-        configuration, safe, queue, with_refresh, with_restart, root_uri,
-        allowed_origins, infos_by_timestamp):
+        configuration, environment, safe, queue, with_refresh, with_restart,
+        root_uri, allowed_origins, infos_by_timestamp):
     server_timestamp = time()
     guard = AuthorizationGuard(configuration, safe)
     settings = {
@@ -108,7 +109,8 @@ def _get_app(
     with Configurator(settings=settings) as config:
         config.include('pyramid_jinja2')
         _configure_authorization_routes(config, guard)
-        _configure_automation_routes(config, configuration, queue, guard)
+        _configure_automation_routes(
+            config, configuration, environment, queue, guard)
         if with_refresh:
             _configure_mutation_routes(
                 config, server_timestamp, infos_by_timestamp)
@@ -125,10 +127,10 @@ def _configure_authorization_routes(config, guard):
     config.include(authorization_routes.includeme)
 
 
-def _configure_automation_routes(config, configuration, queue, guard):
-    automation_definitions = configuration.automation_definitions
+def _configure_automation_routes(
+        config, configuration, environment, queue, guard):
     automation_routes = AutomationRoutes(
-        configuration, automation_definitions, queue, guard)
+        configuration, environment, queue, guard)
     config.include(automation_routes.includeme)
 
 

@@ -37,9 +37,9 @@ DISK_DEBOUNCE_IN_MILLISECONDS = 1000
 
 AUTOMATION_ROUTE = '/a/{automation_slug}'
 BATCH_ROUTE = '/b/{batch_slug}'
-VARIABLE_ROUTE = '/{variable_id}'
-MODE_ROUTE = '/{mode_code}'
 RUN_ROUTE = '/r/{run_slug}'
+MODE_ROUTE = '/{mode_code}'
+VARIABLE_ROUTE = '/{variable_id}'
 STYLE_ROUTE = '/s/{style_name}.css'
 MUTATION_ROUTE = '/mutations{uri}.json'
 
@@ -64,6 +64,7 @@ VIEW_BY_NAME = {}
 
 MINIMUM_PORT = int(getenv('CROSSCOMPUTE_MINIMUM_PORT', 1024))
 MAXIMUM_PORT = int(getenv('CROSSCOMPUTE_MAXIMUM_PORT', 65535))
+PROXY_URI = getenv('CROSSCOMPUTE_PROXY_URI', '')
 
 
 DEBUG_VARIABLE_DICTIONARIES = [{

@@ -20,7 +20,8 @@ from crosscompute.routines.variable import (
 from crosscompute.scripts.configure import (
     configure_argument_parser_for_configuring)
 from crosscompute.scripts.run import (
-    configure_argument_parser_for_running)
+    configure_argument_parser_for_running,
+    configure_running_from)
 from crosscompute.scripts.serve import (
     configure_argument_parser_for_serving,
     configure_serving_from,
@@ -37,6 +38,7 @@ def do(arguments=None):
     try:
         configure_logging_from(args)
         configure_serving_from(args)
+        configure_running_from(args)
         automation = DiskAutomation.load(args.path_or_folder)
         print_with(automation, args)
     except CrossComputeError as e:

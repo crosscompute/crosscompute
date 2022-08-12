@@ -1,12 +1,14 @@
 # TODO: Return unvalidated configuration when there is an exception
 # TODO: Watch multiple folders if not all under parent folder
+# TODO: Kill running containers at exit
+import requests
 import shlex
 import subprocess
+from contextlib import contextmanager
 from collections import defaultdict
 from concurrent.futures import (
     ProcessPoolExecutor, ThreadPoolExecutor, as_completed)
 from datetime import datetime
-from jinja2 import Template
 from logging import getLogger
 from multiprocessing import Manager, Queue
 from os import environ, getenv, symlink
@@ -17,17 +19,22 @@ from urllib.error import URLError
 from urllib.request import urlretrieve as download_url
 
 from invisibleroads_macros_disk import make_folder
+from jinja2 import Template
 
 from ..constants import (
     Error,
     Status,
     AUTOMATION_PATH,
+    AUTOMATION_ROUTE,
     DISK_DEBOUNCE_IN_MILLISECONDS,
     DISK_POLL_IN_MILLISECONDS,
     HOST,
+    MODE_CODE_BY_NAME,
     MODE_NAMES,
     PODMAN_UPDATE_INTERVAL_IN_SECONDS,
     PORT,
+    PROXY_URI,
+    RUN_ROUTE,
     TOKEN_LENGTH)
 from ..exceptions import (
     CrossComputeConfigurationError,
@@ -38,6 +45,7 @@ from ..exceptions import (
     CrossComputeExecutionError)
 from ..macros.iterable import group_by
 from ..macros.security import DictionarySafe
+from ..macros.web import find_open_port
 from .configuration import (
     get_folder_plus_path,
     load_configuration)
@@ -71,12 +79,13 @@ class DiskAutomation(Automation):
                 future.result()
         return instance
 
-    def run(self, with_rebuild=True):
+    def run(self, user_environment, with_rebuild=True):
         for automation_definition in self.definitions:
             prepare_automation(automation_definition, with_rebuild)
         recurring_definitions = []
         for automation_definition in self.definitions:
-            run_automation(automation_definition, with_rebuild)
+            run_automation(
+                automation_definition, user_environment, with_rebuild)
             if automation_definition.interval_timedelta:
                 recurring_definitions.append(automation_definition)
         if not recurring_definitions:
@@ -86,11 +95,13 @@ class DiskAutomation(Automation):
                 last = automation_definition.interval_datetime
                 delta = automation_definition.interval_timedelta
                 if datetime.now() > last + delta:
-                    run_automation(automation_definition, with_rebuild=False)
+                    run_automation(
+                        automation_definition, user_environment,
+                        with_rebuild=False)
             sleep(1)
 
     def serve(
-            self, host=HOST, port=PORT, with_refresh=False,
+            self, environment, host=HOST, port=PORT, with_refresh=False,
             with_restart=False, root_uri='', allowed_origins=None,
             disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
             disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS):
@@ -99,8 +110,8 @@ class DiskAutomation(Automation):
             infos_by_timestamp = manager.dict()
             safe = DictionarySafe({}, manager.dict(), TOKEN_LENGTH)
             server = DiskServer(
-                safe, queue, _work, infos_by_timestamp, host, port,
-                with_refresh, with_restart, root_uri, allowed_origins)
+                environment, safe, queue, _work, infos_by_timestamp, host,
+                port, with_refresh, with_restart, root_uri, allowed_origins)
             configuration = self.configuration
             if not with_refresh and not with_restart:
                 server.serve(configuration)
@@ -154,9 +165,10 @@ class AbstractEngine():
     def __init__(self, with_rebuild=True):
         self.with_rebuild = with_rebuild
 
-    def run_batch(self, automation_definition, batch_definition):
+    def run_batch(
+            self, automation_definition, batch_definition, user_environment):
         reference_time = time()
-        batch_folder, custom_environment = _prepare_batch(
+        batch_folder, batch_environment = _prepare_batch(
             automation_definition, batch_definition)
         if not automation_definition.script_definitions:
             return
@@ -166,7 +178,8 @@ class AbstractEngine():
         L.info('%s running', batch_identifier)
         try:
             return_code = self.run(
-                automation_definition, batch_folder, custom_environment)
+                automation_definition, batch_folder,
+                batch_environment | user_environment)
         except CrossComputeConfigurationError as e:
             e.automation_definition = automation_definition
             raise
@@ -213,10 +226,10 @@ class PodmanEngine(AbstractEngine):
     def prepare(self, automation_definition):
         if not automation_definition.script_definitions:
             return
-        automation_folder = automation_definition.folder
-        container_file_path = automation_folder / CONTAINER_FILE_NAME
-        if not self.with_rebuild and container_file_path.exists():
+        image_name = _get_image_name(automation_definition)
+        if not self.with_rebuild and _has_podman_image(image_name):
             return
+        automation_folder = automation_definition.folder
         (automation_folder / CONTAINER_FILE_NAME).write_text(
             _prepare_container_file_text(automation_definition))
         (automation_folder / '.containerignore').write_text(
@@ -226,26 +239,33 @@ class PodmanEngine(AbstractEngine):
             for _ in automation_definition.script_definitions]
         (automation_folder / CONTAINER_SCRIPT_NAME).write_text(
             '\n'.join([_ + CONTAINER_PIPE_TEXT for _ in command_texts]))
-        image_name = _get_image_name(automation_definition)
         if subprocess.run([
             'podman', 'build', '-t', image_name, '-f', CONTAINER_FILE_NAME,
         ], cwd=automation_folder).returncode != 0:
             raise CrossComputeExecutionError(f'could not build "{image_name}"')
 
     def run(self, automation_definition, batch_folder, custom_environment):
-        image_name = _get_image_name(automation_definition)
-        if subprocess.run([
-            'podman', 'image', 'exists', image_name,
-        ]).returncode != 0:
-            self.prepare(automation_definition)
-        automation_folder = automation_definition.folder
-        script_environment = _prepare_script_environment(
-            CONTAINER_MODE_FOLDER_BY_NAME, custom_environment, with_path=False)
-        (automation_folder / CONTAINER_ENV_NAME).write_text('\n'.join(
-            f'{k}={v}' for k, v in script_environment.items()))
-        return_code = _run_podman(
-            automation_folder, batch_folder, image_name,
-            automation_definition.dataset_definitions)
+        container_id, port_packs = _run_podman_image(
+            automation_definition, custom_environment)
+        with _proxy_podman_ports(
+                automation_definition, batch_folder, custom_environment,
+                port_packs):
+            return_code = _run_podman_script(
+                automation_definition, batch_folder, container_id,
+                PODMAN_UPDATE_INTERVAL_IN_SECONDS)
+        if return_code in [126, 127]:
+            error_text = (
+                'permission denied' if return_code == 126 else 'not found')
+            error = CrossComputeConfigurationError(
+                f'command {error_text} in container; please check script '
+                'definitions')
+            error.code = Error.COMMAND_NOT_RUNNABLE
+            raise error
+        elif return_code > 0:
+            error_text = (batch_folder / 'debug' / 'stderr.txt').read_text()
+            error = CrossComputeExecutionError(error_text.rstrip())
+            error.code = return_code
+            raise error
         return return_code
 
 
@@ -289,7 +309,7 @@ def prepare_automation(automation_definition, with_rebuild=True):
     engine.prepare(automation_definition)
 
 
-def run_automation(automation_definition, with_rebuild=True):
+def run_automation(automation_definition, user_environment, with_rebuild=True):
     ds = []
     run_batch = get_script_engine(
         automation_definition.engine_name, with_rebuild).run_batch
@@ -298,11 +318,12 @@ def run_automation(automation_definition, with_rebuild=True):
     try:
         if concurrency_name == 'single':
             ds.extend(_run_automation_single(
-                automation_definition, run_batch, with_rebuild))
+                automation_definition, run_batch, user_environment,
+                with_rebuild))
         else:
             ds.extend(_run_automation_multiple(
-                automation_definition, run_batch, with_rebuild,
-                concurrency_name))
+                automation_definition, run_batch, user_environment,
+                with_rebuild, concurrency_name))
     except CrossComputeError as e:
         e.automation_definition = automation_definition
         L.error(e)
@@ -310,18 +331,21 @@ def run_automation(automation_definition, with_rebuild=True):
     return ds
 
 
-def _run_automation_single(automation_definition, run_batch, with_rebuild):
+def _run_automation_single(
+        automation_definition, run_batch, user_environment, with_rebuild):
     ds = []
     for batch_definition in automation_definition.batch_definitions:
         batch_status = batch_definition.get_status()
         if not with_rebuild and batch_status != Status.NEW:
             continue
-        ds.append(run_batch(automation_definition, batch_definition))
+        ds.append(run_batch(
+            automation_definition, batch_definition, user_environment))
     return ds
 
 
 def _run_automation_multiple(
-        automation_definition, run_batch, with_rebuild, concurrency_name):
+        automation_definition, run_batch, user_environment, with_rebuild,
+        concurrency_name):
     ds = []
     if concurrency_name == 'process':
         BatchExecutor = ProcessPoolExecutor
@@ -334,7 +358,8 @@ def _run_automation_multiple(
             if not with_rebuild and batch_status != Status.NEW:
                 continue
             futures.append(executor.submit(
-                run_batch, automation_definition, batch_definition))
+                run_batch, automation_definition, batch_definition,
+                user_environment))
         for future in as_completed(futures):
             ds.append(future.result())
     return ds
@@ -378,67 +403,124 @@ def _run_command(
     return process.returncode
 
 
-def _run_podman(
-        automation_folder, batch_folder, image_name, dataset_definitions):
-    container_id = _run_podman_command({'capture_output': True}, [
-        'run', '-d', image_name]).stdout.decode().rstrip()
-    for dataset_definition in dataset_definitions:
+def _has_podman_image(image_name):
+    return _run_podman_command({}, [
+        'image', 'exists', image_name]).returncode == 0
+
+
+def _run_podman_image(automation_definition, custom_environment):
+    automation_folder = automation_definition.folder
+    container_env_path = automation_folder / CONTAINER_ENV_NAME
+    script_environment = _prepare_script_environment(
+        CONTAINER_MODE_FOLDER_BY_NAME, custom_environment, with_path=False)
+    container_env_path.write_text('\n'.join(
+        f'{k}={v}' for k, v in script_environment.items()))
+    L.debug(f'saved script environment to {container_env_path}')
+    port_definitions = automation_definition.port_definitions
+    image_name = _get_image_name(automation_definition)
+    while True:
+        port_packs = []
+        port_terms = []
+        for port_definition in port_definitions:
+            port_id = port_definition.id
+            host_port = find_open_port()
+            mode_name = port_definition.mode_name
+            variable_path = port_definition.variable_path
+            container_port = port_definition.number
+            port_packs.append((port_id, host_port, mode_name, variable_path))
+            port_terms.extend(['-p', f'{host_port}:{container_port}'])
+        process = _run_podman_command({'capture_output': True}, [
+            'run'] + port_terms + ['-d', image_name])
+        if process.returncode == 0:
+            break
+    container_id = process.stdout.decode().rstrip()
+    return container_id, port_packs
+
+
+@contextmanager
+def _proxy_podman_ports(
+        automation_definition, batch_folder, custom_environment, port_packs):
+    origin_uri = custom_environment.get('CROSSCOMPUTE_ORIGIN_URI', '')
+    relative_uris = []
+    if PROXY_URI:
+        def get_session_uri(host_port, relative_uri):
+            requests.post(PROXY_URI + relative_uri, json={
+                'target': f'http://localhost:{host_port}'})
+            relative_uris.append(relative_uri)
+            return origin_uri + relative_uri
+    else:
+        def get_session_uri(host_port, relative_uri):
+            return f'http://localhost:{host_port}'
+    automation_uri = AUTOMATION_ROUTE.format(
+        automation_slug=automation_definition.slug)
+    run_uri = RUN_ROUTE.format(run_slug=batch_folder.name)
+    absolute_batch_folder = automation_definition.folder / batch_folder
+    for port_id, host_port, mode_name, variable_path in port_packs:
+        mode_code = MODE_CODE_BY_NAME[mode_name]
+        variable_id = port_id
+        relative_uri = (
+            f'/sessions{automation_uri}{run_uri}/{mode_code}'
+            f'/{variable_id}')
+        session_uri = get_session_uri(host_port, relative_uri)
+        port_path = absolute_batch_folder / mode_name / variable_path
+        update_variable_data(port_path, {port_id: session_uri})
+    yield
+    for relative_uri in relative_uris:
+        requests.delete(PROXY_URI + relative_uri)
+
+
+def _run_podman_script(
+        automation_definition, batch_folder, container_id,
+        update_interval_in_seconds):
+    automation_folder = automation_definition.folder
+
+    for dataset_definition in automation_definition.dataset_definitions:
         dataset_path = dataset_definition.path
         _run_podman_command({}, [
             'exec', container_id, 'mkdir', dataset_path.parent, '-p'])
         _run_podman_command({'cwd': automation_folder}, [
             'cp', dataset_path, f'{container_id}:{dataset_path}'])
+
     container_batch_folder = f'{container_id}:runs/next/'
     _run_podman_command({'cwd': automation_folder}, [
         'cp', batch_folder / 'input', container_batch_folder])
-    return_code = _run_podman_script(
-        automation_folder, batch_folder, container_batch_folder, container_id,
-        PODMAN_UPDATE_INTERVAL_IN_SECONDS)
-    _run_podman_command({}, ['kill', container_id])
-    if return_code in [126, 127]:
-        error_text = (
-            'permission denied' if return_code == 126 else 'not found')
-        error = CrossComputeConfigurationError(
-            f'command {error_text} in container; please check script '
-            'definitions')
-        error.code = Error.COMMAND_NOT_RUNNABLE
-        raise error
-    elif return_code > 0:
-        error_text = (batch_folder / 'debug' / 'stderr.txt').read_text()
-        error = CrossComputeExecutionError(error_text.rstrip())
-        error.code = return_code
-        raise error
-    return return_code
+    for port_definition in automation_definition.port_definitions:
+        mode_name = port_definition.mode_name
+        _run_podman_command({'cwd': automation_folder}, [
+            'cp', batch_folder / mode_name / port_definition.variable_path,
+            container_batch_folder + mode_name])
 
-
-def _run_podman_script(
-        automation_folder, batch_folder, container_batch_folder, container_id,
-        update_interval_in_seconds):
-    p = subprocess.Popen([
+    process = subprocess.Popen([
         'podman', 'exec', '--env-file', CONTAINER_ENV_NAME, container_id,
         'bash', CONTAINER_SCRIPT_NAME], cwd=automation_folder)
-    while p.poll() is None:
+
+    # TODO: Look into https://unix.stackexchange.com/questions/651198/podman-volume-mounts-when-to-use-the-z-or-z-suffix
+    while process.poll() is None:
         _run_podman_command({'cwd': automation_folder}, [
             'cp', container_batch_folder + '.', batch_folder])
         sleep(update_interval_in_seconds)
     _run_podman_command({'cwd': automation_folder}, [
         'cp', container_batch_folder + '.', batch_folder])
-    return p.returncode
+
+    _run_podman_command({}, ['kill', container_id])
+    return process.returncode
 
 
 def _run_podman_command(options, terms):
-    return subprocess.run(['podman'] + terms, **options)
+    command_terms = ['podman'] + terms
+    L.debug(command_terms)
+    return subprocess.run(command_terms, **options)
 
 
 def _work(automation_queue):
     try:
         while automation_pack := automation_queue.get():
-            automation_definition, batch_definition = automation_pack
+            automation_definition = automation_pack[0]
             engine = get_script_engine(
                 automation_definition.engine_name, with_rebuild=False)
             update_datasets(automation_definition)
             try:
-                engine.run_batch(automation_definition, batch_definition)
+                engine.run_batch(*automation_pack)
             except CrossComputeError as e:
                 e.automation_definition = automation_definition
                 L.error(e)
@@ -452,28 +534,27 @@ def _prepare_batch(automation_definition, batch_definition):
     variable_definitions_by_path = group_by(variable_definitions, 'path')
     data_by_id = batch_definition.data_by_id
     batch_folder = batch_definition.folder
-    custom_environment = _prepare_custom_environment(
+    batch_environment = _prepare_batch_environment(
         automation_definition,
         variable_definitions_by_path.pop('ENVIRONMENT', []),
         data_by_id)
     if not data_by_id:
-        return batch_folder, custom_environment
+        return batch_folder, batch_environment
     automation_folder = automation_definition.folder
     input_folder = make_folder(automation_folder / batch_folder / 'input')
     for path, variable_definitions in variable_definitions_by_path.items():
         input_path = input_folder / path
         save_variable_data(input_path, data_by_id, variable_definitions)
-    return batch_folder, custom_environment
+    return batch_folder, batch_environment
 
 
 def _prepare_container_file_text(automation_definition):
+    path_folders = set()
     package_ids_by_manager_name = defaultdict(set)
     for package_definition in automation_definition.package_definitions:
-        package_id = package_definition.id
         manager_name = package_definition.manager_name
-        package_ids_by_manager_name[manager_name].add(package_id)
-    root_package_commands = []
-    user_package_commands = []
+        package_ids_by_manager_name[manager_name].add(package_definition.id)
+    root_package_commands, user_package_commands = [], []
     if 'apt' in package_ids_by_manager_name:
         package_ids_string = ' '.join(package_ids_by_manager_name['apt'])
         root_package_commands.append(
@@ -485,15 +566,22 @@ def _prepare_container_file_text(automation_definition):
     if 'npm' in package_ids_by_manager_name:
         package_ids_string = ' '.join(package_ids_by_manager_name['npm'])
         user_package_commands.append(
-            f'npm install {package_ids_string} && npm cache clean --force')
+            f'npm install {package_ids_string} --prefix ~/.local -g && '
+            f'npm cache clean --force')
+        path_folders.add('/home/user/.local/bin')
     if 'pip' in package_ids_by_manager_name:
         package_ids_string = ' '.join(package_ids_by_manager_name['pip'])
         user_package_commands.append(
-            f'pip install {package_ids_string} --user && pip cache purge')
+            f'pip install {package_ids_string} --user && '
+            f'pip cache purge && rm -rf ~/.cache')
+        path_folders.add('/home/user/.local/bin')
     return CONTAINER_FILE_TEXT.render(
+        parent_image_name=automation_definition.parent_image_name,
         root_package_commands=root_package_commands,
         user_package_commands=user_package_commands,
-        parent_image_name=automation_definition.parent_image_name)
+        path_folders=path_folders,
+        port_numbers=[str(
+            _.number) for _ in automation_definition.port_definitions])
 
 
 def _prepare_script_environment(
@@ -503,27 +591,26 @@ def _prepare_script_environment(
     } | custom_environment
     if with_path:
         script_environment['PATH'] = getenv('PATH', '')
-    L.debug('environment = %s', script_environment)
     return script_environment
 
 
-def _prepare_custom_environment(
+def _prepare_batch_environment(
         automation_definition, variable_definitions, data_by_id):
-    custom_environment = {}
+    batch_environment = {}
     for variable_id in automation_definition.environment_variable_ids:
-        custom_environment[variable_id] = environ[variable_id]
+        batch_environment[variable_id] = environ[variable_id]
     for variable_id in (_.id for _ in variable_definitions):
         if variable_id in data_by_id:
             continue
         try:
-            custom_environment[variable_id] = environ[variable_id]
+            batch_environment[variable_id] = environ[variable_id]
         except KeyError:
             raise CrossComputeConfigurationError(
                 f'{variable_id} is missing in the environment')
     variable_data_by_id = get_variable_data_by_id(
         variable_definitions, data_by_id, with_exceptions=False)
     variable_value_by_id = get_variable_value_by_id(variable_data_by_id)
-    return custom_environment | variable_value_by_id
+    return batch_environment | variable_value_by_id
 
 
 def _process_batch(
@@ -588,11 +675,17 @@ if command -v useradd > /dev/null; then useradd user; \
 else addgroup -S user && adduser -G user -S user; fi && \
 chown user:user /home/user -R
 USER user
+{% if path_folders %}
+ENV PATH="${PATH}:{{ ':'.join(path_folders) }}"
+{% endif %}
 RUN \
 {% if user_package_commands %}
 {{ ' && '.join(user_package_commands) }} && \
 {% endif %}
 mkdir runs/next/input runs/next/log runs/next/debug runs/next/output -p
+{% if port_numbers %}
+EXPOSE {{ ' '.join(port_numbers) }}
+{% endif %}
 COPY --chown=user:user . .
 CMD ["sleep", "infinity"]''', trim_blocks=True)
 CONTAINER_PIPE_TEXT = (

@@ -19,7 +19,8 @@ from crosscompute.routines.log import (
 from crosscompute.scripts.configure import (
     configure_argument_parser_for_configuring)
 from crosscompute.scripts.run import (
-    configure_argument_parser_for_running)
+    configure_argument_parser_for_running,
+    configure_running_from)
 
 
 def do(arguments=None):
@@ -32,6 +33,7 @@ def do(arguments=None):
     try:
         configure_logging_from(args)
         configure_serving_from(args)
+        configure_running_from(args)
         automation = DiskAutomation.load(args.path_or_folder)
     except CrossComputeError as e:
         L.error(e)
@@ -85,6 +87,7 @@ def configure_serving_from(args):
 def serve_with(automation, args):
     return serve(
         automation,
+        environment=args.environment,
         host=args.host,
         port=args.port,
         with_browser=args.with_browser,
@@ -98,6 +101,7 @@ def serve_with(automation, args):
 
 def serve(
         automation,
+        environment,
         host=HOST,
         port=PORT,
         with_browser=False,
@@ -112,6 +116,7 @@ def serve(
             L.info('opening browser; set --no-browser to disable')
             open_browser(f'http://localhost:{port}{root_uri}')
         automation.serve(
+            environment,
             host=host,
             port=port,
             with_refresh=with_refresh,
