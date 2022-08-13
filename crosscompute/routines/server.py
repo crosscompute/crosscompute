@@ -71,8 +71,10 @@ class DiskServer(Server):
         for changes in watch(
                 automation_folder, min_sleep=disk_poll_in_milliseconds,
                 debounce=disk_debounce_in_milliseconds):
+            L.debug(changes)
             changed_paths = [_[1] for _ in changes]
             changed_infos = disk_database.grok(changed_paths)
+            L.debug(changed_infos)
             should_restart_server = False
             for info in changed_infos:
                 if info['code'] == 'c':

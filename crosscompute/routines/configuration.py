@@ -1037,7 +1037,6 @@ def get_port_definitions(environment_dictionary, variable_definitions):
             raise CrossComputeConfigurationError(
                 f'{port_id} port must correspond to a log or debug variable')
         port_definition.mode_name = mode_name
-        port_definition.variable_path = variable_definition.path
     return port_definitions
 
 

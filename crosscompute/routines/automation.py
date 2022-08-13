@@ -31,7 +31,6 @@ from ..constants import (
     HOST,
     MODE_CODE_BY_NAME,
     MODE_NAMES,
-    PODMAN_UPDATE_INTERVAL_IN_SECONDS,
     PORT,
     PROXY_URI,
     RUN_ROUTE,
@@ -191,11 +190,10 @@ class AbstractEngine():
             L.info('%s done', batch_identifier)
         return _process_batch(automation_definition, batch_definition, [
             'output', 'log', 'debug',
-        ], {
-            'debug': {
-                'execution_time_in_seconds': time() - reference_time,
-                'return_code': return_code,
-            }})
+        ], {'debug': {
+            'execution_time_in_seconds': time() - reference_time,
+            'return_code': return_code,
+        }})
 
     def prepare(self, automation_definition):
         pass
@@ -204,10 +202,8 @@ class AbstractEngine():
 class UnsafeEngine(AbstractEngine):
 
     def run(self, automation_definition, batch_folder, custom_environment):
-        automation_folder = automation_definition.folder
-        mode_folder_by_name = {_ + '_folder': make_folder(
-            automation_folder / batch_folder / _
-        ) for _ in MODE_NAMES}
+        mode_folder_by_name = _get_mode_folder_by_name(
+            automation_definition.folder, batch_folder)
         script_environment = _prepare_script_environment(
             mode_folder_by_name, custom_environment, with_path=True)
         debug_folder = mode_folder_by_name['debug_folder']
@@ -246,13 +242,12 @@ class PodmanEngine(AbstractEngine):
 
     def run(self, automation_definition, batch_folder, custom_environment):
         container_id, port_packs = _run_podman_image(
-            automation_definition, custom_environment)
+            automation_definition, batch_folder, custom_environment)
         with _proxy_podman_ports(
                 automation_definition, batch_folder, custom_environment,
                 port_packs):
             return_code = _run_podman_script(
-                automation_definition, batch_folder, container_id,
-                PODMAN_UPDATE_INTERVAL_IN_SECONDS)
+                automation_definition, batch_folder, container_id)
         if return_code in [126, 127]:
             error_text = (
                 'permission denied' if return_code == 126 else 'not found')
@@ -408,29 +403,32 @@ def _has_podman_image(image_name):
         'image', 'exists', image_name]).returncode == 0
 
 
-def _run_podman_image(automation_definition, custom_environment):
+def _run_podman_image(automation_definition, batch_folder, custom_environment):
     automation_folder = automation_definition.folder
     container_env_path = automation_folder / CONTAINER_ENV_NAME
     script_environment = _prepare_script_environment(
         CONTAINER_MODE_FOLDER_BY_NAME, custom_environment, with_path=False)
     container_env_path.write_text('\n'.join(
         f'{k}={v}' for k, v in script_environment.items()))
-    L.debug(f'saved script environment to {container_env_path}')
     port_definitions = automation_definition.port_definitions
     image_name = _get_image_name(automation_definition)
+    absolute_batch_folder = automation_folder / batch_folder
     while True:
         port_packs = []
-        port_terms = []
+        command_terms = []
         for port_definition in port_definitions:
             port_id = port_definition.id
             host_port = find_open_port()
             mode_name = port_definition.mode_name
-            variable_path = port_definition.variable_path
             container_port = port_definition.number
-            port_packs.append((port_id, host_port, mode_name, variable_path))
-            port_terms.extend(['-p', f'{host_port}:{container_port}'])
-        process = _run_podman_command({'capture_output': True}, [
-            'run'] + port_terms + ['-d', image_name])
+            port_packs.append((port_id, host_port, mode_name))
+            command_terms.extend(['-p', f'{host_port}:{container_port}'])
+        command_terms.extend([
+            '-v', f'{absolute_batch_folder}:/home/user/runs/next:Z'])
+        process = _run_podman_command({
+            'cwd': automation_folder,
+            'capture_output': True,
+        }, ['run'] + command_terms + ['-d', image_name])
         if process.returncode == 0:
             break
     container_id = process.stdout.decode().rstrip()
@@ -455,24 +453,23 @@ def _proxy_podman_ports(
         automation_slug=automation_definition.slug)
     run_uri = RUN_ROUTE.format(run_slug=batch_folder.name)
     absolute_batch_folder = automation_definition.folder / batch_folder
-    for port_id, host_port, mode_name, variable_path in port_packs:
+    for port_id, host_port, mode_name in port_packs:
+        port_path = absolute_batch_folder / 'debug' / 'ports.dictionary'
         mode_code = MODE_CODE_BY_NAME[mode_name]
         variable_id = port_id
         relative_uri = (
             f'/sessions{automation_uri}{run_uri}/{mode_code}'
             f'/{variable_id}')
         session_uri = get_session_uri(host_port, relative_uri)
-        port_path = absolute_batch_folder / mode_name / variable_path
         update_variable_data(port_path, {port_id: session_uri})
     yield
     for relative_uri in relative_uris:
         requests.delete(PROXY_URI + relative_uri)
 
 
-def _run_podman_script(
-        automation_definition, batch_folder, container_id,
-        update_interval_in_seconds):
+def _run_podman_script(automation_definition, batch_folder, container_id):
     automation_folder = automation_definition.folder
+    absolute_batch_folder = automation_folder / batch_folder
 
     for dataset_definition in automation_definition.dataset_definitions:
         dataset_path = dataset_definition.path
@@ -481,26 +478,13 @@ def _run_podman_script(
         _run_podman_command({'cwd': automation_folder}, [
             'cp', dataset_path, f'{container_id}:{dataset_path}'])
 
-    container_batch_folder = f'{container_id}:runs/next/'
-    _run_podman_command({'cwd': automation_folder}, [
-        'cp', batch_folder / 'input', container_batch_folder])
-    for port_definition in automation_definition.port_definitions:
-        mode_name = port_definition.mode_name
-        _run_podman_command({'cwd': automation_folder}, [
-            'cp', batch_folder / mode_name / port_definition.variable_path,
-            container_batch_folder + mode_name])
-
-    process = subprocess.Popen([
-        'podman', 'exec', '--env-file', CONTAINER_ENV_NAME, container_id,
-        'bash', CONTAINER_SCRIPT_NAME], cwd=automation_folder)
-
-    # TODO: Look into https://unix.stackexchange.com/questions/651198/podman-volume-mounts-when-to-use-the-z-or-z-suffix
-    while process.poll() is None:
-        _run_podman_command({'cwd': automation_folder}, [
-            'cp', container_batch_folder + '.', batch_folder])
-        sleep(update_interval_in_seconds)
-    _run_podman_command({'cwd': automation_folder}, [
-        'cp', container_batch_folder + '.', batch_folder])
+    _run_podman_command({}, [
+        'unshare', 'chown', '1000:1000', str(absolute_batch_folder), '-R'])
+    process = _run_podman_command({'cwd': automation_folder}, [
+        'exec', '--env-file', CONTAINER_ENV_NAME, container_id,
+        'bash', CONTAINER_SCRIPT_NAME])
+    _run_podman_command({}, [
+        'unshare', 'chown', '0:0', str(absolute_batch_folder), '-R'])
 
     _run_podman_command({}, ['kill', container_id])
     return process.returncode
@@ -540,12 +524,27 @@ def _prepare_batch(automation_definition, batch_definition):
         data_by_id)
     if not data_by_id:
         return batch_folder, batch_environment
-    automation_folder = automation_definition.folder
-    input_folder = make_folder(automation_folder / batch_folder / 'input')
+    mode_folder_by_name = _make_mode_folder_by_name(
+        automation_definition.folder, batch_folder)
+    input_folder = mode_folder_by_name['input_folder']
     for path, variable_definitions in variable_definitions_by_path.items():
         input_path = input_folder / path
         save_variable_data(input_path, data_by_id, variable_definitions)
     return batch_folder, batch_environment
+
+
+def _make_mode_folder_by_name(automation_folder, batch_folder):
+    mode_folder_by_name = _get_mode_folder_by_name(
+        automation_folder, batch_folder)
+    for folder in mode_folder_by_name.values():
+        folder.mkdir(parents=True, exist_ok=True)
+    return mode_folder_by_name
+
+
+def _get_mode_folder_by_name(automation_folder, batch_folder):
+    return {
+        _ + '_folder': automation_folder / batch_folder / _
+        for _ in MODE_NAMES}
 
 
 def _prepare_container_file_text(automation_definition):
@@ -680,9 +679,8 @@ ENV PATH="${PATH}:{{ ':'.join(path_folders) }}"
 {% endif %}
 RUN \
 {% if user_package_commands %}
-{{ ' && '.join(user_package_commands) }} && \
+{{ ' && '.join(user_package_commands) }}
 {% endif %}
-mkdir runs/next/input runs/next/log runs/next/debug runs/next/output -p
 {% if port_numbers %}
 EXPOSE {{ ' '.join(port_numbers) }}
 {% endif %}

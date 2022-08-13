@@ -76,4 +76,3 @@ DEBUG_VARIABLE_DICTIONARIES = [{
     'view': 'number',
     'path': 'variables.dictionary',
 }]
-PODMAN_UPDATE_INTERVAL_IN_SECONDS = 3
