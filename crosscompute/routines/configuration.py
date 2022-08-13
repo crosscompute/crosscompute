@@ -227,7 +227,7 @@ class ScriptDefinition(Definition):
                     'function_string': function_string}))
         else:
             return
-        self.command = command_string = f'python "{script_path}"'
+        self.command = command_string = f'python3 "{script_path}"'
         return command_string
 
 

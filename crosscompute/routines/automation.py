@@ -555,23 +555,23 @@ def _prepare_container_file_text(automation_definition):
         package_ids_by_manager_name[manager_name].add(package_definition.id)
     root_package_commands, user_package_commands = [], []
     if 'apt' in package_ids_by_manager_name:
-        package_ids_string = ' '.join(package_ids_by_manager_name['apt'])
+        s = ' '.join(sorted(package_ids_by_manager_name['apt']))
         root_package_commands.append(
-            f'apt update && apt -y install {package_ids_string} && apt clean')
+            f'apt update && apt -y install {s} && apt clean')
     if 'dnf' in package_ids_by_manager_name:
-        package_ids_string = ' '.join(package_ids_by_manager_name['dnf'])
+        s = ' '.join(sorted(package_ids_by_manager_name['dnf']))
         root_package_commands.append(
-            f'dnf -y install {package_ids_string} && dnf clean all')
+            f'dnf -y install {s} && dnf clean all')
     if 'npm' in package_ids_by_manager_name:
-        package_ids_string = ' '.join(package_ids_by_manager_name['npm'])
+        s = ' '.join(sorted(package_ids_by_manager_name['npm']))
         user_package_commands.append(
-            f'npm install {package_ids_string} --prefix ~/.local -g && '
+            f'npm install {s} --prefix ~/.local -g && '
             f'npm cache clean --force')
         path_folders.add('/home/user/.local/bin')
     if 'pip' in package_ids_by_manager_name:
-        package_ids_string = ' '.join(package_ids_by_manager_name['pip'])
+        s = ' '.join(sorted(package_ids_by_manager_name['pip']))
         user_package_commands.append(
-            f'pip install {package_ids_string} --user && '
+            f'pip install {s} --user && '
             f'pip cache purge && rm -rf ~/.cache')
         path_folders.add('/home/user/.local/bin')
     return CONTAINER_FILE_TEXT.render(
