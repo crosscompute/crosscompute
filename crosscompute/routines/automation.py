@@ -522,10 +522,10 @@ def _prepare_batch(automation_definition, batch_definition):
         automation_definition,
         variable_definitions_by_path.pop('ENVIRONMENT', []),
         data_by_id)
-    if not data_by_id:
-        return batch_folder, batch_environment
     mode_folder_by_name = _make_mode_folder_by_name(
         automation_definition.folder, batch_folder)
+    if not data_by_id:
+        return batch_folder, batch_environment
     input_folder = mode_folder_by_name['input_folder']
     for path, variable_definitions in variable_definitions_by_path.items():
         input_path = input_folder / path
