@@ -214,7 +214,7 @@ version: 0.0.0
   # - path to CSS stylesheet that will be used to render your templates
   # - uri to CSS stylesheet that will be used to render your templates
   # styles:
-  #   - path: report.css
+  #   - path: style.css
   #   - uri: https://fonts.googleapis.com/css?family=Tangerine
 
   # templates configuration
