@@ -5,6 +5,7 @@ from functools import partial
 from invisibleroads_macros_disk import make_random_folder
 from itertools import count
 from logging import getLogger
+from pathlib import Path
 from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPNotFound
 from pyramid.response import FileResponse, Response
 from time import time
@@ -26,6 +27,7 @@ from ..constants import (
 from ..exceptions import CrossComputeDataError
 from ..macros.iterable import extend_uniquely, find_item
 from ..macros.web import get_html_from_markdown
+from ..routines.authorization import AuthorizationGuard
 from ..routines.batch import DiskBatch
 from ..routines.configuration import BatchDefinition
 from ..routines.variable import (
@@ -37,12 +39,11 @@ from ..routines.variable import (
 class AutomationRoutes():
 
     def __init__(
-            self, configuration, environment, automation_queue,
-            authorization_guard):
+            self, configuration, safe, environment, queue):
         self.configuration = configuration
+        self.safe = safe
         self.environment = environment
-        self.automation_queue = automation_queue
-        self.guard = authorization_guard
+        self.queue = queue
 
     def includeme(self, config):
         config.include(self.configure_root)
@@ -146,10 +147,12 @@ class AutomationRoutes():
         'Render root with a list of available automations'
         configuration = self.configuration
         css_uris = configuration.css_uris
+        guard = AuthorizationGuard(request, self.safe)
+        if not guard.check('see_root', configuration):
+            raise HTTPForbidden
         return {
-            'title_text': self.configuration.get('name', 'Automations'),
-            'automations': _select_automation_definitions(
-                configuration, self.guard, request),
+            'title_text': configuration.get('name', 'Automations'),
+            'automations': guard.get_automation_definitions(configuration),
             'css_uris': css_uris,
             'mutation_uri': MUTATION_ROUTE.format(uri=''),
             'mutation_timestamp': time(),
@@ -180,8 +183,8 @@ class AutomationRoutes():
 
     def run_automation(self, request):
         automation_definition = self.get_automation_definition_from(request)
-        if not self.guard.check(
-                request, 'run_automation', automation_definition):
+        guard = AuthorizationGuard(request, self.safe)
+        if not guard.check('run_automation', automation_definition):
             raise HTTPForbidden
         variable_definitions = automation_definition.get_variable_definitions(
             'input')
@@ -194,11 +197,12 @@ class AutomationRoutes():
         except CrossComputeDataError as e:
             raise HTTPBadRequest(e)
         runs_folder = automation_definition.folder / 'runs'
-        folder = make_random_folder(runs_folder, ID_LENGTH)
+        folder = Path(make_random_folder(runs_folder, ID_LENGTH))
+        guard.save_identities(folder / 'debug' / 'identities.dictionary')
         batch_definition = BatchDefinition({
             'folder': folder,
         }, data_by_id=data_by_id, is_run=True)
-        self.automation_queue.put((
+        self.queue.put((
             automation_definition, batch_definition, self.environment))
         automation_definition.run_definitions.append(batch_definition)
         mode_code = 'l' if automation_definition.get_variable_definitions(
@@ -207,8 +211,8 @@ class AutomationRoutes():
 
     def see_automation(self, request):
         automation_definition = self.get_automation_definition_from(request)
-        guard = self.guard
-        if not guard.check(request, 'see_automation', automation_definition):
+        guard = AuthorizationGuard(request, self.safe)
+        if not guard.check('see_automation', automation_definition):
             raise HTTPForbidden
         design_name = automation_definition.get_design_name('automation')
         automation_uri = automation_definition.uri
@@ -226,8 +230,7 @@ class AutomationRoutes():
             'description': automation_definition.description,
             'host_uri': request.host_url,
             'uri': automation_uri,
-            'batches': _select_batch_definitions(
-                automation_definition, guard, request),
+            'batches': guard.get_batch_definitions(automation_definition),
             'runs': automation_definition.run_definitions,
             'title_text': automation_definition.name,
             'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri),
@@ -236,8 +239,8 @@ class AutomationRoutes():
 
     def see_automation_batch_mode(self, request):
         automation_definition = self.get_automation_definition_from(request)
-        is_match = self.guard.check(
-            request, 'see_batch', automation_definition)
+        guard = AuthorizationGuard(request, self.safe)
+        is_match = guard.check('see_batch', automation_definition)
         if not is_match:
             raise HTTPForbidden
         batch_definition = self.get_batch_definition_from(
@@ -250,8 +253,8 @@ class AutomationRoutes():
 
     def see_automation_batch_mode_variable(self, request):
         automation_definition = self.get_automation_definition_from(request)
-        is_match = self.guard.check(
-            request, 'see_batch', automation_definition)
+        guard = AuthorizationGuard(request, self.safe)
+        is_match = guard.check('see_batch', automation_definition)
         if not is_match:
             raise HTTPForbidden
         batch_definition = self.get_batch_definition_from(
@@ -298,25 +301,6 @@ class AutomationRoutes():
         except StopIteration:
             raise HTTPNotFound
         return batch_definition
-
-
-def _select_automation_definitions(configuration, guard, request):
-    automation_definitions = configuration.automation_definitions
-    return filter(lambda _: guard.check(
-        request, 'see_automation', _,
-    ), automation_definitions)
-
-
-def _select_batch_definitions(automation_definition, guard, request):
-    is_match = guard.check(request, 'see_batch', automation_definition)
-    if not is_match:
-        return []
-    batch_definitions = automation_definition.batch_definitions
-    if not isinstance(is_match, FunctionType):
-        return batch_definitions
-    return filter(
-        lambda _: is_match(DiskBatch(automation_definition, _)),
-        batch_definitions)
 
 
 def _get_mode_name(request):

@@ -1,0 +1,9 @@
+---
+token1:
+  example_role_name: a
+token2:
+  example_role_name: b
+token3:
+  example_role_name: c
+token4:
+  example_role_name: d

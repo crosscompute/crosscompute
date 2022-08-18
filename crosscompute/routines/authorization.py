@@ -1,32 +1,41 @@
+import json
 from logging import getLogger
+from types import FunctionType
 
 from ..macros.iterable import find_item
+from ..macros.memory import CachedProperty
+from ..routines.batch import DiskBatch
 
 
 class AuthorizationGuard():
 
-    def __init__(self, configuration, safe):
-        safe.constant_value_by_key = configuration.payload_by_token
-        self.configuration = configuration
-        self.safe = safe
+    def __init__(self, request, safe):
+        self._request = request
+        self._safe = safe
 
-    def check(self, request, permission_id, automation_definition=None):
-        if not automation_definition:
-            automation_definition = self.configuration
-        group_definitions = automation_definition.group_definitions
+    @CachedProperty
+    def identities(self):
+        identities = {}
+        request = self._request
+        token = get_token(request)
+        if token:
+            try:
+                identities.update(self._safe.get(
+                    token), ip_address=request.remote_addr)
+            except KeyError:
+                pass
+        return identities
+
+    def check(self, permission_id, configuration):
+        group_definitions = configuration.group_definitions
         if not group_definitions:
             return True
-        token = get_token(request)
-        if not token:
+        identities = self.identities
+        if not identities:
             return False
-        try:
-            payload = self.safe.get(token)
-        except KeyError:
-            return False
-        value_by_name = dict(payload, ip_address=request.remote_addr)
         try:
             group_definition = find_group_definition(
-                group_definitions, value_by_name)
+                group_definitions, identities)
         except StopIteration:
             return False
         for permission_definition in group_definition.permissions:
@@ -34,13 +43,34 @@ class AuthorizationGuard():
                 continue
             action = permission_definition.action
             if action == 'match':
-                return define_is_match(payload)
+                return define_is_match(identities)
             else:
                 return True
         return False
 
-    def put(self, payload, time_in_seconds):
-        return self.safe.put(payload, time_in_seconds)
+    def put(self, identities, time_in_seconds):
+        return self._safe.put(identities, time_in_seconds)
+
+    def get_automation_definitions(self, configuration):
+        return [
+            _ for _ in configuration.automation_definitions
+            if self.check('see_automation', _)]
+
+    def get_batch_definitions(self, configuration):
+        is_match = self.check('see_batch', configuration)
+        if not is_match:
+            return []
+        batch_definitions = configuration.batch_definitions
+        if not isinstance(is_match, FunctionType):
+            return batch_definitions
+        return [
+            _ for _ in batch_definitions
+            if is_match(DiskBatch(configuration, _))]
+
+    def save_identities(self, target_path):
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(target_path, 'wt') as f:
+            json.dump(self.identities, f)
 
 
 def get_token(request):
@@ -64,13 +94,13 @@ def get_token(request):
     return token
 
 
-def define_is_match(payload):
+def define_is_match(identities):
 
     def is_match(batch):
         automation_definition = batch.automation_definition
         variable_definitions = automation_definition.get_variable_definitions(
             'input')
-        for name, value in payload.items():
+        for name, value in identities.items():
             try:
                 variable_definition = find_item(
                     variable_definitions, 'id', name)
@@ -91,7 +121,7 @@ def find_group_definition(group_definitions, value_by_name):
             try:
                 v = value_by_name[name]
             except KeyError:
-                L.error('"%s" is not defined in token payload', name)
+                L.error('"%s" is not defined in identities', name)
                 is_match = False
                 continue
             if not has_match(value, v):

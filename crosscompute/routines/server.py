@@ -17,7 +17,6 @@ from ..macros.process import LoggableProcess, StoppableProcess
 from ..routes.authorization import AuthorizationRoutes
 from ..routes.automation import AutomationRoutes
 from ..routes.mutation import MutationRoutes
-from ..routines.authorization import AuthorizationGuard
 from .database import DiskDatabase
 from .interface import Server
 
@@ -48,9 +47,7 @@ class DiskServer(Server):
         worker_process.daemon = True
         worker_process.start()
         # TODO: Decouple from pyramid and waitress
-        host = self._host
-        port = self._port
-        root_uri = self._root_uri
+        host, port, root_uri = self._host, self._port, self._root_uri
         app = _get_app(
             configuration, self._environment, self._safe, self._queue,
             self._with_refresh, self._with_restart, root_uri,
@@ -100,7 +97,6 @@ def _get_app(
         configuration, environment, safe, queue, with_refresh, with_restart,
         root_uri, allowed_origins, infos_by_timestamp):
     server_timestamp = time()
-    guard = AuthorizationGuard(configuration, safe)
     settings = {
         'root_uri': root_uri,
         'jinja2.trim_blocks': True,
@@ -110,9 +106,10 @@ def _get_app(
         settings.update({'pyramid.reload_templates': True})
     with Configurator(settings=settings) as config:
         config.include('pyramid_jinja2')
-        _configure_authorization_routes(config, guard)
+        _configure_authorization_routes(
+            config, configuration, safe)
         _configure_automation_routes(
-            config, configuration, environment, queue, guard)
+            config, configuration, safe, environment, queue)
         if with_refresh:
             _configure_mutation_routes(
                 config, server_timestamp, infos_by_timestamp)
@@ -121,18 +118,21 @@ def _get_app(
             configuration)
         _configure_cache_headers(config, with_restart)
         _configure_allowed_origins(config, allowed_origins)
+    safe.constant_value_by_key = configuration.identities_by_token
     return config.make_wsgi_app()
 
 
-def _configure_authorization_routes(config, guard):
-    authorization_routes = AuthorizationRoutes(guard)
+def _configure_authorization_routes(
+        config, configuration, safe):
+    authorization_routes = AuthorizationRoutes(
+        configuration, safe)
     config.include(authorization_routes.includeme)
 
 
 def _configure_automation_routes(
-        config, configuration, environment, queue, guard):
+        config, configuration, safe, environment, queue):
     automation_routes = AutomationRoutes(
-        configuration, environment, queue, guard)
+        configuration, safe, environment, queue)
     config.include(automation_routes.includeme)
 
 

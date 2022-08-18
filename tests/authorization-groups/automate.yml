@@ -1,0 +1,46 @@
+---
+crosscompute: 0.9.2
+name: Test Authorization Groups
+version: 0.0.1
+input:
+  variables:
+    - id: x
+      view: number
+      path: variables.dictionary
+output:
+  variables:
+    - id: y
+      view: number
+      path: variables.dictionary
+batches:
+  - folder: batches/standard
+scripts:
+  - path: run.py
+authorization:
+  tokens:
+    - path: tokens.yml
+  groups:
+    - configuration:
+        example_role_name: a
+      permissions:
+        - id: add_authorization
+    - configuration:
+        example_role_name: b
+      permissions:
+        - id: see_root
+        - id: see_automation
+        - id: see_batch
+    - configuration:
+        example_role_name: c
+      permissions:
+        - id: see_root
+        - id: see_automation
+        - id: see_batch
+        - id: run_automation
+    - configuration:
+        example_role_name: d
+      permissions:
+        - id: see_root
+        - id: see_automation
+        - id: see_batch
+        - id: run_automation

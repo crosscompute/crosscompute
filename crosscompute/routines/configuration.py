@@ -624,16 +624,16 @@ def validate_authorization(configuration):
     authorization_dictionary = get_dictionary(configuration, 'authorization')
     token_definitions = [TokenDefinition(_) for _ in get_dictionaries(
         authorization_dictionary, 'tokens')]
-    payload_by_token = {
-        token: payload for _ in token_definitions
-        for token, payload in _.payload_by_token.items()}
+    identities_by_token = {
+        token: identities for _ in token_definitions
+        for token, identities in _.identities_by_token.items()}
     group_definitions = [GroupDefinition(_) for _ in get_dictionaries(
         authorization_dictionary, 'groups')]
     if not group_definitions:
         # Inherit group definitions from parent
         group_definitions = getattr(configuration, 'group_definitions', [])
     return {
-        'payload_by_token': payload_by_token,
+        'identities_by_token': identities_by_token,
         'group_definitions': group_definitions,
     }
 
@@ -870,8 +870,8 @@ def validate_token_identifiers(token_dictionary):
     else:
         raise CrossComputeConfigurationError(
             f'{suffix} not supported for token paths')
-    payload_by_token = {}
-    for token, payload in d.items():
+    identities_by_token = {}
+    for token, identities in d.items():
         variable_match = VARIABLE_ID_TEMPLATE_PATTERN.match(token)
         if variable_match:
             variable_id = variable_match.group(1)
@@ -882,9 +882,9 @@ def validate_token_identifiers(token_dictionary):
                     f'{variable_id} is missing in the environment')
                 e.path = token_path
                 raise e
-        payload_by_token[token] = payload
+        identities_by_token[token] = identities
     return {
-        'payload_by_token': payload_by_token,
+        'identities_by_token': identities_by_token,
     }
 
 
@@ -1204,6 +1204,7 @@ $function_string(**d)''')
 
 PERMISSION_IDS = [
     'add_authorization',
+    'see_root',
     'see_automation',
     'see_batch',
     'run_automation',
