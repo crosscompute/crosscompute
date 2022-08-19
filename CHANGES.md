@@ -6,10 +6,13 @@
 - Move map views into crosscompute-views-map: map-mapbox, map-deck-screengrid
 - Refresh variables without reloading page
 - Run batches with process or thread concurrency
+- Save ports to debug/ports.dictionary
+- Save identities to debug/identities.dictionary
 - Support script.function
 - Support display.pages > configuration.design
 - Support environment > interval to re-run automation batches periodically
 - Support environment > engine=podman to run automation in a container
+- Support log variables
 
 # 0.8
 - Start from scratch

@@ -25,7 +25,9 @@ Here are some available views:
 - markdown
 - image
 - table
+- frame
 - map-mapbox (crosscompute-views-map)
+- map-mapbox-location (crosscompute-views-map)
 - map-deck-screengrid (crosscompute-views-map)
 
 [Here are the currently supported configuration options](https://github.com/crosscompute/crosscompute/blob/develop/crosscompute/templates/configuration.yaml).
