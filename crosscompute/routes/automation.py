@@ -221,7 +221,8 @@ class AutomationRoutes():
             mutation_reference_uri = automation_uri
         else:
             batch_definition = automation_definition.batch_definitions[0]
-            batch = DiskBatch(automation_definition, batch_definition)
+            batch = DiskBatch(
+                automation_definition, batch_definition, request.params)
             d = _get_mode_jinja_dictionary(request, batch, design_name)
             mutation_reference_uri = _get_automation_batch_mode_uri(
                 automation_definition, batch_definition, design_name)
@@ -245,7 +246,8 @@ class AutomationRoutes():
             raise HTTPForbidden
         batch_definition = self.get_batch_definition_from(
             request, automation_definition)
-        batch = DiskBatch(automation_definition, batch_definition)
+        batch = DiskBatch(
+            automation_definition, batch_definition, request.params)
         if isinstance(is_match, FunctionType) and not is_match(batch):
             raise HTTPForbidden
         mode_name = _get_mode_name(request)

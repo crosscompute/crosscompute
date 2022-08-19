@@ -15,9 +15,14 @@ from .variable import (
 
 class DiskBatch(Batch):
 
-    def __init__(self, automation_definition, batch_definition):
+    def __init__(
+            self,
+            automation_definition,
+            batch_definition,
+            request_params=None):
         self.automation_definition = automation_definition
         self.batch_definition = batch_definition
+        self.request_params = request_params or {}
         self.folder = automation_definition.folder / batch_definition.folder
 
     def get_variable_configuration(self, variable_definition):
@@ -44,11 +49,14 @@ class DiskBatch(Batch):
         return variable_configuration
 
     def get_data(self, variable_definition):
+        variable_id = variable_definition.id
+        params = self.request_params
+        if variable_id in params:
+            return {'value': params[variable_id]}
         variable_path = variable_definition.path
         if variable_path == 'ENVIRONMENT':
             return {}
         mode_name = variable_definition.mode_name
-        variable_id = variable_definition.id
         path = self.folder / mode_name / variable_path
         try:
             variable_data = load_variable_data(path, variable_id)

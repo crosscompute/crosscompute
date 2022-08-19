@@ -32,7 +32,7 @@ def do(arguments=None):
 def configure_argument_parser_for_running(a):
     a.add_argument(
         '--no-rebuild', dest='with_rebuild', action='store_false',
-        help='do not rebuild batches and container images')
+        help='do not rebuild container images')
 
 
 def configure_running_from(args):

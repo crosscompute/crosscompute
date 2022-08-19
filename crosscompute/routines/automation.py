@@ -23,7 +23,6 @@ from jinja2 import Template
 
 from ..constants import (
     Error,
-    Status,
     AUTOMATION_PATH,
     AUTOMATION_ROUTE,
     DISK_DEBOUNCE_IN_MILLISECONDS,
@@ -313,12 +312,11 @@ def run_automation(automation_definition, user_environment, with_rebuild=True):
     try:
         if concurrency_name == 'single':
             ds.extend(_run_automation_single(
-                automation_definition, run_batch, user_environment,
-                with_rebuild))
+                automation_definition, run_batch, user_environment))
         else:
             ds.extend(_run_automation_multiple(
                 automation_definition, run_batch, user_environment,
-                with_rebuild, concurrency_name))
+                concurrency_name))
     except CrossComputeError as e:
         e.automation_definition = automation_definition
         L.error(e)
@@ -327,20 +325,16 @@ def run_automation(automation_definition, user_environment, with_rebuild=True):
 
 
 def _run_automation_single(
-        automation_definition, run_batch, user_environment, with_rebuild):
+        automation_definition, run_batch, user_environment):
     ds = []
     for batch_definition in automation_definition.batch_definitions:
-        batch_status = batch_definition.get_status()
-        if not with_rebuild and batch_status != Status.NEW:
-            continue
         ds.append(run_batch(
             automation_definition, batch_definition, user_environment))
     return ds
 
 
 def _run_automation_multiple(
-        automation_definition, run_batch, user_environment, with_rebuild,
-        concurrency_name):
+        automation_definition, run_batch, user_environment, concurrency_name):
     ds = []
     if concurrency_name == 'process':
         BatchExecutor = ProcessPoolExecutor
@@ -349,9 +343,6 @@ def _run_automation_multiple(
     with BatchExecutor() as executor:
         futures = []
         for batch_definition in automation_definition.batch_definitions:
-            batch_status = batch_definition.get_status()
-            if not with_rebuild and batch_status != Status.NEW:
-                continue
             futures.append(executor.submit(
                 run_batch, automation_definition, batch_definition,
                 user_environment))
