@@ -69,7 +69,7 @@ class AuthorizationGuard():
 
     def save_identities(self, target_path):
         target_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(target_path, 'wt') as f:
+        with target_path.open('wt') as f:
             json.dump(self.identities, f)
 
 
