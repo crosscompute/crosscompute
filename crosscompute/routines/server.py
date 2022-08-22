@@ -44,7 +44,6 @@ class DiskServer(Server):
             getLogger('waitress').setLevel(ERROR)
         worker_process = LoggableProcess(
             name='worker', target=self._work, args=(self._queue,))
-        worker_process.daemon = True
         worker_process.start()
         # TODO: Decouple from pyramid and waitress
         host, port, root_uri = self._host, self._port, self._root_uri

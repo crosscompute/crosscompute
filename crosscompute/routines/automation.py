@@ -488,10 +488,13 @@ def _run_podman_command(options, terms):
 
 
 def _work(automation_queue):
-    while automation_pack := automation_queue.get():
-        worker_process = Process(
-            target=_work_one, args=(automation_pack,), daemon=True)
-        worker_process.start()
+    try:
+        while automation_pack := automation_queue.get():
+            worker_process = Process(
+                target=_work_one, args=(automation_pack,), daemon=True)
+            worker_process.start()
+    except KeyboardInterrupt:
+        pass
 
 
 def _work_one(automation_pack):
