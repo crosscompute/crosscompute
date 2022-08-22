@@ -85,8 +85,8 @@ def open_browser(uri, check_interval_in_seconds=1):
         except KeyboardInterrupt:
             pass
 
-    process = LoggableProcess(name='browser', target=wait_then_run)
-    process.daemon = True
+    process = LoggableProcess(
+        name='browser', target=wait_then_run, daemon=True)
     process.start()
 
 
