@@ -1,9 +1,9 @@
 import json
+from functools import cached_property
 from logging import getLogger
 from types import FunctionType
 
 from ..macros.iterable import find_item
-from ..macros.memory import CachedProperty
 from ..routines.batch import DiskBatch
 
 
@@ -13,7 +13,7 @@ class AuthorizationGuard():
         self._request = request
         self._safe = safe
 
-    @CachedProperty
+    @cached_property
     def identities(self):
         identities = {}
         request = self._request
