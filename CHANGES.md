@@ -9,6 +9,7 @@
 - Save ports to debug/ports.dictionary
 - Save identities to debug/identities.dictionary
 - Support script.function
+- Support authorization configuration
 - Support display.pages > configuration.design
 - Support environment > interval to re-run automation batches periodically
 - Support environment > engine=podman to run automation in a container
