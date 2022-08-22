@@ -10,7 +10,7 @@ from concurrent.futures import (
     ProcessPoolExecutor, ThreadPoolExecutor, as_completed)
 from datetime import datetime
 from logging import getLogger
-from multiprocessing import Manager, Queue
+from multiprocessing import Manager, Process, Queue
 from os import environ, getenv, symlink
 from os.path import relpath
 from pathlib import Path
@@ -488,17 +488,23 @@ def _run_podman_command(options, terms):
 
 
 def _work(automation_queue):
+    while automation_pack := automation_queue.get():
+        worker_process = Process(
+            target=_work_one, args=(automation_pack,), daemon=True)
+        worker_process.start()
+
+
+def _work_one(automation_pack):
     try:
-        while automation_pack := automation_queue.get():
-            automation_definition = automation_pack[0]
-            engine = get_script_engine(
-                automation_definition.engine_name, with_rebuild=False)
-            update_datasets(automation_definition)
-            try:
-                engine.run_batch(*automation_pack)
-            except CrossComputeError as e:
-                e.automation_definition = automation_definition
-                L.error(e)
+        automation_definition = automation_pack[0]
+        engine = get_script_engine(
+            automation_definition.engine_name, with_rebuild=False)
+        update_datasets(automation_definition)
+        try:
+            engine.run_batch(*automation_pack)
+        except CrossComputeError as e:
+            e.automation_definition = automation_definition
+            L.error(e)
     except KeyboardInterrupt:
         pass
 
