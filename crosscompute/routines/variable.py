@@ -248,6 +248,8 @@ class TextView(VariableView):
 
     def render_input(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
+        data = b.get_data_from_request(variable_definition)
+        value = data.get('value', '')
         variable_id = self.variable_id
         view_name = self.view_name
         element_id = x.id
@@ -257,6 +259,8 @@ class TextView(VariableView):
             'mode_name': self.mode_name,
             'view_name': view_name,
             'variable_id': variable_id,
+            'attribute_string': '' if value else ' disabled',
+            'value': value,
         })
         if x.design_name not in ['none']:
             main_text = add_label_html(main_text, c, variable_id, element_id)
@@ -264,11 +268,12 @@ class TextView(VariableView):
             STRING_JS_HEADER,
             STRING_JS_INPUT.substitute({'view_name': view_name}),
             TEXT_JS_HEADER,
-            TEXT_JS_INPUT.substitute({
+        ]
+        if not value:
+            js_texts.append(TEXT_JS_INPUT.substitute({
                 'element_id': element_id,
                 'data_uri': b.get_data_uri(variable_definition, x),
-            }),
-        ]
+            }))
         return {
             'css_uris': [],
             'js_uris': [],

@@ -49,13 +49,13 @@ class DiskBatch(Batch):
         return variable_configuration
 
     def get_data(self, variable_definition):
-        variable_id = variable_definition.id
-        params = self.request_params
-        if variable_id in params:
-            return {'value': params[variable_id]}
+        variable_data = self.get_data_from_request(variable_definition)
+        if variable_data:
+            return variable_data
         variable_path = variable_definition.path
         if variable_path == 'ENVIRONMENT':
             return {}
+        variable_id = variable_definition.id
         mode_name = variable_definition.mode_name
         path = self.folder / mode_name / variable_path
         try:
@@ -64,6 +64,13 @@ class DiskBatch(Batch):
             L.warning(e)
             return {'error': e}
         return variable_data
+
+    def get_data_from_request(self, variable_definition):
+        variable_id = variable_definition.id
+        params = self.request_params
+        if variable_id in params:
+            return {'value': params[variable_id]}
+        return {}
 
     def get_data_uri(self, variable_definition, element):
         root_uri = element.root_uri
