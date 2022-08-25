@@ -23,7 +23,7 @@ authorization:
     - configuration:
         example_role_name: a
       permissions:
-        - id: add_authorization
+        - id: add_token
     - configuration:
         example_role_name: b
       permissions:

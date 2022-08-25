@@ -1203,7 +1203,7 @@ $function_string(**d)''')
 
 
 PERMISSION_IDS = [
-    'add_authorization',
+    'add_token',
     'see_root',
     'see_automation',
     'see_batch',

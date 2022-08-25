@@ -3,29 +3,29 @@ from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden
 from ..routines.authorization import AuthorizationGuard
 
 
-class AuthorizationRoutes():
+class TokenRoutes():
 
     def __init__(self, configuration, safe):
         self.configuration = configuration
         self.safe = safe
 
     def includeme(self, config):
-        config.include(self.configure_authorizations)
+        config.include(self.configure_tokens)
 
-    def configure_authorizations(self, config):
+    def configure_tokens(self, config):
         config.add_route(
-            'authorizations.json', 'authorizations.json')
+            'tokens.json', 'tokens.json')
 
         config.add_view(
-            self.add_authorization,
+            self.add_token,
             request_method='POST',
-            route_name='authorizations.json',
+            route_name='tokens.json',
             renderer='json')
 
-    def add_authorization(self, request):
+    def add_token(self, request):
         # TODO: Fix to be oauth2 compliant; backport from market
         guard = AuthorizationGuard(request, self.safe)
-        if not guard.check('add_authorization', self.configuration):
+        if not guard.check('add_token', self.configuration):
             raise HTTPForbidden
         try:
             params = request.params or request.json_body
@@ -34,4 +34,4 @@ class AuthorizationRoutes():
         except (KeyError, ValueError):
             raise HTTPBadRequest
         token = guard.put(identities, time_in_seconds)
-        return {'token': token}
+        return {'access_token': token, 'token_type': 'bearer'}

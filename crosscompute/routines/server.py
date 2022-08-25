@@ -14,9 +14,9 @@ from ..constants import (
 from ..exceptions import (
     CrossComputeError)
 from ..macros.process import LoggableProcess, StoppableProcess
-from ..routes.authorization import AuthorizationRoutes
 from ..routes.automation import AutomationRoutes
 from ..routes.mutation import MutationRoutes
+from ..routes.token import TokenRoutes
 from .database import DiskDatabase
 from .interface import Server
 
@@ -105,13 +105,13 @@ def _get_app(
         settings.update({'pyramid.reload_templates': True})
     with Configurator(settings=settings) as config:
         config.include('pyramid_jinja2')
-        _configure_authorization_routes(
-            config, configuration, safe)
         _configure_automation_routes(
             config, configuration, safe, environment, queue)
         if with_refresh:
             _configure_mutation_routes(
                 config, server_timestamp, infos_by_timestamp)
+        _configure_token_routes(
+            config, configuration, safe)
         _configure_renderer_globals(
             config, with_refresh, with_restart, root_uri, server_timestamp,
             configuration)
@@ -121,11 +121,11 @@ def _get_app(
     return config.make_wsgi_app()
 
 
-def _configure_authorization_routes(
+def _configure_token_routes(
         config, configuration, safe):
-    authorization_routes = AuthorizationRoutes(
+    token_routes = TokenRoutes(
         configuration, safe)
-    config.include(authorization_routes.includeme)
+    config.include(token_routes.includeme)
 
 
 def _configure_automation_routes(

@@ -252,7 +252,7 @@ version: 0.0.0
 #     - configuration:
 #         role_name: admin
 #       permissions:
-#         - id: add_authorization
+#         - id: add_token
 #         - id: see_root
 #         - id: see_automation
 #         - id: see_batch
