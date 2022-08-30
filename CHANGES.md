@@ -3,11 +3,13 @@
 - Restore self-contained server
 - Add views: link, string, number, password, email, text, markdown, image
 - Add views: table, frame
-- Move map views into crosscompute-views-map: map-mapbox, map-deck-screengrid
+- Move map views into crosscompute-views-map
+- Parallelize built-in workers
+- Respect GET parameters for views based on string or text
 - Refresh variables without reloading page
 - Run batches with process or thread concurrency
-- Save ports to debug/ports.dictionary
 - Save identities to debug/identities.dictionary
+- Save ports to debug/ports.dictionary
 - Support script.function
 - Support authorization configuration
 - Support display.pages > configuration.design
