@@ -1,9 +1,9 @@
 from logging import getLogger, DEBUG, ERROR
 from time import time
 
+import uvicorn
 from pyramid.config import Configurator
 from pyramid.events import NewResponse
-from waitress import serve
 from watchgod import watch
 
 from ..constants import (
@@ -47,15 +47,24 @@ class DiskServer(Server):
         worker_process.start()
         # TODO: Decouple from pyramid and waitress
         host, port, root_uri = self._host, self._port, self._root_uri
+        with_restart = self._with_restart
         app = _get_app(
             configuration, self._environment, self._safe, self._queue,
-            self._with_refresh, self._with_restart, root_uri,
+            self._with_refresh, with_restart, root_uri,
             self._allowed_origins, self._infos_by_timestamp)
         L.info('serving at http://%s:%s%s', host, port, root_uri)
         try:
-            serve(app, host=host, port=port, url_prefix=root_uri)
-        except OSError as e:
-            L.error(e)
+            # serve(app, host=host, port=port, url_prefix=root_uri)
+            uvicorn.run(
+                app,
+                # 'crosscompute.apps:app',
+                host=host,
+                port=port,
+                root_path=root_uri,
+                # reload=with_restart,
+            )
+        except AssertionError:
+            L.error(f'could not start server at {host}:{port}')
 
     def watch(
             self, configuration, disk_poll_in_milliseconds,
