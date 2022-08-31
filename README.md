@@ -86,13 +86,13 @@ $ crosscompute
 SyntaxError: invalid syntax
 ```
 
-To solve this issue, create a virtual environment using python >= 3.9.
+To solve this issue, create a virtual environment using python >= 3.10.
 
 ```
-sudo dnf -y install python3.9
-# sudo apt -y install python3.9
+sudo dnf -y install python3.10
+# sudo apt -y install python3.10
 
-python3.9 -m venv ~/.virtualenvs/crosscompute
+python3.10 -m venv ~/.virtualenvs/crosscompute
 source ~/.virtualenvs/crosscompute/bin/activate
 
 pip install crosscompute>=0.9.2
