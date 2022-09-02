@@ -1,22 +1,25 @@
 from logging import getLogger, DEBUG, ERROR
-from time import time
+# from time import time
 
 import uvicorn
-from pyramid.config import Configurator
-from pyramid.events import NewResponse
+# from pyramid.config import Configurator
+# from pyramid.events import NewResponse
 from watchgod import watch
 
+from ..apps.base import app
 from ..constants import (
     HOST,
-    MAXIMUM_PING_INTERVAL_IN_SECONDS,
-    MINIMUM_PING_INTERVAL_IN_SECONDS,
+    # MAXIMUM_PING_INTERVAL_IN_SECONDS,
+    # MINIMUM_PING_INTERVAL_IN_SECONDS,
     PORT)
 from ..exceptions import (
     CrossComputeError)
-from ..macros.process import LoggableProcess, StoppableProcess
-from ..routes.automation import AutomationRoutes
-from ..routes.mutation import MutationRoutes
-from ..routes.token import TokenRoutes
+from ..macros.process import (
+    LoggableProcess,
+    StoppableProcess)
+# from ..routes.automation import AutomationRoutes
+# from ..routes.mutation import MutationRoutes
+# from ..routes.token import TokenRoutes
 from .database import DiskDatabase
 from .interface import Server
 
@@ -40,29 +43,24 @@ class DiskServer(Server):
         self._allowed_origins = allowed_origins
 
     def serve(self, configuration):
-        if L.getEffectiveLevel() > DEBUG:
-            getLogger('waitress').setLevel(ERROR)
         worker_process = LoggableProcess(
             name='worker', target=self._work, args=(self._queue,))
         worker_process.start()
-        # TODO: Decouple from pyramid and waitress
         host, port, root_uri = self._host, self._port, self._root_uri
-        with_restart = self._with_restart
+        '''
         app = _get_app(
             configuration, self._environment, self._safe, self._queue,
             self._with_refresh, with_restart, root_uri,
             self._allowed_origins, self._infos_by_timestamp)
+        '''
         L.info('serving at http://%s:%s%s', host, port, root_uri)
         try:
-            # serve(app, host=host, port=port, url_prefix=root_uri)
             uvicorn.run(
                 app,
-                # 'crosscompute.apps:app',
                 host=host,
                 port=port,
                 root_path=root_uri,
-                # reload=with_restart,
-            )
+                access_log=L.getEffectiveLevel() <= DEBUG)
         except AssertionError:
             L.error(f'could not start server at {host}:{port}')
 
@@ -101,6 +99,7 @@ class DiskServer(Server):
         return server_process, disk_database
 
 
+'''
 def _get_app(
         configuration, environment, safe, queue, with_refresh, with_restart,
         root_uri, allowed_origins, infos_by_timestamp):
@@ -194,6 +193,8 @@ def _configure_allowed_origins(config, allowed_origins):
             'Access-Control-Allow-Origin': origin})
 
     config.add_subscriber(update_cors_headers, NewResponse)
+'''
 
 
 L = getLogger(__name__)
+getLogger('uvicorn.error').propagate = False

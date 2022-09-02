@@ -99,7 +99,7 @@ class AutomationRoutes():
             self.see_automation,
             request_method='GET',
             route_name='automation',
-            renderer='crosscompute:templates/automation.jinja2')
+            renderer='crosscompute:templates/automation.html')
 
     def configure_batches(self, config):
         config.add_route(
@@ -116,7 +116,7 @@ class AutomationRoutes():
             self.see_automation_batch_mode,
             request_method='GET',
             route_name='automation batch mode',
-            renderer='crosscompute:templates/mode.jinja2')
+            renderer='crosscompute:templates/mode.html')
         config.add_view(
             self.see_automation_batch_mode_variable,
             request_method='GET',
@@ -137,7 +137,7 @@ class AutomationRoutes():
             self.see_automation_batch_mode,
             request_method='GET',
             route_name='automation run mode',
-            renderer='crosscompute:templates/mode.jinja2')
+            renderer='crosscompute:templates/mode.html')
         config.add_view(
             self.see_automation_batch_mode_variable,
             request_method='GET',
