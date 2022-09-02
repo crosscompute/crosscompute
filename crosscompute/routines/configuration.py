@@ -627,11 +627,10 @@ def validate_authorization(configuration):
     identities_by_token = {
         token: identities for _ in token_definitions
         for token, identities in _.identities_by_token.items()}
-    group_definitions = [GroupDefinition(_) for _ in get_dictionaries(
+    parent_group_definitions = getattr(configuration, 'group_definitions', [])
+    child_group_definitions = [GroupDefinition(_) for _ in get_dictionaries(
         authorization_dictionary, 'groups')]
-    if not group_definitions:
-        # Inherit group definitions from parent
-        group_definitions = getattr(configuration, 'group_definitions', [])
+    group_definitions = child_group_definitions + parent_group_definitions
     return {
         'identities_by_token': identities_by_token,
         'group_definitions': group_definitions,
