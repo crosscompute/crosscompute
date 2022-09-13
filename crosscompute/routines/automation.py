@@ -240,6 +240,7 @@ class PodmanEngine(AbstractEngine):
             raise CrossComputeExecutionError(f'could not build "{image_name}"')
 
     def run(self, automation_definition, batch_folder, custom_environment):
+        automation_folder = automation_definition.folder
         container_id, port_packs = _run_podman_image(
             automation_definition, batch_folder, custom_environment)
         with _proxy_podman_ports(
@@ -256,7 +257,9 @@ class PodmanEngine(AbstractEngine):
             error.code = Error.COMMAND_NOT_RUNNABLE
             raise error
         elif return_code > 0:
-            error_text = (batch_folder / 'debug' / 'stderr.txt').read_text()
+            error_text = (
+                automation_folder / batch_folder / 'debug' / 'stderr.txt'
+            ).read_text()
             error = CrossComputeExecutionError(error_text.rstrip())
             error.code = return_code
             raise error
