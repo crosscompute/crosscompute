@@ -81,7 +81,7 @@ def get_token(request):
         token = params['_token']
         request.response.set_cookie(
             'crosscompute', value=token, secure=True, httponly=True,
-            samesite='strict')
+            samesite='none')
     elif 'Authorization' in headers:
         try:
             token = headers['Authorization'].split(maxsplit=1)[1]

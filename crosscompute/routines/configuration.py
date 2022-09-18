@@ -81,6 +81,7 @@ class AutomationDefinition(Definition):
         self._validation_functions = [
             validate_protocol,
             validate_automation_identifiers,
+            validate_authorization,  # Must run before validate_imports
             validate_imports,
             validate_variables,
             validate_variable_views,
@@ -92,7 +93,6 @@ class AutomationDefinition(Definition):
             validate_display_styles,
             validate_display_templates,
             validate_display_pages,
-            validate_authorization,
             validate_prints,
         ]
 
