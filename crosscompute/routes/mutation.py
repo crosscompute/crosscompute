@@ -33,7 +33,10 @@ class MutationRoutes():
         configurations, variables, templates, styles = [], [], [], []
         for timestamp, infos in infos_by_timestamp.copy().items():
             if new_timestamp - timestamp > MAXIMUM_MUTATION_AGE_IN_SECONDS:
-                del infos_by_timestamp[timestamp]
+                try:
+                    del infos_by_timestamp[timestamp]
+                except KeyError:
+                    pass
             if timestamp <= old_timestamp:
                 continue
             for info in infos:
