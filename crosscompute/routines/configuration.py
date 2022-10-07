@@ -6,7 +6,7 @@ from configparser import ConfigParser
 from datetime import timedelta
 from logging import getLogger
 from os import environ
-from os.path import basename, relpath, splitext
+from os.path import basename, getmtime, relpath, splitext
 from pathlib import Path
 from string import Template
 from time import time
@@ -14,6 +14,7 @@ from time import time
 import tomli
 from invisibleroads_macros_log import format_path
 from invisibleroads_macros_text import format_slug
+from jinja2 import BaseLoader, TemplateNotFound
 from nbconvert import PythonExporter
 from nbformat import read as load_notebook, NO_CONVERT
 from ruamel.yaml import YAML
@@ -113,7 +114,7 @@ class AutomationDefinition(Definition):
         if template_id in template_path_by_id:
             template_path = str(self.folder / template_path_by_id[template_id])
         else:
-            template_path = f'crosscompute:templates/{template_id}.jinja2'
+            template_path = f'crosscompute:templates/{template_id}.html'
         return template_path
 
     def get_template_text(self, mode_name):
@@ -297,6 +298,22 @@ class PrintDefinition(Definition):
             validate_header_footer_options,
             validate_page_number_options,
         ]
+
+
+class PathByNameLoader(BaseLoader):
+
+    def __init__(self, path_by_name):
+        self.path_by_name = path_by_name
+
+    def get_source(self, environment, template):
+        try:
+            path = self.path_by_name[template]
+        except KeyError:
+            raise TemplateNotFound(template)
+        modification_time = getmtime(path)
+        with open(path, 'rt') as f:
+            text = f.read()
+        return text, path, lambda: modification_time == getmtime(path)
 
 
 def save_raw_configuration(configuration_path, configuration):
