@@ -6,7 +6,7 @@ from configparser import ConfigParser
 from datetime import timedelta
 from logging import getLogger
 from os import environ
-from os.path import basename, getmtime, relpath, splitext
+from os.path import basename, relpath, splitext
 from pathlib import Path
 from string import Template
 from time import time
@@ -300,20 +300,27 @@ class PrintDefinition(Definition):
         ]
 
 
-class PathByNameLoader(BaseLoader):
+class PathLoader(BaseLoader):
 
-    def __init__(self, path_by_name):
-        self.path_by_name = path_by_name
+    def __init__(self, encoding='utf-8'):
+        self.encoding = encoding
 
     def get_source(self, environment, template):
+        path = Path(template)
         try:
-            path = self.path_by_name[template]
-        except KeyError:
-            raise TemplateNotFound(template)
-        modification_time = getmtime(path)
-        with open(path, 'rt') as f:
+            modification_time = path.stat().st_mtime
+        except OSError:
+            raise TemplateNotFound(path)
+
+        def is_latest():
+            try:
+                return modification_time == path.stat().st_mtime
+            except OSError:
+                return False
+
+        with path.open('rt', encoding=self.encoding) as f:
             text = f.read()
-        return text, path, lambda: modification_time == getmtime(path)
+        return text, path.resolve(), is_latest
 
 
 def save_raw_configuration(configuration_path, configuration):

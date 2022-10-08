@@ -3,6 +3,8 @@ from fastapi.templating import Jinja2Templates
 
 from .constants import (
     TEMPLATES_FOLDER)
+from .routines.configuration import (
+    PathLoader)
 
 
 TemplateResponse = Jinja2Templates(
