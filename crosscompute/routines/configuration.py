@@ -32,6 +32,7 @@ from ..constants import (
     PRINTER_BY_NAME,
     RUN_ROUTE,
     STYLE_ROUTE,
+    TEMPLATES_FOLDER,
     VARIABLE_ID_PATTERN,
     VARIABLE_ID_TEMPLATE_PATTERN,
     VIEW_BY_NAME)
@@ -114,7 +115,7 @@ class AutomationDefinition(Definition):
         if template_id in template_path_by_id:
             template_path = str(self.folder / template_path_by_id[template_id])
         else:
-            template_path = f'crosscompute:templates/{template_id}.html'
+            template_path = f'{TEMPLATES_FOLDER}/{template_id}.html'
         return template_path
 
     def get_template_text(self, mode_name):
@@ -298,29 +299,6 @@ class PrintDefinition(Definition):
             validate_header_footer_options,
             validate_page_number_options,
         ]
-
-
-class PathLoader(BaseLoader):
-
-    def __init__(self, encoding='utf-8'):
-        self.encoding = encoding
-
-    def get_source(self, environment, template):
-        path = Path(template)
-        try:
-            modification_time = path.stat().st_mtime
-        except OSError:
-            raise TemplateNotFound(path)
-
-        def is_latest():
-            try:
-                return modification_time == path.stat().st_mtime
-            except OSError:
-                return False
-
-        with path.open('rt', encoding=self.encoding) as f:
-            text = f.read()
-        return text, path.resolve(), is_latest
 
 
 def save_raw_configuration(configuration_path, configuration):

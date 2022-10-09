@@ -1,13 +1,16 @@
 # TODO: Set templates.env.auto_reload dynamically
-from fastapi.templating import Jinja2Templates
 
-from .constants import (
-    TEMPLATES_FOLDER)
-from .routines.configuration import (
-    PathLoader)
+from .routines.template import (
+    RelativeTemplateEnvironment,
+    TemplatePathLoader,
+    TemplateResponseFactory,
+    url_for)
 
 
-TemplateResponse = Jinja2Templates(
-    directory=TEMPLATES_FOLDER,
+template_environment = RelativeTemplateEnvironment(
+    loader=TemplatePathLoader(),
+    autoescape=True,
     trim_blocks=True,
-).TemplateResponse
+    globals={'url_for': url_for})
+TemplateResponse = TemplateResponseFactory(
+    template_environment).TemplateResponse
