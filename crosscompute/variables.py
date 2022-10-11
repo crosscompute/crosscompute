@@ -1,9 +1,9 @@
-# TODO: Set templates.env.auto_reload dynamically
-
-from .routines.template import (
+# TODO: Set template_environment.auto_reload dynamically
+from invisibleroads_macros_web.fastapi import (
+    TemplateResponseFactory)
+from invisibleroads_macros_web.jinja import (
     RelativeTemplateEnvironment,
     TemplatePathLoader,
-    TemplateResponseFactory,
     url_for)
 
 
