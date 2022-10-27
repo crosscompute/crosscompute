@@ -244,6 +244,14 @@ version: 0.0.0
   #     configuration:
   #       design: none
 
+  # buttons configuration
+  # - id of the button (required)
+  # - configuration of the button
+  # buttons:
+  #   - id: run
+  #     configuration:
+  #       button-text: Apply
+
 # authorization configuration
 # authorization:
 #   tokens:

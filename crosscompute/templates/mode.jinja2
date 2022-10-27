@@ -1,10 +1,12 @@
 {% extends LIVE_JINJA2 if WITH_REFRESH else BASE_JINJA2 %}
 
 {% block header_html %}
+{% if not for_embed %}
 <a href="{{ ROOT_URI or '/' }}">Root</a> &gt;
 <a href="{{ ROOT_URI }}{{ automation_definition.uri }}">{{ automation_definition.name }}</a> &gt;
 <a>{{ batch_definition.name }}</a> &gt;
 {{ mode_name.title() }}
+{% endif %}
 {% endblock %}
 
 {% block main_html %}

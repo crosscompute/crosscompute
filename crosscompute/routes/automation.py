@@ -337,23 +337,41 @@ def _get_automation_batch_mode_uri(
 
 
 def _get_mode_jinja_dictionary(request, batch, mode_name):
+    params = request.params
+    cookies = request.cookies
     automation_definition = batch.automation_definition
     batch_definition = batch.batch_definition
     design_name = automation_definition.get_design_name(mode_name)
     root_uri = request.registry.settings['root_uri']
     mutation_reference_uri = _get_automation_batch_mode_uri(
         automation_definition, batch_definition, mode_name)
-    for_print = 'p' in request.params
+    for_embed = 'e' in params or 'crosscompute-e' in cookies
+    for_print = 'p' in params
+    if for_embed:
+        request.response.set_cookie('crosscompute-e')
     return {
         'title_text': batch_definition.name,
-        'css_text': CSS_TEXT_BY_DESIGN_NAME[design_name],
+        'css_text': __get_css_text(design_name, for_embed, for_print),
         'automation_definition': automation_definition,
         'batch_definition': batch_definition,
         'mode_name': mode_name,
         'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri),
         'mutation_timestamp': time(),
+        'for_embed': for_embed,
     } | __get_mode_jinja_dictionary(
-        batch, root_uri, mode_name, design_name, for_print)
+        batch, root_uri, mode_name, design_name,
+        for_print=for_print)
+
+
+def __get_css_text(design_name, for_embed, for_print):
+    css_texts = []
+    if not for_embed and not for_print:
+        css_texts.append(HEADER_CSS)
+    elif for_embed:
+        css_texts.append(EMBED_CSS)
+    if design_name == 'flex-vertical':
+        css_texts.append(FLEX_VERTICAL_CSS)
+    return '\n'.join(css_texts)
 
 
 def __get_mode_jinja_dictionary(
@@ -399,6 +417,20 @@ def _render_html(
     return jinja_dictionary['main_text']
 
 
+EMBED_CSS = '''\
+body {
+  margin: 0;
+}
+'''
+HEADER_CSS = '''\
+header {
+  margin-bottom: 16px;
+}
+@media print {
+  header {
+    display: none;
+  }
+}'''
 FLEX_VERTICAL_CSS = '''\
 main {
   display: flex;
@@ -419,18 +451,4 @@ main > * {
 #_run {
   padding: 8px 0;
 }'''
-HEADER_CSS = '''\
-header {
-  margin-bottom: 16px;
-}
-@media print {
-  header {
-    display: none;
-  }
-}'''
-CSS_TEXT_BY_DESIGN_NAME = {
-    'flex-vertical': '\n'.join([
-        HEADER_CSS, FLEX_VERTICAL_CSS]),
-    'none': HEADER_CSS,
-}
 L = getLogger(__name__)
