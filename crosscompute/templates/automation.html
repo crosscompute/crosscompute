@@ -10,8 +10,10 @@
 {% endblock %}
 
 {% block header_html %}
+{% if not for_embed %}
 <a href="{{ ROOT_URI or '/' }}">Root</a> &gt;
 <a href="{{ ROOT_URI }}{{ uri }}">{{ name }}</a>
+{% endif %}
 {% endblock %}
 
 {% block main_html %}
@@ -19,6 +21,7 @@
 {{ super() }}
 {% include 'modeMain.html' %}
 {% endif %}
+{% if not for_embed %}
 <ul class="_batches">
 {% for batch in batches %}
 <li>
@@ -39,6 +42,7 @@
 {% endfor %}
 </ul>
 #}
+{% endif %}
 {% endblock %}
 
 {% block body_js %}

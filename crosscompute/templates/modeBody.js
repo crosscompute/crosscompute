@@ -11,7 +11,7 @@ document.getElementById('_run').onclick = async () => {
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(dataById)});
   const d = await response.json();
-  location = '{{ ROOT_URI }}{{ automation_definition.uri }}/r/' + d['run_id'] + '/' + d['mode_code'];
+  location = '{{ ROOT_URI }}{{ automation_definition.uri }}/r/' + d['run_id'] + '/' + d['mode_code']{% if for_embed %} + '?_embed'{% endif %};
 };
 const GET_DATA_BY_VIEW_NAME = {};
 {% else %}
