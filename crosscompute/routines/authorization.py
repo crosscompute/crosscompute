@@ -80,15 +80,15 @@ def get_token(request):
     if '_token' in params:
         token = params['_token']
         request.response.set_cookie(
-            'crosscompute', value=token, secure=True, httponly=True,
+            'crosscompute-token', value=token, secure=True, httponly=True,
             samesite='none')
     elif 'Authorization' in headers:
         try:
             token = headers['Authorization'].split(maxsplit=1)[1]
         except IndexError:
             token = ''
-    elif 'crosscompute' in cookies:
-        token = cookies['crosscompute']
+    elif 'crosscompute-token' in cookies:
+        token = cookies['crosscompute-token']
     else:
         token = ''
     return token

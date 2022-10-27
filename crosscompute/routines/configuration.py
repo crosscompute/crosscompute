@@ -93,6 +93,7 @@ class AutomationDefinition(Definition):
             validate_display_styles,
             validate_display_templates,
             validate_display_pages,
+            validate_display_buttons,
             validate_prints,
         ]
 
@@ -136,6 +137,13 @@ class AutomationDefinition(Definition):
             if not variable_definitions:
                 design_name = 'none'
         return design_name
+
+    def get_button_text(self, button_id):
+        button_definition = self.button_definition_by_id.get(button_id, {})
+        button_configuration = button_definition.configuration
+        button_text = button_configuration.get(
+            'button-text', BUTTON_TEXT_BY_ID)
+        return button_text
 
 
 class VariableDefinition(Definition):
@@ -261,6 +269,15 @@ class PageDefinition(Definition):
         self._validation_functions = [
             validate_page_identifiers,
             validate_page_configuration,
+        ]
+
+
+class ButtonDefinition(Definition):
+
+    def _initialize(self, kwargs):
+        self._validation_functions = [
+            validate_button_identifiers,
+            validate_button_configuration,
         ]
 
 
@@ -620,6 +637,16 @@ def validate_display_pages(configuration):
     }
 
 
+def validate_display_buttons(configuration):
+    display_dictionary = get_dictionary(configuration, 'display')
+    button_definitions = [ButtonDefinition(_) for _ in get_dictionaries(
+        display_dictionary, 'buttons')]
+    button_definition_by_id = {_.id: _ for _ in button_definitions}
+    return {
+        'button_definition_by_id': button_definition_by_id,
+    }
+
+
 def validate_authorization(configuration):
     authorization_dictionary = get_dictionary(configuration, 'authorization')
     token_definitions = [TokenDefinition(_) for _ in get_dictionaries(
@@ -708,7 +735,8 @@ def validate_batch_identifiers(batch_dictionary):
         except CrossComputeConfigurationNotImplementedError:
             raise
         except CrossComputeConfigurationError as e:
-            batch_configuration = batch_dictionary.get('configuration', {})
+            batch_configuration = get_dictionary(
+                batch_dictionary, 'configuration')
             if 'path' in batch_configuration:
                 e.path = batch_configuration['path']
             raise
@@ -842,7 +870,7 @@ def validate_page_identifiers(page_dictionary):
 
 
 def validate_page_configuration(page_dictionary):
-    page_configuration = page_dictionary.get('configuration', {})
+    page_configuration = get_dictionary(page_dictionary, 'configuration')
     page_id = page_dictionary['id']
     design_name = page_configuration.get('design')
     design_names = DESIGN_NAMES_BY_PAGE_ID[page_id]
@@ -851,6 +879,26 @@ def validate_page_configuration(page_dictionary):
             f'"{design_name}" design not supported for {page_id} page')
     return {
         'configuration': page_configuration,
+    }
+
+
+def validate_button_identifiers(button_dictionary):
+    try:
+        button_id = button_dictionary['id']
+    except KeyError as e:
+        raise CrossComputeConfigurationError(f'{e} required for each button')
+    if button_id not in BUTTON_TEXT_BY_ID:
+        raise CrossComputeConfigurationError(
+            f'{button_id} button not supported for button configuration')
+    return {
+        'id': button_id,
+    }
+
+
+def validate_button_configuration(button_dictionary):
+    button_configuration = get_dictionary(button_dictionary, 'configuration')
+    return {
+        'configuration': button_configuration,
     }
 
 
@@ -1178,6 +1226,11 @@ DESIGN_NAMES_BY_PAGE_ID = {
     'output': ['flex-vertical', 'none'],
     'log': ['flex-vertical', 'none'],
     'debug': ['flex-vertical', 'none'],
+}
+
+
+BUTTON_TEXT_BY_ID = {
+    'run': 'Run',
 }
 
 

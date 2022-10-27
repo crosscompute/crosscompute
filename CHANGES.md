@@ -16,6 +16,8 @@
 - Support environment > interval to re-run automation batches periodically
 - Support environment > engine=podman to run automation in a container
 - Support log variables
+- Support _print parameter for printing
+- Support _embed parameter for embedding
 
 # 0.8
 - Start from scratch

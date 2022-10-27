@@ -338,17 +338,14 @@ def _get_automation_batch_mode_uri(
 
 def _get_mode_jinja_dictionary(request, batch, mode_name):
     params = request.params
-    cookies = request.cookies
     automation_definition = batch.automation_definition
     batch_definition = batch.batch_definition
     design_name = automation_definition.get_design_name(mode_name)
     root_uri = request.registry.settings['root_uri']
     mutation_reference_uri = _get_automation_batch_mode_uri(
         automation_definition, batch_definition, mode_name)
-    for_embed = 'e' in params or 'crosscompute-e' in cookies
-    for_print = 'p' in params
-    if for_embed:
-        request.response.set_cookie('crosscompute-e')
+    for_embed = '_embed' in params
+    for_print = '_print' in params
     return {
         'title_text': batch_definition.name,
         'css_text': __get_css_text(design_name, for_embed, for_print),
