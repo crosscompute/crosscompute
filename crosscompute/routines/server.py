@@ -4,6 +4,9 @@ from logging import getLogger, DEBUG, ERROR
 import uvicorn
 # from pyramid.config import Configurator
 # from pyramid.events import NewResponse
+from invisibleroads_macros_process import (
+    LoggableProcess,
+    StoppableProcess)
 from watchgod import watch
 
 from ..apps.base import app
@@ -14,9 +17,6 @@ from ..constants import (
     PORT)
 from ..exceptions import (
     CrossComputeError)
-from ..macros.process import (
-    LoggableProcess,
-    StoppableProcess)
 # from ..routes.automation import AutomationRoutes
 # from ..routes.mutation import MutationRoutes
 # from ..routes.token import TokenRoutes

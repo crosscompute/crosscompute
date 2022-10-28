@@ -19,6 +19,7 @@ from urllib.error import URLError
 from urllib.request import urlretrieve as download_url
 
 from invisibleroads_macros_disk import make_folder
+from invisibleroads_macros_web.port import find_open_port
 from jinja2 import Template
 
 from ..constants import (
@@ -28,6 +29,8 @@ from ..constants import (
     DISK_DEBOUNCE_IN_MILLISECONDS,
     DISK_POLL_IN_MILLISECONDS,
     HOST,
+    MAXIMUM_PORT,
+    MINIMUM_PORT,
     MODE_CODE_BY_NAME,
     MODE_NAMES,
     PORT,
@@ -43,7 +46,6 @@ from ..exceptions import (
     CrossComputeExecutionError)
 from ..macros.iterable import group_by
 from ..macros.security import DictionarySafe
-from ..macros.web import find_open_port
 from .configuration import (
     get_folder_plus_path,
     load_configuration)
@@ -412,7 +414,9 @@ def _run_podman_image(automation_definition, batch_folder, custom_environment):
         command_terms = []
         for port_definition in port_definitions:
             port_id = port_definition.id
-            host_port = find_open_port()
+            host_port = find_open_port(
+                minimum_port=MINIMUM_PORT,
+                maximum_port=MAXIMUM_PORT)
             mode_name = port_definition.mode_name
             container_port = port_definition.number
             port_packs.append((port_id, host_port, mode_name))
