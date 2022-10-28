@@ -2,15 +2,21 @@ from argparse import ArgumentParser
 from logging import getLogger
 from os import environ
 
+from invisibleroads_macros_web.browser import (
+    open_browser)
+from invisibleroads_macros_web.port import (
+    find_open_port,
+    is_port_in_use)
+
 from crosscompute.constants import (
     DISK_DEBOUNCE_IN_MILLISECONDS,
     DISK_POLL_IN_MILLISECONDS,
     HOST,
+    MAXIMUM_PORT,
+    MINIMUM_PORT,
     PORT)
 from crosscompute.exceptions import (
     CrossComputeError)
-from crosscompute.macros.web import (
-    find_open_port, is_port_in_use, open_browser)
 from crosscompute.routines.automation import (
     DiskAutomation)
 from crosscompute.routines.log import (
@@ -49,7 +55,8 @@ def configure_argument_parser_for_serving(a):
         help='specify * to listen for requests from all ip addresses')
     a.add_argument(
         '--port', metavar='X',
-        default=find_open_port(PORT),
+        default=find_open_port(
+            PORT, minimum_port=MINIMUM_PORT, maximum_port=MAXIMUM_PORT),
         help='specify port to listen to for requests')
     a.add_argument(
         '--no-browser', dest='with_browser', action='store_false',

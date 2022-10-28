@@ -1,14 +1,18 @@
 from argparse import ArgumentParser
-from invisibleroads_macros_disk import make_folder, make_random_folder
-from invisibleroads_macros_log import get_timestamp, LONGSTAMP_TEMPLATE
 from logging import getLogger
 
-from crosscompute.constants import PRINTER_BY_NAME
+from invisibleroads_macros_disk import make_folder, make_random_folder
+from invisibleroads_macros_log import get_timestamp, LONGSTAMP_TEMPLATE
+from invisibleroads_macros_process import StoppableProcess
+from invisibleroads_macros_web.port import find_open_port
+
+from crosscompute.constants import (
+    MAXIMUM_PORT,
+    MINIMUM_PORT,
+    PRINTER_BY_NAME)
 from crosscompute.exceptions import (
     CrossComputeConfigurationError,
     CrossComputeError)
-from crosscompute.macros.process import StoppableProcess
-from crosscompute.macros.web import find_open_port
 from crosscompute.routines.automation import (
     DiskAutomation, run_automation)
 from crosscompute.routines.log import (
@@ -56,7 +60,8 @@ def configure_printing_from(args):
 
 def print_with(automation, args):
     try:
-        port = find_open_port()
+        port = find_open_port(
+            minimum_port=MINIMUM_PORT, maximum_port=MAXIMUM_PORT)
     except OSError as e:
         raise CrossComputeError(e)
     timestamp = get_timestamp(template=LONGSTAMP_TEMPLATE)

@@ -1,6 +1,9 @@
 from logging import getLogger, DEBUG, ERROR
 from time import time
 
+from invisibleroads_macros_process import (
+    LoggableProcess,
+    StoppableProcess)
 from pyramid.config import Configurator
 from pyramid.events import NewResponse
 from waitress import serve
@@ -13,7 +16,6 @@ from ..constants import (
     PORT)
 from ..exceptions import (
     CrossComputeError)
-from ..macros.process import LoggableProcess, StoppableProcess
 from ..routes.automation import AutomationRoutes
 from ..routes.mutation import MutationRoutes
 from ..routes.token import TokenRoutes

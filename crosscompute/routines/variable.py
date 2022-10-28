@@ -9,6 +9,9 @@ from urllib.request import urlretrieve as download_uri
 from importlib_metadata import entry_points
 from invisibleroads_macros_log import format_path
 from invisibleroads_macros_text import format_name, format_slug
+from invisibleroads_macros_web.escape import (
+    escape_quotes_html,
+    escape_quotes_js)
 
 from ..constants import (
     CACHED_FILE_SIZE_LIMIT_IN_BYTES,
@@ -23,9 +26,6 @@ from ..exceptions import (
 from ..macros.disk import FileCache
 from ..macros.iterable import find_item
 from ..macros.package import import_attribute
-from ..macros.web import (
-    escape_quotes_html,
-    escape_quotes_js)
 from .interface import Batch
 
 

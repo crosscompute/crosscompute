@@ -2,10 +2,12 @@ import multiprocessing as mp
 from argparse import ArgumentParser
 from logging import getLogger
 
+from invisibleroads_macros_process import (
+    LoggableProcess)
+
 from crosscompute.exceptions import (
     CrossComputeConfigurationNotFoundError,
     CrossComputeError)
-from crosscompute.macros.process import LoggableProcess
 from crosscompute.routines.automation import (
     DiskAutomation)
 from crosscompute.routines.log import (

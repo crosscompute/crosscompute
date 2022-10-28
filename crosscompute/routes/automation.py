@@ -3,6 +3,7 @@
 import json
 from functools import partial
 from invisibleroads_macros_disk import make_random_folder
+from invisibleroads_macros_web.markdown import get_html_from_markdown
 from itertools import count
 from logging import getLogger
 from pathlib import Path
@@ -26,7 +27,6 @@ from ..constants import (
     VARIABLE_ROUTE)
 from ..exceptions import CrossComputeDataError
 from ..macros.iterable import extend_uniquely, find_item
-from ..macros.web import get_html_from_markdown
 from ..routines.authorization import AuthorizationGuard
 from ..routines.batch import DiskBatch
 from ..routines.configuration import BatchDefinition
