@@ -32,7 +32,7 @@ async function processMutations() {
         }
         e.href += '?' + Date.now();
       }
-    } else if (variables.length) {
+    } else if (variables.length && refreshVariable) {
       for (const variable of variables) {
         refreshVariable(variable.id);
       }
