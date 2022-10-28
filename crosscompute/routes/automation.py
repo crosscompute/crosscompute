@@ -360,6 +360,16 @@ def _get_mode_jinja_dictionary(request, batch, mode_name):
         for_print=for_print)
 
 
+# TODO: Move to invisibleroads-macros-web
+def split_css(css_uris, css_text):
+    # for each css_uri, check if it is local
+    # if it is local,
+    # load from file cache and append to css_text
+    # remove from uris
+    # return
+    return css_uris, css_text
+
+
 def __get_css_text(design_name, for_embed, for_print):
     css_texts = []
     if not for_embed and not for_print:
