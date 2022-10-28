@@ -146,14 +146,14 @@ class AutomationRoutes():
     def see_root(self, request):
         'Render root with a list of available automations'
         configuration = self.configuration
-        css_uris = configuration.css_uris
         guard = AuthorizationGuard(request, self.safe)
         if not guard.check('see_root', configuration):
             raise HTTPForbidden
         return {
             'title_text': configuration.get('name', 'Automations'),
             'automations': guard.get_automation_definitions(configuration),
-            'css_uris': css_uris,
+            'css_uris': configuration.css_uris,
+            'css_text': configuration.css_text,
             'mutation_uri': MUTATION_ROUTE.format(uri=''),
             'mutation_timestamp': time(),
         }
@@ -217,7 +217,9 @@ class AutomationRoutes():
         design_name = automation_definition.get_design_name('automation')
         automation_uri = automation_definition.uri
         if design_name == 'none':
-            d = {'css_uris': automation_definition.css_uris}
+            d = {
+                'css_uris': automation_definition.css_uris,
+                'css_text': automation_definition.css_text}
             mutation_reference_uri = automation_uri
         else:
             batch_definition = automation_definition.batch_definitions[0]
@@ -344,45 +346,20 @@ def _get_mode_jinja_dictionary(request, batch, mode_name):
     root_uri = request.registry.settings['root_uri']
     mutation_reference_uri = _get_automation_batch_mode_uri(
         automation_definition, batch_definition, mode_name)
-    for_embed = '_embed' in params
-    for_print = '_print' in params
     return {
         'title_text': batch_definition.name,
-        'css_text': __get_css_text(design_name, for_embed, for_print),
         'automation_definition': automation_definition,
         'batch_definition': batch_definition,
         'mode_name': mode_name,
         'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri),
         'mutation_timestamp': time(),
-        'for_embed': for_embed,
     } | __get_mode_jinja_dictionary(
-        batch, root_uri, mode_name, design_name,
-        for_print=for_print)
-
-
-# TODO: Move to invisibleroads-macros-web
-def split_css(css_uris, css_text):
-    # for each css_uri, check if it is local
-    # if it is local,
-    # load from file cache and append to css_text
-    # remove from uris
-    # return
-    return css_uris, css_text
-
-
-def __get_css_text(design_name, for_embed, for_print):
-    css_texts = []
-    if not for_embed and not for_print:
-        css_texts.append(HEADER_CSS)
-    elif for_embed:
-        css_texts.append(EMBED_CSS)
-    if design_name == 'flex-vertical':
-        css_texts.append(FLEX_VERTICAL_CSS)
-    return '\n'.join(css_texts)
+        batch, root_uri, mode_name, design_name, for_embed='_embed' in params,
+        for_print='_print' in params)
 
 
 def __get_mode_jinja_dictionary(
-        batch, root_uri, mode_name, design_name, for_print):
+        batch, root_uri, mode_name, design_name, for_embed, for_print):
     automation_definition = batch.automation_definition
     css_uris = automation_definition.css_uris
     template_text = automation_definition.get_template_text(
@@ -398,8 +375,24 @@ def __get_mode_jinja_dictionary(
     main_text = get_html_from_markdown(VARIABLE_ID_TEMPLATE_PATTERN.sub(
         render_html, template_text))
     return m | {
+        'css_text': '\n'.join([
+            __get_css_text(design_name, for_embed, for_print),
+            automation_definition.css_text]),
         'main_text': main_text,
-        'js_text': '\n'.join(m['js_texts'])}
+        'js_text': '\n'.join(m['js_texts']),
+        'for_embed': for_embed,
+    }
+
+
+def __get_css_text(design_name, for_embed, for_print):
+    css_texts = []
+    if not for_embed and not for_print:
+        css_texts.append(HEADER_CSS)
+    elif for_embed:
+        css_texts.append(EMBED_CSS)
+    if design_name == 'flex-vertical':
+        css_texts.append(FLEX_VERTICAL_CSS)
+    return '\n'.join(css_texts)
 
 
 def _render_html(
