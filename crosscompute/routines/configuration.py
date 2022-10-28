@@ -6,15 +6,14 @@ from configparser import ConfigParser
 from datetime import timedelta
 from logging import getLogger
 from os import environ
-from os.path import basename, relpath, splitext
+from os.path import basename, relpath
 from pathlib import Path
 from string import Template
-from time import time
 
 import tomli
 from invisibleroads_macros_log import format_path
 from invisibleroads_macros_text import format_slug
-from jinja2 import BaseLoader, TemplateNotFound
+# from jinja2 import BaseLoader, TemplateNotFound
 from nbconvert import PythonExporter
 from nbformat import read as load_notebook, NO_CONVERT
 from ruamel.yaml import YAML
@@ -31,7 +30,6 @@ from ..constants import (
     MODE_NAMES,
     PRINTER_BY_NAME,
     RUN_ROUTE,
-    STYLE_ROUTE,
     TEMPLATES_FOLDER,
     VARIABLE_ID_PATTERN,
     VARIABLE_ID_TEMPLATE_PATTERN,
@@ -141,10 +139,13 @@ class AutomationDefinition(Definition):
         return design_name
 
     def get_button_text(self, button_id):
-        button_definition = self.button_definition_by_id.get(button_id, {})
-        button_configuration = button_definition.configuration
-        button_text = button_configuration.get(
-            'button-text', BUTTON_TEXT_BY_ID)
+        button_text = BUTTON_TEXT_BY_ID[button_id]
+        button_definition_by_id = self.button_definition_by_id
+        if button_id in button_definition_by_id:
+            button_definition = button_definition_by_id[button_id]
+            button_configuration = button_definition.configuration
+            button_text = button_configuration.get(
+                'button-text', button_text)
         return button_text
 
 
@@ -585,32 +586,24 @@ def validate_scripts(configuration):
 def validate_display_styles(configuration):
     display_dictionary = get_dictionary(configuration, 'display')
     automation_folder = configuration.folder
-    automation_index = configuration.index
-    automation_uri = configuration.uri
-    reference_time = time()
     style_definitions = []
+    css_texts = []
     for raw_style_definition in get_dictionaries(
             display_dictionary, 'styles'):
         style_definition = StyleDefinition(raw_style_definition)
         style_uri = style_definition.uri
-        style_path = style_definition.path
         if '//' not in style_uri:
-            path = automation_folder / style_path
+            path = automation_folder / style_definition.path
             if not path.exists():
                 raise CrossComputeConfigurationError(
                     f'{path} not found for style')
-            style_name = format_slug(
-                f'{splitext(style_path)[0]}-{reference_time}')
-            style_uri = STYLE_ROUTE.format(style_name=style_name)
-            if automation_index > 0:
-                style_uri = automation_uri + style_uri
-            style_definition.path = style_path
-            style_definition.uri = style_uri
+            css_texts.append(path.read_text().rstrip())
+            continue
         style_definitions.append(style_definition)
-    css_uris = [_.uri for _ in style_definitions]
     return {
         'style_definitions': style_definitions,
-        'css_uris': css_uris,
+        'css_uris': [_.uri for _ in style_definitions],
+        'css_text': '\n'.join(css_texts) + '\n' if css_texts else '',
     }
 
 
