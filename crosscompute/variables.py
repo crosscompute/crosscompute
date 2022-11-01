@@ -10,7 +10,9 @@ from invisibleroads_macros_web.jinja import (
 template_environment = RelativeTemplateEnvironment(
     loader=TemplatePathLoader(),
     autoescape=True,
-    trim_blocks=True,
-    globals={'url_for': url_for})
+    trim_blocks=True)
+template_environment.globals = {'url_for': url_for}
+
+
 TemplateResponse = TemplateResponseFactory(
     template_environment).TemplateResponse

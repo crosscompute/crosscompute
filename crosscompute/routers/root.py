@@ -4,7 +4,7 @@ from fastapi.responses import FileResponse
 from ..constants import (
     IMAGES_FOLDER)
 from ..variables import (
-    DefaultTemplateResponse)
+    TemplateResponse)
 
 
 router = APIRouter()
@@ -12,7 +12,7 @@ router = APIRouter()
 
 @router.get('/', tags=['root'])
 async def see_root(request: Request):
-    return DefaultTemplateResponse('base.html', {'request': request})
+    return TemplateResponse('base.html', {'request': request})
 
 
 @router.get('/favicon.ico', tags=['root'])
