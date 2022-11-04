@@ -9,6 +9,7 @@ from invisibleroads_macros_process import (
     StoppableProcess)
 from watchgod import watch
 
+# from .. import variables
 from ..apps.base import app
 from ..constants import (
     HOST,
@@ -47,6 +48,7 @@ class DiskServer(Server):
             name='worker', target=self._work, args=(self._queue,))
         worker_process.start()
         host, port, root_uri = self._host, self._port, self._root_uri
+        # variables.configuration = configuration
         '''
         app = _get_app(
             configuration, self._environment, self._safe, self._queue,

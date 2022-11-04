@@ -98,6 +98,7 @@ class AutomationDefinition(Definition):
         ]
 
     def get_variable_definitions(self, mode_name, with_all=False):
+        # TODO: Can be put into variables
         variable_definitions = self.variable_definitions_by_mode_name.get(
             mode_name, [])
         if with_all:
@@ -110,6 +111,7 @@ class AutomationDefinition(Definition):
         return variable_definitions
 
     def get_template_path(self, template_id):
+        # TODO: Can be put into variables
         template_path_by_id = self.template_path_by_id
         if template_id in template_path_by_id:
             template_path = str(self.folder / template_path_by_id[template_id])
@@ -118,6 +120,7 @@ class AutomationDefinition(Definition):
         return template_path
 
     def get_template_text(self, mode_name):
+        # TODO: Can be put into variables
         automation_folder = self.folder
         variable_definitions = self.get_variable_definitions(
             mode_name)
@@ -127,6 +130,7 @@ class AutomationDefinition(Definition):
             template_definitions, automation_folder, variable_definitions)
 
     def get_design_name(self, page_id):
+        # TODO: Can be put into variables
         design_name = DESIGN_NAMES_BY_PAGE_ID[page_id][0]
         if page_id in self.page_definition_by_id:
             page_definition = self.page_definition_by_id[page_id]
@@ -139,6 +143,7 @@ class AutomationDefinition(Definition):
         return design_name
 
     def get_button_text(self, button_id):
+        # TODO: Can be put into variables
         button_text = BUTTON_TEXT_BY_ID[button_id]
         button_definition_by_id = self.button_definition_by_id
         if button_id in button_definition_by_id:
