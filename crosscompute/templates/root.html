@@ -1,10 +1,10 @@
-{% extends LIVE_PATH if WITH_REFRESH else BASE_PATH %}
+{% extends live_template_path if with_refresh else base_template_path %}
 
 {% block main_html -%}
 <h1>{{ title_text }}</h1>
 <ul>
-{%- for automation in automations %}
-<li><a href="{{ ROOT_URI }}{{ automation['uri'] }}">{{ automation['name'] }}</a></li>
+{%- for automation_definition in automation_definitions %}
+<li><a href="{{ root_uri }}{{ automation_definition['uri'] }}">{{ automation_definition['name'] }}</a></li>
 {%- endfor %}
 </ul>
 {%- endblock %}
