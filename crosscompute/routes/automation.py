@@ -52,21 +52,6 @@ class AutomationRoutes():
         config.include(self.configure_batches)
         config.include(self.configure_runs)
 
-    def configure_root(self, config):
-        configuration = self.configuration
-        config.add_route('root', '/')
-        config.add_route('icon', '/favicon.ico')
-
-        config.add_view(
-            self.see_root,
-            request_method='GET',
-            route_name='root',
-            renderer=configuration.get_template_path('root'))
-        config.add_view(
-            self.see_icon,
-            request_method='GET',
-            route_name='icon')
-
     def configure_styles(self, config):
         config.add_route(
             'style', STYLE_ROUTE)

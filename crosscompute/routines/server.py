@@ -21,6 +21,9 @@ from ..exceptions import (
 # from ..routes.automation import AutomationRoutes
 # from ..routes.mutation import MutationRoutes
 # from ..routes.token import TokenRoutes
+from ..variables import (
+    automation_definitions,
+    site_settings)
 from .database import DiskDatabase
 from .interface import Server
 
@@ -48,7 +51,10 @@ class DiskServer(Server):
             name='worker', target=self._work, args=(self._queue,))
         worker_process.start()
         host, port, root_uri = self._host, self._port, self._root_uri
-        # variables.configuration = configuration
+        site_settings.update({
+            'name': configuration.name,
+        })
+        automation_definitions[:] = configuration.automation_definitions
         '''
         app = _get_app(
             configuration, self._environment, self._safe, self._queue,
@@ -158,10 +164,6 @@ def _configure_renderer_globals(
 
     def update_renderer_globals():
         config.get_jinja2_environment().globals.update({
-            'BASE_JINJA2': configuration.get_template_path('base'),
-            'LIVE_JINJA2': configuration.get_template_path('live'),
-            'WITH_REFRESH': with_refresh,
-            'ROOT_URI': root_uri,
             'MAXIMUM_PING_INTERVAL': MAXIMUM_PING_INTERVAL_IN_SECONDS * 1000,
             'MINIMUM_PING_INTERVAL': MINIMUM_PING_INTERVAL_IN_SECONDS * 1000,
             'SERVER_TIMESTAMP': server_timestamp,

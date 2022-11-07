@@ -1,9 +1,9 @@
-{% extends BASE_JINJA2 %}
+{% extends base_template_path %}
 
 {% block body_js %}
 {{ super() -}}
 let mutationTimestamp = {{ mutation_timestamp }};
-let pingInterval = {{ MINIMUM_PING_INTERVAL }};
+let pingInterval = {{ MINIMUM_PING_INTERVAL_IN_MILLISECONDS }};
 async function refreshPage() {
   response = await fetch(location.href, { method: 'head' });
   if (response.ok) {
@@ -38,10 +38,10 @@ async function processMutations() {
       }
     }
     mutationTimestamp = d.mutation_timestamp;
-    pingInterval = {{ MINIMUM_PING_INTERVAL }};
+    pingInterval = {{ MINIMUM_PING_INTERVAL_IN_MILLISECONDS }};
   } catch (error) {
     console.error(error);
-    if (pingInterval < {{ MAXIMUM_PING_INTERVAL }}) {
+    if (pingInterval < {{ MAXIMUM_PING_INTERVAL_IN_MILLISECONDS }}) {
       pingInterval *= 1.1;
     }
   }

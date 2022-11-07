@@ -5,6 +5,8 @@ from ..constants import (
     IMAGES_FOLDER)
 from ..variables import (
     TemplateResponse,
+    automation_definitions,
+    site_settings,
     template_path_by_id)
 
 
@@ -13,9 +15,11 @@ router = APIRouter()
 
 @router.get('/', tags=['root'])
 async def see_root(request: Request):
-    # template_path = configuration.get_template_path('root')
-    template_path = template_path_by_id['root']
-    return TemplateResponse(template_path, {'request': request})
+    return TemplateResponse(template_path_by_id['root'], {
+        'request': request,
+        'title_text': site_settings['name'],
+        'automation_definitions': automation_definitions,
+    })
 
 
 @router.get('/favicon.ico', tags=['root'])
@@ -24,8 +28,6 @@ async def see_icon():
 
 
 '''
-config.add_view(
-    renderer=configuration.get_template_path('root'))
 config.add_route(
     'style', STYLE_ROUTE)
 '''
