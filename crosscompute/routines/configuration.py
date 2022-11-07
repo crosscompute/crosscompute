@@ -292,6 +292,7 @@ class ButtonDefinition(Definition):
 class TokenDefinition(Definition):
 
     def _initialize(self, kwargs):
+        self.automation_folder = kwargs['automation_folder']
         self._validation_functions = [
             validate_token_identifiers,
         ]
@@ -907,16 +908,16 @@ def validate_token_identifiers(token_dictionary):
         token_path = token_dictionary['path']
     except KeyError as e:
         raise CrossComputeConfigurationError(f'{e} required for each token')
-    token_path = Path(token_path)
-    suffix = token_path.suffix
-    if suffix == '.yml':
-        yaml = YAML()
-        d = yaml.load(token_path)
-    elif suffix == '.json':
-        d = json.load(token_path.open('rt'))
-    else:
-        raise CrossComputeConfigurationError(
-            f'{suffix} not supported for token paths')
+    path = Path(token_dictionary.automation_folder, token_path)
+    suffix = path.suffix
+    match suffix:
+        case '.yml':
+            d = YAML().load(token_path)
+        case '.json':
+            d = json.load(token_path.open('rt'))
+        case _:
+            raise CrossComputeConfigurationError(
+                f'{suffix} not supported for token paths')
     identities_by_token = {}
     for token, identities in d.items():
         variable_match = VARIABLE_ID_TEMPLATE_PATTERN.match(token)
@@ -927,7 +928,7 @@ def validate_token_identifiers(token_dictionary):
             except KeyError:
                 e = CrossComputeConfigurationError(
                     f'{variable_id} is missing in the environment')
-                e.path = token_path
+                e.path = path
                 raise e
         identities_by_token[token] = identities
     return {
