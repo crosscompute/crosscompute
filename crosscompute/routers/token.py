@@ -2,6 +2,10 @@ from fastapi import APIRouter
 
 
 router = APIRouter()
-'''
-config.add_route('tokens.json', 'tokens.json')
-'''
+
+
+@router.post(
+    'tokens.json',
+    tags=['token'])
+async def add_token():
+    return {}

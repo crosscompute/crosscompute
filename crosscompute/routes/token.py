@@ -9,19 +9,6 @@ class TokenRoutes():
         self.configuration = configuration
         self.safe = safe
 
-    def includeme(self, config):
-        config.include(self.configure_tokens)
-
-    def configure_tokens(self, config):
-        config.add_route(
-            'tokens.json', 'tokens.json')
-
-        config.add_view(
-            self.add_token,
-            request_method='POST',
-            route_name='tokens.json',
-            renderer='json')
-
     def add_token(self, request):
         # TODO: Fix to be oauth2 compliant; backport from market
         guard = AuthorizationGuard(request, self.safe)

@@ -9,11 +9,11 @@ async function refreshPage() {
   if (response.ok) {
     location.reload();
   } else {
-    location.href = '{{ ROOT_URI or '/' }}';
+    location.href = '{{ root_uri or '/' }}';
   }
 }
 async function processMutations() {
-  const uri = '{{ ROOT_URI }}{{ mutation_uri }}';
+  const uri = '{{ root_uri }}{{ mutation_uri }}';
   try {
     const response = await fetch(`${uri}?t=${mutationTimestamp}`);
     const d = await response.json();

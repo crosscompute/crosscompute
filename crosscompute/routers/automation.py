@@ -1,77 +1,80 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, Request
+
+from ..constants import (
+    AUTOMATION_ROUTE,
+    BATCH_ROUTE,
+    MODE_ROUTE,
+    RUN_ROUTE,
+    VARIABLE_ROUTE)
+from ..dependencies.automation import (
+    get_automation_definition)
+from ..routines.configuration import (
+    AutomationDefinition)
+from ..variables import (
+    TemplateResponse,
+    template_path_by_id)
 
 
 router = APIRouter()
 
 
-@router.get()
-async def see_automation(request: Request):
-    return TemplateResponse
-'''
-config.add_route(
-    'automation.json',
-    AUTOMATION_ROUTE + '.json')
-config.add_route(
-    'automation',
-    AUTOMATION_ROUTE)
+@router.get(
+    AUTOMATION_ROUTE,
+    tags=['automation'])
+async def see_automation(
+    request: Request,
+    automation_definition: AutomationDefinition = Depends(
+        get_automation_definition),
+):
+    automation_uri = automation_definition.uri
+    return TemplateResponse(template_path_by_id['automation'], {
+        'request': request,
+        'title_text': automation_definition.name,
+        'description': automation_definition.description,
+        'host_uri': request.url,
+        'name': automation_definition.name,
+        'uri': automation_uri,
+        'batches': automation_definition.batch_definitions,
+    })
 
-config.add_view(
-    self.run_automation,
-    request_method='POST',
-    route_name='automation.json',
-    renderer='json')
-config.add_view(
-    self.see_automation,
-    request_method='GET',
-    route_name='automation',
-    renderer='crosscompute:templates/automation.html')
-config.add_route(
-'automation run',
-AUTOMATION_ROUTE + RUN_ROUTE)
-config.add_route(
-'automation run mode',
-AUTOMATION_ROUTE + RUN_ROUTE + MODE_ROUTE)
-config.add_route(
-'automation run mode variable',
-AUTOMATION_ROUTE + RUN_ROUTE + MODE_ROUTE + VARIABLE_ROUTE)
 
-config.add_route(
-    'automation batch',
-    AUTOMATION_ROUTE + BATCH_ROUTE)
-config.add_route(
-    'automation batch mode',
-    AUTOMATION_ROUTE + BATCH_ROUTE + MODE_ROUTE)
-config.add_route(
-    'automation batch mode variable',
-    AUTOMATION_ROUTE + BATCH_ROUTE + MODE_ROUTE + VARIABLE_ROUTE)
+@router.post(
+    AUTOMATION_ROUTE + '.json',
+    tags=['automation'])
+async def run_automation():
+    return {
+    }
 
-config.add_view(
-    self.see_automation_batch_mode,
-    request_method='GET',
-    route_name='automation batch mode',
-    renderer='crosscompute:templates/mode.html')
-config.add_view(
-    self.see_automation_batch_mode_variable,
-    request_method='GET',
-    route_name='automation batch mode variable')
 
-config.add_route(
-    'automation run',
-    AUTOMATION_ROUTE + RUN_ROUTE)
-config.add_route(
-    'automation run mode',
-    AUTOMATION_ROUTE + RUN_ROUTE + MODE_ROUTE)
-config.add_route(
-    'automation run mode variable',
-    AUTOMATION_ROUTE + RUN_ROUTE + MODE_ROUTE + VARIABLE_ROUTE)
+@router.get(
+    AUTOMATION_ROUTE + BATCH_ROUTE,
+    tags=['automation'])
+@router.get(
+    AUTOMATION_ROUTE + RUN_ROUTE,
+    tags=['automation'])
+async def see_automation_batch(request: Request):
+    return TemplateResponse(template_path_by_id['batch'], {
+        'request': request,
+    })
 
-config.add_view(
-    self.see_automation_batch_mode,
-    request_method='GET',
-    route_name='automation run mode',
-    renderer='crosscompute:templates/mode.html')
-config.add_view(
-    self.see_automation_batch_mode_variable,
-    request_method='GET',
-    route_name='automation run mode variable')
-'''
+
+@router.get(
+    AUTOMATION_ROUTE + BATCH_ROUTE + MODE_ROUTE,
+    tags=['automation'])
+@router.get(
+    AUTOMATION_ROUTE + RUN_ROUTE + MODE_ROUTE,
+    tags=['automation'])
+async def see_automation_batch_mode(request: Request):
+    return TemplateResponse(template_path_by_id['mode'], {
+        'request': request,
+    })
+
+
+@router.get(
+    AUTOMATION_ROUTE + BATCH_ROUTE + MODE_ROUTE + VARIABLE_ROUTE,
+    tags=['automation'])
+@router.get(
+    AUTOMATION_ROUTE + RUN_ROUTE + MODE_ROUTE + VARIABLE_ROUTE,
+    tags=['automation'])
+async def see_automation_batch_mode_variable(request: Request):
+    return {}

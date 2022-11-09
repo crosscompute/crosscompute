@@ -12,14 +12,6 @@ class MutationRoutes():
         self._infos_by_timestamp = infos_by_timestamp
         self._server_timestamp = server_timestamp
 
-    def includeme(self, config):
-        config.add_route('mutation', MUTATION_ROUTE.format(uri='{uri:.*}'))
-
-        config.add_view(
-            self.see_mutation,
-            route_name='mutation',
-            renderer='json')
-
     def see_mutation(self, request):
         params = request.params
         try:

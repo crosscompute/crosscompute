@@ -13,7 +13,9 @@ from ..variables import (
 router = APIRouter()
 
 
-@router.get('/', tags=['root'])
+@router.get(
+    '/',
+    tags=['root'])
 async def see_root(request: Request):
     'Render root with a list of available automations'
     return TemplateResponse(template_path_by_id['root'], {
@@ -23,6 +25,8 @@ async def see_root(request: Request):
     })
 
 
-@router.get('/favicon.ico', tags=['root'])
+@router.get(
+    '/favicon.ico',
+    tags=['root'])
 async def see_icon():
     return FileResponse(IMAGES_FOLDER / 'favicon.ico')

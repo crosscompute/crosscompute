@@ -43,67 +43,6 @@ class AutomationRoutes():
         self.environment = environment
         self.queue = queue
 
-    def configure_automations(self, config):
-        config.add_route(
-            'automation.json',
-            AUTOMATION_ROUTE + '.json')
-        config.add_route(
-            'automation',
-            AUTOMATION_ROUTE)
-
-        config.add_view(
-            self.run_automation,
-            request_method='POST',
-            route_name='automation.json',
-            renderer='json')
-        config.add_view(
-            self.see_automation,
-            request_method='GET',
-            route_name='automation',
-            renderer='crosscompute:templates/automation.html')
-
-    def configure_batches(self, config):
-        config.add_route(
-            'automation batch',
-            AUTOMATION_ROUTE + BATCH_ROUTE)
-        config.add_route(
-            'automation batch mode',
-            AUTOMATION_ROUTE + BATCH_ROUTE + MODE_ROUTE)
-        config.add_route(
-            'automation batch mode variable',
-            AUTOMATION_ROUTE + BATCH_ROUTE + MODE_ROUTE + VARIABLE_ROUTE)
-
-        config.add_view(
-            self.see_automation_batch_mode,
-            request_method='GET',
-            route_name='automation batch mode',
-            renderer='crosscompute:templates/mode.html')
-        config.add_view(
-            self.see_automation_batch_mode_variable,
-            request_method='GET',
-            route_name='automation batch mode variable')
-
-    def configure_runs(self, config):
-        config.add_route(
-            'automation run',
-            AUTOMATION_ROUTE + RUN_ROUTE)
-        config.add_route(
-            'automation run mode',
-            AUTOMATION_ROUTE + RUN_ROUTE + MODE_ROUTE)
-        config.add_route(
-            'automation run mode variable',
-            AUTOMATION_ROUTE + RUN_ROUTE + MODE_ROUTE + VARIABLE_ROUTE)
-
-        config.add_view(
-            self.see_automation_batch_mode,
-            request_method='GET',
-            route_name='automation run mode',
-            renderer='crosscompute:templates/mode.html')
-        config.add_view(
-            self.see_automation_batch_mode_variable,
-            request_method='GET',
-            route_name='automation run mode variable')
-
     def see_root(self, request):
         guard = AuthorizationGuard(request, self.safe)
         if not guard.check('see_root', configuration):
@@ -145,12 +84,10 @@ class AutomationRoutes():
         return {'run_id': batch_definition.name, 'mode_code': mode_code}
 
     def see_automation(self, request):
-        automation_definition = self.get_automation_definition_from(request)
         guard = AuthorizationGuard(request, self.safe)
         if not guard.check('see_automation', automation_definition):
             raise HTTPForbidden
         design_name = automation_definition.get_design_name('automation')
-        automation_uri = automation_definition.uri
         if design_name == 'none':
             d = {
                 'css_uris': automation_definition.css_uris,
@@ -164,13 +101,7 @@ class AutomationRoutes():
             mutation_reference_uri = _get_automation_batch_mode_uri(
                 automation_definition, batch_definition, design_name)
         return d | {
-            'name': automation_definition.name,
-            'description': automation_definition.description,
-            'host_uri': request.host_url,
-            'uri': automation_uri,
             'batches': guard.get_batch_definitions(automation_definition),
-            'runs': automation_definition.run_definitions,
-            'title_text': automation_definition.name,
             'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri),
             'mutation_timestamp': time(),
         }
@@ -213,18 +144,6 @@ class AutomationRoutes():
         if 'error' in variable_data:
             raise HTTPNotFound
         raise HTTPBadRequest
-
-    def get_automation_definition_from(self, request):
-        matchdict = request.matchdict
-        automation_definitions = self.configuration.automation_definitions
-        automation_slug = matchdict['automation_slug']
-        try:
-            automation_definition = find_item(
-                automation_definitions, 'slug', automation_slug,
-                normalize=str.casefold)
-        except StopIteration:
-            raise HTTPNotFound
-        return automation_definition
 
     def get_batch_definition_from(self, request, automation_definition):
         matchdict = request.matchdict

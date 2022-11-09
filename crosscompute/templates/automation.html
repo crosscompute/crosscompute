@@ -1,18 +1,18 @@
-{% extends LIVE_JINJA2 if WITH_REFRESH else BASE_JINJA2 %}
+{% extends live_template_path if with_refresh else base_template_path %}
 
 {% block head_html %}
 {{ super() -}}
 <meta name="title" property="og:title" content="{{ name }}" />
 <meta name="description" property="og:description" content="{{ description }}">
-<meta name="image" property="og:image" content="{{ host_uri }}{{ ROOT_URI }}/favicon.ico" />
-<meta property="og:url" content="{{ host_uri }}{{ ROOT_URI }}{{ uri }}" />
+<meta name="image" property="og:image" content="{{ host_uri }}{{ root_uri }}/favicon.ico" />
+<meta property="og:url" content="{{ host_uri }}{{ root_uri }}{{ uri }}" />
 <meta name="twitter:card" content="summary">
 {% endblock %}
 
 {% block header_html %}
 {% if not for_embed %}
-<a href="{{ ROOT_URI or '/' }}">Root</a> &gt;
-<a href="{{ ROOT_URI }}{{ uri }}">{{ name }}</a>
+<a href="{{ root_uri or '/' }}">Root</a> &gt;
+<a href="{{ root_uri }}{{ uri }}">{{ name }}</a>
 {% endif %}
 {% endblock %}
 
@@ -26,22 +26,11 @@
 {% for batch in batches %}
 <li>
 {{ batch['name'] }}
-<a href="{{ ROOT_URI }}{{ uri }}{{ batch['uri'] }}/i">[input]</a>
-<a href="{{ ROOT_URI }}{{ uri }}{{ batch['uri'] }}/o">[output]</a>
+<a href="{{ root_uri }}{{ uri }}{{ batch['uri'] }}/i">[input]</a>
+<a href="{{ root_uri }}{{ uri }}{{ batch['uri'] }}/o">[output]</a>
 </li>
 {% endfor %}
 </ul>
-{#
-<ul class="_runs">
-{% for run in runs %}
-<li>
-{{ run['name'] }}
-<a href="{{ ROOT_URI }}{{ uri }}{{ run['uri'] }}/i">[input]</a>
-<a href="{{ ROOT_URI }}{{ uri }}{{ run['uri'] }}/o">[output]</a>
-</li>
-{% endfor %}
-</ul>
-#}
 {% endif %}
 {% endblock %}
 
