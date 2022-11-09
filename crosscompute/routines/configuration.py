@@ -598,14 +598,14 @@ def validate_display_styles(configuration):
             display_dictionary, 'styles'):
         style_definition = StyleDefinition(raw_style_definition)
         style_uri = style_definition.uri
-        if '//' not in style_uri:
+        if '//' in style_uri:
+            style_definitions.append(style_definition)
+        else:
             path = automation_folder / style_definition.path
             if not path.exists():
                 raise CrossComputeConfigurationError(
                     f'{path} not found for style')
             css_texts.append(path.read_text().rstrip())
-            continue
-        style_definitions.append(style_definition)
     return {
         'style_definitions': style_definitions,
         'css_uris': [_.uri for _ in style_definitions],

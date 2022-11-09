@@ -4,15 +4,10 @@ from fastapi import APIRouter
 router = APIRouter()
 
 
+@router.get()
+async def see_automation(request: Request):
+    return TemplateResponse
 '''
-config.add_route(
-    'automation style', AUTOMATION_ROUTE + STYLE_ROUTE)
-
-config.add_view(
-    self.see_style,
-    request_method='GET',
-    route_name='automation style')
-
 config.add_route(
     'automation.json',
     AUTOMATION_ROUTE + '.json')

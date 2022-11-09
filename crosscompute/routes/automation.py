@@ -16,13 +16,11 @@ from ..constants import (
     AUTOMATION_ROUTE,
     BATCH_ROUTE,
     ID_LENGTH,
-    IMAGES_FOLDER,
     MODE_CODE_BY_NAME,
     MODE_NAME_BY_CODE,
     MODE_ROUTE,
     MUTATION_ROUTE,
     RUN_ROUTE,
-    STYLE_ROUTE,
     VARIABLE_ID_TEMPLATE_PATTERN,
     VARIABLE_ROUTE)
 from ..exceptions import CrossComputeDataError
@@ -44,28 +42,6 @@ class AutomationRoutes():
         self.safe = safe
         self.environment = environment
         self.queue = queue
-
-    def includeme(self, config):
-        config.include(self.configure_root)
-        config.include(self.configure_styles)
-        config.include(self.configure_automations)
-        config.include(self.configure_batches)
-        config.include(self.configure_runs)
-
-    def configure_styles(self, config):
-        config.add_route(
-            'style', STYLE_ROUTE)
-        config.add_route(
-            'automation style', AUTOMATION_ROUTE + STYLE_ROUTE)
-
-        config.add_view(
-            self.see_style,
-            request_method='GET',
-            route_name='style')
-        config.add_view(
-            self.see_style,
-            request_method='GET',
-            route_name='automation style')
 
     def configure_automations(self, config):
         config.add_route(
@@ -129,42 +105,16 @@ class AutomationRoutes():
             route_name='automation run mode variable')
 
     def see_root(self, request):
-        'Render root with a list of available automations'
-        configuration = self.configuration
         guard = AuthorizationGuard(request, self.safe)
         if not guard.check('see_root', configuration):
             raise HTTPForbidden
         return {
-            'title_text': configuration.get('name', 'Automations'),
             'automations': guard.get_automation_definitions(configuration),
             'css_uris': configuration.css_uris,
             'css_text': configuration.css_text,
             'mutation_uri': MUTATION_ROUTE.format(uri=''),
             'mutation_timestamp': time(),
         }
-
-    def see_icon(self, request):
-        return FileResponse(IMAGES_FOLDER / 'favicon.ico')
-
-    def see_style(self, request):
-        matchdict = request.matchdict
-        if 'automation_slug' in matchdict:
-            automation_definition = self.get_automation_definition_from(
-                request)
-        else:
-            automation_definition = self.configuration
-        style_definitions = automation_definition.style_definitions
-        try:
-            style_definition = find_item(
-                style_definitions, 'uri', request.environ['PATH_INFO'])
-        except StopIteration:
-            raise HTTPNotFound
-        path = automation_definition.folder / style_definition['path']
-        try:
-            response = FileResponse(path, request)
-        except TypeError:
-            raise HTTPNotFound
-        return response
 
     def run_automation(self, request):
         automation_definition = self.get_automation_definition_from(request)
