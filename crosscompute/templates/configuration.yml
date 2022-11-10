@@ -193,7 +193,7 @@ version: 0.0.0
 
   # ports needed by your scripts
   # ports:
-  #   - id: session_url
+  #   - id: y8
   #     number: 8888
 
   # environment variables needed by your scripts
