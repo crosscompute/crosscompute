@@ -650,8 +650,9 @@ def validate_display_buttons(configuration):
 
 def validate_authorization(configuration):
     authorization_dictionary = get_dictionary(configuration, 'authorization')
-    token_definitions = [TokenDefinition(_) for _ in get_dictionaries(
-        authorization_dictionary, 'tokens')]
+    token_definitions = [TokenDefinition(
+        _, automation_folder=configuration.folder,
+    ) for _ in get_dictionaries(authorization_dictionary, 'tokens')]
     identities_by_token = {
         token: identities for _ in token_definitions
         for token, identities in _.identities_by_token.items()}
@@ -910,14 +911,11 @@ def validate_token_identifiers(token_dictionary):
         raise CrossComputeConfigurationError(f'{e} required for each token')
     path = Path(token_dictionary.automation_folder, token_path)
     suffix = path.suffix
-    match suffix:
-        case '.yml':
-            d = YAML().load(token_path)
-        case '.json':
-            d = json.load(token_path.open('rt'))
-        case _:
-            raise CrossComputeConfigurationError(
-                f'{suffix} not supported for token paths')
+    if suffix == '.yml':
+        d = load_raw_configuration_yaml(path)
+    else:
+        raise CrossComputeConfigurationError(
+            f'{suffix} not supported for token paths')
     identities_by_token = {}
     for token, identities in d.items():
         variable_match = VARIABLE_ID_TEMPLATE_PATTERN.match(token)
@@ -931,9 +929,7 @@ def validate_token_identifiers(token_dictionary):
                 e.path = path
                 raise e
         identities_by_token[token] = identities
-    return {
-        'identities_by_token': identities_by_token,
-    }
+    return {'identities_by_token': identities_by_token}
 
 
 def validate_group_identifiers(group_dictionary):
