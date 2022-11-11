@@ -183,7 +183,8 @@ class AutomationRoutes():
 
     def run_automation(self, request):
         automation_definition = self.get_automation_definition_from(request)
-        guard = AuthorizationGuard(request, self.safe)
+        guard = AuthorizationGuard(
+            request, self.safe, automation_definition.identities_by_token)
         if not guard.check('run_automation', automation_definition):
             raise HTTPForbidden
         variable_definitions = automation_definition.get_variable_definitions(
@@ -211,7 +212,8 @@ class AutomationRoutes():
 
     def see_automation(self, request):
         automation_definition = self.get_automation_definition_from(request)
-        guard = AuthorizationGuard(request, self.safe)
+        guard = AuthorizationGuard(
+            request, self.safe, automation_definition.identities_by_token)
         if not guard.check('see_automation', automation_definition):
             raise HTTPForbidden
         design_name = automation_definition.get_design_name('automation')
@@ -242,7 +244,8 @@ class AutomationRoutes():
 
     def see_automation_batch_mode(self, request):
         automation_definition = self.get_automation_definition_from(request)
-        guard = AuthorizationGuard(request, self.safe)
+        guard = AuthorizationGuard(
+            request, self.safe, automation_definition.identities_by_token)
         is_match = guard.check('see_batch', automation_definition)
         if not is_match:
             raise HTTPForbidden
@@ -257,7 +260,8 @@ class AutomationRoutes():
 
     def see_automation_batch_mode_variable(self, request):
         automation_definition = self.get_automation_definition_from(request)
-        guard = AuthorizationGuard(request, self.safe)
+        guard = AuthorizationGuard(
+            request, self.safe, automation_definition.identities_by_token)
         is_match = guard.check('see_batch', automation_definition)
         if not is_match:
             raise HTTPForbidden

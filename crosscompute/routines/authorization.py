@@ -9,9 +9,10 @@ from ..routines.batch import DiskBatch
 
 class AuthorizationGuard():
 
-    def __init__(self, request, safe):
+    def __init__(self, request, safe, identities_by_token=None):
         self._request = request
         self._safe = safe
+        self._identities_by_token = identities_by_token or {}
 
     @cached_property
     def identities(self):
@@ -21,7 +22,9 @@ class AuthorizationGuard():
         if token:
             try:
                 identities.update(self._safe.get(
-                    token), ip_address=request.client_addr)
+                    token,
+                    self._identities_by_token.get(token),
+                ), ip_address=request.client_addr)
             except KeyError:
                 pass
         return identities
