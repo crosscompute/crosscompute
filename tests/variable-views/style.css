@@ -6,6 +6,10 @@
   height: 300px;
 }
 
+._map-mapbox-location {
+  height: 300px;
+}
+
 ._map-deck-screengrid {
   height: 300px;
 }

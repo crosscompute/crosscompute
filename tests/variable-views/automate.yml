@@ -4,78 +4,95 @@ name: Test Variable Views
 version: 0.0.0
 input:
   variables:
-    - id: x1
+    - id: zipcode
       view: string
       path: variables.dictionary
-    - id: x2
+      configuration:
+        label: What is your zipcode?
+    - id: age
       view: number
       path: variables.dictionary
       configuration:
-        label: xx
-    - id: x3
+        label: What is your age?
+    - id: secret_code
       view: password
       path: ENVIRONMENT
-    - id: x4
+      configuration:
+        label: What is your secret code?
+    - id: support_email
       view: email
       path: ENVIRONMENT
-    - id: x5
+    - id: problem_description
       view: text
-      path: x5.txt
-    - id: x6
+      path: problem.txt
+    - id: blurb
       view: markdown
-      path: x6.md
+      path: blurb.md
+    - id: ice_cream_flavor
+      view: radio
+      path: variables.dictionary
+      configuration:
+        options:
+          - value: vanilla
+          - value: chocolate
+          - value: strawberry
+    - id: region
+      view: map-mapbox-location
+      path: variables.dictionary
   templates:
-    - path: form.md
+    - path: form-part1.md
+    - path: form-part2.md
+
+# !!! TODO: Update output variables
+
 output:
   variables:
-    - id: y1
+    - id: y-link
       view: link
-      path: y1.txt
+      path: y-link.txt
       configuration:
         link-text: y1'"y1
         file-name: y1'"y1.txt
-    - id: y2
+    - id: y-string
       view: string
       path: variables.dictionary
-    - id: y3
+    - id: y-number
       view: number
       path: variables.dictionary
-    - id: y4
+    - id: y-text
       view: text
-      path: y4.txt
-    - id: y5
+      path: y-text.txt
+    - id: y-markdown
       view: markdown
-      path: y5.md
-    - id: y6
+      path: y-markdown.md
+    - id: y-image
       view: image
-      path: y6.svg
-    - id: y7
+      path: y-image.svg
+    - id: y-table
       view: table
-      path: y7.json
-    - id: y8
+      path: y-table.json
+    - id: y-map-mapbox
       view: map-mapbox
-      path: y8.geojson
+      path: y-map-mapbox.geojson
       configuration:
         style: mapbox://styles/mapbox/dark-v10
         layers:
           - type: fill
             paint:
               fill-color: blue
-        path: y8-configuration.json
-    - id: y9
+    - id: y-map-deck-screengrid
       view: map-deck-screengrid
-      path: y9.json
+      path: y-map-deck-screengrid.json
       configuration:
         style: mapbox://styles/mapbox/dark-v10
-        path: y9-configuration.json
   templates:
-    - path: report-section1.md
-    - path: report-section2.md
+    - path: report-part1.md
+    - path: report-part2.md
 batches:
   - folder: batches/standard
 display:
   styles:
-    - path: report.css
+    - path: style.css
   pages:
     - id: automation
       configuration:
