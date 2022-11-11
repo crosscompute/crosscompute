@@ -3,7 +3,7 @@ import json
 import shutil
 from dataclasses import dataclass
 from logging import getLogger
-from string import Template
+from string import Template as StringTemplate
 from urllib.request import urlretrieve as download_uri
 
 from importlib_metadata import entry_points
@@ -12,6 +12,7 @@ from invisibleroads_macros_text import format_name, format_slug
 from invisibleroads_macros_web.escape import (
     escape_quotes_html,
     escape_quotes_js)
+from jinja2 import Template as JinjaTemplate
 
 from ..constants import (
     CACHED_FILE_SIZE_LIMIT_IN_BYTES,
@@ -378,6 +379,45 @@ class ImageView(VariableView):
         }
 
 
+class RadioView(StringView):
+
+    view_name = 'radio'
+
+    def render_input(self, b: Batch, x: Element):
+        variable_definition = self.variable_definition
+        variable_id = self.variable_id
+        view_name = self.view_name
+        element_id = x.id
+        c = b.get_variable_configuration(variable_definition)
+        options = []
+        for d in c.get('options', []):
+            # TODO: Validate variable view configurations
+            option_value = d['value']
+            option_name = d.get('name', option_value)
+            option_id = format_slug(option_name)
+            options.append({
+                'id': option_id, 'name': option_name, 'value': option_value})
+        main_text = RADIO_HTML_INPUT.render({
+            'element_id': element_id,
+            'mode_name': self.mode_name,
+            'view_name': view_name,
+            'variable_id': variable_id,
+            'options': options,
+            'value': self.get_value(b),
+        })
+        if x.design_name not in ['none']:
+            main_text = add_label_html(main_text, c, variable_id, element_id)
+        js_texts = [
+            RADIO_JS_INPUT.substitute({'view_name': view_name}),
+        ]
+        return {
+            'css_uris': [],
+            'js_uris': [],
+            'main_text': main_text,
+            'js_texts': js_texts,
+        }
+
+
 class TableView(VariableView):
 
     view_name = 'table'
@@ -721,35 +761,39 @@ L = getLogger(__name__)
 
 
 LINK_JS_HEADER = load_view_text('linkHeader.js')
-LINK_JS_OUTPUT = Template(load_view_text('linkOutput.js'))
+LINK_JS_OUTPUT = StringTemplate(load_view_text('linkOutput.js'))
 
 
-STRING_HTML_INPUT = Template(load_view_text('stringInput.html'))
-STRING_JS_INPUT = Template(load_view_text('stringInput.js'))
+STRING_HTML_INPUT = StringTemplate(load_view_text('stringInput.html'))
+STRING_JS_INPUT = StringTemplate(load_view_text('stringInput.js'))
 STRING_JS_HEADER = load_view_text('stringHeader.js')
-STRING_JS_OUTPUT = Template(load_view_text('stringOutput.js'))
+STRING_JS_OUTPUT = StringTemplate(load_view_text('stringOutput.js'))
 
 
-TEXT_HTML_INPUT = Template(load_view_text('textInput.html'))
+TEXT_HTML_INPUT = StringTemplate(load_view_text('textInput.html'))
 TEXT_JS_HEADER = load_view_text('textHeader.js')
-TEXT_JS_INPUT = Template(load_view_text('textInput.js'))
-TEXT_JS_OUTPUT = Template(load_view_text('textOutput.js'))
+TEXT_JS_INPUT = StringTemplate(load_view_text('textInput.js'))
+TEXT_JS_OUTPUT = StringTemplate(load_view_text('textOutput.js'))
 
 
 MARKDOWN_JS_HEADER = load_view_text('markdownHeader.js')
-MARKDOWN_JS_OUTPUT = Template(load_view_text('markdownOutput.js'))
+MARKDOWN_JS_OUTPUT = StringTemplate(load_view_text('markdownOutput.js'))
 
 
 IMAGE_JS_HEADER = load_view_text('imageHeader.js')
-IMAGE_JS_OUTPUT = Template(load_view_text('imageOutput.js'))
+IMAGE_JS_OUTPUT = StringTemplate(load_view_text('imageOutput.js'))
+
+
+RADIO_HTML_INPUT = JinjaTemplate(load_view_text('radioInput.html'))
+RADIO_JS_INPUT = StringTemplate(load_view_text('radioInput.js'))
 
 
 TABLE_JS_HEADER = load_view_text('tableHeader.js')
-TABLE_JS_OUTPUT = Template(load_view_text('tableOutput.js'))
+TABLE_JS_OUTPUT = StringTemplate(load_view_text('tableOutput.js'))
 
 
 FRAME_JS_HEADER = load_view_text('frameHeader.js')
-FRAME_JS_OUTPUT = Template(load_view_text('frameOutput.js'))
+FRAME_JS_OUTPUT = StringTemplate(load_view_text('frameOutput.js'))
 
 
 YIELD_DATA_BY_ID_BY_EXTENSION = {

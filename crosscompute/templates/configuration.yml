@@ -36,26 +36,41 @@ version: 0.0.0
   #   specify ENVIRONMENT to prevent saving the variable to disk (required)
   # - configuration of the view
   # variables:
-  #   - id: x1
+  #   - id: zipcode
   #     view: string
   #     path: variables.dictionary
-  #   - id: x2
+  #     configuration:
+  #       label: What is your zipcode?
+  #   - id: age
   #     view: number
   #     path: variables.dictionary
   #     configuration:
-  #       label: YOUR-LABEL-TEXT
-  #   - id: x3
+  #       label: What is your age?
+  #   - id: secret_code
   #     view: password
   #     path: ENVIRONMENT
-  #   - id: x4
+  #     configuration:
+  #       label: What is your secret code?
+  #   - id: support_email
   #     view: email
   #     path: ENVIRONMENT
-  #   - id: x5
+  #   - id: problem_description
   #     view: text
-  #     path: x5.txt
-  #   - id: x6
+  #     path: problem.txt
+  #   - id: blurb
   #     view: markdown
-  #     path: x6.md
+  #     path: blurb.md
+  #   - id: ice_cream_flavor
+  #     view: radio
+  #     path: variables.dictionary
+  #     configuration:
+  #       options:
+  #         - name [optional]: Vanilla
+  #           value [required]: vanilla
+  #         - name: Chocolate
+  #           value: chocolate
+  #         - name: Strawberry
+  #           value: strawberry
   #   - id: x7
   #     view: map-mapbox-location
   #     path: variables.dictionary

@@ -2,7 +2,7 @@
 - Start from scratch
 - Restore self-contained server
 - Add views: link, string, number, password, email, text, markdown, image
-- Add views: table, frame
+- Add views: radio, table, frame
 - Move map views into crosscompute-views-map
 - Parallelize built-in workers
 - Respect GET parameters for views based on string or text

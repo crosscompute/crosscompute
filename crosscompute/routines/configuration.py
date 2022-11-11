@@ -488,6 +488,7 @@ def validate_variables(configuration):
 
 
 def validate_variable_views(configuration):
+    # TODO: Validate variable view configurations
     initialize_view_by_name()
     for view_name in configuration.___view_names:
         try:

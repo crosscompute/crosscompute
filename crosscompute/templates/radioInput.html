@@ -1,0 +1,8 @@
+<fieldset id="{{ element_id }}" class="_{{ mode_name }} _{{ view_name }} {{ variable_id }}" data-view="{{ view_name }}" data-variable="{{ variable_id }}">
+{% for option in options %}
+{% set option_id = option['id'] %}
+{% set option_name = option['name'] %}
+{% set option_value = option['value'] %}
+<div><input type="radio" id="{{ variable_id }}-{{ option_id }}" name="{{ variable_id }}" value="{{ option_value }}"{% if option_value == value %} checked{% endif %}> <label for="{{ variable_id }}-{{ option_id }}">{{ option_name }}</label></div>
+{% endfor %}
+</fieldset>

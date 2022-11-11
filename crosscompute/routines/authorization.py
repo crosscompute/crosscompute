@@ -21,7 +21,7 @@ class AuthorizationGuard():
         if token:
             try:
                 identities.update(self._safe.get(
-                    token), ip_address=request.remote_addr)
+                    token), ip_address=request.client_addr)
             except KeyError:
                 pass
         return identities
