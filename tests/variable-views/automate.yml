@@ -4,28 +4,47 @@ name: Test Variable Views
 version: 0.0.0
 input:
   variables:
-    - id: x-string
+    - id: zipcode
       view: string
       path: variables.dictionary
       configuration:
-        label: x string
-    - id: x-number
+        label: What is your zipcode?
+    - id: age
       view: number
       path: variables.dictionary
-    - id: x-password
+      configuration:
+        label: What is your age?
+    - id: secret_code
       view: password
       path: ENVIRONMENT
-    - id: x-email
+      configuration:
+        label: What is your secret code?
+    - id: support_email
       view: email
       path: ENVIRONMENT
-    - id: x-text
+    - id: problem_description
       view: text
-      path: x-text.txt
-    - id: x-markdown
+      path: problem.txt
+    - id: blurb
       view: markdown
-      path: x-markdown.md
+      path: blurb.md
+    - id: ice_cream_flavor
+      view: radio
+      path: variables.dictionary
+      configuration:
+        options:
+          - value: vanilla
+          - value: chocolate
+          - value: strawberry
+    - id: region
+      view: map-mapbox-location
+      path: variables.dictionary
   templates:
-    - path: form.md
+    - path: form-part1.md
+    - path: form-part2.md
+
+# !!! TODO: Update output variables
+
 output:
   variables:
     - id: y-link
@@ -67,13 +86,13 @@ output:
       configuration:
         style: mapbox://styles/mapbox/dark-v10
   templates:
-    - path: report-section1.md
-    - path: report-section2.md
+    - path: report-part1.md
+    - path: report-part2.md
 batches:
   - folder: batches/standard
 display:
   styles:
-    - path: report.css
+    - path: style.css
   pages:
     - id: automation
       configuration:
