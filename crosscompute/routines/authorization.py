@@ -20,13 +20,10 @@ class AuthorizationGuard():
         request = self._request
         token = get_token(request)
         if token:
-            try:
-                identities.update(self._safe.get(
-                    token,
-                    self._identities_by_token.get(token),
-                ), ip_address=request.client_addr)
-            except KeyError:
-                pass
+            identities.update(self._safe.get(
+                token,
+                self._identities_by_token.get(token, {}),
+            ), ip_address=request.client_addr)
         return identities
 
     def check(self, permission_id, configuration):
