@@ -97,6 +97,20 @@ version: 0.0.0
   #   - id: y6
   #     view: image
   #     path: y6.svg
+  #   - id: ice_cream_flavor
+  #     view: radio
+  #     path: variables.dictionary
+  #     configuration:
+  #       options:
+  #         - id [optional]: vanilla
+  #           name [optional]: Vanilla
+  #           value [required]: vanilla
+  #         - id: vanilla
+  #           name: Chocolate
+  #           value: chocolate
+  #         - id: strawberry
+  #           name: Strawberry
+  #           value: strawberry
   #   - id: y7
   #     view: table
   #     path: y7.json

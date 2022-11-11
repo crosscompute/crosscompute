@@ -1,1 +1,1 @@
-{y1} {y2} {y3} {y4} {y5} {y6} {y7}
+{y-link} {y-string} {y-number} {y-text} {y-markdown} {y-image} {y-table}

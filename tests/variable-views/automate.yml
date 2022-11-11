@@ -4,70 +4,68 @@ name: Test Variable Views
 version: 0.0.0
 input:
   variables:
-    - id: x1
+    - id: x-string
       view: string
       path: variables.dictionary
-    - id: x2
+      configuration:
+        label: x string
+    - id: x-number
       view: number
       path: variables.dictionary
-      configuration:
-        label: xx
-    - id: x3
+    - id: x-password
       view: password
       path: ENVIRONMENT
-    - id: x4
+    - id: x-email
       view: email
       path: ENVIRONMENT
-    - id: x5
+    - id: x-text
       view: text
-      path: x5.txt
-    - id: x6
+      path: x-text.txt
+    - id: x-markdown
       view: markdown
-      path: x6.md
+      path: x-markdown.md
   templates:
     - path: form.md
 output:
   variables:
-    - id: y1
+    - id: y-link
       view: link
-      path: y1.txt
+      path: y-link.txt
       configuration:
         link-text: y1'"y1
         file-name: y1'"y1.txt
-    - id: y2
+    - id: y-string
       view: string
       path: variables.dictionary
-    - id: y3
+    - id: y-number
       view: number
       path: variables.dictionary
-    - id: y4
+    - id: y-text
       view: text
-      path: y4.txt
-    - id: y5
+      path: y-text.txt
+    - id: y-markdown
       view: markdown
-      path: y5.md
-    - id: y6
+      path: y-markdown.md
+    - id: y-image
       view: image
-      path: y6.svg
-    - id: y7
+      path: y-image.svg
+    - id: y-table
       view: table
-      path: y7.json
-    - id: y8
+      path: y-table.json
+    - id: y-map-mapbox
       view: map-mapbox
-      path: y8.geojson
+      path: y-map-mapbox.geojson
       configuration:
         style: mapbox://styles/mapbox/dark-v10
         layers:
           - type: fill
             paint:
               fill-color: blue
-        path: y8-configuration.json
-    - id: y9
+    - id: y-map-deck-screengrid
       view: map-deck-screengrid
-      path: y9.json
+      path: y-map-deck-screengrid.json
       configuration:
         style: mapbox://styles/mapbox/dark-v10
-        path: y9-configuration.json
   templates:
     - path: report-section1.md
     - path: report-section2.md
