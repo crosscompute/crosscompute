@@ -21,17 +21,10 @@ async function processMutations() {
     if (
       d.server_timestamp != {{ SERVER_TIMESTAMP }} ||
       d.configurations.length ||
+      d.styles.length ||
       d.templates.length
     ) {
       refreshPage();
-    } else if (styles.length) {
-      const { origin } = location;
-      for (var e of document.getElementsByTagName('link')) {
-        if (e.rel !== 'stylesheet' || new URL(e.href).origin !== origin) {
-          continue;
-        }
-        e.href += '?' + Date.now();
-      }
     } else if (variables.length && refreshVariable) {
       for (const variable of variables) {
         refreshVariable(variable.id);
