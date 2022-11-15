@@ -21,6 +21,7 @@ class MutationRoutes():
             renderer='json')
 
     def see_mutation(self, request):
+        # TODO: Consider adding guard
         params = request.params
         try:
             old_timestamp = float(params.get('t', 0))
