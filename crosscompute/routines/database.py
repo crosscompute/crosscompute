@@ -40,7 +40,7 @@ class DiskDatabase():
             run_uri = RUN_ROUTE.format(run_slug=run_id)
             memory = DiskMemory()
             add_variable_infos_from_folder(
-                memory, configuration, runs_folder / run_id, run_uri)
+                memory, automation_definition, runs_folder / run_id, run_uri)
             infos = memory.get(path)
             break
         else:
@@ -99,35 +99,34 @@ def add_variable_infos(memory, configuration):
         for batch_definition in automation_definition.batch_definitions:
             add_variable_infos_from_folder(
                 memory,
-                configuration,
+                automation_definition,
                 automation_folder / batch_definition.folder,
                 batch_definition.uri)
 
 
 def add_variable_infos_from_folder(
-        memory, configuration, absolute_batch_folder, batch_uri):
+        memory, automation_definition, absolute_batch_folder, batch_uri):
     info = {'code': 'v'}
-    for automation_definition in configuration.automation_definitions:
-        automation_uri = automation_definition.uri
-        uri = automation_uri + batch_uri
-        d = automation_definition.variable_definitions_by_mode_name
-        for mode_name, variable_definitions in d.items():
-            mode_code = MODE_CODE_BY_NAME[mode_name]
-            mode_uri = MODE_ROUTE.format(mode_code=mode_code)
-            folder = absolute_batch_folder / mode_name
-            for variable_definition in variable_definitions:
-                variable_id = variable_definition.id
-                if variable_id != 'return_code':
-                    info_uri = uri + mode_uri
-                else:
-                    info_uri = uri
-                variable_info = info | {'id': variable_id, 'uri': info_uri}
-                variable_configuration = variable_definition.configuration
-                if 'path' in variable_configuration:
-                    path = folder / variable_configuration['path']
-                    memory.add(path, variable_info)
-                path = folder / variable_definition.path
+    automation_uri = automation_definition.uri
+    uri = automation_uri + batch_uri
+    d = automation_definition.variable_definitions_by_mode_name
+    for mode_name, variable_definitions in d.items():
+        mode_code = MODE_CODE_BY_NAME[mode_name]
+        mode_uri = MODE_ROUTE.format(mode_code=mode_code)
+        folder = absolute_batch_folder / mode_name
+        for variable_definition in variable_definitions:
+            variable_id = variable_definition.id
+            if variable_id != 'return_code':
+                info_uri = uri + mode_uri
+            else:
+                info_uri = uri
+            variable_info = info | {'id': variable_id, 'uri': info_uri}
+            variable_configuration = variable_definition.configuration
+            if 'path' in variable_configuration:
+                path = folder / variable_configuration['path']
                 memory.add(path, variable_info)
+            path = folder / variable_definition.path
+            memory.add(path, variable_info)
 
 
 def add_template_infos(memory, configuration):
