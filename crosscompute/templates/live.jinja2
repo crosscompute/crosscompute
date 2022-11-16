@@ -25,10 +25,12 @@ async function processMutations() {
       d.templates.length
     ) {
       refreshPage();
-    } else if (variables.length && refreshVariable) {
+{% if mode_name != 'input' %}
+    } else if (variables.length) {
       for (const variable of variables) {
         refreshVariable(variable.id);
       }
+{% endif %}
     }
     mutationTimestamp = d.mutation_timestamp;
     pingInterval = {{ MINIMUM_PING_INTERVAL }};

@@ -190,7 +190,7 @@ class AutomationRoutes():
         variable_definitions = automation_definition.get_variable_definitions(
             'input')
         try:
-            data_by_id = dict(request.params) or request.json_body
+            data_by_id = request.json_body
         except json.JSONDecodeError:
             data_by_id = {}
         try:
