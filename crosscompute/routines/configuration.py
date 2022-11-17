@@ -6,9 +6,10 @@ from configparser import ConfigParser
 from datetime import timedelta
 from logging import getLogger
 from os import environ
-from os.path import basename, relpath
+from os.path import basename, relpath, splitext
 from pathlib import Path
 from string import Template
+from time import time
 
 import tomli
 from invisibleroads_macros_log import format_path
@@ -29,6 +30,7 @@ from ..constants import (
     MODE_NAMES,
     PRINTER_BY_NAME,
     RUN_ROUTE,
+    STYLE_ROUTE,
     VARIABLE_ID_PATTERN,
     VARIABLE_ID_TEMPLATE_PATTERN,
     VIEW_BY_NAME)
@@ -586,24 +588,31 @@ def validate_scripts(configuration):
 def validate_display_styles(configuration):
     display_dictionary = get_dictionary(configuration, 'display')
     automation_folder = configuration.folder
+    automation_index = configuration.index
+    automation_uri = configuration.uri
+    reference_time = time()
     style_definitions = []
-    css_texts = []
     for raw_style_definition in get_dictionaries(
             display_dictionary, 'styles'):
         style_definition = StyleDefinition(raw_style_definition)
         style_uri = style_definition.uri
         if '//' not in style_uri:
-            path = automation_folder / style_definition.path
+            style_path = style_definition.path
+            path = automation_folder / style_path
             if not path.exists():
                 raise CrossComputeConfigurationError(
                     f'{path} not found for style')
-            css_texts.append(path.read_text().rstrip())
-            continue
+            style_name = format_slug(
+                f'{splitext(style_path)[0]}-{reference_time}')
+            style_uri = STYLE_ROUTE.format(style_name=style_name)
+            if automation_index > 0:
+                style_uri = automation_uri + style_uri
+            style_definition.path = style_path
+            style_definition.uri = style_uri
         style_definitions.append(style_definition)
     return {
         'style_definitions': style_definitions,
         'css_uris': [_.uri for _ in style_definitions],
-        'css_text': '\n'.join(css_texts) + '\n' if css_texts else '',
     }
 
 

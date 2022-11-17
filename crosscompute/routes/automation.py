@@ -153,7 +153,6 @@ class AutomationRoutes():
             'title_text': configuration.get('name', 'Automations'),
             'automations': guard.get_automation_definitions(configuration),
             'css_uris': configuration.css_uris,
-            'css_text': configuration.css_text,
             'mutation_uri': MUTATION_ROUTE.format(uri=''),
             'mutation_timestamp': time(),
         }
@@ -219,9 +218,7 @@ class AutomationRoutes():
         design_name = automation_definition.get_design_name('automation')
         automation_uri = automation_definition.uri
         if design_name == 'none':
-            d = {
-                'css_uris': automation_definition.css_uris,
-                'css_text': automation_definition.css_text}
+            d = {'css_uris': automation_definition.css_uris}
             mutation_reference_uri = automation_uri
         else:
             batch_definition = automation_definition.batch_definitions[0]
@@ -379,9 +376,7 @@ def __get_mode_jinja_dictionary(
     main_text = get_html_from_markdown(VARIABLE_ID_TEMPLATE_PATTERN.sub(
         render_html, template_text))
     return m | {
-        'css_text': '\n'.join([
-            __get_css_text(design_name, for_embed, for_print),
-            automation_definition.css_text]),
+        'css_text': __get_css_text(design_name, for_embed, for_print),
         'main_text': main_text,
         'js_text': '\n'.join(m['js_texts']),
         'for_embed': for_embed,
