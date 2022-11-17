@@ -19,7 +19,6 @@ from ..exceptions import (
 from ..routes.automation import AutomationRoutes
 from ..routes.mutation import MutationRoutes
 from ..routes.token import TokenRoutes
-from .configuration import validate_display_styles
 from .database import DiskDatabase
 from .interface import Server
 
@@ -74,7 +73,7 @@ class DiskServer(Server):
             changed_paths = [_[1] for _ in changes]
             changed_infos = disk_database.grok(changed_paths)
             L.debug(changed_infos)
-            should_restart_server, should_reload_styles = False, False
+            should_restart_server = False
             for info in changed_infos:
                 if info['code'] == 'c':
                     should_restart_server = True
