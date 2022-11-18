@@ -397,11 +397,10 @@ def __get_css_text(design_name, for_embed, for_print):
 def _render_html(
         match, variable_definitions, batch, m, i, root_uri, mode_name,
         design_name, for_print):
-    matching_text = match.group(0)
-    print(matching_text)
-    if matching_text == 'ROOT_URI':
+    matching_inner_text = match.group(1)
+    if matching_inner_text == 'ROOT_URI':
         return root_uri
-    terms = match.group(1).split('|')
+    terms = matching_inner_text.split('|')
     variable_id = terms[0].strip()
     try:
         variable_definition = find_item(
@@ -409,7 +408,8 @@ def _render_html(
     except StopIteration:
         L.warning(
             '%s variable in template but not in configuration', variable_id)
-        return matching_text
+        matching_outer_text = match.group(0)
+        return matching_outer_text
     view = VariableView.get_from(variable_definition)
     element = Element(
         f'v{next(i)}', root_uri, mode_name, design_name, for_print, terms[1:])
