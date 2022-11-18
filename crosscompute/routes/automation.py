@@ -398,6 +398,7 @@ def _render_html(
         match, variable_definitions, batch, m, i, root_uri, mode_name,
         design_name, for_print):
     matching_text = match.group(0)
+    print(matching_text)
     if matching_text == 'ROOT_URI':
         return root_uri
     terms = match.group(1).split('|')
