@@ -162,13 +162,14 @@ class StringView(VariableView):
         element_id = x.id
         value = self.get_value(b)
         c = b.get_variable_configuration(variable_definition)
-        main_text = STRING_HTML_INPUT.substitute({
+        main_text = STRING_HTML_INPUT.render({
             'element_id': element_id,
             'mode_name': self.mode_name,
             'view_name': view_name,
             'variable_id': variable_id,
             'value': escape_quotes_html(value),
             'input_type': self.input_type,
+            'suggestions': c.get('suggestions', []),
         })
         if x.design_name not in ['none']:
             main_text = add_label_html(main_text, c, variable_id, element_id)
@@ -764,7 +765,7 @@ LINK_JS_HEADER = load_view_text('linkHeader.js')
 LINK_JS_OUTPUT = StringTemplate(load_view_text('linkOutput.js'))
 
 
-STRING_HTML_INPUT = StringTemplate(load_view_text('stringInput.html'))
+STRING_HTML_INPUT = JinjaTemplate(load_view_text('stringInput.html'))
 STRING_JS_INPUT = StringTemplate(load_view_text('stringInput.js'))
 STRING_JS_HEADER = load_view_text('stringHeader.js')
 STRING_JS_OUTPUT = StringTemplate(load_view_text('stringOutput.js'))

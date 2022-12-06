@@ -4,11 +4,17 @@ name: Test Variable Views
 version: 0.0.0
 input:
   variables:
-    - id: zipcode
+    - id: town
       view: string
       path: variables.dictionary
       configuration:
-        label: What is your zipcode?
+        label: What is the name of your town?
+        suggestions:
+          - value: Springfield
+          - value: Branson
+          - value: Nixa
+          - value: Mansfield
+          - value: Independence
     - id: age
       view: number
       path: variables.dictionary
@@ -96,7 +102,7 @@ display:
   pages:
     - id: automation
       configuration:
-        design: none
+        design: input
     - id: output
       configuration:
         design: none

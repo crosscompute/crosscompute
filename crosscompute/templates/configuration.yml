@@ -36,11 +36,17 @@ version: 0.0.0
   #   specify ENVIRONMENT to prevent saving the variable to disk (required)
   # - configuration of the view
   # variables:
-  #   - id: zipcode
+  #   - id: town
   #     view: string
   #     path: variables.dictionary
   #     configuration:
-  #       label: What is your zipcode?
+  #       label: What is the name of your town?
+  #       suggestions:
+  #         - value: Springfield
+  #         - value: Branson
+  #         - value: Nixa
+  #         - value: Mansfield
+  #         - value: Independence
   #   - id: age
   #     view: number
   #     path: variables.dictionary
@@ -65,8 +71,8 @@ version: 0.0.0
   #     path: variables.dictionary
   #     configuration:
   #       options:
-  #         - name [optional]: Vanilla
-  #           value [required]: vanilla
+  #         - name: Vanilla
+  #           value: vanilla
   #         - name: Chocolate
   #           value: chocolate
   #         - name: Strawberry
