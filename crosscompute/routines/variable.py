@@ -1,3 +1,4 @@
+# TODO: Validate variable view configurations
 import csv
 import json
 import shutil
@@ -390,9 +391,9 @@ class RadioView(StringView):
         view_name = self.view_name
         element_id = x.id
         c = b.get_variable_configuration(variable_definition)
+        # options = normalize_options(c.get('options', []))
         options = []
         for d in c.get('options', []):
-            # TODO: Validate variable view configurations
             option_value = d['value']
             option_name = d.get('name', option_value)
             option_id = format_slug(option_name)
@@ -416,6 +417,25 @@ class RadioView(StringView):
             'js_uris': [],
             'main_text': main_text,
             'js_texts': js_texts,
+        }
+
+
+class CheckboxView(VariableView):
+
+    view_name = 'checkbox'
+
+    def render_input(self, b: Batch, x: Element):
+        variable_definition = self.variable_definition
+        c = b.get_variable_configuration(variable_definition)
+        data = b.get_data(variable_definition)
+        options = [{'value': _} for _ in data.get(
+            'value', '').splitlines()] or c.get('options', [])
+        print(options)
+        return {
+            'css_uris': [],
+            'js_uris': [],
+            'main_text': '',
+            'js_texts': [],
         }
 
 
@@ -752,6 +772,10 @@ def get_label_text(variable_configuration, variable_id):
     else:
         label_text = format_name(variable_id)
     return label_text.strip()
+
+
+def get_configuration_options(variable_data, variable_configuration):
+    pass
 
 
 def load_view_text(file_name):

@@ -42,6 +42,16 @@ input:
           - value: vanilla
           - value: chocolate
           - value: strawberry
+    - id: topics
+      view: checkbox
+      path: variables.dictionary
+      configuration:
+        options:
+          - value: cooking
+          - value: reading
+          - value: writing
+          - value: mathematics
+          - value: swimming
     - id: region
       view: map-mapbox-location
       path: variables.dictionary
