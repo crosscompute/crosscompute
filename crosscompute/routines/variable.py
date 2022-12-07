@@ -391,20 +391,12 @@ class RadioView(StringView):
         view_name = self.view_name
         element_id = x.id
         c = b.get_variable_configuration(variable_definition)
-        # options = normalize_options(c.get('options', []))
-        options = []
-        for d in c.get('options', []):
-            option_value = d['value']
-            option_name = d.get('name', option_value)
-            option_id = format_slug(option_name)
-            options.append({
-                'id': option_id, 'name': option_name, 'value': option_value})
         main_text = RADIO_HTML_INPUT.render({
             'element_id': element_id,
             'mode_name': self.mode_name,
             'view_name': view_name,
             'variable_id': variable_id,
-            'options': options,
+            'options': get_configuration_options(c),
             'value': self.get_value(b),
         })
         if x.design_name not in ['none']:
@@ -425,17 +417,29 @@ class CheckboxView(VariableView):
     view_name = 'checkbox'
 
     def render_input(self, b: Batch, x: Element):
+        element_id = x.id
+        view_name = self.view_name
+        variable_id = self.variable_id
         variable_definition = self.variable_definition
         c = b.get_variable_configuration(variable_definition)
-        data = b.get_data(variable_definition)
-        options = [{'value': _} for _ in data.get(
-            'value', '').splitlines()] or c.get('options', [])
-        print(options)
+        main_text = CHECKBOX_HTML_INPUT.render({
+            'element_id': element_id,
+            'mode_name': self.mode_name,
+            'view_name': view_name,
+            'variable_id': variable_id,
+            'options': get_configuration_options(c),
+            # 'values': self.get_value(b),
+        })
+        if x.design_name not in ['none']:
+            main_text = add_label_html(main_text, c, variable_id, element_id)
+        js_texts = [
+            CHECKBOX_JS_INPUT.substitute({'view_name': view_name}),
+        ]
         return {
             'css_uris': [],
             'js_uris': [],
-            'main_text': '',
-            'js_texts': [],
+            'main_text': main_text,
+            'js_texts': js_texts,
         }
 
 
@@ -774,8 +778,19 @@ def get_label_text(variable_configuration, variable_id):
     return label_text.strip()
 
 
-def get_configuration_options(variable_data, variable_configuration):
-    pass
+def get_configuration_options(variable_configuration):
+    options = []
+    for d in variable_configuration.get('options', []):
+        option_value = d['value']
+        # !!!
+        option_name = d.get('name', option_value)
+        option_id = format_slug(option_name)
+        options.append({
+            'id': option_id,
+            'name': option_name,
+            'value': option_value,
+        })
+    return options
 
 
 def load_view_text(file_name):
@@ -811,6 +826,10 @@ IMAGE_JS_OUTPUT = StringTemplate(load_view_text('imageOutput.js'))
 
 RADIO_HTML_INPUT = JinjaTemplate(load_view_text('radioInput.html'))
 RADIO_JS_INPUT = StringTemplate(load_view_text('radioInput.js'))
+
+
+CHECKBOX_HTML_INPUT = JinjaTemplate(load_view_text('checkboxInput.html'))
+CHECKBOX_JS_INPUT = StringTemplate(load_view_text('checkboxInput.js'))
 
 
 TABLE_JS_HEADER = load_view_text('tableHeader.js')
