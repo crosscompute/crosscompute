@@ -87,7 +87,7 @@ version: 0.0.0
   #          - value: writing
   #          - value: mathematics
   #          - value: swimming
-  #   - id: x7
+  #   - id: region
   #     view: map-mapbox-location
   #     path: variables.dictionary
 
@@ -107,36 +107,36 @@ version: 0.0.0
   #   folder (required)
   # - configuration of the view
   # variables:
-  #   - id: y1
+  #   - id: document
   #     view: link
-  #     path: y1.pdf
+  #     path: document.pdf
   #     configuration:
   #       link-text: YOUR-LINK-TEXT
   #       file-name: YOUR-FILE-NAME
-  #   - id: y2
+  #   - id: message
   #     view: string
   #     path: variables.dictionary
-  #   - id: y3
+  #   - id: count
   #     view: number
   #     path: variables.dictionary
-  #   - id: y4
+  #   - id: lyrics
   #     view: text
-  #     path: y4.txt
-  #   - id: y5
+  #     path: lyrics.txt
+  #   - id: monologue
   #     view: markdown
-  #     path: y5.md
-  #   - id: y6
+  #     path: monologue.md
+  #   - id: logo
   #     view: image
-  #     path: y6.svg
-  #   - id: y7
+  #     path: logo.svg
+  #   - id: counts
   #     view: table
-  #     path: y7.json
-  #   - id: y8
+  #     path: counts.json
+  #   - id: demo
   #     view: frame
   #     path: variables.dictionary
-  #   - id: y9
+  #   - id: region
   #     view: map-mapbox
-  #     path: y9.geojson
+  #     path: region.geojson
   #     configuration:
   #       style: mapbox://styles/mapbox/dark-v10
   #       layers:
@@ -145,9 +145,9 @@ version: 0.0.0
   #           paint:
   #             fill-color: blue
   #             circle-color: red
-  #   - id: y10
+  #   - id: incidents
   #     view: map-deck-screengrid
-  #     path: y10.json
+  #     path: incidents.json
   #     configuration:
   #       style: mapbox://styles/mapbox/dark-v10
 

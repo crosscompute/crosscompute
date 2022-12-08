@@ -66,42 +66,42 @@ input:
 
 output:
   variables:
-    - id: y-link
+    - id: document
       view: link
-      path: y-link.txt
+      path: document.txt
       configuration:
         link-text: y1'"y1
         file-name: y1'"y1.txt
-    - id: y-string
+    - id: message
       view: string
       path: variables.dictionary
-    - id: y-number
+    - id: count
       view: number
       path: variables.dictionary
-    - id: y-text
+    - id: lyrics
       view: text
-      path: y-text.txt
-    - id: y-markdown
+      path: document.txt
+    - id: monologue
       view: markdown
-      path: y-markdown.md
-    - id: y-image
+      path: document.md
+    - id: logo
       view: image
-      path: y-image.svg
-    - id: y-table
+      path: Logo-SmallFormat-20220127.svg
+    - id: counts
       view: table
-      path: y-table.json
-    - id: y-map-mapbox
+      path: counts.json
+    - id: region
       view: map-mapbox
-      path: y-map-mapbox.geojson
+      path: region.geojson
       configuration:
         style: mapbox://styles/mapbox/dark-v10
         layers:
           - type: fill
             paint:
               fill-color: blue
-    - id: y-map-deck-screengrid
+    - id: incidents
       view: map-deck-screengrid
-      path: y-map-deck-screengrid.json
+      path: incidents.json
       configuration:
         style: mapbox://styles/mapbox/dark-v10
   templates:
