@@ -1,7 +1,7 @@
 GET_DATA_BY_VIEW_NAME['$view_name'] = x => {
-  const values = [], selections = x.querySelectorAll('input:checked');
-  for (const selection of selections) {
-    values.push(selection.value);
+  const vs = [];
+  for (const e of x.querySelectorAll('input:checked')) {
+    vs.push(e.value);
   }
-  return values.join('\n');
+  return { value: vs.join('\n') };
 };

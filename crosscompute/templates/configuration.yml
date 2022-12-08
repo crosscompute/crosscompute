@@ -66,7 +66,7 @@ version: 0.0.0
   #   - id: blurb
   #     view: markdown
   #     path: blurb.md
-  #   - id: ice_cream_flavor
+  #   - id: flavor
   #     view: radio
   #     path: variables.dictionary
   #     configuration:
@@ -77,6 +77,16 @@ version: 0.0.0
   #           value: chocolate
   #         - name: Strawberry
   #           value: strawberry
+  #   - id: topics
+  #     view: checkbox
+  #     path: variables.dictionary
+  #     configuration:
+  #       options:
+  #          - value: cooking
+  #          - value: reading
+  #          - value: writing
+  #          - value: mathematics
+  #          - value: swimming
   #   - id: x7
   #     view: map-mapbox-location
   #     path: variables.dictionary

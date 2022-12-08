@@ -381,7 +381,7 @@ class ImageView(VariableView):
         }
 
 
-class RadioView(StringView):
+class RadioView(VariableView):
 
     view_name = 'radio'
 
@@ -391,13 +391,14 @@ class RadioView(StringView):
         view_name = self.view_name
         element_id = x.id
         c = b.get_variable_configuration(variable_definition)
+        data = b.get_data(variable_definition)
         main_text = RADIO_HTML_INPUT.render({
             'element_id': element_id,
             'mode_name': self.mode_name,
             'view_name': view_name,
             'variable_id': variable_id,
             'options': get_configuration_options(c),
-            'value': self.get_value(b),
+            'value': data.get('value', ''),
         })
         if x.design_name not in ['none']:
             main_text = add_label_html(main_text, c, variable_id, element_id)
@@ -412,7 +413,7 @@ class RadioView(StringView):
         }
 
 
-class CheckboxView(TextView):
+class CheckboxView(VariableView):
 
     view_name = 'checkbox'
 
@@ -422,13 +423,14 @@ class CheckboxView(TextView):
         variable_id = self.variable_id
         variable_definition = self.variable_definition
         c = b.get_variable_configuration(variable_definition)
+        data = b.get_data(variable_definition)
         main_text = CHECKBOX_HTML_INPUT.render({
             'element_id': element_id,
             'mode_name': self.mode_name,
             'view_name': view_name,
             'variable_id': variable_id,
             'options': get_configuration_options(c),
-            # 'values': self.get_value(b),
+            'values': data.get('value', '').splitlines(),
         })
         if x.design_name not in ['none']:
             main_text = add_label_html(main_text, c, variable_id, element_id)
@@ -782,7 +784,6 @@ def get_configuration_options(variable_configuration):
     options = []
     for d in variable_configuration.get('options', []):
         option_value = d['value']
-        # !!!
         option_name = d.get('name', option_value)
         option_id = format_slug(option_name)
         options.append({

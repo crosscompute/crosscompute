@@ -34,14 +34,17 @@ input:
     - id: blurb
       view: markdown
       path: blurb.md
-    - id: ice_cream_flavor
+    - id: flavor
       view: radio
       path: variables.dictionary
       configuration:
         options:
-          - value: vanilla
-          - value: chocolate
-          - value: strawberry
+          - name: Vanilla
+            value: vanilla
+          - name: Chocolate
+            value: chocolate
+          - name: Strawberry
+            value: strawberry
     - id: topics
       view: checkbox
       path: variables.dictionary
