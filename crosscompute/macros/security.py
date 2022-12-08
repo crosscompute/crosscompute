@@ -30,14 +30,15 @@ class DictionarySafe():
         self.variable_pack_by_key[key] = value, expiration_datetime
 
     def get(self, key):
+        variable_pack_by_key = self.variable_pack_by_key
         try:
-            value, expiration_datetime = self.variable_pack_by_key[key]
+            value, expiration_datetime = variable_pack_by_key[key]
         except KeyError:
             value = self.constant_value_by_key[key]
-            return value
-        if expiration_datetime and datetime.now() > expiration_datetime:
-            del self.variable_pack_by_key[key]
-            raise KeyError
+        else:
+            if expiration_datetime and datetime.now() > expiration_datetime:
+                del variable_pack_by_key[key]
+                raise KeyError(key)
         return value
 
 

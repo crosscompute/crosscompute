@@ -684,8 +684,8 @@ USER user
 {% if path_folders %}
 ENV PATH="${PATH}:{{ ':'.join(path_folders) }}"
 {% endif %}
-RUN \
 {% if user_package_commands %}
+RUN \
 {{ ' && '.join(user_package_commands) }}
 {% endif %}
 {% if port_numbers %}

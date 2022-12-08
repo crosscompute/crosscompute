@@ -25,10 +25,19 @@ async function processMutations() {
       d.templates.length
     ) {
       refreshPage();
-    } else if (variables.length && refreshVariable) {
+    } else if (styles.length) {
+      const { origin } = location;
+      for (var e of document.getElementsByTagName('link')) {
+        if (e.rel !== 'stylesheet' || new URL(e.href).origin !== origin) {
+          continue;
+        }
+        e.href += '?' + Date.now();
+      }
+    } else if (variables.length) {
       for (const variable of variables) {
         refreshVariable(variable.id);
       }
+{% endif %}
     }
     mutationTimestamp = d.mutation_timestamp;
     pingInterval = {{ MINIMUM_PING_INTERVAL_IN_MILLISECONDS }};

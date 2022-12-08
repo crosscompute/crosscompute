@@ -50,20 +50,20 @@ class AutomationRoutes():
         return {
             'automations': guard.get_automation_definitions(configuration),
             'css_uris': configuration.css_uris,
-            'css_text': configuration.css_text,
             'mutation_uri': MUTATION_ROUTE.format(uri=''),
             'mutation_timestamp': time(),
         }
 
     def run_automation(self, request):
         automation_definition = self.get_automation_definition_from(request)
-        guard = AuthorizationGuard(request, self.safe)
+        guard = AuthorizationGuard(
+            request, self.safe, automation_definition.identities_by_token)
         if not guard.check('run_automation', automation_definition):
             raise HTTPForbidden
         variable_definitions = automation_definition.get_variable_definitions(
             'input')
         try:
-            data_by_id = dict(request.params) or request.json_body
+            data_by_id = request.json_body
         except json.JSONDecodeError:
             data_by_id = {}
         try:
@@ -84,14 +84,14 @@ class AutomationRoutes():
         return {'run_id': batch_definition.name, 'mode_code': mode_code}
 
     def see_automation(self, request):
-        guard = AuthorizationGuard(request, self.safe)
+        automation_definition = self.get_automation_definition_from(request)
+        guard = AuthorizationGuard(
+            request, self.safe, automation_definition.identities_by_token)
         if not guard.check('see_automation', automation_definition):
             raise HTTPForbidden
         design_name = automation_definition.get_design_name('automation')
         if design_name == 'none':
-            d = {
-                'css_uris': automation_definition.css_uris,
-                'css_text': automation_definition.css_text}
+            d = {'css_uris': automation_definition.css_uris}
             mutation_reference_uri = automation_uri
         else:
             batch_definition = automation_definition.batch_definitions[0]
@@ -108,7 +108,8 @@ class AutomationRoutes():
 
     def see_automation_batch_mode(self, request):
         automation_definition = self.get_automation_definition_from(request)
-        guard = AuthorizationGuard(request, self.safe)
+        guard = AuthorizationGuard(
+            request, self.safe, automation_definition.identities_by_token)
         is_match = guard.check('see_batch', automation_definition)
         if not is_match:
             raise HTTPForbidden
@@ -123,7 +124,8 @@ class AutomationRoutes():
 
     def see_automation_batch_mode_variable(self, request):
         automation_definition = self.get_automation_definition_from(request)
-        guard = AuthorizationGuard(request, self.safe)
+        guard = AuthorizationGuard(
+            request, self.safe, automation_definition.identities_by_token)
         is_match = guard.check('see_batch', automation_definition)
         if not is_match:
             raise HTTPForbidden
@@ -229,9 +231,7 @@ def __get_mode_jinja_dictionary(
     main_text = get_html_from_markdown(VARIABLE_ID_TEMPLATE_PATTERN.sub(
         render_html, template_text))
     return m | {
-        'css_text': '\n'.join([
-            __get_css_text(design_name, for_embed, for_print),
-            automation_definition.css_text]),
+        'css_text': __get_css_text(design_name, for_embed, for_print),
         'main_text': main_text,
         'js_text': '\n'.join(m['js_texts']),
         'for_embed': for_embed,
@@ -252,8 +252,10 @@ def __get_css_text(design_name, for_embed, for_print):
 def _render_html(
         match, variable_definitions, batch, m, i, root_uri, mode_name,
         design_name, for_print):
-    matching_text = match.group(0)
-    terms = match.group(1).split('|')
+    matching_inner_text = match.group(1)
+    if matching_inner_text == 'ROOT_URI':
+        return root_uri
+    terms = matching_inner_text.split('|')
     variable_id = terms[0].strip()
     try:
         variable_definition = find_item(
@@ -261,7 +263,8 @@ def _render_html(
     except StopIteration:
         L.warning(
             '%s variable in template but not in configuration', variable_id)
-        return matching_text
+        matching_outer_text = match.group(0)
+        return matching_outer_text
     view = VariableView.get_from(variable_definition)
     element = Element(
         f'v{next(i)}', root_uri, mode_name, design_name, for_print, terms[1:])
