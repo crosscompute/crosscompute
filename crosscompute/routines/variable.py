@@ -412,7 +412,7 @@ class RadioView(StringView):
         }
 
 
-class CheckboxView(VariableView):
+class CheckboxView(TextView):
 
     view_name = 'checkbox'
 
