@@ -25,6 +25,7 @@ Here are some available views:
 - markdown
 - image
 - radio
+- checkbox
 - table
 - frame
 - map-mapbox (crosscompute-views-map)

@@ -152,6 +152,7 @@ class AutomationDefinition(Definition):
 class VariableDefinition(Definition):
 
     def _initialize(self, kwargs):
+        self.page_id = kwargs['page_id']
         self.mode_name = kwargs['mode_name']
         self._validation_functions = [
             validate_variable_identifiers,
@@ -459,8 +460,10 @@ def validate_imports(configuration):
 
 
 def validate_variables(configuration):
-    variable_definitions_by_mode_name = {}
+    variable_definitions_by_page_id = {}
     view_names = set()
+    for page_id in PAGE_IDS:
+
     for mode_name in MODE_NAMES:
         mode_configuration = get_dictionary(configuration, mode_name)
         variable_dictionaries = get_dictionaries(
@@ -468,7 +471,7 @@ def validate_variables(configuration):
         if mode_name == 'debug':
             variable_dictionaries[:0] = DEBUG_VARIABLE_DICTIONARIES
         variable_definitions = [VariableDefinition(
-            _, mode_name=mode_name,
+            _, page_id=mode_name, mode_name=_.get('mode', mode_name),
         ) for _ in variable_dictionaries]
         assert_unique_values([
             _.id for _ in variable_definitions
@@ -477,7 +480,7 @@ def validate_variables(configuration):
         view_names.update(_.view_name for _ in variable_definitions)
     L.debug('view_names = %s', list(view_names))
     return {
-        'variable_definitions_by_mode_name': variable_definitions_by_mode_name,
+        'variable_definitions_by_page_id': variable_definitions_by_page_id,
         '___view_names': view_names,
     }
 
@@ -1210,31 +1213,6 @@ def assert_unique_values(xs, message):
     for x, count in Counter(xs).items():
         if count > 1:
             raise CrossComputeConfigurationError(message.format(x=x))
-
-
-PACKAGE_MANAGER_NAMES = [
-    'apt',
-    'dnf',
-    'npm',
-    'pip',
-]
-
-
-DESIGN_NAMES_BY_PAGE_ID = {
-    'automation': ['input', 'output', 'none'],
-    'input': ['flex-vertical', 'none'],
-    'output': ['flex-vertical', 'none'],
-    'log': ['flex-vertical', 'none'],
-    'debug': ['flex-vertical', 'none'],
-}
-
-
-BUTTON_TEXT_BY_ID = {
-    'run': 'Run',
-}
-
-
-INTERVAL_UNIT_NAMES = 'seconds', 'minutes', 'hours', 'days', 'weeks'
 
 
 RUN_PY = Template('''\

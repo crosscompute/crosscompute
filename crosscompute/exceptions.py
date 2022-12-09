@@ -15,11 +15,13 @@ class CrossComputeError(Exception):
         return text
 
 
-class CrossComputeConfigurationError(CrossComputeError):
+class CrossComputeConfigurationError(
+        CrossComputeError):
     pass
 
 
-class CrossComputeConfigurationNotFoundError(CrossComputeConfigurationError):
+class CrossComputeConfigurationNotFoundError(
+        CrossComputeConfigurationError):
     pass
 
 
@@ -28,13 +30,16 @@ class CrossComputeConfigurationNotImplementedError(
     pass
 
 
-class CrossComputeConfigurationFormatError(CrossComputeError):
+class CrossComputeConfigurationFormatError(
+        CrossComputeError):
     pass
 
 
-class CrossComputeDataError(CrossComputeError):
+class CrossComputeDataError(
+        CrossComputeError):
     pass
 
 
-class CrossComputeExecutionError(CrossComputeError):
+class CrossComputeExecutionError(
+        CrossComputeError):
     pass

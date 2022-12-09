@@ -38,15 +38,27 @@ DISK_DEBOUNCE_IN_MILLISECONDS = 1000
 AUTOMATION_ROUTE = '/a/{automation_slug}'
 BATCH_ROUTE = '/b/{batch_slug}'
 RUN_ROUTE = '/r/{run_slug}'
-MODE_ROUTE = '/{mode_code}'
+STEP_ROUTE = '/{step_code}'
 VARIABLE_ROUTE = '/{variable_id}'
 STYLE_ROUTE = '/s/{style_name}.css'
 MUTATION_ROUTE = '/mutations{uri}.json'
 
 
-MODE_NAMES = 'input', 'output', 'log', 'debug'
-MODE_NAME_BY_CODE = {_[0]: _ for _ in MODE_NAMES}
-MODE_CODE_BY_NAME = {k: v for v, k in MODE_NAME_BY_CODE.items()}
+PACKAGE_MANAGER_NAMES = 'apt', 'dnf', 'npm', 'pip'
+DESIGN_NAMES_BY_PAGE_ID = {
+    'automation': ['input', 'output', 'none'],
+    'input': ['flex-vertical', 'none'],
+    'output': ['flex-vertical', 'none'],
+    'log': ['flex-vertical', 'none'],
+    'debug': ['flex-vertical', 'none'],
+}
+BUTTON_TEXT_BY_ID = {'run': 'Run'}
+
+
+INTERVAL_UNIT_NAMES = 'seconds', 'minutes', 'hours', 'days', 'weeks'
+STEP_NAMES = 'input', 'output', 'log', 'debug'
+STEP_NAME_BY_CODE = {_[0]: _ for _ in STEP_NAMES}
+STEP_CODE_BY_NAME = {k: v for v, k in STEP_NAME_BY_CODE.items()}
 MINIMUM_PING_INTERVAL_IN_SECONDS = 1
 MAXIMUM_PING_INTERVAL_IN_SECONDS = 30
 MAXIMUM_MUTATION_AGE_IN_SECONDS = 180

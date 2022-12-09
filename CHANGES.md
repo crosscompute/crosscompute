@@ -16,8 +16,8 @@
 - Support environment > interval to re-run automation batches periodically
 - Support environment > engine=podman to run automation in a container
 - Support log variables
-- Support _print parameter for printing
-- Support _embed parameter for embedding
+- Support `_print` parameter for printing
+- Support `_embed` parameter for embedding
 
 # 0.8
 - Start from scratch
@@ -27,11 +27,11 @@
 - Parallelize report and result automations using ThreadPoolExecutor
 
 # 0.7
-- Add memory_level, processor_level to work script
-- Remove redundant calls to data_type.load
-- Render run_tool_json errors in form
+- Add `memory_level`, `processor_level` to work script
+- Remove redundant calls to `data_type.load`
+- Render `run_tool_json` errors in form
 - Replace setup script with support for setup.sh in work script
-- Replace show_standard_output, show_standard_error with show_raw_output
+- Replace `show_standard_output`, `show_standard_error` with `show_raw_output`
 - Support inline default values in tool definition e.g. {--x} and {--x 1}
 - Use hard links when available
 
@@ -51,9 +51,9 @@
 
 # 0.4
 - Add tool scaffold
-- Support data types that require extra stylesheets, scripts, api_keys
+- Support data types that require extra stylesheets, scripts, api keys
 - Make result files available from server
-- Use DataTypeError to detect data_type errors
+- Use DataTypeError to detect data type errors
 - Use DataType classmethods without instantiation
 
 # 0.3

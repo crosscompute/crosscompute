@@ -2,15 +2,16 @@
 # TODO: Add unit tests
 import json
 from functools import partial
-from invisibleroads_macros_disk import make_random_folder
-from invisibleroads_macros_web.markdown import get_html_from_markdown
 from itertools import count
 from logging import getLogger
 from pathlib import Path
-from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPNotFound
-from pyramid.response import FileResponse, Response
 from time import time
 from types import FunctionType
+
+from invisibleroads_macros_disk import make_random_folder
+from invisibleroads_macros_web.markdown import get_html_from_markdown
+from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPNotFound
+from pyramid.response import FileResponse, Response
 
 from ..constants import (
     AUTOMATION_ROUTE,
@@ -38,8 +39,7 @@ from ..routines.variable import (
 
 class AutomationRoutes():
 
-    def __init__(
-            self, configuration, safe, environment, queue):
+    def __init__(self, configuration, safe, environment, queue):
         self.configuration = configuration
         self.safe = safe
         self.environment = environment
@@ -106,42 +106,42 @@ class AutomationRoutes():
             'automation batch',
             AUTOMATION_ROUTE + BATCH_ROUTE)
         config.add_route(
-            'automation batch mode',
-            AUTOMATION_ROUTE + BATCH_ROUTE + MODE_ROUTE)
+            'automation batch step',
+            AUTOMATION_ROUTE + BATCH_ROUTE + STEP_ROUTE)
         config.add_route(
-            'automation batch mode variable',
-            AUTOMATION_ROUTE + BATCH_ROUTE + MODE_ROUTE + VARIABLE_ROUTE)
+            'automation batch step variable',
+            AUTOMATION_ROUTE + BATCH_ROUTE + STEP_ROUTE + VARIABLE_ROUTE)
 
         config.add_view(
-            self.see_automation_batch_mode,
+            self.see_automation_batch_step,
             request_method='GET',
-            route_name='automation batch mode',
-            renderer='crosscompute:templates/mode.jinja2')
+            route_name='automation batch step',
+            renderer='crosscompute:templates/step.jinja2')
         config.add_view(
-            self.see_automation_batch_mode_variable,
+            self.see_automation_batch_step_variable,
             request_method='GET',
-            route_name='automation batch mode variable')
+            route_name='automation batch step variable')
 
     def configure_runs(self, config):
         config.add_route(
             'automation run',
             AUTOMATION_ROUTE + RUN_ROUTE)
         config.add_route(
-            'automation run mode',
-            AUTOMATION_ROUTE + RUN_ROUTE + MODE_ROUTE)
+            'automation run step',
+            AUTOMATION_ROUTE + RUN_ROUTE + STEP_ROUTE)
         config.add_route(
-            'automation run mode variable',
-            AUTOMATION_ROUTE + RUN_ROUTE + MODE_ROUTE + VARIABLE_ROUTE)
+            'automation run step variable',
+            AUTOMATION_ROUTE + RUN_ROUTE + STEP_ROUTE + VARIABLE_ROUTE)
 
         config.add_view(
-            self.see_automation_batch_mode,
+            self.see_automation_batch_step,
             request_method='GET',
-            route_name='automation run mode',
-            renderer='crosscompute:templates/mode.jinja2')
+            route_name='automation run step',
+            renderer='crosscompute:templates/step.jinja2')
         config.add_view(
-            self.see_automation_batch_mode_variable,
+            self.see_automation_batch_step_variable,
             request_method='GET',
-            route_name='automation run mode variable')
+            route_name='automation run step variable')
 
     def see_root(self, request):
         'Render root with a list of available automations'
