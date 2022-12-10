@@ -43,7 +43,7 @@ def test_validate_automation_identifiers():
 
 def test_validate_variables():
     d = validate_variables(DummyConfiguration({}))
-    assert len(d['variable_definitions_by_mode_name']['input']) == 0
+    assert len(d['variable_definitions_by_step_name']['input']) == 0
     with raises(CrossComputeConfigurationError):
         validate_variables(DummyConfiguration({
             'input': {'variables': [{
@@ -65,7 +65,7 @@ def test_validate_variables():
             'view': 'string',
             'path': 'y.txt',
         }]}}))
-    assert len(d['variable_definitions_by_mode_name']['input']) == 2
+    assert len(d['variable_definitions_by_step_name']['input']) == 2
 
 
 def test_validate_templates(tmp_path):
@@ -73,7 +73,7 @@ def test_validate_templates(tmp_path):
     c.folder = tmp_path
 
     d = validate_templates(c)
-    assert len(d['template_definitions_by_mode_name']['input']) == 0
+    assert len(d['template_definitions_by_step_name']['input']) == 0
 
     c['input']['templates'] = [{}]
     with raises(CrossComputeConfigurationError):
@@ -90,7 +90,7 @@ def test_validate_templates(tmp_path):
 
     c['input']['templates'] = [{'path': 'x.md'}]
     d = validate_templates(c)
-    assert len(d['template_definitions_by_mode_name']['input']) == 1
+    assert len(d['template_definitions_by_step_name']['input']) == 1
 
 
 def test_validate_header_footer_options():
