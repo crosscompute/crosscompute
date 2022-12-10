@@ -1,7 +1,7 @@
 ---
-crosscompute: 0.9.2
+crosscompute: 0.9.3
 name: Test Variable Views
-version: 0.0.0
+version: 0.3.0
 input:
   variables:
     - id: town
@@ -61,9 +61,6 @@ input:
   templates:
     - path: form-part1.md
     - path: form-part2.md
-
-# !!! TODO: Update output variables
-
 output:
   variables:
     - id: document
@@ -75,6 +72,10 @@ output:
     - id: message
       view: string
       path: variables.dictionary
+    - id: message-feedback
+      view: string
+      path: variables.dictionary
+      mode: input
     - id: count
       view: number
       path: variables.dictionary

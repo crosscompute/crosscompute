@@ -1,1 +1,1 @@
-{document} {message} {count} {lyrics} {monologue} {logo} {counts}
+{document} {message} {message-feedback} {count} {lyrics} {monologue} {logo} {counts}

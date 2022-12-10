@@ -107,6 +107,7 @@ def _get_app(
         settings.update({'pyramid.reload_templates': True})
     with Configurator(settings=settings) as config:
         config.include('pyramid_jinja2')
+        config.add_jinja2_renderer('.html')
         _configure_automation_routes(
             config, configuration, safe, environment, queue)
         if with_refresh:
@@ -146,12 +147,13 @@ def _configure_renderer_globals(
         config, with_refresh, with_restart, root_uri, server_timestamp,
         configuration):
     if configuration.template_path_by_id:
-        config.add_jinja2_search_path(str(configuration.folder), prepend=True)
+        config.add_jinja2_search_path(str(
+            configuration.folder), prepend=True, name='.html')
 
     def update_renderer_globals():
-        config.get_jinja2_environment().globals.update({
-            'BASE_JINJA2': configuration.get_template_path('base'),
-            'LIVE_JINJA2': configuration.get_template_path('live'),
+        config.get_jinja2_environment(name='.html').globals.update({
+            'BASE_PATH': configuration.get_template_path('base'),
+            'LIVE_PATH': configuration.get_template_path('live'),
             'WITH_REFRESH': with_refresh,
             'ROOT_URI': root_uri,
             'MAXIMUM_PING_INTERVAL': MAXIMUM_PING_INTERVAL_IN_SECONDS * 1000,
