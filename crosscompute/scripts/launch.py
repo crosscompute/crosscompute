@@ -32,20 +32,20 @@ from crosscompute.scripts.serve import (
 def do(arguments=None):
     mp.set_start_method('fork')
     args = _get_args(arguments)
-    launch_mode = get_launch_mode_from(args)
-    if launch_mode == 'configure':
+    launch_id = get_launch_id_from(args)
+    if launch_id == 'configure':
         configure_with(args)
         return
     automation = _get_automation_from(args)
-    if launch_mode == 'print':
+    if launch_id == 'print':
         print_with(automation, args)
         return
     processes = []
-    if launch_mode in ['serve', 'all']:
+    if launch_id in ['serve', 'all']:
         check_port(args.port)
         processes.append(LoggableProcess(
             name='serve', target=serve_with, args=(automation, args)))
-    if launch_mode in ['run', 'all']:
+    if launch_id in ['run', 'all']:
         processes.append(LoggableProcess(
             name='run', target=run_with, args=(automation, args)))
     try:
@@ -72,17 +72,17 @@ def configure_argument_parser_for_launching(a):
         help='print only')
 
 
-def get_launch_mode_from(args):
-    launch_mode = 'all'
+def get_launch_id_from(args):
+    launch_id = 'all'
     if args.is_configure_only:
-        launch_mode = 'configure'
+        launch_id = 'configure'
     elif args.is_run_only:
-        launch_mode = 'run'
+        launch_id = 'run'
     elif args.is_serve_only:
-        launch_mode = 'serve'
+        launch_id = 'serve'
     elif args.is_print_only:
-        launch_mode = 'print'
-    return launch_mode
+        launch_id = 'print'
+    return launch_id
 
 
 def _get_args(arguments):
