@@ -36,7 +36,6 @@ class Element():
 
     id: str
     root_uri: str
-    mode_name: str
     design_name: str
     for_print: bool
     function_names: list[str]
@@ -70,20 +69,20 @@ class VariableView():
         pass
 
     def render(self, b: Batch, x: Element):
-        if x.mode_name == 'input':
+        if self.mode_name == 'input':
             render = self.render_input
         else:
             render = self.render_output
-        jinja_dictionary = render(b, x)
-        main_text = jinja_dictionary['main_text']
+        page_dictionary = render(b, x)
+        main_text = page_dictionary['main_text']
         if x.design_name != 'none':
             if main_text.endswith('</a>') or main_text.endswith('</span>'):
                 tag_name = 'span'
             else:
                 tag_name = 'div'
-            jinja_dictionary['main_text'] = '<%s class="_view">%s</%s>' % (
+            page_dictionary['main_text'] = '<%s class="_view">%s</%s>' % (
                 tag_name, main_text, tag_name)
-        return jinja_dictionary
+        return page_dictionary
 
     def render_input(self, b: Batch, x: Element):
         return {

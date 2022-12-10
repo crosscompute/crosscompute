@@ -26,10 +26,14 @@ from ..constants import (
     AUTOMATION_ROUTE,
     AUTOMATION_VERSION,
     BATCH_ROUTE,
+    BUTTON_TEXT_BY_ID,
     DEBUG_VARIABLE_DICTIONARIES,
-    MODE_NAMES,
+    DESIGN_NAMES_BY_PAGE_ID,
+    INTERVAL_UNIT_NAMES,
+    PACKAGE_MANAGER_NAMES,
     PRINTER_BY_NAME,
     RUN_ROUTE,
+    STEP_NAMES,
     STYLE_ROUTE,
     VARIABLE_ID_PATTERN,
     VARIABLE_ID_TEMPLATE_PATTERN,
@@ -97,16 +101,16 @@ class AutomationDefinition(Definition):
             validate_prints,
         ]
 
-    def get_variable_definitions(self, mode_name, with_all=False):
-        variable_definitions = self.variable_definitions_by_mode_name.get(
-            mode_name, [])
+    def get_variable_definitions(self, step_name, with_all=False):
+        variable_definitions = self.variable_definitions_by_step_name.get(
+            step_name, [])
         if with_all:
             variable_definitions = variable_definitions.copy()
-            for MODE_NAME in MODE_NAMES:
-                if mode_name == MODE_NAME:
+            for STEP_NAME in STEP_NAMES:
+                if step_name == STEP_NAME:
                     continue
                 variable_definitions.extend(self.get_variable_definitions(
-                    MODE_NAME))
+                    STEP_NAME))
         return variable_definitions
 
     def get_template_path(self, template_id):
@@ -114,15 +118,14 @@ class AutomationDefinition(Definition):
         if template_id in template_path_by_id:
             template_path = str(self.folder / template_path_by_id[template_id])
         else:
-            template_path = f'crosscompute:templates/{template_id}.jinja2'
+            template_path = f'crosscompute:templates/{template_id}.html'
         return template_path
 
-    def get_template_text(self, mode_name):
+    def get_template_text(self, step_name):
         automation_folder = self.folder
-        variable_definitions = self.get_variable_definitions(
-            mode_name)
-        template_definitions = self.template_definitions_by_mode_name[
-            mode_name]
+        variable_definitions = self.get_variable_definitions(step_name)
+        template_definitions = self.template_definitions_by_step_name[
+            step_name]
         return get_template_text(
             template_definitions, automation_folder, variable_definitions)
 
@@ -132,7 +135,7 @@ class AutomationDefinition(Definition):
             page_definition = self.page_definition_by_id[page_id]
             design_name = page_definition.configuration.get(
                 'design', design_name)
-        elif page_id in MODE_NAMES:
+        elif page_id in STEP_NAMES:
             variable_definitions = self.get_variable_definitions(page_id)
             if not variable_definitions:
                 design_name = 'none'
@@ -152,8 +155,7 @@ class AutomationDefinition(Definition):
 class VariableDefinition(Definition):
 
     def _initialize(self, kwargs):
-        self.page_id = kwargs['page_id']
-        self.mode_name = kwargs['mode_name']
+        self.step_name = kwargs['step_name']
         self._validation_functions = [
             validate_variable_identifiers,
             validate_variable_configuration,
@@ -164,7 +166,7 @@ class TemplateDefinition(Definition):
 
     def _initialize(self, kwargs):
         self.automation_folder = kwargs['automation_folder']
-        self.mode_name = kwargs.get('mode_name')
+        self.step_name = kwargs.get('step_name')
         self._validation_functions = [
             validate_template_identifiers,
         ]
@@ -460,27 +462,24 @@ def validate_imports(configuration):
 
 
 def validate_variables(configuration):
-    variable_definitions_by_page_id = {}
+    variable_definitions_by_step_name = {}
     view_names = set()
-    for page_id in PAGE_IDS:
-
-    for mode_name in MODE_NAMES:
-        mode_configuration = get_dictionary(configuration, mode_name)
+    for step_name in STEP_NAMES:
+        step_configuration = get_dictionary(configuration, step_name)
         variable_dictionaries = get_dictionaries(
-            mode_configuration, 'variables')
-        if mode_name == 'debug':
+            step_configuration, 'variables')
+        if step_name == 'debug':
             variable_dictionaries[:0] = DEBUG_VARIABLE_DICTIONARIES
         variable_definitions = [VariableDefinition(
-            _, page_id=mode_name, mode_name=_.get('mode', mode_name),
-        ) for _ in variable_dictionaries]
+            _, step_name=step_name) for _ in variable_dictionaries]
         assert_unique_values([
             _.id for _ in variable_definitions
-        ], f'duplicate variable id {{x}} in {mode_name}')
-        variable_definitions_by_mode_name[mode_name] = variable_definitions
+        ], f'duplicate variable id {{x}} in {step_name}')
+        variable_definitions_by_step_name[step_name] = variable_definitions
         view_names.update(_.view_name for _ in variable_definitions)
     L.debug('view_names = %s', list(view_names))
     return {
-        'variable_definitions_by_page_id': variable_definitions_by_page_id,
+        'variable_definitions_by_step_name': variable_definitions_by_step_name,
         '___view_names': view_names,
     }
 
@@ -502,19 +501,19 @@ def validate_variable_views(configuration):
 
 
 def validate_templates(configuration):
-    template_definitions_by_mode_name = {}
+    template_definitions_by_step_name = {}
     automation_folder = configuration.folder
-    for mode_name in MODE_NAMES:
-        mode_configuration = get_dictionary(configuration, mode_name)
+    for step_name in STEP_NAMES:
+        step_configuration = get_dictionary(configuration, step_name)
         template_definitions = [TemplateDefinition(
-            _, automation_folder=automation_folder, mode_name=mode_name,
-        ) for _ in get_dictionaries(mode_configuration, 'templates')]
+            _, automation_folder=automation_folder, step_name=step_name,
+        ) for _ in get_dictionaries(step_configuration, 'templates')]
         assert_unique_values([
             _.id for _ in template_definitions],
-            f'duplicate template id {{x}} in {mode_name}')
-        template_definitions_by_mode_name[mode_name] = template_definitions
+            f'duplicate template id {{x}} in {step_name}')
+        template_definitions_by_step_name[step_name] = template_definitions
     return {
-        'template_definitions_by_mode_name': template_definitions_by_mode_name,
+        'template_definitions_by_step_name': template_definitions_by_step_name,
     }
 
 
@@ -711,6 +710,10 @@ def validate_variable_identifiers(variable_dictionary):
         raise CrossComputeConfigurationError(
             f'path {variable_path} for variable {variable_id} must be within '
             'the folder')
+    mode_name = variable_dictionary.get('mode', variable_dictionary.step_name)
+    if mode_name not in ['input', 'output']:
+        raise CrossComputeConfigurationError(
+            f'{mode_name} is not a valid mode; specify input or output')
     return {
         'id': variable_id,
         'view_name': view_name,
@@ -1082,11 +1085,11 @@ def get_port_definitions(environment_dictionary, variable_definitions):
         except StopIteration:
             raise CrossComputeConfigurationError(
                 f'{port_id} port must have a matching variable definition')
-        mode_name = variable_definition.mode_name
-        if mode_name not in ['log', 'debug']:
+        step_name = variable_definition.step_name
+        if step_name not in ['log', 'debug']:
             raise CrossComputeConfigurationError(
                 f'{port_id} port must correspond to a log or debug variable')
-        port_definition.mode_name = mode_name
+        port_definition.step_name = step_name
     return port_definitions
 
 

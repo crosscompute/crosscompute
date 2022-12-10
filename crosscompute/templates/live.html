@@ -32,7 +32,7 @@ async function processMutations() {
         }
         e.href += '?' + Date.now();
       }
-{% if mode_name != 'input' %}
+{% if step_name != 'input' %}
     } else if (variables.length) {
       for (const variable of variables) {
         refreshVariable(variable.id);

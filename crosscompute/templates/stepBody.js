@@ -1,4 +1,4 @@
-{% if mode_name == 'input' %}
+{% if step_name == 'input' %}
 document.getElementById('_run').onclick = async () => {
   const dataById = {};
   for (const x of document.getElementsByClassName('_input')) {
@@ -11,7 +11,7 @@ document.getElementById('_run').onclick = async () => {
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(dataById)});
   const d = await response.json();
-  location = '{{ ROOT_URI }}{{ automation_definition.uri }}/r/' + d['run_id'] + '/' + d['mode_code']{% if for_embed %} + '?_embed'{% endif %};
+  location = '{{ ROOT_URI }}{{ automation_definition.uri }}/r/' + d['run_id'] + '/' + d['step_code']{% if for_embed %} + '?_embed'{% endif %};
 };
 const GET_DATA_BY_VIEW_NAME = {};
 {% else %}
@@ -28,7 +28,7 @@ function refreshVariable(variableId) {
     f();
   }
 }
-{% if mode_name == 'log' %}
+{% if step_name == 'log' %}
 registerElement('return_code', function() {
   location = location.href.slice(0, -1) + 'o';
 });

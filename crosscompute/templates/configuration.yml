@@ -252,11 +252,11 @@ version: 0.0.0
   # - path to template (required)
   # - id of template
   # templates:
-  #   - path: base.jinja2
+  #   - path: base.html
   #     id: base
-  #   - path: live.jinja2
+  #   - path: live.html
   #     id: live
-  #   - path: root.jinja2
+  #   - path: root.html
   #     id: root
 
   # pages configuration

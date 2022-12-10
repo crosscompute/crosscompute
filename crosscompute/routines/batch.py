@@ -3,8 +3,8 @@ from invisibleroads_macros_log import format_path
 from logging import getLogger
 
 from ..constants import (
-    MODE_CODE_BY_NAME,
-    MODE_ROUTE,
+    STEP_CODE_BY_NAME,
+    STEP_ROUTE,
     VARIABLE_ROUTE)
 from ..exceptions import (
     CrossComputeDataError)
@@ -34,8 +34,8 @@ class DiskBatch(Batch):
         else:
             relative_path = str(variable_definition.path) + '.configuration'
             is_customized = False
-        mode_name = variable_definition.mode_name
-        path = folder / mode_name / relative_path
+        step_name = variable_definition.step_name
+        path = folder / step_name / relative_path
         if not is_customized and not path.exists():
             return variable_configuration
         try:
@@ -56,8 +56,8 @@ class DiskBatch(Batch):
         if variable_path == 'ENVIRONMENT':
             return {}
         variable_id = variable_definition.id
-        mode_name = variable_definition.mode_name
-        path = self.folder / mode_name / variable_path
+        step_name = variable_definition.step_name
+        path = self.folder / step_name / variable_path
         try:
             variable_data = load_variable_data(path, variable_id)
         except CrossComputeDataError as e:
@@ -76,11 +76,11 @@ class DiskBatch(Batch):
         root_uri = element.root_uri
         automation_uri = self.automation_definition.uri
         batch_uri = self.batch_definition.uri
-        mode_code = MODE_CODE_BY_NAME[variable_definition.mode_name]
-        mode_uri = MODE_ROUTE.format(mode_code=mode_code)
+        step_code = STEP_CODE_BY_NAME[variable_definition.step_name]
+        step_uri = STEP_ROUTE.format(step_code=step_code)
         variable_uri = VARIABLE_ROUTE.format(
             variable_id=variable_definition.id)
-        return root_uri + automation_uri + batch_uri + mode_uri + variable_uri
+        return root_uri + automation_uri + batch_uri + step_uri + variable_uri
 
 
 L = getLogger(__name__)

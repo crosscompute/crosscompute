@@ -72,6 +72,7 @@ def configure_argument_parser_for_launching(a):
         help='print only')
 
 
+# !!!
 def get_launch_mode_from(args):
     launch_mode = 'all'
     if args.is_configure_only:

@@ -31,11 +31,11 @@ from ..constants import (
     HOST,
     MAXIMUM_PORT,
     MINIMUM_PORT,
-    MODE_CODE_BY_NAME,
-    MODE_NAMES,
     PORT,
     PROXY_URI,
     RUN_ROUTE,
+    STEP_CODE_BY_NAME,
+    STEP_NAMES,
     TOKEN_LENGTH)
 from ..exceptions import (
     CrossComputeConfigurationError,
@@ -203,17 +203,18 @@ class AbstractEngine():
 class UnsafeEngine(AbstractEngine):
 
     def run(self, automation_definition, batch_folder, custom_environment):
-        mode_folder_by_name = _get_mode_folder_by_name(
+        step_folder_by_name = _get_step_folder_by_name(
             automation_definition.folder, batch_folder)
+        script_definitions = automation_definition.script_definitions
         script_environment = _prepare_script_environment(
-            mode_folder_by_name, custom_environment, with_path=True)
-        debug_folder = mode_folder_by_name['debug_folder']
+            step_folder_by_name, custom_environment, with_path=True)
+        debug_folder = step_folder_by_name['debug_folder']
         o_path = debug_folder / 'stdout.txt'
         e_path = debug_folder / 'stderr.txt'
         with open(o_path, 'wt') as o_file, open(e_path, 'w+t') as e_file:
-            for script_definition in automation_definition.script_definitions:
+            for script_definition in script_definitions:
                 return_code = _run_script(
-                    script_definition, mode_folder_by_name,
+                    script_definition, step_folder_by_name,
                     script_environment, o_file, e_file)
         return return_code
 
@@ -232,7 +233,7 @@ class PodmanEngine(AbstractEngine):
         (automation_folder / '.containerignore').write_text(
             CONTAINER_IGNORE_TEXT)
         command_texts = [
-            _.get_command_string().format(**CONTAINER_MODE_FOLDER_BY_NAME)
+            _.get_command_string().format(**CONTAINER_STEP_FOLDER_BY_NAME)
             for _ in automation_definition.script_definitions]
         (automation_folder / CONTAINER_SCRIPT_NAME).write_text(
             '\n'.join([_ + CONTAINER_PIPE_TEXT for _ in command_texts]))
@@ -357,12 +358,12 @@ def _run_automation_multiple(
 
 
 def _run_script(
-        script_definition, mode_folder_by_name, script_environment,
+        script_definition, step_folder_by_name, script_environment,
         stdout_file, stderr_file):
     command_string = script_definition.get_command_string()
     if not command_string:
         return
-    command_text = command_string.format(**mode_folder_by_name)
+    command_text = command_string.format(**step_folder_by_name)
     automation_folder = script_definition.automation_folder
     script_folder = script_definition.folder
     command_folder = automation_folder / script_folder
@@ -403,7 +404,7 @@ def _run_podman_image(automation_definition, batch_folder, custom_environment):
     automation_folder = automation_definition.folder
     container_env_path = automation_folder / CONTAINER_ENV_NAME
     script_environment = _prepare_script_environment(
-        CONTAINER_MODE_FOLDER_BY_NAME, custom_environment, with_path=False)
+        CONTAINER_STEP_FOLDER_BY_NAME, custom_environment, with_path=False)
     container_env_path.write_text('\n'.join(
         f'{k}={v}' for k, v in script_environment.items()))
     port_definitions = automation_definition.port_definitions
@@ -417,9 +418,9 @@ def _run_podman_image(automation_definition, batch_folder, custom_environment):
             host_port = find_open_port(
                 minimum_port=MINIMUM_PORT,
                 maximum_port=MAXIMUM_PORT)
-            mode_name = port_definition.mode_name
+            step_name = port_definition.step_name
             container_port = port_definition.number
-            port_packs.append((port_id, host_port, mode_name))
+            port_packs.append((port_id, host_port, step_name))
             command_terms.extend(['-p', f'{host_port}:{container_port}'])
         command_terms.extend([
             '-v', f'{absolute_batch_folder}:/home/user/runs/next:Z'])
@@ -451,12 +452,12 @@ def _proxy_podman_ports(
         automation_slug=automation_definition.slug)
     run_uri = RUN_ROUTE.format(run_slug=batch_folder.name)
     absolute_batch_folder = automation_definition.folder / batch_folder
-    for port_id, host_port, mode_name in port_packs:
+    for port_id, host_port, step_name in port_packs:
         port_path = absolute_batch_folder / 'debug' / 'ports.dictionary'
-        mode_code = MODE_CODE_BY_NAME[mode_name]
+        step_code = STEP_CODE_BY_NAME[step_name]
         variable_id = port_id
         relative_uri = (
-            f'/sessions{automation_uri}{run_uri}/{mode_code}'
+            f'/sessions{automation_uri}{run_uri}/{step_code}'
             f'/{variable_id}')
         session_uri = get_session_uri(host_port, relative_uri)
         update_variable_data(port_path, {port_id: session_uri})
@@ -529,29 +530,29 @@ def _prepare_batch(automation_definition, batch_definition):
         automation_definition,
         variable_definitions_by_path.pop('ENVIRONMENT', []),
         data_by_id)
-    mode_folder_by_name = _make_mode_folder_by_name(
+    step_folder_by_name = _make_step_folder_by_name(
         automation_definition.folder, batch_folder)
     if not data_by_id:
         return batch_folder, batch_environment
-    input_folder = mode_folder_by_name['input_folder']
+    input_folder = step_folder_by_name['input_folder']
     for path, variable_definitions in variable_definitions_by_path.items():
         input_path = input_folder / path
         save_variable_data(input_path, data_by_id, variable_definitions)
     return batch_folder, batch_environment
 
 
-def _make_mode_folder_by_name(automation_folder, batch_folder):
-    mode_folder_by_name = _get_mode_folder_by_name(
+def _make_step_folder_by_name(automation_folder, batch_folder):
+    step_folder_by_name = _get_step_folder_by_name(
         automation_folder, batch_folder)
-    for folder in mode_folder_by_name.values():
+    for folder in step_folder_by_name.values():
         folder.mkdir(parents=True, exist_ok=True)
-    return mode_folder_by_name
+    return step_folder_by_name
 
 
-def _get_mode_folder_by_name(automation_folder, batch_folder):
+def _get_step_folder_by_name(automation_folder, batch_folder):
     return {
         _ + '_folder': automation_folder / batch_folder / _
-        for _ in MODE_NAMES}
+        for _ in STEP_NAMES}
 
 
 def _prepare_container_file_text(automation_definition):
@@ -591,9 +592,9 @@ def _prepare_container_file_text(automation_definition):
 
 
 def _prepare_script_environment(
-        mode_folder_by_name, custom_environment, with_path=False):
+        step_folder_by_name, custom_environment, with_path=False):
     script_environment = {
-        'CROSSCOMPUTE_' + k.upper(): v for k, v in mode_folder_by_name.items()
+        'CROSSCOMPUTE_' + k.upper(): v for k, v in step_folder_by_name.items()
     } | custom_environment
     if with_path:
         script_environment['PATH'] = getenv('PATH', '')
@@ -620,23 +621,23 @@ def _prepare_batch_environment(
 
 
 def _process_batch(
-        automation_definition, batch_definition, mode_names,
-        extra_data_by_id_by_mode_name):
-    variable_data_by_id_by_mode_name = {}
+        automation_definition, batch_definition, step_names,
+        extra_data_by_id_by_step_name):
+    variable_data_by_id_by_step_name = {}
     automation_folder = automation_definition.folder
     batch_folder = batch_definition.folder
-    for mode_name in mode_names:
-        variable_data_by_id_by_mode_name[mode_name] = variable_data_by_id = {}
-        extra_data_by_id = extra_data_by_id_by_mode_name.get(mode_name, {})
-        mode_folder = automation_folder / batch_folder / mode_name
+    for step_name in step_names:
+        variable_data_by_id_by_step_name[step_name] = variable_data_by_id = {}
+        extra_data_by_id = extra_data_by_id_by_step_name.get(step_name, {})
+        step_folder = automation_folder / batch_folder / step_name
         variable_definitions = automation_definition.get_variable_definitions(
-            mode_name)
+            step_name)
         for variable_definition in variable_definitions:
             variable_id = variable_definition.id
             variable_path = variable_definition.path
             if variable_id in extra_data_by_id:
                 continue
-            path = mode_folder / variable_path
+            path = step_folder / variable_path
             try:
                 variable_data = process_variable_data(
                     path, variable_definition)
@@ -647,9 +648,9 @@ def _process_batch(
             variable_data_by_id[variable_id] = variable_data
         if extra_data_by_id:
             update_variable_data(
-                mode_folder / 'variables.dictionary', extra_data_by_id)
+                step_folder / 'variables.dictionary', extra_data_by_id)
             variable_data_by_id.update(extra_data_by_id)
-    return variable_data_by_id_by_mode_name
+    return variable_data_by_id_by_step_name
 
 
 def _get_image_name(automation_definition):
@@ -698,8 +699,8 @@ CONTAINER_PIPE_TEXT = (
     ' 2>>runs/next/debug/stderr.txt')
 CONTAINER_SCRIPT_NAME = '.run.sh'
 CONTAINER_ENV_NAME = '.run.env'
-CONTAINER_MODE_FOLDER_BY_NAME = {
-    _ + '_folder': 'runs/next/' + _ for _ in MODE_NAMES}
+CONTAINER_STEP_FOLDER_BY_NAME = {
+    _ + '_folder': 'runs/next/' + _ for _ in STEP_NAMES}
 
 
 L = getLogger(__name__)

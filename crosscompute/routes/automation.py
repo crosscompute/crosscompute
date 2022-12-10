@@ -18,11 +18,11 @@ from ..constants import (
     BATCH_ROUTE,
     ID_LENGTH,
     IMAGES_FOLDER,
-    MODE_CODE_BY_NAME,
-    MODE_NAME_BY_CODE,
-    MODE_ROUTE,
     MUTATION_ROUTE,
     RUN_ROUTE,
+    STEP_CODE_BY_NAME,
+    STEP_NAME_BY_CODE,
+    STEP_ROUTE,
     STYLE_ROUTE,
     VARIABLE_ID_TEMPLATE_PATTERN,
     VARIABLE_ROUTE)
@@ -99,7 +99,7 @@ class AutomationRoutes():
             self.see_automation,
             request_method='GET',
             route_name='automation',
-            renderer='crosscompute:templates/automation.jinja2')
+            renderer='crosscompute:templates/automation.html')
 
     def configure_batches(self, config):
         config.add_route(
@@ -116,7 +116,7 @@ class AutomationRoutes():
             self.see_automation_batch_step,
             request_method='GET',
             route_name='automation batch step',
-            renderer='crosscompute:templates/step.jinja2')
+            renderer='crosscompute:templates/step.html')
         config.add_view(
             self.see_automation_batch_step_variable,
             request_method='GET',
@@ -137,7 +137,7 @@ class AutomationRoutes():
             self.see_automation_batch_step,
             request_method='GET',
             route_name='automation run step',
-            renderer='crosscompute:templates/step.jinja2')
+            renderer='crosscompute:templates/step.html')
         config.add_view(
             self.see_automation_batch_step_variable,
             request_method='GET',
@@ -205,9 +205,9 @@ class AutomationRoutes():
         self.queue.put((
             automation_definition, batch_definition, self.environment))
         automation_definition.run_definitions.append(batch_definition)
-        mode_code = 'l' if automation_definition.get_variable_definitions(
+        step_code = 'l' if automation_definition.get_variable_definitions(
             'log') else 'o'
-        return {'run_id': batch_definition.name, 'mode_code': mode_code}
+        return {'run_id': batch_definition.name, 'step_code': step_code}
 
     def see_automation(self, request):
         automation_definition = self.get_automation_definition_from(request)
@@ -224,8 +224,8 @@ class AutomationRoutes():
             batch_definition = automation_definition.batch_definitions[0]
             batch = DiskBatch(
                 automation_definition, batch_definition, request.params)
-            d = _get_mode_jinja_dictionary(request, batch, design_name)
-            mutation_reference_uri = _get_automation_batch_mode_uri(
+            d = _get_step_page_dictionary(request, batch, design_name)
+            mutation_reference_uri = _get_automation_batch_step_uri(
                 automation_definition, batch_definition, design_name)
         return d | {
             'name': automation_definition.name,
@@ -239,7 +239,7 @@ class AutomationRoutes():
             'mutation_timestamp': time(),
         }
 
-    def see_automation_batch_mode(self, request):
+    def see_automation_batch_step(self, request):
         automation_definition = self.get_automation_definition_from(request)
         guard = AuthorizationGuard(
             request, self.safe, automation_definition.identities_by_token)
@@ -252,10 +252,10 @@ class AutomationRoutes():
             automation_definition, batch_definition, request.params)
         if isinstance(is_match, FunctionType) and not is_match(batch):
             raise HTTPForbidden
-        mode_name = _get_mode_name(request)
-        return _get_mode_jinja_dictionary(request, batch, mode_name)
+        step_name = _get_step_name(request)
+        return _get_step_page_dictionary(request, batch, step_name)
 
-    def see_automation_batch_mode_variable(self, request):
+    def see_automation_batch_step_variable(self, request):
         automation_definition = self.get_automation_definition_from(request)
         guard = AuthorizationGuard(
             request, self.safe, automation_definition.identities_by_token)
@@ -267,10 +267,10 @@ class AutomationRoutes():
         batch = DiskBatch(automation_definition, batch_definition)
         if isinstance(is_match, FunctionType) and not is_match(batch):
             raise HTTPForbidden
-        mode_name = _get_mode_name(request)
+        step_name = _get_step_name(request)
         variable_id = request.matchdict['variable_id']
         variable_definition = _get_variable_definition(
-            automation_definition, mode_name, variable_id)
+            automation_definition, step_name, variable_id)
         variable_data = batch.get_data(variable_definition)
         if 'path' in variable_data:
             return FileResponse(variable_data['path'], request=request)
@@ -308,19 +308,19 @@ class AutomationRoutes():
         return batch_definition
 
 
-def _get_mode_name(request):
+def _get_step_name(request):
     matchdict = request.matchdict
-    mode_code = matchdict['mode_code']
+    step_code = matchdict['step_code']
     try:
-        mode_name = MODE_NAME_BY_CODE[mode_code]
+        step_name = STEP_NAME_BY_CODE[step_code]
     except KeyError:
         raise HTTPNotFound
-    return mode_name
+    return step_name
 
 
-def _get_variable_definition(automation_definition, mode_name, variable_id):
+def _get_variable_definition(automation_definition, step_name, variable_id):
     variable_definitions = automation_definition.get_variable_definitions(
-        mode_name)
+        step_name)
     try:
         variable_definition = find_item(
             variable_definitions, 'id', variable_id,
@@ -330,49 +330,49 @@ def _get_variable_definition(automation_definition, mode_name, variable_id):
     return variable_definition
 
 
-def _get_automation_batch_mode_uri(
-        automation_definition, batch_definition, mode_name):
+def _get_automation_batch_step_uri(
+        automation_definition, batch_definition, step_name):
     automation_uri = automation_definition.uri
     batch_uri = batch_definition.uri
-    mode_code = MODE_CODE_BY_NAME[mode_name]
-    mode_uri = MODE_ROUTE.format(mode_code=mode_code)
-    return automation_uri + batch_uri + mode_uri
+    step_code = STEP_CODE_BY_NAME[step_name]
+    step_uri = STEP_ROUTE.format(step_code=step_code)
+    return automation_uri + batch_uri + step_uri
 
 
-def _get_mode_jinja_dictionary(request, batch, mode_name):
+def _get_step_page_dictionary(request, batch, step_name):
     params = request.params
     automation_definition = batch.automation_definition
     batch_definition = batch.batch_definition
-    design_name = automation_definition.get_design_name(mode_name)
+    design_name = automation_definition.get_design_name(step_name)
     root_uri = request.registry.settings['root_uri']
-    mutation_reference_uri = _get_automation_batch_mode_uri(
-        automation_definition, batch_definition, mode_name)
+    mutation_reference_uri = _get_automation_batch_step_uri(
+        automation_definition, batch_definition, step_name)
     return {
         'title_text': batch_definition.name,
         'automation_definition': automation_definition,
         'batch_definition': batch_definition,
-        'mode_name': mode_name,
+        'step_name': step_name,
         'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri),
         'mutation_timestamp': time(),
-    } | __get_mode_jinja_dictionary(
-        batch, root_uri, mode_name, design_name, for_embed='_embed' in params,
+    } | __get_step_page_dictionary(
+        batch, root_uri, step_name, design_name, for_embed='_embed' in params,
         for_print='_print' in params)
 
 
-def __get_mode_jinja_dictionary(
-        batch, root_uri, mode_name, design_name, for_embed, for_print):
+def __get_step_page_dictionary(
+        batch, root_uri, step_name, design_name, for_embed, for_print):
     automation_definition = batch.automation_definition
     css_uris = automation_definition.css_uris
     template_text = automation_definition.get_template_text(
-        mode_name)
+        step_name)
     variable_definitions = automation_definition.get_variable_definitions(
-        mode_name, with_all=True)
+        step_name, with_all=True)
     m = {'css_uris': css_uris.copy(), 'js_uris': [], 'js_texts': []}
     i = count()
     render_html = partial(
         _render_html, variable_definitions=variable_definitions,
-        batch=batch, m=m, i=i, root_uri=root_uri, mode_name=mode_name,
-        design_name=design_name, for_print=for_print)
+        batch=batch, m=m, i=i, root_uri=root_uri, design_name=design_name,
+        for_print=for_print)
     main_text = get_html_from_markdown(VARIABLE_ID_TEMPLATE_PATTERN.sub(
         render_html, template_text))
     return m | {
@@ -395,8 +395,8 @@ def __get_css_text(design_name, for_embed, for_print):
 
 
 def _render_html(
-        match, variable_definitions, batch, m, i, root_uri, mode_name,
-        design_name, for_print):
+        match, variable_definitions, batch, m, i, root_uri, design_name,
+        for_print):
     matching_inner_text = match.group(1)
     if matching_inner_text == 'ROOT_URI':
         return root_uri
@@ -412,11 +412,11 @@ def _render_html(
         return matching_outer_text
     view = VariableView.get_from(variable_definition)
     element = Element(
-        f'v{next(i)}', root_uri, mode_name, design_name, for_print, terms[1:])
-    jinja_dictionary = view.render(batch, element)
+        f'v{next(i)}', root_uri, design_name, for_print, terms[1:])
+    page_dictionary = view.render(batch, element)
     for k, v in m.items():
-        extend_uniquely(v, [_.strip() for _ in jinja_dictionary[k]])
-    return jinja_dictionary['main_text']
+        extend_uniquely(v, [_.strip() for _ in page_dictionary[k]])
+    return page_dictionary['main_text']
 
 
 EMBED_CSS = '''\

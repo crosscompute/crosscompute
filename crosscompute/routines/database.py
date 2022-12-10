@@ -4,9 +4,9 @@ from time import time
 from invisibleroads_macros_disk import is_path_in_folder
 
 from ..constants import (
-    MODE_CODE_BY_NAME,
-    MODE_ROUTE,
-    RUN_ROUTE)
+    RUN_ROUTE,
+    STEP_CODE_BY_NAME,
+    STEP_ROUTE)
 
 
 class DiskDatabase():
@@ -109,15 +109,15 @@ def add_variable_infos_from_folder(
     info = {'code': 'v'}
     automation_uri = automation_definition.uri
     uri = automation_uri + batch_uri
-    d = automation_definition.variable_definitions_by_mode_name
-    for mode_name, variable_definitions in d.items():
-        mode_code = MODE_CODE_BY_NAME[mode_name]
-        mode_uri = MODE_ROUTE.format(mode_code=mode_code)
-        folder = absolute_batch_folder / mode_name
+    d = automation_definition.variable_definitions_by_step_name
+    for step_name, variable_definitions in d.items():
+        step_code = STEP_CODE_BY_NAME[step_name]
+        step_uri = STEP_ROUTE.format(step_code=step_code)
+        folder = absolute_batch_folder / step_name
         for variable_definition in variable_definitions:
             variable_id = variable_definition.id
             if variable_id != 'return_code':
-                info_uri = uri + mode_uri
+                info_uri = uri + step_uri
             else:
                 info_uri = uri
             variable_info = info | {'id': variable_id, 'uri': info_uri}
@@ -135,8 +135,8 @@ def add_template_infos(memory, configuration):
         automation_folder = automation_definition.folder
         automation_uri = automation_definition.uri
         template_info = info | {'uri': automation_uri}
-        d = automation_definition.template_definitions_by_mode_name
-        for mode_name, template_definitions in d.items():
+        d = automation_definition.template_definitions_by_step_name
+        for step_name, template_definitions in d.items():
             for template_definition in template_definitions:
                 if 'path' not in template_definition:
                     continue
