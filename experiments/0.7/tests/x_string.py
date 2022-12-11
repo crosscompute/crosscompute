@@ -14,14 +14,6 @@ TEXT = (
     'in a way that other people can use.')
 
 
-def test_output_logging(tmpdir, text=TEXT):
-    args = str(tmpdir), 'echo', {'x': text}
-    r = run(*args)
-    assert r['raw_output'] == text
-    s = serve(*args)[0]
-    assert extract_text(s, 'raw_output-meta') == text
-
-
 def test_file_name_with_spaces(tmpdir):
     args = str(tmpdir), 'file-name-with-spaces',
     r = run(*args)
@@ -37,12 +29,6 @@ def test_file_content(tmpdir, file_path='assets/string.txt'):
     response = c.get(s.find('a', {'class': 'download'})['href'])
     zip_file = ZipFile(BytesIO(response.data))
     assert zip_file.read('a').decode('utf-8') == file_content
-
-
-def test_target_folder(tmpdir):
-    args = str(tmpdir), 'target-folder'
-    r = run(*args)
-    assert r['raw_output'].startswith(str(tmpdir))
 
 
 def extract_text(soup, element_id):

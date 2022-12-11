@@ -1,18 +1,3 @@
-from os import chdir, environ
-from os.path import join
-
-from .. import OutputtingScript, run_safely
-from ...constants import TOOL_FILE_NAME
-from ...routines import (
-    fetch_resource,
-    get_bash_configuration_text,
-    load_relevant_path,
-    prepare_dataset,
-    process_result_definition,
-    run_tests,
-    run_worker)
-
-
 class AddToolScript(OutputtingScript):
 
     def configure(self, argument_subparser):
