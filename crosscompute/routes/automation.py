@@ -102,15 +102,20 @@ class AutomationRoutes():
             renderer='crosscompute:templates/automation.html')
 
     def configure_batches(self, config):
+        base_route = AUTOMATION_ROUTE + BATCH_ROUTE
+
         config.add_route(
             'automation batch',
-            AUTOMATION_ROUTE + BATCH_ROUTE)
+            base_route)
         config.add_route(
             'automation batch step',
-            AUTOMATION_ROUTE + BATCH_ROUTE + STEP_ROUTE)
+            base_route + STEP_ROUTE)
+        config.add_route(
+            'automation batch step variable json',
+            base_route + STEP_ROUTE + VARIABLE_ROUTE + '.json')
         config.add_route(
             'automation batch step variable',
-            AUTOMATION_ROUTE + BATCH_ROUTE + STEP_ROUTE + VARIABLE_ROUTE)
+            base_route + STEP_ROUTE + VARIABLE_ROUTE)
 
         config.add_view(
             self.see_automation_batch_step,
@@ -118,26 +123,41 @@ class AutomationRoutes():
             route_name='automation batch step',
             renderer='crosscompute:templates/step.html')
         config.add_view(
+            self.see_automation_batch_step_variable_json,
+            request_method='GET',
+            route_name='automation batch step variable json',
+            renderer='json')
+        config.add_view(
             self.see_automation_batch_step_variable,
             request_method='GET',
             route_name='automation batch step variable')
 
     def configure_runs(self, config):
+        base_route = AUTOMATION_ROUTE + RUN_ROUTE
+
         config.add_route(
             'automation run',
-            AUTOMATION_ROUTE + RUN_ROUTE)
+            base_route)
         config.add_route(
             'automation run step',
-            AUTOMATION_ROUTE + RUN_ROUTE + STEP_ROUTE)
+            base_route + STEP_ROUTE)
+        config.add_route(
+            'automation run step variable json',
+            base_route + STEP_ROUTE + VARIABLE_ROUTE + '.json')
         config.add_route(
             'automation run step variable',
-            AUTOMATION_ROUTE + RUN_ROUTE + STEP_ROUTE + VARIABLE_ROUTE)
+            base_route + STEP_ROUTE + VARIABLE_ROUTE)
 
         config.add_view(
             self.see_automation_batch_step,
             request_method='GET',
             route_name='automation run step',
             renderer='crosscompute:templates/step.html')
+        config.add_view(
+            self.see_automation_batch_step_variable_json,
+            request_method='GET',
+            route_name='automation run step variable json',
+            renderer='json')
         config.add_view(
             self.see_automation_batch_step_variable,
             request_method='GET',
@@ -238,6 +258,10 @@ class AutomationRoutes():
             'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri),
             'mutation_timestamp': time(),
         }
+
+    def see_automation_batch_step_variable_json(self, request):
+        # TODO: swap with see_automation_batch_step
+        return {}
 
     def see_automation_batch_step(self, request):
         automation_definition = self.get_automation_definition_from(request)
