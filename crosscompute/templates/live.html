@@ -1,7 +1,7 @@
 {% extends BASE_PATH %}
 
 {% block body_js %}
-{{ super() -}}
+{{ super() }}
 let mutationTimestamp = {{ mutation_timestamp }};
 let pingInterval = {{ MINIMUM_PING_INTERVAL }};
 async function refreshPage() {

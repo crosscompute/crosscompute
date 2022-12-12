@@ -1,3 +1,4 @@
+const GET_DATA_BY_VIEW_NAME = {};
 {% if step_name == 'input' %}
 document.getElementById('_run').onclick = async () => {
   const dataById = {};
@@ -13,7 +14,6 @@ document.getElementById('_run').onclick = async () => {
   const d = await response.json();
   location = '{{ ROOT_URI }}{{ automation_definition.uri }}/r/' + d['run_id'] + '/' + d['step_code']{% if for_embed %} + '?_embed'{% endif %};
 };
-const GET_DATA_BY_VIEW_NAME = {};
 {% else %}
 const functionsByVariableId = {};
 function registerElement(variableId, refreshElement) {
