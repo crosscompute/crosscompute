@@ -34,6 +34,7 @@ from ..routines.configuration import BatchDefinition
 from ..routines.variable import (
     Element,
     VariableView,
+    load_file_text,
     parse_data_by_id)
 
 
@@ -259,10 +260,6 @@ class AutomationRoutes():
             'mutation_timestamp': time(),
         }
 
-    def see_automation_batch_step_variable_json(self, request):
-        # TODO: swap with see_automation_batch_step
-        return {}
-
     def see_automation_batch_step(self, request):
         automation_definition = self.get_automation_definition_from(request)
         guard = AuthorizationGuard(
@@ -279,30 +276,22 @@ class AutomationRoutes():
         step_name = _get_step_name(request)
         return _get_step_page_dictionary(request, batch, step_name)
 
+    def see_automation_batch_step_variable_json(self, request):
+        data, definition, batch = self.get_variable_pack_from(request)
+        if 'path' in data:
+            value = load_file_text(data['path'])
+        else:
+            value = data['value']
+        configuration = batch.get_variable_configuration(definition).copy()
+        configuration.pop('path', None)
+        return {'value': value, 'configuration': configuration}
+
     def see_automation_batch_step_variable(self, request):
-        automation_definition = self.get_automation_definition_from(request)
-        guard = AuthorizationGuard(
-            request, self.safe, automation_definition.identities_by_token)
-        is_match = guard.check('see_batch', automation_definition)
-        if not is_match:
-            raise HTTPForbidden
-        batch_definition = self.get_batch_definition_from(
-            request, automation_definition)
-        batch = DiskBatch(automation_definition, batch_definition)
-        if isinstance(is_match, FunctionType) and not is_match(batch):
-            raise HTTPForbidden
-        step_name = _get_step_name(request)
-        variable_id = request.matchdict['variable_id']
-        variable_definition = _get_variable_definition(
-            automation_definition, step_name, variable_id)
-        variable_data = batch.get_data(variable_definition)
-        if 'path' in variable_data:
-            return FileResponse(variable_data['path'], request=request)
-        if 'value' in variable_data:
-            return Response(str(variable_data['value']))
-        if 'error' in variable_data:
-            raise HTTPNotFound
-        raise HTTPBadRequest
+        data = self.get_variable_pack_from(request)[0]
+        if 'path' in data:
+            return FileResponse(data['path'], request=request)
+        else:
+            return Response(str(data['value']))
 
     def get_automation_definition_from(self, request):
         matchdict = request.matchdict
@@ -330,6 +319,27 @@ class AutomationRoutes():
         except StopIteration:
             raise HTTPNotFound
         return batch_definition
+
+    def get_variable_pack_from(self, request):
+        automation_definition = self.get_automation_definition_from(request)
+        guard = AuthorizationGuard(
+            request, self.safe, automation_definition.identities_by_token)
+        is_match = guard.check('see_batch', automation_definition)
+        if not is_match:
+            raise HTTPForbidden
+        batch_definition = self.get_batch_definition_from(
+            request, automation_definition)
+        batch = DiskBatch(automation_definition, batch_definition)
+        if isinstance(is_match, FunctionType) and not is_match(batch):
+            raise HTTPForbidden
+        step_name = _get_step_name(request)
+        variable_id = request.matchdict['variable_id']
+        variable_definition = _get_variable_definition(
+            automation_definition, step_name, variable_id)
+        variable_data = batch.get_data(variable_definition)
+        if 'error' in variable_data:
+            raise HTTPNotFound
+        return variable_data, variable_definition, batch
 
 
 def _get_step_name(request):
