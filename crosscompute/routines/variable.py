@@ -429,13 +429,19 @@ class CheckboxView(VariableView):
             'view_name': view_name,
             'variable_id': variable_id,
             'options': get_configuration_options(c),
-            'values': data.get('value', '').splitlines(),
-        })
+            'values': data.get('value', '').splitlines()})
         if x.design_name not in ['none']:
             main_text = add_label_html(main_text, c, variable_id, element_id)
         js_texts = [
-            CHECKBOX_JS_INPUT.substitute({'view_name': view_name}),
-        ]
+            CHECKBOX_JS_INPUT.substitute({'view_name': view_name})]
+        if variable_definition.step_name != 'input':
+            data_uri = b.get_data_uri(variable_definition, x)
+            js_texts.extend([
+                CHECKBOX_JS_HEADER,
+                CHECKBOX_JS_OUTPUT.substitute({
+                    'variable_id': variable_id,
+                    'element_id': element_id,
+                    'data_uri': data_uri})])
         return {
             'css_uris': [],
             'js_uris': [],
@@ -781,13 +787,11 @@ def get_label_text(variable_configuration, variable_id):
 
 def get_configuration_options(variable_configuration):
     options = []
-    for d in variable_configuration.get('options', []):
+    for i, d in enumerate(variable_configuration.get('options', [])):
         option_value = d['value']
-        option_name = d.get('name', option_value)
-        option_id = format_slug(option_name)
         options.append({
-            'id': option_id,
-            'name': option_name,
+            'id': d.get('id', i),
+            'name': d.get('name', option_value),
             'value': option_value,
         })
     return options
@@ -829,7 +833,9 @@ RADIO_JS_INPUT = StringTemplate(load_view_text('radioInput.js'))
 
 
 CHECKBOX_HTML_INPUT = JinjaTemplate(load_view_text('checkboxInput.html'))
+CHECKBOX_JS_HEADER = load_view_text('checkboxHeader.js')
 CHECKBOX_JS_INPUT = StringTemplate(load_view_text('checkboxInput.js'))
+CHECKBOX_JS_OUTPUT = StringTemplate(load_view_text('checkboxOutput.js'))
 
 
 TABLE_JS_HEADER = load_view_text('tableHeader.js')
