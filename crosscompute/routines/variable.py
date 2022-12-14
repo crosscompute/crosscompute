@@ -391,13 +391,14 @@ class RadioView(VariableView):
         element_id = x.id
         c = b.get_variable_configuration(variable_definition)
         data = b.get_data(variable_definition)
+        value = data.get('value', '')
         main_text = RADIO_HTML_INPUT.render({
             'element_id': element_id,
             'mode_name': self.mode_name,
             'view_name': view_name,
             'variable_id': variable_id,
-            'options': get_configuration_options(c),
-            'value': data.get('value', ''),
+            'options': get_configuration_options(c, [value]),
+            'value': value,
         })
         if x.design_name not in ['none']:
             main_text = add_label_html(main_text, c, variable_id, element_id)
@@ -423,13 +424,14 @@ class CheckboxView(VariableView):
         variable_definition = self.variable_definition
         c = b.get_variable_configuration(variable_definition)
         data = b.get_data(variable_definition)
+        values = data.get('value', '').splitlines()
         main_text = CHECKBOX_HTML_INPUT.render({
             'element_id': element_id,
             'mode_name': self.mode_name,
             'view_name': view_name,
             'variable_id': variable_id,
-            'options': get_configuration_options(c),
-            'values': data.get('value', '').splitlines()})
+            'options': get_configuration_options(c, values),
+            'values': values})
         if x.design_name not in ['none']:
             main_text = add_label_html(main_text, c, variable_id, element_id)
         js_texts = [
@@ -785,9 +787,10 @@ def get_label_text(variable_configuration, variable_id):
     return label_text.strip()
 
 
-def get_configuration_options(variable_configuration):
+def get_configuration_options(variable_configuration, variable_values):
     options = []
-    for i, d in enumerate(variable_configuration.get('options', [])):
+    for i, d in enumerate(variable_configuration.get('options', [{
+            'value': _} for _ in variable_values])):
         option_value = d['value']
         options.append({
             'id': d.get('id', i),
