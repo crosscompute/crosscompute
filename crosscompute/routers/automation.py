@@ -71,6 +71,8 @@ async def see_automation_batch(request: Request):
     tags=['automation'])
 async def see_automation_batch_step(
     request: Request,
+    # _embed: str | None = None,
+    # _print: str | None = None,
     automation_definition: AutomationDefinition = Depends(
         get_automation_definition),
     batch_definition: BatchDefinition = Depends(
@@ -78,6 +80,10 @@ async def see_automation_batch_step(
     step_name: str = Depends(
         get_step_name),
 ):
+    # print(_embed)
+    # print(_print)
+    print(request.query_params)
+    # import pudb.forked; pudb.forked.set_trace()
     return TemplateResponse(template_path_by_id['step'], {
         'request': request,
         'automation_definition': automation_definition,

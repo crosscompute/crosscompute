@@ -240,7 +240,7 @@ class AutomationRoutes():
             automation_definition, batch_definition, request.params)
         if isinstance(is_match, FunctionType) and not is_match(batch):
             raise HTTPForbidden
-        step_name = _get_step_name(request)
+        # step_name = _get_step_name(request)
         return _get_step_page_dictionary(request, batch, step_name)
 
     def see_automation_batch_step_variable_json(self, request):

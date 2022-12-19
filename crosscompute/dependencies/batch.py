@@ -6,7 +6,7 @@ from .automation import get_automation_definition
 
 
 # def get_batch_definition(batch_slug: str, run_slug: str):
-def get_batch_definition(
+async def get_batch_definition(
     # batch_slug: str,
     # run_slug: str,
     automation_definition: AutomationDefinition = Depends(
