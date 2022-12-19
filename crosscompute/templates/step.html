@@ -1,9 +1,9 @@
-{% extends LIVE_PATH if WITH_REFRESH else BASE_PATH %}
+{% extends live_template_path if with_refresh else base_template_path %}
 
 {% block header_html %}
 {% if not for_embed %}
-<a href="{{ ROOT_URI or '/' }}">Root</a> &gt;
-<a href="{{ ROOT_URI }}{{ automation_definition.uri }}">{{ automation_definition.name }}</a> &gt;
+<a href="{{ root_uri or '/' }}">Root</a> &gt;
+<a href="{{ root_uri }}{{ automation_definition.uri }}">{{ automation_definition.name }}</a> &gt;
 <a>{{ batch_definition.name }}</a> &gt;
 {{ step_name.title() }}
 {% endif %}

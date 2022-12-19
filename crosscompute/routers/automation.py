@@ -3,8 +3,8 @@ from fastapi import APIRouter, Depends, Request
 from ..constants import (
     AUTOMATION_ROUTE,
     BATCH_ROUTE,
-    MODE_ROUTE,
     RUN_ROUTE,
+    STEP_ROUTE,
     VARIABLE_ROUTE)
 from ..dependencies.automation import (
     get_automation_definition)
@@ -59,22 +59,22 @@ async def see_automation_batch(request: Request):
 
 
 @router.get(
-    AUTOMATION_ROUTE + BATCH_ROUTE + MODE_ROUTE,
+    AUTOMATION_ROUTE + BATCH_ROUTE + STEP_ROUTE,
     tags=['automation'])
 @router.get(
-    AUTOMATION_ROUTE + RUN_ROUTE + MODE_ROUTE,
+    AUTOMATION_ROUTE + RUN_ROUTE + STEP_ROUTE,
     tags=['automation'])
-async def see_automation_batch_mode(request: Request):
-    return TemplateResponse(template_path_by_id['mode'], {
+async def see_automation_batch_step(request: Request):
+    return TemplateResponse(template_path_by_id['step'], {
         'request': request,
     })
 
 
 @router.get(
-    AUTOMATION_ROUTE + BATCH_ROUTE + MODE_ROUTE + VARIABLE_ROUTE,
+    AUTOMATION_ROUTE + BATCH_ROUTE + STEP_ROUTE + VARIABLE_ROUTE,
     tags=['automation'])
 @router.get(
-    AUTOMATION_ROUTE + RUN_ROUTE + MODE_ROUTE + VARIABLE_ROUTE,
+    AUTOMATION_ROUTE + RUN_ROUTE + STEP_ROUTE + VARIABLE_ROUTE,
     tags=['automation'])
-async def see_automation_batch_mode_variable(request: Request):
+async def see_automation_batch_step_variable(request: Request):
     return {}

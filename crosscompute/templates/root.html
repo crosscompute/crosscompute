@@ -4,7 +4,7 @@
 <h1>{{ title_text }}</h1>
 <ul>
 {%- for automation_definition in automation_definitions %}
-<li><a href="{{ root_uri }}{{ automation_definition['uri'] }}">{{ automation_definition['name'] }}</a></li>
+<li><a href="{{ root_uri }}{{ automation_definition.uri }}">{{ automation_definition.name }}</a></li>
 {%- endfor %}
 </ul>
 {%- endblock %}

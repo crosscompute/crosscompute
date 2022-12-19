@@ -20,7 +20,7 @@ template_path_by_id = {
     'root': str(TEMPLATES_FOLDER / 'root.html'),
     'automation': str(TEMPLATES_FOLDER / 'automation.html'),
     'batch': str(TEMPLATES_FOLDER / 'batch.html'),
-    'mode': str(TEMPLATES_FOLDER / 'mode.html'),
+    'step': str(TEMPLATES_FOLDER / 'step.html'),
 }
 template_environment = RelativeTemplateEnvironment(
     loader=PathTemplateLoader(),

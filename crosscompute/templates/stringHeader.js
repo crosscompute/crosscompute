@@ -1,15 +1,14 @@
 async function refreshString(
     elementId, elementAttribute, dataUri, formatText) {
-  const response = await fetch(dataUri);
-  const { status } = response;
+  const r = await fetch(dataUri), { status } = r;
   if (status != 200) {
     throw { status };
   }
-  let text = await response.text();
+  let x = await r.text();
   if (formatText) {
-    text = formatText(text);
+    x = formatText(x);
   }
-  const element = document.getElementById(elementId);
-  element[elementAttribute] = text;
-  return element;
+  const e = document.getElementById(elementId);
+  e[elementAttribute] = x;
+  return e;
 }

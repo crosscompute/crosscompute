@@ -18,12 +18,19 @@ class DiskDatabase():
 
     def grok(self, paths):
         changed_infos = []
+        variable_ids = []
         for path in paths:
             try:
                 infos = self._get(path)
             except KeyError:
                 continue
-            changed_infos.extend(infos)
+            for info in infos:
+                if info['code'] == 'v':
+                    variable_id = info['id']
+                    if info['id'] in variable_ids:
+                        continue
+                    variable_ids.append(variable_id)
+                changed_infos.append(info)
         if changed_infos:
             self._infos_by_timestamp[time()] = changed_infos
         return changed_infos

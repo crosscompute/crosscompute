@@ -27,7 +27,7 @@ class DiskBatch(Batch):
 
     def get_variable_configuration(self, variable_definition):
         folder = self.folder
-        variable_configuration = variable_definition.configuration
+        variable_configuration = variable_definition.configuration.copy()
         if 'path' in variable_configuration:
             relative_path = variable_configuration['path']
             is_customized = True
@@ -39,7 +39,9 @@ class DiskBatch(Batch):
         if not is_customized and not path.exists():
             return variable_configuration
         try:
-            variable_configuration.update(json.load(open(path, 'rt')))
+            with path.open('rt') as f:
+                d = json.load(f)
+            variable_configuration.update(d)
         except OSError:
             L.error('path not found %s', format_path(path))
         except json.JSONDecodeError:

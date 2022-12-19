@@ -34,6 +34,7 @@ from ..routines.configuration import BatchDefinition
 from ..routines.variable import (
     Element,
     VariableView,
+    load_file_text,
     parse_data_by_id)
 
 
@@ -102,15 +103,20 @@ class AutomationRoutes():
             renderer='crosscompute:templates/automation.html')
 
     def configure_batches(self, config):
+        base_route = AUTOMATION_ROUTE + BATCH_ROUTE
+
         config.add_route(
             'automation batch',
-            AUTOMATION_ROUTE + BATCH_ROUTE)
+            base_route)
         config.add_route(
             'automation batch step',
-            AUTOMATION_ROUTE + BATCH_ROUTE + STEP_ROUTE)
+            base_route + STEP_ROUTE)
+        config.add_route(
+            'automation batch step variable json',
+            base_route + STEP_ROUTE + VARIABLE_ROUTE + '.json')
         config.add_route(
             'automation batch step variable',
-            AUTOMATION_ROUTE + BATCH_ROUTE + STEP_ROUTE + VARIABLE_ROUTE)
+            base_route + STEP_ROUTE + VARIABLE_ROUTE)
 
         config.add_view(
             self.see_automation_batch_step,
@@ -118,26 +124,41 @@ class AutomationRoutes():
             route_name='automation batch step',
             renderer='crosscompute:templates/step.html')
         config.add_view(
+            self.see_automation_batch_step_variable_json,
+            request_method='GET',
+            route_name='automation batch step variable json',
+            renderer='json')
+        config.add_view(
             self.see_automation_batch_step_variable,
             request_method='GET',
             route_name='automation batch step variable')
 
     def configure_runs(self, config):
+        base_route = AUTOMATION_ROUTE + RUN_ROUTE
+
         config.add_route(
             'automation run',
-            AUTOMATION_ROUTE + RUN_ROUTE)
+            base_route)
         config.add_route(
             'automation run step',
-            AUTOMATION_ROUTE + RUN_ROUTE + STEP_ROUTE)
+            base_route + STEP_ROUTE)
+        config.add_route(
+            'automation run step variable json',
+            base_route + STEP_ROUTE + VARIABLE_ROUTE + '.json')
         config.add_route(
             'automation run step variable',
-            AUTOMATION_ROUTE + RUN_ROUTE + STEP_ROUTE + VARIABLE_ROUTE)
+            base_route + STEP_ROUTE + VARIABLE_ROUTE)
 
         config.add_view(
             self.see_automation_batch_step,
             request_method='GET',
             route_name='automation run step',
             renderer='crosscompute:templates/step.html')
+        config.add_view(
+            self.see_automation_batch_step_variable_json,
+            request_method='GET',
+            route_name='automation run step variable json',
+            renderer='json')
         config.add_view(
             self.see_automation_batch_step_variable,
             request_method='GET',
@@ -222,7 +243,39 @@ class AutomationRoutes():
         step_name = _get_step_name(request)
         return _get_step_page_dictionary(request, batch, step_name)
 
+    def see_automation_batch_step_variable_json(self, request):
+        data, definition, batch = self.get_variable_pack_from(request)
+        if 'path' in data:
+            value = load_file_text(data['path'])
+        else:
+            value = data['value']
+        configuration = batch.get_variable_configuration(definition).copy()
+        configuration.pop('path', None)
+        return {'value': value, 'configuration': configuration}
+
     def see_automation_batch_step_variable(self, request):
+        data = self.get_variable_pack_from(request)[0]
+        if 'path' in data:
+            return FileResponse(data['path'], request=request)
+        else:
+            return Response(str(data['value']))
+
+    def get_batch_definition_from(self, request, automation_definition):
+        matchdict = request.matchdict
+        if 'batch_slug' in matchdict:
+            slug = matchdict['batch_slug']
+            key = 'batch_definitions'
+        else:
+            slug = matchdict['run_slug']
+            key = 'run_definitions'
+        batch_definitions = getattr(automation_definition, key)
+        try:
+            batch_definition = find_item(batch_definitions, 'slug', slug)
+        except StopIteration:
+            raise HTTPNotFound
+        return batch_definition
+
+    def get_variable_pack_from(self, request):
         automation_definition = self.get_automation_definition_from(request)
         guard = AuthorizationGuard(
             request, self.safe, automation_definition.identities_by_token)
@@ -239,28 +292,9 @@ class AutomationRoutes():
         variable_definition = _get_variable_definition(
             automation_definition, step_name, variable_id)
         variable_data = batch.get_data(variable_definition)
-        if 'path' in variable_data:
-            return FileResponse(variable_data['path'], request=request)
-        if 'value' in variable_data:
-            return Response(str(variable_data['value']))
         if 'error' in variable_data:
             raise HTTPNotFound
-        raise HTTPBadRequest
-
-    def get_batch_definition_from(self, request, automation_definition):
-        matchdict = request.matchdict
-        if 'batch_slug' in matchdict:
-            slug = matchdict['batch_slug']
-            key = 'batch_definitions'
-        else:
-            slug = matchdict['run_slug']
-            key = 'run_definitions'
-        batch_definitions = getattr(automation_definition, key)
-        try:
-            batch_definition = find_item(batch_definitions, 'slug', slug)
-        except StopIteration:
-            raise HTTPNotFound
-        return batch_definition
+        return variable_data, variable_definition, batch
 
 
 def _get_step_name(request):
