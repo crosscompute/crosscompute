@@ -8,6 +8,8 @@ from ..constants import (
     VARIABLE_ROUTE)
 from ..dependencies.automation import (
     get_automation_definition)
+from ..dependencies.step import (
+    get_step_name)
 from ..dependencies.batch import (
     get_batch_definition)
 from ..routines.configuration import (
@@ -73,12 +75,14 @@ async def see_automation_batch_step(
         get_automation_definition),
     batch_definition: BatchDefinition = Depends(
         get_batch_definition),
+    step_name: str = Depends(
+        get_step_name),
 ):
     return TemplateResponse(template_path_by_id['step'], {
         'request': request,
         'automation_definition': automation_definition,
         'batch_definition': batch_definition,
-        'step_name': 'dummy',
+        'step_name': step_name,
     })
 
 
