@@ -6,6 +6,7 @@ from ..variables import (
 
 
 def get_automation_definition(automation_slug: str):
+    print('called get_automation_definition')
     try:
         automation_definition = find_item(
             automation_definitions, 'slug', automation_slug,

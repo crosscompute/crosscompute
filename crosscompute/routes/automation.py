@@ -228,7 +228,7 @@ class AutomationRoutes():
         }
 
     def see_automation_batch_step(self, request):
-        automation_definition = self.get_automation_definition_from(request)
+        # automation_definition = self.get_automation_definition_from(request)
         guard = AuthorizationGuard(
             request, self.safe, automation_definition.identities_by_token)
         is_match = guard.check('see_batch', automation_definition)
