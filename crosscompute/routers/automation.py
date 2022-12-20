@@ -4,7 +4,7 @@ from logging import getLogger
 from pathlib import Path
 from time import time
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Request
 from invisibleroads_macros_disk import make_random_folder
 from invisibleroads_macros_web.markdown import get_html_from_markdown
 
@@ -18,13 +18,11 @@ from ..constants import (
     STEP_ROUTE,
     VARIABLE_ID_TEMPLATE_PATTERN,
     VARIABLE_ROUTE)
-from ..dependencies.automation import (
-    get_automation_definition)
-from ..dependencies.batch import (
-    get_batch_definition)
-from ..dependencies.step import (
+from ..dependencies import (
+    get_automation_definition,
+    get_batch_definition,
+    get_data_by_id,
     get_step_name)
-from ..exceptions import CrossComputeDataError
 from ..macros.iterable import extend_uniquely, find_item
 from ..routines.batch import DiskBatch
 from ..routines.configuration import (
@@ -32,12 +30,11 @@ from ..routines.configuration import (
     BatchDefinition)
 from ..routines.variable import (
     Element,
-    VariableView,
-    parse_data_by_id)
+    VariableView)
 from ..variables import (
     TemplateResponse,
-    template_path_by_id,
-    user_variables)
+    site_variables,
+    template_path_by_id)
 
 
 router = APIRouter()
@@ -69,29 +66,16 @@ async def see_automation(
 async def run_automation(
     automation_definition: AutomationDefinition = Depends(
         get_automation_definition),
-    data_by_id: dict = Body,
+    data_by_id: dict = Depends(
+        get_data_by_id),
 ):
-    variable_definitions = automation_definition.get_variable_definitions(
-        'input')
-    try:
-        # TODO: Consider using fastapi validation using Depends(get_data_by_id)
-        data_by_id = parse_data_by_id(data_by_id, variable_definitions)
-    except CrossComputeDataError as e:
-        raise HTTPException(status_code=400, detail=e.args[0])
-
     runs_folder = automation_definition.folder / 'runs'
     folder = Path(make_random_folder(runs_folder, ID_LENGTH))
     batch_definition = BatchDefinition({
-        'folder': folder,
-    }, data_by_id=data_by_id, is_run=True)
+        'folder': folder}, data_by_id=data_by_id, is_run=True)
 
-    # queue = Queue.get_instance() # Global app
-    # user_instances['queue'] # Queues per user
-    queue = user_variables['queue']
-    environment = user_variables['environment']
-
-    # TODO: self.environment instead of {}
-    # self.queue.put((automation_definition, batch_definition, self.environment))
+    queue = site_variables['queue']
+    environment = site_variables['environment']
     queue.put((automation_definition, batch_definition, environment))
     automation_definition.run_definitions.append(batch_definition)
 

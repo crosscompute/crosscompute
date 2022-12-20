@@ -6,7 +6,7 @@ from ..constants import (
 from ..variables import (
     TemplateResponse,
     automation_definitions,
-    site_settings,
+    site_variables,
     template_path_by_id)
 
 
@@ -20,7 +20,7 @@ async def see_root(request: Request):
     'Render root with a list of available automations'
     return TemplateResponse(template_path_by_id['root'], {
         'request': request,
-        'title_text': site_settings['name'],
+        'title_text': site_variables['name'],
         'automation_definitions': automation_definitions,
     })
 

@@ -10,7 +10,6 @@ from concurrent.futures import (
     ProcessPoolExecutor, ThreadPoolExecutor, as_completed)
 from datetime import datetime
 from logging import getLogger
-from multiprocessing import Manager, Process, Queue
 from os import environ, getenv, symlink
 from os.path import relpath
 from pathlib import Path
@@ -46,6 +45,7 @@ from ..exceptions import (
     CrossComputeExecutionError)
 from ..macros.iterable import group_by
 from ..macros.security import DictionarySafe
+from ..variables import multiprocessing_context
 from .configuration import (
     get_folder_plus_path,
     load_configuration)
@@ -105,8 +105,8 @@ class DiskAutomation(Automation):
             with_restart=False, root_uri='', allowed_origins=None,
             disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
             disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS):
-        queue = Queue()
-        with Manager() as manager:
+        queue = multiprocessing_context.Queue()
+        with multiprocessing_context.Manager() as manager:
             infos_by_timestamp = manager.dict()
             safe = DictionarySafe({}, manager.dict(), TOKEN_LENGTH)
             server = DiskServer(
@@ -498,7 +498,7 @@ def _run_podman_command(options, terms):
 def _work(automation_queue):
     try:
         while automation_pack := automation_queue.get():
-            worker_process = Process(
+            worker_process = multiprocessing_context.Process(
                 target=_work_one, args=(automation_pack,), daemon=True)
             worker_process.start()
     except KeyboardInterrupt:

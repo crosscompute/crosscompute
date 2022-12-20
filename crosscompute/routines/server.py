@@ -23,7 +23,7 @@ from ..exceptions import (
 # from ..routes.token import TokenRoutes
 from ..variables import (
     automation_definitions,
-    site_settings,
+    site_variables,
     template_environment)
 from .database import DiskDatabase
 from .interface import Server
@@ -48,14 +48,14 @@ class DiskServer(Server):
         self._allowed_origins = allowed_origins
 
     def serve(self, configuration):
-        # !!!
         worker_process = LoggableProcess(
             name='worker', target=self._work, args=(self._queue,))
         worker_process.start()
         host, port, root_uri = self._host, self._port, self._root_uri
-        site_settings.update({
+        site_variables.update({
             'name': configuration.name,
-        })
+            'queue': self._queue,
+            'environment': self._environment})
         automation_definitions[:] = configuration.automation_definitions
         template_environment.globals['server_timestamp'] = time()
         '''

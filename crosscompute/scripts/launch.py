@@ -1,4 +1,3 @@
-import multiprocessing as mp
 from argparse import ArgumentParser
 from logging import getLogger
 
@@ -30,7 +29,6 @@ from crosscompute.scripts.serve import (
 
 
 def do(arguments=None):
-    mp.set_start_method('fork')
     args = _get_args(arguments)
     launch_id = get_launch_id_from(args)
     if launch_id == 'configure':

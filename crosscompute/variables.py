@@ -1,3 +1,5 @@
+import multiprocessing as mp
+
 # TODO: Set template_environment.auto_reload dynamically
 from invisibleroads_macros_web.fastapi import (
     TemplateResponseFactory)
@@ -12,10 +14,12 @@ from .constants import (
     TEMPLATES_FOLDER)
 
 
-site_settings = {
+multiprocessing_context = mp.get_context('fork')
+site_variables = {
     'name': 'Automations',
+    'queue': multiprocessing_context.Queue(),
+    'environment': {},
 }
-user_variables = {}
 automation_definitions = []
 template_path_by_id = {
     'base': str(TEMPLATES_FOLDER / 'base.html'),
