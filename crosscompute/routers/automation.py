@@ -1,6 +1,7 @@
 from itertools import count
 from functools import partial
 from logging import getLogger
+from time import time
 
 from fastapi import APIRouter, Depends, Request
 from invisibleroads_macros_web.markdown import get_html_from_markdown
@@ -12,7 +13,9 @@ from ..macros.iterable import extend_uniquely, find_item
 from ..constants import (
     AUTOMATION_ROUTE,
     BATCH_ROUTE,
+    MUTATION_ROUTE,
     RUN_ROUTE,
+    STEP_CODE_BY_NAME,
     STEP_ROUTE,
     VARIABLE_ID_TEMPLATE_PATTERN,
     VARIABLE_ROUTE)
@@ -57,7 +60,11 @@ async def see_automation(
 @router.post(
     AUTOMATION_ROUTE + '.json',
     tags=['automation'])
-async def run_automation():
+async def run_automation(
+    automation_definition: AutomationDefinition = Depends(
+        get_automation_definition),
+):
+    print(automation_definition)
     return {
     }
 
@@ -82,8 +89,6 @@ async def see_automation_batch(request: Request):
     tags=['automation'])
 async def see_automation_batch_step(
     request: Request,
-    # _embed: str | None = None,
-    # _print: str | None = None,
     automation_definition: AutomationDefinition = Depends(
         get_automation_definition),
     batch_definition: BatchDefinition = Depends(
@@ -91,22 +96,11 @@ async def see_automation_batch_step(
     step_name: str = Depends(
         get_step_name),
 ):
-    # print(_embed)
-    # print(_print)
-    print(request.query_params)
-    # import pudb.forked; pudb.forked.set_trace()
-    '''
-    return TemplateResponse(template_path_by_id['step'], {
-        'request': request,
-        'automation_definition': automation_definition,
-        'batch_definition': batch_definition,
-        'step_name': step_name,
-    })
-    '''
     batch = DiskBatch(
         automation_definition, batch_definition, request.query_params)
-
-    return TemplateResponse(template_path_by_id['step'], _get_step_page_dictionary(request, batch, step_name))
+    return TemplateResponse(
+        template_path_by_id['step'],
+        _get_step_page_dictionary(request, batch, step_name))
 
 
 @router.get(
@@ -124,21 +118,30 @@ def _get_step_page_dictionary(request, batch, step_name):
     automation_definition = batch.automation_definition
     batch_definition = batch.batch_definition
     design_name = automation_definition.get_design_name(step_name)
-    root_uri = ""
+    root_uri = ''
     # root_uri = request.registry.settings['root_uri']
-    # mutation_reference_uri = _get_automation_batch_step_uri(
-    #     automation_definition, batch_definition, step_name)
+    mutation_reference_uri = _get_automation_batch_step_uri(
+        automation_definition, batch_definition, step_name)
     return {
         'request': request,
         'title_text': batch_definition.name,
         'automation_definition': automation_definition,
         'batch_definition': batch_definition,
         'step_name': step_name,
-        # 'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri),
-        # 'mutation_timestamp': time(),
+        'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri),
+        'mutation_timestamp': time(),
     } | __get_step_page_dictionary(
         batch, root_uri, step_name, design_name, for_embed='_embed' in params,
         for_print='_print' in params)
+
+
+def _get_automation_batch_step_uri(
+        automation_definition, batch_definition, step_name):
+    automation_uri = automation_definition.uri
+    batch_uri = batch_definition.uri
+    step_code = STEP_CODE_BY_NAME[step_name]
+    step_uri = STEP_ROUTE.format(step_code=step_code)
+    return automation_uri + batch_uri + step_uri
 
 
 def __get_step_page_dictionary(
@@ -158,22 +161,11 @@ def __get_step_page_dictionary(
     main_text = get_html_from_markdown(VARIABLE_ID_TEMPLATE_PATTERN.sub(
         render_html, template_text))
     return m | {
-        'css_text': __get_css_text(design_name, for_embed, for_print),
+        'css_text': _get_css_text(design_name, for_embed, for_print),
         'main_text': main_text,
         'js_text': '\n'.join(m['js_texts']),
         'for_embed': for_embed,
     }
-
-
-def __get_css_text(design_name, for_embed, for_print):
-    css_texts = []
-    if not for_embed and not for_print:
-        css_texts.append(HEADER_CSS)
-    elif for_embed:
-        css_texts.append(EMBED_CSS)
-    if design_name == 'flex-vertical':
-        css_texts.append(FLEX_VERTICAL_CSS)
-    return '\n'.join(css_texts)
 
 
 def _render_html(
@@ -201,11 +193,21 @@ def _render_html(
     return page_dictionary['main_text']
 
 
+def _get_css_text(design_name, for_embed, for_print):
+    css_texts = []
+    if not for_embed and not for_print:
+        css_texts.append(HEADER_CSS)
+    elif for_embed:
+        css_texts.append(EMBED_CSS)
+    if design_name == 'flex-vertical':
+        css_texts.append(FLEX_VERTICAL_CSS)
+    return '\n'.join(css_texts)
+
+
 EMBED_CSS = '''\
 body {
   margin: 0;
-}
-'''
+}'''
 HEADER_CSS = '''\
 header {
   margin-bottom: 16px;
@@ -235,5 +237,4 @@ main > * {
 #_run {
   padding: 8px 0;
 }'''
-
 L = getLogger(__name__)
