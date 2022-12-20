@@ -19,7 +19,7 @@ function getDataById() {
 const GET_DATA_BY_VIEW_NAME = {};
 {% if step_name == 'input' %}
 document.getElementById('_run').onclick = async () => {
-  const uri = '{{ ROOT_URI }}{{ automation_definition.uri }}';
+  const uri = '{{ root_uri }}{{ automation_definition.uri }}';
   const d = await post(uri + '.json', getDataById());
   redirect(uri, d);
 };

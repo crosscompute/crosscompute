@@ -3,7 +3,7 @@
 {% block body_js %}
 {{ super() }}
 let mutationTimestamp = {{ mutation_timestamp }};
-let pingInterval = {{ MINIMUM_PING_INTERVAL_IN_MILLISECONDS }};
+let pingInterval = {{ minimum_ping_interval_in_milliseconds }};
 async function refreshPage() {
   response = await fetch(location.href, { method: 'head' });
   if (response.ok) {
@@ -19,7 +19,7 @@ async function processMutations() {
     const d = await response.json();
     const { styles, variables } = d;
     if (
-      d.server_timestamp != {{ SERVER_TIMESTAMP }} ||
+      d.server_timestamp != {{ server_timestamp }} ||
       d.configurations.length ||
       d.styles.length ||
       d.templates.length
@@ -41,10 +41,10 @@ async function processMutations() {
 {% endif %}
     }
     mutationTimestamp = d.mutation_timestamp;
-    pingInterval = {{ MINIMUM_PING_INTERVAL_IN_MILLISECONDS }};
+    pingInterval = {{ minimum_ping_interval_in_milliseconds }};
   } catch (error) {
     console.error(error);
-    if (pingInterval < {{ MAXIMUM_PING_INTERVAL_IN_MILLISECONDS }}) {
+    if (pingInterval < {{ maximum_ping_interval_in_milliseconds }}) {
       pingInterval *= 1.1;
     }
   }

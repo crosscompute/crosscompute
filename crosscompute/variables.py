@@ -7,6 +7,8 @@ from invisibleroads_macros_web.jinja import (
     url_for)
 
 from .constants import (
+    MAXIMUM_PING_INTERVAL_IN_SECONDS,
+    MINIMUM_PING_INTERVAL_IN_SECONDS,
     TEMPLATES_FOLDER)
 
 
@@ -30,6 +32,11 @@ template_environment.globals = {
     'with_refresh': True,
     'base_template_path': template_path_by_id['base'],
     'live_template_path': template_path_by_id['live'],
+    'maximum_ping_interval_in_milliseconds':
+        MAXIMUM_PING_INTERVAL_IN_SECONDS * 1000,
+    'minimum_ping_interval_in_milliseconds':
+        MINIMUM_PING_INTERVAL_IN_SECONDS * 1000,
+    'server_timestamp': 0,
     'root_uri': '',
     'url_for': url_for,
 }

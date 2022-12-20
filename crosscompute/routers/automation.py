@@ -172,7 +172,7 @@ def _render_html(
         match, variable_definitions, batch, m, i, root_uri, design_name,
         for_print):
     matching_inner_text = match.group(1)
-    if matching_inner_text == 'ROOT_URI':
+    if matching_inner_text == 'root_uri':
         return root_uri
     terms = matching_inner_text.split('|')
     variable_id = terms[0].strip()
