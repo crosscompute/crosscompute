@@ -176,7 +176,7 @@ class AutomationRoutes():
         }
 
     def run_automation(self, request):
-        automation_definition = self.get_automation_definition_from(request)
+        # automation_definition = self.get_automation_definition_from(request)
         guard = AuthorizationGuard(
             request, self.safe, automation_definition.identities_by_token)
         if not guard.check('run_automation', automation_definition):
@@ -184,25 +184,22 @@ class AutomationRoutes():
         variable_definitions = automation_definition.get_variable_definitions(
             'input')
         try:
-            data_by_id = request.json_body
-        except json.JSONDecodeError:
-            data_by_id = {}
-        try:
+            # TODO: Use fastapi validation
             data_by_id = parse_data_by_id(data_by_id, variable_definitions)
         except CrossComputeDataError as e:
             raise HTTPBadRequest(e)
-        runs_folder = automation_definition.folder / 'runs'
-        folder = Path(make_random_folder(runs_folder, ID_LENGTH))
+        # runs_folder = automation_definition.folder / 'runs'
+        # folder = Path(make_random_folder(runs_folder, ID_LENGTH))
         guard.save_identities(folder / 'debug' / 'identities.dictionary')
+
         batch_definition = BatchDefinition({
             'folder': folder,
         }, data_by_id=data_by_id, is_run=True)
+
+        # TODO: environment
         self.queue.put((
             automation_definition, batch_definition, self.environment))
         automation_definition.run_definitions.append(batch_definition)
-        step_code = 'l' if automation_definition.get_variable_definitions(
-            'log') else 'o'
-        return {'run_id': batch_definition.name, 'step_code': step_code}
 
     def see_automation(self, request):
         automation_definition = self.get_automation_definition_from(request)

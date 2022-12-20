@@ -1,18 +1,17 @@
 from itertools import count
 from functools import partial
 from logging import getLogger
+from pathlib import Path
 from time import time
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
+from invisibleroads_macros_disk import make_random_folder
 from invisibleroads_macros_web.markdown import get_html_from_markdown
 
-from ..routines.variable import (
-    Element,
-    VariableView)
-from ..macros.iterable import extend_uniquely, find_item
 from ..constants import (
     AUTOMATION_ROUTE,
     BATCH_ROUTE,
+    ID_LENGTH,
     MUTATION_ROUTE,
     RUN_ROUTE,
     STEP_CODE_BY_NAME,
@@ -25,10 +24,16 @@ from ..dependencies.batch import (
     get_batch_definition)
 from ..dependencies.step import (
     get_step_name)
+from ..exceptions import CrossComputeDataError
+from ..macros.iterable import extend_uniquely, find_item
 from ..routines.batch import DiskBatch
 from ..routines.configuration import (
     AutomationDefinition,
     BatchDefinition)
+from ..routines.variable import (
+    Element,
+    VariableView,
+    parse_data_by_id)
 from ..variables import (
     TemplateResponse,
     template_path_by_id)
@@ -61,31 +66,34 @@ async def see_automation(
     AUTOMATION_ROUTE + '.json',
     tags=['automation'])
 async def run_automation(
-    request: Request,
     automation_definition: AutomationDefinition = Depends(
         get_automation_definition),
+    data_by_id: dict = Body,
 ):
-    print(automation_definition)
-
-    '''
+    variable_definitions = automation_definition.get_variable_definitions(
+        'input')
     try:
-        data_by_id = request.json_body
-    except json.JSONDecodeError:
-        data_by_id = {}
+        # TODO: Consider using fastapi validation using Depends(get_data_by_id)
+        data_by_id = parse_data_by_id(data_by_id, variable_definitions)
+    except CrossComputeDataError as e:
+        raise HTTPException(status_code=400, detail=e.args[0])
+
+    runs_folder = automation_definition.folder / 'runs'
+    folder = Path(make_random_folder(runs_folder, ID_LENGTH))
     batch_definition = BatchDefinition({
         'folder': folder,
     }, data_by_id=data_by_id, is_run=True)
 
+    # TODO: self.environment instead of {}
+    # self.queue.put((automation_definition, batch_definition, self.environment))
+    automation_definition.run_definitions.append(batch_definition)
+
     step_code = 'l' if automation_definition.get_variable_definitions(
         'log') else 'o'
     return {
-        'run_id': batch_definition.name, 'step_code': step_code
+        'run_id': batch_definition.name, 'step_code': step_code,
     }
-    '''
-    import pudb.forked; pudb.forked.set_trace();
-    return {
-        'run_id': "", 'step_code': 'o',
-    }
+
 
 @router.get(
     AUTOMATION_ROUTE + BATCH_ROUTE,
