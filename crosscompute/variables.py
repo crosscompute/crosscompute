@@ -15,6 +15,7 @@ from .constants import (
 site_settings = {
     'name': 'Automations',
 }
+user_variables = {}
 automation_definitions = []
 template_path_by_id = {
     'base': str(TEMPLATES_FOLDER / 'base.html'),

@@ -36,7 +36,8 @@ from ..routines.variable import (
     parse_data_by_id)
 from ..variables import (
     TemplateResponse,
-    template_path_by_id)
+    template_path_by_id,
+    user_variables)
 
 
 router = APIRouter()
@@ -84,8 +85,14 @@ async def run_automation(
         'folder': folder,
     }, data_by_id=data_by_id, is_run=True)
 
+    # queue = Queue.get_instance() # Global app
+    # user_instances['queue'] # Queues per user
+    queue = user_variables['queue']
+    environment = user_variables['environment']
+
     # TODO: self.environment instead of {}
     # self.queue.put((automation_definition, batch_definition, self.environment))
+    queue.put((automation_definition, batch_definition, environment))
     automation_definition.run_definitions.append(batch_definition)
 
     step_code = 'l' if automation_definition.get_variable_definitions(
