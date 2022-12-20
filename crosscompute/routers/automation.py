@@ -61,13 +61,31 @@ async def see_automation(
     AUTOMATION_ROUTE + '.json',
     tags=['automation'])
 async def run_automation(
+    request: Request,
     automation_definition: AutomationDefinition = Depends(
         get_automation_definition),
 ):
     print(automation_definition)
-    return {
-    }
 
+    '''
+    try:
+        data_by_id = request.json_body
+    except json.JSONDecodeError:
+        data_by_id = {}
+    batch_definition = BatchDefinition({
+        'folder': folder,
+    }, data_by_id=data_by_id, is_run=True)
+
+    step_code = 'l' if automation_definition.get_variable_definitions(
+        'log') else 'o'
+    return {
+        'run_id': batch_definition.name, 'step_code': step_code
+    }
+    '''
+    import pudb.forked; pudb.forked.set_trace();
+    return {
+        'run_id': "", 'step_code': 'o',
+    }
 
 @router.get(
     AUTOMATION_ROUTE + BATCH_ROUTE,
