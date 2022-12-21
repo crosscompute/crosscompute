@@ -1,3 +1,4 @@
+# TODO: Consider having production pages that do not change ignore mutations
 from fastapi import APIRouter, Request
 
 from ..constants import (
