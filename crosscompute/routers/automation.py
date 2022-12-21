@@ -4,7 +4,8 @@ from logging import getLogger
 from pathlib import Path
 from time import time
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Response, HTTPException
+from fastapi.responses import FileResponse
 from invisibleroads_macros_disk import make_random_folder
 from invisibleroads_macros_web.markdown import get_html_from_markdown
 
@@ -126,8 +127,38 @@ async def see_automation_batch_step(
 @router.get(
     AUTOMATION_ROUTE + RUN_ROUTE + STEP_ROUTE + VARIABLE_ROUTE,
     tags=['automation'])
-async def see_automation_batch_step_variable(request: Request):
-    return {}
+async def see_automation_batch_step_variable(
+    variable_id: str,
+    automation_definition: AutomationDefinition = Depends(
+        get_automation_definition),
+    batch_definition: BatchDefinition = Depends(
+        get_batch_definition),
+    step_name: str = Depends(
+        get_step_name),
+):
+    batch = DiskBatch(automation_definition, batch_definition)
+    variable_definition = _get_variable_definition(
+        automation_definition, step_name, variable_id)
+    data = batch.get_data(variable_definition)
+    if 'error' in data:
+        raise HTTPException(status_code=404)
+    # data = self.get_variable_pack_from(request)[0]
+    if 'path' in data:
+        return FileResponse(data['path'])
+    else:
+        return Response(str(data['value']))
+
+
+def _get_variable_definition(automation_definition, step_name, variable_id):
+    variable_definitions = automation_definition.get_variable_definitions(
+        step_name)
+    try:
+        variable_definition = find_item(
+            variable_definitions, 'id', variable_id,
+            normalize=str.casefold)
+    except StopIteration:
+        raise HTTPException(status_code=404)
+    return variable_definition
 
 
 def _get_step_page_dictionary(request, batch, step_name):
