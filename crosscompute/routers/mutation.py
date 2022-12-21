@@ -1,7 +1,7 @@
 # TODO: Consider having production pages that do not change ignore mutations
 from time import time
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Query
 
 from ..constants import (
     MAXIMUM_MUTATION_AGE_IN_SECONDS,
@@ -15,9 +15,14 @@ router = APIRouter()
 
 
 @router.get(
-    MUTATION_ROUTE.format(uri='{uri:.*}'),
+    MUTATION_ROUTE.format(uri='{uri:path}'),
     tags=['mutation'])
-async def see_mutation(request: Request, uri: str, t: float = 0):
+# async def see_mutation_json(uri: str, t: float = 0):
+async def see_mutation_json(
+    uri: str,
+    old_timestamp: float = Query(default=0, alias='t'),
+):
+    # TODO: Consider adding guard
     new_timestamp = time()
     infos_by_timestamp = site_variables['infos_by_timestamp']
     configurations, variables, templates, styles = [], [], [], []
@@ -27,7 +32,7 @@ async def see_mutation(request: Request, uri: str, t: float = 0):
                 del infos_by_timestamp[timestamp]
             except KeyError:
                 pass
-        if timestamp <= t:
+        if timestamp <= old_timestamp:
             continue
         for info in infos:
             code = info['code']
@@ -50,11 +55,14 @@ async def see_mutation(request: Request, uri: str, t: float = 0):
         'templates': templates,
         'styles': styles,
     }
-    return {}
 
 
 '''
 - [X] Define infos_by_timestamp in variables/site_variables
 - [X] Define t:str = 0 in see_mutation
-- [ ] Use template_environment.globals['server_timestamp']
+- [X] Use template_environment.globals['server_timestamp']
+- [X] Remove request from see_mutation_json
+- [X] Restore comment about guard
+- [ ] Fix issue with mutation route not found
+- [ ] Use query alias
 '''

@@ -63,7 +63,7 @@ async def see_automation(
 @router.post(
     AUTOMATION_ROUTE + '.json',
     tags=['automation'])
-async def run_automation(
+async def run_automation_json(
     automation_definition: AutomationDefinition = Depends(
         get_automation_definition),
     data_by_id: dict = Depends(
