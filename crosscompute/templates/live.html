@@ -21,7 +21,6 @@ async function processMutations() {
     if (
       d.server_timestamp != {{ server_timestamp }} ||
       d.configurations.length ||
-      d.styles.length ||
       d.templates.length
     ) {
       refreshPage();
