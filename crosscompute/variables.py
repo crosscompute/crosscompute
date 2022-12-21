@@ -19,6 +19,7 @@ site_variables = {
     'name': 'Automations',
     'queue': multiprocessing_context.Queue(),
     'environment': {},
+    'infos_by_timestamp': {},
 }
 automation_definitions = []
 template_path_by_id = {

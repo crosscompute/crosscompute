@@ -55,7 +55,8 @@ class DiskServer(Server):
         site_variables.update({
             'name': configuration.name,
             'queue': self._queue,
-            'environment': self._environment})
+            'environment': self._environment,
+            'infos_by_timestamp': self._infos_by_timestamp})
         automation_definitions[:] = configuration.automation_definitions
         template_environment.globals['server_timestamp'] = time()
         '''
