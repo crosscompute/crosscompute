@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Path, Request
+from fastapi import APIRouter, HTTPException, Path, Request, Response
 from fastapi.responses import FileResponse
 
 from ..constants import (
@@ -37,12 +37,37 @@ async def see_icon():
 @router.get(
     STYLE_ROUTE,
     tags=['root'])
+async def see_style(request: Request):
+    import pudb.forked; pudb.forked.set_trace()
+    automation_definition = self.configuration
+    try:
+        style_definition = find_item(
+            style_definitions, 'uri', request.environ['PATH_INFO'])
+    except StopIteration:
+        raise HTTPNotFound
+    path = automation_definition.folder / style_definition['path']
+    try:
+        response = FileResponse(path, request)
+    except TypeError:
+        raise HTTPException(status_code=404)
+    return response
+
+
 @router.get(
     AUTOMATION_ROUTE + STYLE_ROUTE,
     tags=['root'])
-# async def see_style(automation_slug: str | None = Path(default=None)):
-async def see_style(automation_slug: str | None = None):
-# async def see_style(automation_slug: Optional[str] = Path(default=None)):
+async def see_automation_style(request: Request, automation_slug: str):
+    automation_definition = self.get_automation_definition_from(
+        request)
+    try:
+        style_definition = find_item(
+            style_definitions, 'uri', request.environ['PATH_INFO'])
+    except StopIteration:
+        raise HTTPException(status_code=404)
     print(automation_slug)
-    from fastapi import Response
-    return Response('')
+    path = automation_definition.folder / style_definition['path']
+    try:
+        response = FileResponse(path, request)
+    except TypeError:
+        raise HTTPException(status_code=404)
+    return response
