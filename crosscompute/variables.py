@@ -15,13 +15,14 @@ from .constants import (
 
 
 multiprocessing_context = mp.get_context('fork')
-site_variables = {
+site = {
     'name': 'Automations',
-    'queue': multiprocessing_context.Queue(),
+    'configuration': None,
+    'definitions': [],
+    'queue': None,
     'environment': {},
-    'infos_by_timestamp': {},
+    'changes': {},
 }
-automation_definitions = []
 template_path_by_id = {
     'base': str(TEMPLATES_FOLDER / 'base.html'),
     'live': str(TEMPLATES_FOLDER / 'live.html'),

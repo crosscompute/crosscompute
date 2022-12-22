@@ -11,10 +11,11 @@ from .routines.configuration import (
 from .routines.variable import (
     parse_data_by_id)
 from .variables import (
-    automation_definitions)
+    site)
 
 
 async def get_automation_definition(automation_slug: str):
+    automation_definitions = site['definitions']
     try:
         automation_definition = find_item(
             automation_definitions, 'slug', automation_slug,

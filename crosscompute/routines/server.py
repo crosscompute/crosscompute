@@ -22,8 +22,7 @@ from ..exceptions import (
 # from ..routes.mutation import MutationRoutes
 # from ..routes.token import TokenRoutes
 from ..variables import (
-    automation_definitions,
-    site_variables,
+    site,
     template_environment)
 from .database import DiskDatabase
 from .interface import Server
@@ -32,14 +31,14 @@ from .interface import Server
 class DiskServer(Server):
 
     def __init__(
-            self, environment, safe, queue, work, infos_by_timestamp,
+            self, environment, safe, queue, work, changes,
             host=HOST, port=PORT, with_refresh=False,
             with_restart=False, root_uri='', allowed_origins=None):
         self._environment = environment
         self._safe = safe
         self._queue = queue
         self._work = work
-        self._infos_by_timestamp = infos_by_timestamp
+        self._changes = changes
         self._host = host
         self._port = port
         self._with_refresh = with_refresh
@@ -52,18 +51,19 @@ class DiskServer(Server):
             name='worker', target=self._work, args=(self._queue,))
         worker_process.start()
         host, port, root_uri = self._host, self._port, self._root_uri
-        site_variables.update({
+        site.update({
             'name': configuration.name,
+            'configuration': configuration,
+            'definitions': configuration.automation_definitions,
             'queue': self._queue,
             'environment': self._environment,
-            'infos_by_timestamp': self._infos_by_timestamp})
-        automation_definitions[:] = configuration.automation_definitions
+            'changes': self._changes})
         template_environment.globals['server_timestamp'] = time()
         '''
         app = _get_app(
             configuration, self._environment, self._safe, self._queue,
             self._with_refresh, with_restart, root_uri,
-            self._allowed_origins, self._infos_by_timestamp)
+            self._allowed_origins, self._changes)
         '''
         L.info('serving at http://%s:%s%s', host, port, root_uri)
         try:
@@ -83,11 +83,11 @@ class DiskServer(Server):
             getLogger('watchgod.watcher').setLevel(ERROR)
         server_process, disk_database = self._serve(configuration)
         automation_folder = configuration.folder
-        for changes in watch(
+        for changed_packs in watch(
                 automation_folder, min_sleep=disk_poll_in_milliseconds,
                 debounce=disk_debounce_in_milliseconds):
-            L.debug(changes)
-            changed_paths = [_[1] for _ in changes]
+            L.debug(changed_packs)
+            changed_paths = [_[1] for _ in changed_packs]
             changed_infos = disk_database.grok(changed_paths)
             L.debug(changed_infos)
             should_restart_server = False
@@ -107,14 +107,14 @@ class DiskServer(Server):
         server_process = StoppableProcess(
             name='server', target=self.serve, args=(configuration,))
         server_process.start()
-        disk_database = DiskDatabase(configuration, self._infos_by_timestamp)
+        disk_database = DiskDatabase(configuration, self._changes)
         return server_process, disk_database
 
 
 '''
 def _get_app(
         configuration, environment, safe, queue, with_refresh, with_restart,
-        root_uri, allowed_origins, infos_by_timestamp):
+        root_uri, allowed_origins, changes):
     server_timestamp = time()
     settings = {
         'root_uri': root_uri,
@@ -130,7 +130,7 @@ def _get_app(
             config, configuration, safe, environment, queue)
         if with_refresh:
             _configure_mutation_routes(
-                config, server_timestamp, infos_by_timestamp)
+                config, server_timestamp, changes)
         _configure_token_routes(
             config, configuration, safe)
         _configure_renderer_globals(
@@ -156,8 +156,8 @@ def _configure_automation_routes(
     config.include(automation_routes.includeme)
 
 
-def _configure_mutation_routes(config, server_timestamp, infos_by_timestamp):
-    mutation_routes = MutationRoutes(server_timestamp, infos_by_timestamp)
+def _configure_mutation_routes(config, server_timestamp, changes):
+    mutation_routes = MutationRoutes(server_timestamp, changes)
     config.include(mutation_routes.includeme)
 
 

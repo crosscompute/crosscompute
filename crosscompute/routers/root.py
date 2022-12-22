@@ -1,14 +1,19 @@
-from fastapi import APIRouter, HTTPException, Path, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse
 
 from ..constants import (
     AUTOMATION_ROUTE,
     IMAGES_FOLDER,
     STYLE_ROUTE)
+from ..dependencies import (
+    get_automation_definition)
+from ..macros.iterable import (
+    find_item)
+from ..routines.configuration import (
+    AutomationDefinition)
 from ..variables import (
     TemplateResponse,
-    automation_definitions,
-    site_variables,
+    site,
     template_path_by_id)
 
 
@@ -22,8 +27,8 @@ async def see_root(request: Request):
     'Render root with a list of available automations'
     return TemplateResponse(template_path_by_id['root'], {
         'request': request,
-        'title_text': site_variables['name'],
-        'automation_definitions': automation_definitions,
+        'title_text': site['name'],
+        'automation_definitions': site['definitions'],
     })
 
 
@@ -38,36 +43,30 @@ async def see_icon():
     STYLE_ROUTE,
     tags=['root'])
 async def see_style(request: Request):
-    import pudb.forked; pudb.forked.set_trace()
-    automation_definition = self.configuration
-    try:
-        style_definition = find_item(
-            style_definitions, 'uri', request.environ['PATH_INFO'])
-    except StopIteration:
-        raise HTTPNotFound
-    path = automation_definition.folder / style_definition['path']
-    try:
-        response = FileResponse(path, request)
-    except TypeError:
-        raise HTTPException(status_code=404)
-    return response
+    return get_style_response(request.url.path, site['configuration'])
 
 
 @router.get(
     AUTOMATION_ROUTE + STYLE_ROUTE,
     tags=['root'])
-async def see_automation_style(request: Request, automation_slug: str):
-    automation_definition = self.get_automation_definition_from(
-        request)
+async def see_automation_style(
+    request: Request,
+    automation_definition: AutomationDefinition = Depends(
+        get_automation_definition),
+):
+    return get_style_response(request.url.path, automation_definition)
+
+
+def get_style_response(uri_path, automation_definition):
+    style_definitions = automation_definition.style_definitions
     try:
         style_definition = find_item(
-            style_definitions, 'uri', request.environ['PATH_INFO'])
+            style_definitions, 'uri', uri_path)
     except StopIteration:
         raise HTTPException(status_code=404)
-    print(automation_slug)
     path = automation_definition.folder / style_definition['path']
     try:
-        response = FileResponse(path, request)
+        response = FileResponse(path)
     except TypeError:
         raise HTTPException(status_code=404)
     return response

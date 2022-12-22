@@ -107,10 +107,10 @@ class DiskAutomation(Automation):
             disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS):
         queue = multiprocessing_context.Queue()
         with multiprocessing_context.Manager() as manager:
-            infos_by_timestamp = manager.dict()
+            changes = manager.dict()
             safe = DictionarySafe({}, manager.dict(), TOKEN_LENGTH)
             server = DiskServer(
-                environment, safe, queue, _work, infos_by_timestamp, host,
+                environment, safe, queue, _work, changes, host,
                 port, with_refresh, with_restart, root_uri, allowed_origins)
             configuration = self.configuration
             if not with_refresh and not with_restart:

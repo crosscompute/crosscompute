@@ -34,7 +34,7 @@ from ..routines.variable import (
     VariableView)
 from ..variables import (
     TemplateResponse,
-    site_variables,
+    site,
     template_path_by_id)
 
 
@@ -75,8 +75,8 @@ async def run_automation_json(
     batch_definition = BatchDefinition({
         'folder': folder}, data_by_id=data_by_id, is_run=True)
 
-    queue = site_variables['queue']
-    environment = site_variables['environment']
+    queue = site['queue']
+    environment = site['environment']
     queue.put((automation_definition, batch_definition, environment))
     automation_definition.run_definitions.append(batch_definition)
 

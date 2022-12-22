@@ -11,9 +11,9 @@ from ..constants import (
 
 class DiskDatabase():
 
-    def __init__(self, configuration, infos_by_timestamp):
+    def __init__(self, configuration, changes):
         self._configuration = configuration
-        self._infos_by_timestamp = infos_by_timestamp
+        self._changes = changes
         self._memory = learn(configuration)
 
     def grok(self, paths):
@@ -32,7 +32,7 @@ class DiskDatabase():
                     variable_ids.append(variable_id)
                 changed_infos.append(info)
         if changed_infos:
-            self._infos_by_timestamp[time()] = changed_infos
+            self._changes[time()] = changed_infos
         return changed_infos
 
     def _get(self, path):

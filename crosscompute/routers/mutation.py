@@ -7,7 +7,7 @@ from ..constants import (
     MAXIMUM_MUTATION_AGE_IN_SECONDS,
     MUTATION_ROUTE)
 from ..variables import (
-    site_variables,
+    site,
     template_environment)
 
 
@@ -24,12 +24,12 @@ async def see_mutation_json(
 ):
     # TODO: Consider adding guard
     new_timestamp = time()
-    infos_by_timestamp = site_variables['infos_by_timestamp']
+    changes = site['changes']
     configurations, variables, templates, styles = [], [], [], []
-    for timestamp, infos in infos_by_timestamp.copy().items():
+    for timestamp, infos in changes.copy().items():
         if new_timestamp - timestamp > MAXIMUM_MUTATION_AGE_IN_SECONDS:
             try:
-                del infos_by_timestamp[timestamp]
+                del changes[timestamp]
             except KeyError:
                 pass
         if timestamp <= old_timestamp:
@@ -55,14 +55,3 @@ async def see_mutation_json(
         'templates': templates,
         'styles': styles,
     }
-
-
-'''
-- [X] Define infos_by_timestamp in variables/site_variables
-- [X] Define t:str = 0 in see_mutation
-- [X] Use template_environment.globals['server_timestamp']
-- [X] Remove request from see_mutation_json
-- [X] Restore comment about guard
-- [ ] Fix issue with mutation route not found
-- [ ] Use query alias
-'''
