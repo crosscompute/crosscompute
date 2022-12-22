@@ -152,15 +152,3 @@ class AutomationRoutes():
         if 'error' in variable_data:
             raise HTTPNotFound
         return variable_data, variable_definition, batch
-
-
-def _get_variable_definition(automation_definition, step_name, variable_id):
-    variable_definitions = automation_definition.get_variable_definitions(
-        step_name)
-    try:
-        variable_definition = find_item(
-            variable_definitions, 'id', variable_id,
-            normalize=str.casefold)
-    except StopIteration:
-        raise HTTPNotFound
-    return variable_definition
