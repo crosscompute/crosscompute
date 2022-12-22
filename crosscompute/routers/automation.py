@@ -118,7 +118,7 @@ async def see_automation_batch_step(
         automation_definition, batch_definition, request.query_params)
     return TemplateResponse(
         template_path_by_id['step'],
-        _get_step_page_dictionary(request, batch, step_name))
+        _get_step_page_outer_dictionary(request, batch, step_name))
 
 
 @router.get(
@@ -149,19 +149,7 @@ async def see_automation_batch_step_variable(
         return Response(str(data['value']))
 
 
-def _get_variable_definition(automation_definition, step_name, variable_id):
-    variable_definitions = automation_definition.get_variable_definitions(
-        step_name)
-    try:
-        variable_definition = find_item(
-            variable_definitions, 'id', variable_id,
-            normalize=str.casefold)
-    except StopIteration:
-        raise HTTPException(status_code=404)
-    return variable_definition
-
-
-def _get_step_page_dictionary(request, batch, step_name):
+def _get_step_page_outer_dictionary(request, batch, step_name):
     params = request.query_params
     automation_definition = batch.automation_definition
     batch_definition = batch.batch_definition
@@ -178,21 +166,12 @@ def _get_step_page_dictionary(request, batch, step_name):
         'step_name': step_name,
         'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri),
         'mutation_timestamp': time(),
-    } | __get_step_page_dictionary(
+    } | _get_step_page_inner_dictionary(
         batch, root_uri, step_name, design_name, for_embed='_embed' in params,
         for_print='_print' in params)
 
 
-def _get_automation_batch_step_uri(
-        automation_definition, batch_definition, step_name):
-    automation_uri = automation_definition.uri
-    batch_uri = batch_definition.uri
-    step_code = STEP_CODE_BY_NAME[step_name]
-    step_uri = STEP_ROUTE.format(step_code=step_code)
-    return automation_uri + batch_uri + step_uri
-
-
-def __get_step_page_dictionary(
+def _get_step_page_inner_dictionary(
         batch, root_uri, step_name, design_name, for_embed, for_print):
     automation_definition = batch.automation_definition
     css_uris = automation_definition.css_uris
@@ -250,6 +229,27 @@ def _get_css_text(design_name, for_embed, for_print):
     if design_name == 'flex-vertical':
         css_texts.append(FLEX_VERTICAL_CSS)
     return '\n'.join(css_texts)
+
+
+def _get_variable_definition(automation_definition, step_name, variable_id):
+    variable_definitions = automation_definition.get_variable_definitions(
+        step_name)
+    try:
+        variable_definition = find_item(
+            variable_definitions, 'id', variable_id,
+            normalize=str.casefold)
+    except StopIteration:
+        raise HTTPException(status_code=404)
+    return variable_definition
+
+
+def _get_automation_batch_step_uri(
+        automation_definition, batch_definition, step_name):
+    automation_uri = automation_definition.uri
+    batch_uri = batch_definition.uri
+    step_code = STEP_CODE_BY_NAME[step_name]
+    step_uri = STEP_ROUTE.format(step_code=step_code)
+    return automation_uri + batch_uri + step_uri
 
 
 EMBED_CSS = '''\

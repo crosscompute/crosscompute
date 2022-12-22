@@ -46,28 +46,6 @@ class AutomationRoutes():
         self.environment = environment
         self.queue = queue
 
-    def see_style(self, request):
-        matchdict = request.matchdict
-        if 'automation_slug' in matchdict:
-            automation_definition = self.get_automation_definition_from(
-                request)
-        else:
-            automation_definition = self.configuration
-        style_definitions = automation_definition.style_definitions
-        try:
-            style_definition = find_item(
-                style_definitions, 'uri', request.environ['PATH_INFO'])
-        except StopIteration:
-            raise HTTPNotFound
-        path = automation_definition.folder / style_definition['path']
-        try:
-            response = FileResponse(path, request)
-        except TypeError:
-            raise HTTPNotFound
-        return response
-
-
-
         config.add_view(
             self.see_automation_batch_step_variable_json,
             request_method='GET',
