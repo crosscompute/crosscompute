@@ -26,20 +26,13 @@ async def get_automation_definition(automation_slug: str):
 
 
 async def get_batch_definition(
-    batch_slug: str | None = None,
-    run_slug: str | None = None,
+    batch_slug: str,
     automation_definition: AutomationDefinition = Depends(
-        get_automation_definition)
+        get_automation_definition),
 ):
-    if batch_slug:
-        slug = batch_slug
-        key = 'batch_definitions'
-    else:
-        slug = run_slug
-        key = 'run_definitions'
-    batch_definitions = getattr(automation_definition, key)
+    batch_definitions = getattr(automation_definition, 'batch_definitions')
     try:
-        batch_definition = find_item(batch_definitions, 'slug', slug)
+        batch_definition = find_item(batch_definitions, 'slug', batch_slug)
     except StopIteration:
         raise HTTPException(status_code=404)
     return batch_definition

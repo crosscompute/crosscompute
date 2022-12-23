@@ -36,6 +36,7 @@ class Element():
 
     id: str
     root_uri: str
+    request_params: str
     design_name: str
     for_print: bool
     function_names: list[str]
@@ -250,6 +251,7 @@ class TextView(VariableView):
 
     def render_input(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
+        data = get_data_from(
         data = b.get_data_from_request(variable_definition)
         value = data.get('value', '')
         variable_id = self.variable_id
@@ -602,6 +604,15 @@ def yield_data_by_id_from_txt(path, variable_definitions):
                 yield parse_data_by_id(data_by_id, variable_definitions)
     except OSError as e:
         raise CrossComputeConfigurationError(e)
+
+
+def get_data_from(request_params, variable_definition):
+    variable_id = variable_definition.id
+    if variable_id in request_params:
+        data = {'value': request_params[variable_id]}
+    else:
+        data = {}
+    return data
 
 
 def parse_data_by_id(data_by_id, variable_definitions):

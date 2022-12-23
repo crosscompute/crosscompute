@@ -2,28 +2,14 @@ from logging import getLogger, DEBUG, ERROR
 from time import time
 
 import uvicorn
-# from pyramid.config import Configurator
-# from pyramid.events import NewResponse
-from invisibleroads_macros_process import (
-    LoggableProcess,
-    StoppableProcess)
+from fastapi import FastAPI
+from invisibleroads_macros_process import LoggableProcess, StoppableProcess
 from watchgod import watch
 
-# from .. import variables
-from ..apps.base import app
-from ..constants import (
-    HOST,
-    # MAXIMUM_PING_INTERVAL_IN_SECONDS,
-    # MINIMUM_PING_INTERVAL_IN_SECONDS,
-    PORT)
-from ..exceptions import (
-    CrossComputeError)
-# from ..routes.automation import AutomationRoutes
-# from ..routes.mutation import MutationRoutes
-# from ..routes.token import TokenRoutes
-from ..variables import (
-    site,
-    template_environment)
+from ..constants import HOST, PORT
+from ..exceptions import CrossComputeError
+from ..routers import automation, mutation, root, token
+from ..variables import site, template_environment
 from .database import DiskDatabase
 from .interface import Server
 
@@ -58,20 +44,17 @@ class DiskServer(Server):
             'queue': self._queue,
             'environment': self._environment,
             'changes': self._changes})
-        template_environment.globals['server_timestamp'] = time()
-        '''
-        app = _get_app(
-            configuration, self._environment, self._safe, self._queue,
-            self._with_refresh, with_restart, root_uri,
-            self._allowed_origins, self._changes)
-        '''
+        template_environment.globals.update({
+            'server_timestamp': time(),
+        })
+        # self._safe, self._with_refresh, with_restart, self._allowed_origins
+        app = get_app(root_uri)
         L.info('serving at http://%s:%s%s', host, port, root_uri)
         try:
             uvicorn.run(
                 app,
                 host=host,
                 port=port,
-                root_path=root_uri,
                 access_log=L.getEffectiveLevel() <= DEBUG)
         except AssertionError:
             L.error(f'could not start server at {host}:{port}')
@@ -109,6 +92,15 @@ class DiskServer(Server):
         server_process.start()
         disk_database = DiskDatabase(configuration, self._changes)
         return server_process, disk_database
+
+
+def get_app(root_uri):
+    app = FastAPI(root_path=root_uri)
+    app.include_router(root.router)
+    app.include_router(automation.router)
+    app.include_router(mutation.router)
+    app.include_router(token.router)
+    return app
 
 
 '''

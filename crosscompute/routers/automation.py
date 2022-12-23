@@ -1,4 +1,3 @@
-# TODO: Split routes
 from itertools import count
 from functools import partial
 from logging import getLogger
@@ -15,7 +14,6 @@ from ..constants import (
     BATCH_ROUTE,
     ID_LENGTH,
     MUTATION_ROUTE,
-    RUN_ROUTE,
     STEP_CODE_BY_NAME,
     STEP_ROUTE,
     VARIABLE_ID_TEMPLATE_PATTERN,
@@ -79,20 +77,18 @@ async def run_automation_json(
     queue = site['queue']
     environment = site['environment']
     queue.put((automation_definition, batch_definition, environment))
-    automation_definition.run_definitions.append(batch_definition)
+    automation_definition.batch_definitions.append(batch_definition)
 
     step_code = 'l' if automation_definition.get_variable_definitions(
         'log') else 'o'
     return {
-        'run_id': batch_definition.name, 'step_code': step_code,
+        'run_id': batch_definition.name,
+        'step_code': step_code,
     }
 
 
 @router.get(
     AUTOMATION_ROUTE + BATCH_ROUTE,
-    tags=['automation'])
-@router.get(
-    AUTOMATION_ROUTE + RUN_ROUTE,
     tags=['automation'])
 async def see_automation_batch(request: Request):
     return TemplateResponse(template_path_by_id['batch'], {
@@ -103,9 +99,6 @@ async def see_automation_batch(request: Request):
 @router.get(
     AUTOMATION_ROUTE + BATCH_ROUTE + STEP_ROUTE,
     tags=['automation'])
-@router.get(
-    AUTOMATION_ROUTE + RUN_ROUTE + STEP_ROUTE,
-    tags=['automation'])
 async def see_automation_batch_step(
     request: Request,
     automation_definition: AutomationDefinition = Depends(
@@ -115,18 +108,14 @@ async def see_automation_batch_step(
     step_name: str = Depends(
         get_step_name),
 ):
-    batch = DiskBatch(
-        automation_definition, batch_definition, request.query_params)
-    return TemplateResponse(
-        template_path_by_id['step'],
-        _get_step_page_outer_dictionary(request, batch, step_name))
+    return TemplateResponse(template_path_by_id['step'], {
+        'request': request,
+    } | _get_step_page_outer_dictionary(
+        batch, step_name, request.query_params))
 
 
 @router.get(
     AUTOMATION_ROUTE + BATCH_ROUTE + STEP_ROUTE + VARIABLE_ROUTE,
-    tags=['automation'])
-@router.get(
-    AUTOMATION_ROUTE + RUN_ROUTE + STEP_ROUTE + VARIABLE_ROUTE,
     tags=['automation'])
 async def see_automation_batch_step_variable(
     variable_id: str,
@@ -143,24 +132,35 @@ async def see_automation_batch_step_variable(
     data = batch.get_data(variable_definition)
     if 'error' in data:
         raise HTTPException(status_code=404)
-    # data = self.get_variable_pack_from(request)[0]
     if 'path' in data:
-        return FileResponse(data['path'])
+        response = FileResponse(data['path'])
     else:
-        return Response(str(data['value']))
+        response = Response(str(data['value']))
+    return response
 
 
-def _get_step_page_outer_dictionary(request, batch, step_name):
-    params = request.query_params
+def get_step_response(automation_definition, batch_definition, request):
+    root_uri = template_environment.globals['root_uri']
+    return TemplateResponse(template_path_by_id['step'], {
+        'request': request,
+    } | get_step_page_outer_dictionary(automation_definition, batch_definition))
+
+
+def get_step_page_dictionary(automation_definition, batch_definition):
+    pass
+
+
+def _get_step_page_outer_dictionary(batch, step_name, request_params):
     automation_definition = batch.automation_definition
     batch_definition = batch.batch_definition
     design_name = automation_definition.get_design_name(step_name)
+    # TODO: get root_uri from globals
+    # TODO: pass params
     root_uri = ''
     # root_uri = request.registry.settings['root_uri']
     mutation_reference_uri = _get_automation_batch_step_uri(
         automation_definition, batch_definition, step_name)
     return {
-        'request': request,
         'title_text': batch_definition.name,
         'automation_definition': automation_definition,
         'batch_definition': batch_definition,
@@ -182,12 +182,12 @@ def _get_step_page_inner_dictionary(
         step_name, with_all=True)
     m = {'css_uris': css_uris.copy(), 'js_uris': [], 'js_texts': []}
     i = count()
-    render_html = partial(
-        _render_html, variable_definitions=variable_definitions,
-        batch=batch, m=m, i=i, root_uri=root_uri, design_name=design_name,
-        for_print=for_print)
+    # TODO: pass params here
+    render_element_html = partial(
+        render_html, variable_definitions, batch, m, i, root_uri,
+        design_name, for_print)
     main_text = get_html_from_markdown(VARIABLE_ID_TEMPLATE_PATTERN.sub(
-        render_html, template_text))
+        render_element_html, template_text))
     return m | {
         'css_text': _get_css_text(design_name, for_embed, for_print),
         'main_text': main_text,
@@ -196,9 +196,9 @@ def _get_step_page_inner_dictionary(
     }
 
 
-def _render_html(
-        match, variable_definitions, batch, m, i, root_uri, design_name,
-        for_print):
+def render_html(
+        match, variable_definitions, batch, m, i, root_uri, request_params,
+        design_name, for_print):
     matching_inner_text = match.group(1)
     if matching_inner_text == 'root_uri':
         return root_uri
@@ -214,14 +214,15 @@ def _render_html(
         return matching_outer_text
     view = VariableView.get_from(variable_definition)
     element = Element(
-        f'v{next(i)}', root_uri, design_name, for_print, terms[1:])
+        f'v{next(i)}', root_uri, request_params, design_name, for_print,
+        terms[1:])
     page_dictionary = view.render(batch, element)
     for k, v in m.items():
         extend_uniquely(v, [_.strip() for _ in page_dictionary[k]])
     return page_dictionary['main_text']
 
 
-def _get_css_text(design_name, for_embed, for_print):
+def get_css_text(design_name, for_embed, for_print):
     css_texts = []
     if not for_embed and not for_print:
         css_texts.append(HEADER_CSS)
@@ -232,7 +233,7 @@ def _get_css_text(design_name, for_embed, for_print):
     return '\n'.join(css_texts)
 
 
-def _get_variable_definition(automation_definition, step_name, variable_id):
+def get_variable_definition(automation_definition, step_name, variable_id):
     variable_definitions = automation_definition.get_variable_definitions(
         step_name)
     try:
@@ -244,7 +245,7 @@ def _get_variable_definition(automation_definition, step_name, variable_id):
     return variable_definition
 
 
-def _get_automation_batch_step_uri(
+def get_automation_batch_step_uri(
         automation_definition, batch_definition, step_name):
     automation_uri = automation_definition.uri
     batch_uri = batch_definition.uri

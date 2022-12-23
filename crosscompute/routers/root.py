@@ -43,7 +43,7 @@ async def see_icon():
     STYLE_ROUTE,
     tags=['root'])
 async def see_style(request: Request):
-    return get_style_response(request.url.path, site['configuration'])
+    return get_style_response(site['configuration'], request.url.path)
 
 
 @router.get(
@@ -54,10 +54,10 @@ async def see_automation_style(
     automation_definition: AutomationDefinition = Depends(
         get_automation_definition),
 ):
-    return get_style_response(request.url.path, automation_definition)
+    return get_style_response(automation_definition, request.url.path)
 
 
-def get_style_response(uri_path, automation_definition):
+def get_style_response(automation_definition, uri_path):
     style_definitions = automation_definition.style_definitions
     try:
         style_definition = find_item(

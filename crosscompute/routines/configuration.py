@@ -543,7 +543,6 @@ def validate_batches(configuration):
         _.uri for _ in batch_definitions], 'duplicate batch uri {x}')
     return {
         'batch_definitions': batch_definitions,
-        'run_definitions': [],
     }
 
 

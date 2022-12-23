@@ -15,14 +15,9 @@ from .variable import (
 
 class DiskBatch(Batch):
 
-    def __init__(
-            self,
-            automation_definition,
-            batch_definition,
-            request_params=None):
+    def __init__(self, automation_definition, batch_definition):
         self.automation_definition = automation_definition
         self.batch_definition = batch_definition
-        self.request_params = request_params or {}
         self.folder = automation_definition.folder / batch_definition.folder
 
     def get_variable_configuration(self, variable_definition):
@@ -50,6 +45,8 @@ class DiskBatch(Batch):
             L.error('must contain a dictionary %s', format_path(path))
         return variable_configuration
 
+    # TODO: Use request params here
+    # def get_data(self, request_params, variable_definition):
     def get_data(self, variable_definition):
         variable_data = self.get_data_from_request(variable_definition)
         if variable_data:
@@ -67,13 +64,8 @@ class DiskBatch(Batch):
             return {'error': e}
         return variable_data
 
-    def get_data_from_request(self, variable_definition):
-        variable_id = variable_definition.id
-        params = self.request_params
-        if variable_id in params:
-            return {'value': params[variable_id]}
-        return {}
-
+    # TODO: Use root_uri from template globals
+    # TODO: Remove root_uri from element
     def get_data_uri(self, variable_definition, element):
         root_uri = element.root_uri
         automation_uri = self.automation_definition.uri

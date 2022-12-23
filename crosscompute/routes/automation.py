@@ -92,8 +92,7 @@ class AutomationRoutes():
             mutation_reference_uri = automation_uri
         else:
             batch_definition = automation_definition.batch_definitions[0]
-            batch = DiskBatch(
-                automation_definition, batch_definition, request.params)
+            batch = DiskBatch(automation_definition, batch_definition)
             d = _get_step_page_dictionary(request, batch, design_name)
         return d | {
             'batches': guard.get_batch_definitions(automation_definition),
@@ -108,8 +107,7 @@ class AutomationRoutes():
             raise HTTPForbidden
         batch_definition = self.get_batch_definition_from(
             request, automation_definition)
-        batch = DiskBatch(
-            automation_definition, batch_definition, request.params)
+        batch = DiskBatch(automation_definition, batch_definition)
         if isinstance(is_match, FunctionType) and not is_match(batch):
             raise HTTPForbidden
         # step_name = _get_step_name(request)
