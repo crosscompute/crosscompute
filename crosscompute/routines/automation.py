@@ -192,6 +192,7 @@ class AbstractEngine():
         return _process_batch(automation_definition, batch_definition, [
             'output', 'log', 'debug',
         ], {'debug': {
+            'source_time': reference_time,
             'execution_time_in_seconds': time() - reference_time,
             'return_code': return_code,
         }})
