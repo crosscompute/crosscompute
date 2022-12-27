@@ -1,5 +1,5 @@
-from itertools import count
 from functools import partial
+from itertools import count
 from logging import getLogger
 from pathlib import Path
 from time import time
@@ -48,14 +48,13 @@ async def see_automation(
     automation_definition: AutomationDefinition = Depends(
         get_automation_definition),
 ):
-    automation_uri = automation_definition.uri
     return TemplateResponse(template_path_by_id['automation'], {
         'request': request,
         'title_text': automation_definition.name,
         'description': automation_definition.description,
         'host_uri': request.url,
         'name': automation_definition.name,
-        'uri': automation_uri,
+        'uri': automation_definition.uri,
         'batches': automation_definition.batch_definitions,
     })
 
@@ -110,8 +109,19 @@ async def see_automation_batch_step(
 ):
     return TemplateResponse(template_path_by_id['step'], {
         'request': request,
-    } | _get_step_page_outer_dictionary(
-        batch, step_name, request.query_params))
+        'title_text': batch_definition.name,
+        'automation_definition': automation_definition,
+        'batch_definition': batch_definition,
+        'step_name': step_name,
+        'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri),
+        'mutation_timestamp': time(),
+        'css_uris': m['css_uris'],
+        'css_text': get_css_text(design_name, for_embed, for_print),
+        'main_text': main_text,
+        'js_uris': m['js_uris'],
+        'js_text': '\n'.join(m['js_texts']),
+        'for_embed': for_embed,
+    })
 
 
 @router.get(
@@ -127,7 +137,7 @@ async def see_automation_batch_step_variable(
         get_step_name),
 ):
     batch = DiskBatch(automation_definition, batch_definition)
-    variable_definition = _get_variable_definition(
+    variable_definition = get_variable_definition(
         automation_definition, step_name, variable_id)
     data = batch.get_data(variable_definition)
     if 'error' in data:
@@ -141,18 +151,10 @@ async def see_automation_batch_step_variable(
 
 def get_step_response(automation_definition, batch_definition, request):
     root_uri = template_environment.globals['root_uri']
-    return TemplateResponse(template_path_by_id['step'], {
-        'request': request,
-    } | get_step_page_outer_dictionary(automation_definition, batch_definition))
-
-
-def get_step_page_dictionary(automation_definition, batch_definition):
-    pass
+    get_step_page_outer_dictionary(automation_definition, batch_definition))
 
 
 def _get_step_page_outer_dictionary(batch, step_name, request_params):
-    automation_definition = batch.automation_definition
-    batch_definition = batch.batch_definition
     design_name = automation_definition.get_design_name(step_name)
     # TODO: get root_uri from globals
     # TODO: pass params
@@ -160,21 +162,9 @@ def _get_step_page_outer_dictionary(batch, step_name, request_params):
     # root_uri = request.registry.settings['root_uri']
     mutation_reference_uri = _get_automation_batch_step_uri(
         automation_definition, batch_definition, step_name)
-    return {
-        'title_text': batch_definition.name,
-        'automation_definition': automation_definition,
-        'batch_definition': batch_definition,
-        'step_name': step_name,
-        'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri),
-        'mutation_timestamp': time(),
-    } | _get_step_page_inner_dictionary(
-        batch, root_uri, step_name, design_name, for_embed='_embed' in params,
-        for_print='_print' in params)
+    for_embed='_embed' in params
+    for_print='_print' in params
 
-
-def _get_step_page_inner_dictionary(
-        batch, root_uri, step_name, design_name, for_embed, for_print):
-    automation_definition = batch.automation_definition
     css_uris = automation_definition.css_uris
     template_text = automation_definition.get_template_text(
         step_name)
@@ -189,10 +179,6 @@ def _get_step_page_inner_dictionary(
     main_text = get_html_from_markdown(VARIABLE_ID_TEMPLATE_PATTERN.sub(
         render_element_html, template_text))
     return m | {
-        'css_text': _get_css_text(design_name, for_embed, for_print),
-        'main_text': main_text,
-        'js_text': '\n'.join(m['js_texts']),
-        'for_embed': for_embed,
     }
 
 
