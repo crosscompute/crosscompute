@@ -69,7 +69,8 @@ def print_with(automation, args):
     for automation_definition in get_selected_automation_definitions(
             automation.definitions):
         # TODO: Consider using ds returned from run_automation
-        run_automation(automation_definition, with_rebuild=True)
+        run_automation(
+            automation_definition, user_environment={}, with_rebuild=True)
         for print_definition in automation_definition.print_definitions:
             batch_dictionaries = get_batch_dictionaries(
                 automation_definition, print_definition, timestamp)
