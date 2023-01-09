@@ -50,7 +50,7 @@ class VariableView():
         self.variable_definition = variable_definition
         self.variable_id = variable_definition.id
         self.variable_path = variable_definition.path
-        self.mode_name = variable_definition.mode_name
+        # self.mode_name = variable_definition.mode_name
 
     @classmethod
     def get_from(Class, variable_definition):
@@ -69,6 +69,9 @@ class VariableView():
         pass
 
     def render(self, b: Batch, x: Element):
+        # mode override = x.step_name
+        # url mode = x.step_name
+        # variable mode = x.step_name
         if self.mode_name == 'input':
             render = self.render_input
         else:
