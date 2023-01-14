@@ -4,7 +4,7 @@ async function refreshText_$element_id() {
   } catch {
   }
 }
-registerElement('$variable_id', function () {
+registerElement('$variable_id', function() {
   refreshText_$element_id();
 });
 refreshText_$element_id();
