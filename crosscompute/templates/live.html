@@ -4,6 +4,9 @@
 {{ super() }}
 let mutationTimestamp = {{ mutation_timestamp }};
 let pingInterval = {{ minimum_ping_interval_in_milliseconds }};
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
 async function refreshPage() {
   response = await fetch(location.href, { method: 'head' });
   if (response.ok) {

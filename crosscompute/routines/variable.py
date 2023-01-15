@@ -405,8 +405,15 @@ class RadioView(VariableView):
         if x.design_name not in ['none']:
             main_text = add_label_html(main_text, c, variable_id, element_id)
         js_texts = [
-            RADIO_JS_INPUT.substitute({'view_name': view_name}),
-        ]
+            RADIO_JS_INPUT.substitute({'view_name': view_name})]
+        if variable_definition.step_name != 'input':
+            data_uri = b.get_data_uri(variable_definition, x)
+            js_texts.extend([
+                RADIO_JS_HEADER,
+                RADIO_JS_OUTPUT.substitute({
+                    'variable_id': variable_id,
+                    'element_id': element_id,
+                    'data_uri': data_uri})])
         return {
             'css_uris': [],
             'js_uris': [],
@@ -843,7 +850,9 @@ IMAGE_JS_OUTPUT = StringTemplate(load_view_text('imageOutput.js'))
 
 
 RADIO_HTML_INPUT = JinjaTemplate(load_view_text('radioInput.html'))
+RADIO_JS_HEADER = load_view_text('radioHeader.js')
 RADIO_JS_INPUT = StringTemplate(load_view_text('radioInput.js'))
+RADIO_JS_OUTPUT = StringTemplate(load_view_text('radioOutput.js'))
 
 
 CHECKBOX_HTML_INPUT = JinjaTemplate(load_view_text('checkboxInput.html'))
