@@ -101,17 +101,8 @@ class AutomationDefinition(Definition):
             validate_prints,
         ]
 
-    def get_variable_definitions(self, step_name, with_all=False):
-        variable_definitions = self.variable_definitions_by_step_name.get(
-            step_name, [])
-        if with_all:
-            variable_definitions = variable_definitions.copy()
-            for STEP_NAME in STEP_NAMES:
-                if step_name == STEP_NAME:
-                    continue
-                variable_definitions.extend(self.get_variable_definitions(
-                    STEP_NAME))
-        return variable_definitions
+    def get_variable_definitions(self, step_name):
+        return self.variable_definitions_by_step_name.get(step_name, [])
 
     def get_template_path(self, template_id):
         template_path_by_id = self.template_path_by_id
@@ -542,12 +533,9 @@ def validate_batches(configuration):
 
 def validate_environment(configuration):
     d = get_dictionary(configuration, 'environment')
-    engine_name = get_engine_name(d)
-    parent_image_name = d.get('image', 'python').strip()
-    package_definitions = [PackageDefinition(_) for _ in get_dictionaries(
-        d, 'packages')]
     port_definitions = get_port_definitions(
-        d, configuration.get_variable_definitions('log', with_all=True))
+        d, configuration.get_variable_definitions('log')
+        + configuration.get_variable_definitions('debug'))
     environment_variable_ids = get_environment_variable_ids(get_dictionaries(
         d, 'variables'))
     batch_concurrency_name = d.get('batch', 'process').lower()
@@ -557,9 +545,10 @@ def validate_environment(configuration):
     interval_text = d.get('interval', '').strip()
     interval_timedelta = get_interval_timedelta(interval_text)
     return {
-        'engine_name': engine_name,
-        'parent_image_name': parent_image_name,
-        'package_definitions': package_definitions,
+        'engine_name': get_engine_name(d),
+        'parent_image_name': d.get('image', 'python').strip(),
+        'package_definitions': [PackageDefinition(_) for _ in get_dictionaries(
+            d, 'packages')],
         'port_definitions': port_definitions,
         'environment_variable_ids': environment_variable_ids,
         'batch_concurrency_name': batch_concurrency_name,

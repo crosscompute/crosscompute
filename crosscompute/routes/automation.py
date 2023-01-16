@@ -400,7 +400,7 @@ def __get_step_page_dictionary(
     template_text = automation_definition.get_template_text(
         step_name)
     variable_definitions = automation_definition.get_variable_definitions(
-        step_name, with_all=True)
+        step_name)
     m = {'css_uris': css_uris.copy(), 'js_uris': [], 'js_texts': []}
     i = count()
     render_html = partial(
