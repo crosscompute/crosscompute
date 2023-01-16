@@ -405,8 +405,8 @@ def __get_step_page_dictionary(
     i = count()
     render_html = partial(
         _render_html, variable_definitions=variable_definitions,
-        batch=batch, m=m, i=i, root_uri=root_uri, design_name=design_name,
-        for_print=for_print)
+        batch=batch, m=m, i=i, root_uri=root_uri, step_name=step_name,
+        design_name=design_name, for_print=for_print)
     main_text = get_html_from_markdown(VARIABLE_ID_TEMPLATE_PATTERN.sub(
         render_html, template_text))
     return m | {
@@ -429,8 +429,8 @@ def __get_css_text(design_name, for_embed, for_print):
 
 
 def _render_html(
-        match, variable_definitions, batch, m, i, root_uri, design_name,
-        for_print):
+        match, variable_definitions, batch, m, i, root_uri, step_name,
+        design_name, for_print):
     matching_inner_text = match.group(1)
     if matching_inner_text == 'ROOT_URI':
         return root_uri
@@ -445,8 +445,9 @@ def _render_html(
         matching_outer_text = match.group(0)
         return matching_outer_text
     view = VariableView.get_from(variable_definition)
+    mode_name = variable_definition.get('mode', step_name)
     element = Element(
-        f'v{next(i)}', root_uri, design_name, for_print, terms[1:])
+        f'v{next(i)}', root_uri, mode_name, design_name, for_print, terms[1:])
     page_dictionary = view.render(batch, element)
     for k, v in m.items():
         extend_uniquely(v, [_.strip() for _ in page_dictionary[k]])

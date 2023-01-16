@@ -36,6 +36,7 @@ class Element():
 
     id: str
     root_uri: str
+    mode_name: str
     design_name: str
     for_print: bool
     function_names: list[str]
@@ -50,7 +51,6 @@ class VariableView():
         self.variable_definition = variable_definition
         self.variable_id = variable_definition.id
         self.variable_path = variable_definition.path
-        self.mode_name = variable_definition.mode_name
 
     @classmethod
     def get_from(Class, variable_definition):
@@ -69,7 +69,7 @@ class VariableView():
         pass
 
     def render(self, b: Batch, x: Element):
-        if self.mode_name == 'input':
+        if x.mode_name == 'input':
             render = self.render_input
         else:
             render = self.render_output
@@ -115,7 +115,7 @@ class LinkView(VariableView):
         link_text = c.get('link-text', file_name)
         main_text = (
             f'<a id="{element_id}" href="{data_uri}" '
-            f'class="_{self.mode_name} _{self.view_name} {variable_id}" '
+            f'class="_{x.mode_name} _{self.view_name} {variable_id}" '
             f'download="{escape_quotes_html(file_name)}">'
             f'{link_text}</a>')
         if x.design_name not in ['none']:
@@ -164,7 +164,7 @@ class StringView(VariableView):
         c = b.get_variable_configuration(variable_definition)
         main_text = STRING_HTML_INPUT.render({
             'element_id': element_id,
-            'mode_name': self.mode_name,
+            'mode_name': x.mode_name,
             'view_name': view_name,
             'variable_id': variable_id,
             'value': escape_quotes_html(value),
@@ -197,7 +197,7 @@ class StringView(VariableView):
         c = b.get_variable_configuration(variable_definition)
         main_text = (
             f'<span id="{x.id}" '
-            f'class="_{self.mode_name} _{self.view_name} {self.variable_id}">'
+            f'class="_{x.mode_name} _{self.view_name} {self.variable_id}">'
             f'{value}</span>')
         if x.design_name not in ['none']:
             main_text = add_label_html(main_text, c, variable_id, element_id)
@@ -258,7 +258,7 @@ class TextView(VariableView):
         c = b.get_variable_configuration(variable_definition)
         main_text = TEXT_HTML_INPUT.substitute({
             'element_id': element_id,
-            'mode_name': self.mode_name,
+            'mode_name': x.mode_name,
             'view_name': view_name,
             'variable_id': variable_id,
             'attribute_string': '' if value else ' disabled',
@@ -291,7 +291,7 @@ class TextView(VariableView):
         c = b.get_variable_configuration(variable_definition)
         main_text = (
             f'<span id="{x.id}" '
-            f'class="_{self.mode_name} _{self.view_name} {self.variable_id}">'
+            f'class="_{x.mode_name} _{self.view_name} {self.variable_id}">'
             '</span>')
         if x.design_name not in ['none']:
             main_text = add_label_html(main_text, c, variable_id, element_id)
@@ -326,7 +326,7 @@ class MarkdownView(TextView):
         c = b.get_variable_configuration(variable_definition)
         main_text = (
             f'<span id="{x.id}" '
-            f'class="_{self.mode_name} _{self.view_name} {self.variable_id}">'
+            f'class="_{x.mode_name} _{self.view_name} {self.variable_id}">'
             '</span>')
         if x.design_name not in ['none']:
             main_text = add_label_html(main_text, c, variable_id, element_id)
@@ -359,7 +359,7 @@ class ImageView(VariableView):
         c = b.get_variable_configuration(variable_definition)
         main_text = (
             f'<img id="{x.id}" '
-            f'class="_{self.mode_name} _{self.view_name} {variable_id}" '
+            f'class="_{x.mode_name} _{self.view_name} {variable_id}" '
             f'src="{data_uri}" alt="">')
         # TODO: Show spinner onerror
         if x.design_name not in ['none']:
@@ -394,7 +394,7 @@ class RadioView(VariableView):
         value = data.get('value', '')
         main_text = RADIO_HTML_INPUT.render({
             'element_id': element_id,
-            'mode_name': self.mode_name,
+            'mode_name': x.mode_name,
             'view_name': view_name,
             'variable_id': variable_id,
             'options': get_configuration_options(c, [value]),
@@ -434,7 +434,7 @@ class CheckboxView(VariableView):
         values = data.get('value', '').splitlines()
         main_text = CHECKBOX_HTML_INPUT.render({
             'element_id': element_id,
-            'mode_name': self.mode_name,
+            'mode_name': x.mode_name,
             'view_name': view_name,
             'variable_id': variable_id,
             'options': get_configuration_options(c, values),
@@ -471,7 +471,7 @@ class TableView(VariableView):
         c = b.get_variable_configuration(variable_definition)
         main_text = (
             f'<table id="{element_id}" '
-            f'class="_{self.mode_name} _{self.view_name} {variable_id}">'
+            f'class="_{x.mode_name} _{self.view_name} {variable_id}">'
             '<thead/><tbody/></table>')
         if x.design_name not in ['none']:
             main_text = add_label_html(main_text, c, variable_id, element_id)
@@ -508,7 +508,7 @@ class FrameView(VariableView):
             value = ''
         main_text = (
             f'<iframe id="{element_id}" '
-            f'class="_{self.mode_name} _{self.view_name} {variable_id}" '
+            f'class="_{x.mode_name} _{self.view_name} {variable_id}" '
             f'src="{escape_quotes_html(value)}" frameborder="0">'
             '</iframe>')
         if x.design_name not in ['none']:

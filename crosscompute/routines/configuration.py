@@ -699,17 +699,9 @@ def validate_variable_identifiers(variable_dictionary):
         raise CrossComputeConfigurationError(
             f'path {variable_path} for variable {variable_id} must be within '
             'the folder')
-    if 'mode' in variable_dictionary:
-        mode_name = variable_dictionary['mode']
-        if mode_name not in ['input', 'output']:
-            raise CrossComputeConfigurationError(
-                f'{mode_name} is not a valid mode; specify input or output')
-    else:
-        mode_name = variable_dictionary.step_name
     return {
         'id': variable_id,
         'view_name': view_name,
-        'mode_name': mode_name,
         'path': Path(variable_path),
     }
 
