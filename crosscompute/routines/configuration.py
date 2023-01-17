@@ -101,8 +101,17 @@ class AutomationDefinition(Definition):
             validate_prints,
         ]
 
-    def get_variable_definitions(self, step_name):
-        return self.variable_definitions_by_step_name.get(step_name, [])
+    def get_variable_definitions(self, step_name, with_all=False):
+        variable_definitions = self.variable_definitions_by_step_name.get(
+            step_name, [])
+        if with_all:
+            variable_definitions = variable_definitions.copy()
+            for STEP_NAME in STEP_NAMES:
+                if step_name == STEP_NAME:
+                    continue
+                variable_definitions.extend(self.get_variable_definitions(
+                    STEP_NAME))
+        return variable_definitions
 
     def get_template_path(self, template_id):
         template_path_by_id = self.template_path_by_id
