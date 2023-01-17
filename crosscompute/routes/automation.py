@@ -150,3 +150,152 @@ class AutomationRoutes():
         if 'error' in variable_data:
             raise HTTPNotFound
         return variable_data, variable_definition, batch
+
+
+def _get_step_name(request):
+    matchdict = request.matchdict
+    step_code = matchdict['step_code']
+    try:
+        step_name = STEP_NAME_BY_CODE[step_code]
+    except KeyError:
+        raise HTTPNotFound
+    return step_name
+
+
+def _get_variable_definition(automation_definition, step_name, variable_id):
+    variable_definitions = automation_definition.get_variable_definitions(
+        step_name)
+    try:
+        variable_definition = find_item(
+            variable_definitions, 'id', variable_id,
+            normalize=str.casefold)
+    except StopIteration:
+        raise HTTPNotFound
+    return variable_definition
+
+
+def _get_automation_batch_step_uri(
+        automation_definition, batch_definition, step_name):
+    automation_uri = automation_definition.uri
+    batch_uri = batch_definition.uri
+    step_code = STEP_CODE_BY_NAME[step_name]
+    step_uri = STEP_ROUTE.format(step_code=step_code)
+    return automation_uri + batch_uri + step_uri
+
+
+def _get_step_page_dictionary(request, batch, step_name):
+    params = request.params
+    automation_definition = batch.automation_definition
+    batch_definition = batch.batch_definition
+    design_name = automation_definition.get_design_name(step_name)
+    root_uri = request.registry.settings['root_uri']
+    mutation_reference_uri = _get_automation_batch_step_uri(
+        automation_definition, batch_definition, step_name)
+    return {
+        'title_text': batch_definition.name,
+        'automation_definition': automation_definition,
+        'batch_definition': batch_definition,
+        'step_name': step_name,
+        'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri),
+        'mutation_timestamp': time(),
+    } | __get_step_page_dictionary(
+        batch, root_uri, step_name, design_name, for_embed='_embed' in params,
+        for_print='_print' in params)
+
+
+def __get_step_page_dictionary(
+        batch, root_uri, step_name, design_name, for_embed, for_print):
+    automation_definition = batch.automation_definition
+    css_uris = automation_definition.css_uris
+    template_text = automation_definition.get_template_text(
+        step_name)
+    variable_definitions = automation_definition.get_variable_definitions(
+        step_name, with_all=True)
+    m = {'css_uris': css_uris.copy(), 'js_uris': [], 'js_texts': []}
+    i = count()
+    render_html = partial(
+        _render_html, variable_definitions=variable_definitions,
+        batch=batch, m=m, i=i, root_uri=root_uri, step_name=step_name,
+        design_name=design_name, for_print=for_print)
+    main_text = get_html_from_markdown(VARIABLE_ID_TEMPLATE_PATTERN.sub(
+        render_html, template_text))
+    return m | {
+        'css_text': __get_css_text(design_name, for_embed, for_print),
+        'main_text': main_text,
+        'js_text': '\n'.join(m['js_texts']),
+        'for_embed': for_embed,
+    }
+
+
+def __get_css_text(design_name, for_embed, for_print):
+    css_texts = []
+    if not for_embed and not for_print:
+        css_texts.append(HEADER_CSS)
+    elif for_embed:
+        css_texts.append(EMBED_CSS)
+    if design_name == 'flex-vertical':
+        css_texts.append(FLEX_VERTICAL_CSS)
+    return '\n'.join(css_texts)
+
+
+def _render_html(
+        match, variable_definitions, batch, m, i, root_uri, step_name,
+        design_name, for_print):
+    matching_inner_text = match.group(1)
+    if matching_inner_text == 'ROOT_URI':
+        return root_uri
+    terms = matching_inner_text.split('|')
+    variable_id = terms[0].strip()
+    try:
+        variable_definition = find_item(
+            variable_definitions, 'id', variable_id)
+    except StopIteration:
+        L.warning(
+            '%s variable in template but not in configuration', variable_id)
+        matching_outer_text = match.group(0)
+        return matching_outer_text
+    view = VariableView.get_from(variable_definition)
+    mode_name = variable_definition.get('mode', step_name)
+    element = Element(
+        f'v{next(i)}', root_uri, mode_name, design_name, for_print, terms[1:])
+    page_dictionary = view.render(batch, element)
+    for k, v in m.items():
+        extend_uniquely(v, [_.strip() for _ in page_dictionary[k]])
+    return page_dictionary['main_text']
+
+
+EMBED_CSS = '''\
+body {
+  margin: 0;
+}
+'''
+HEADER_CSS = '''\
+header {
+  margin-bottom: 16px;
+}
+@media print {
+  header {
+    display: none;
+  }
+}'''
+FLEX_VERTICAL_CSS = '''\
+main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+main > * {
+  margin: 0;
+}
+._view {
+  display: flex;
+  flex-direction: column;
+}
+._view img {
+  align-self: start;
+  max-width: 100%;
+}
+#_run {
+  padding: 8px 0;
+}'''
+L = getLogger(__name__)

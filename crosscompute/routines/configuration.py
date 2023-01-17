@@ -548,12 +548,9 @@ def validate_batches(configuration):
 
 def validate_environment(configuration):
     d = get_dictionary(configuration, 'environment')
-    engine_name = get_engine_name(d)
-    parent_image_name = d.get('image', 'python').strip()
-    package_definitions = [PackageDefinition(_) for _ in get_dictionaries(
-        d, 'packages')]
     port_definitions = get_port_definitions(
-        d, configuration.get_variable_definitions('log', with_all=True))
+        d, configuration.get_variable_definitions('log')
+        + configuration.get_variable_definitions('debug'))
     environment_variable_ids = get_environment_variable_ids(get_dictionaries(
         d, 'variables'))
     batch_concurrency_name = d.get('batch', 'process').lower()
@@ -563,9 +560,10 @@ def validate_environment(configuration):
     interval_text = d.get('interval', '').strip()
     interval_timedelta = get_interval_timedelta(interval_text)
     return {
-        'engine_name': engine_name,
-        'parent_image_name': parent_image_name,
-        'package_definitions': package_definitions,
+        'engine_name': get_engine_name(d),
+        'parent_image_name': d.get('image', 'python').strip(),
+        'package_definitions': [PackageDefinition(_) for _ in get_dictionaries(
+            d, 'packages')],
         'port_definitions': port_definitions,
         'environment_variable_ids': environment_variable_ids,
         'batch_concurrency_name': batch_concurrency_name,
@@ -716,17 +714,9 @@ def validate_variable_identifiers(variable_dictionary):
         raise CrossComputeConfigurationError(
             f'path {variable_path} for variable {variable_id} must be within '
             'the folder')
-    if 'mode' in variable_dictionary:
-        mode_name = variable_dictionary['mode']
-        if mode_name not in ['input', 'output']:
-            raise CrossComputeConfigurationError(
-                f'{mode_name} is not a valid mode; specify input or output')
-    else:
-        mode_name = variable_dictionary.step_name
     return {
         'id': variable_id,
         'view_name': view_name,
-        'mode_name': mode_name,
         'path': Path(variable_path),
     }
 
