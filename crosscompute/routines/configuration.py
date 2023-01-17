@@ -33,7 +33,6 @@ from ..constants import (
     INTERVAL_UNIT_NAMES,
     PACKAGE_MANAGER_NAMES,
     PRINTER_BY_NAME,
-    RUN_ROUTE,
     STEP_NAMES,
     STYLE_ROUTE,
     TEMPLATES_FOLDER,
@@ -757,11 +756,9 @@ def validate_batch_identifiers(batch_dictionary):
             if k in batch_dictionary:
                 batch_dictionary[k] = v
     if data_by_id is not None:
-        if is_run:
-            uri = RUN_ROUTE.format(run_slug=slug)
-        else:
+        if not is_run:
             slug = format_slug(slug)
-            uri = BATCH_ROUTE.format(batch_slug=slug)
+        uri = BATCH_ROUTE.format(batch_slug=slug)
         d.update({'slug': slug, 'uri': uri})
     return d
 

@@ -25,6 +25,7 @@ from ..constants import (
     Error,
     AUTOMATION_PATH,
     AUTOMATION_ROUTE,
+    BATCH_ROUTE,
     DISK_DEBOUNCE_IN_MILLISECONDS,
     DISK_POLL_IN_MILLISECONDS,
     HOST,
@@ -32,7 +33,6 @@ from ..constants import (
     MINIMUM_PORT,
     PORT,
     PROXY_URI,
-    RUN_ROUTE,
     STEP_CODE_BY_NAME,
     STEP_NAMES,
     TOKEN_LENGTH)
@@ -451,14 +451,14 @@ def _proxy_podman_ports(
             return f'http://localhost:{host_port}'
     automation_uri = AUTOMATION_ROUTE.format(
         automation_slug=automation_definition.slug)
-    run_uri = RUN_ROUTE.format(run_slug=batch_folder.name)
+    batch_uri = BATCH_ROUTE.format(batch_slug=batch_folder.name)
     absolute_batch_folder = automation_definition.folder / batch_folder
     for port_id, host_port, step_name in port_packs:
         port_path = absolute_batch_folder / 'debug' / 'ports.dictionary'
         step_code = STEP_CODE_BY_NAME[step_name]
         variable_id = port_id
         relative_uri = (
-            f'/sessions{automation_uri}{run_uri}/{step_code}'
+            f'/sessions{automation_uri}{batch_uri}/{step_code}'
             f'/{variable_id}')
         session_uri = get_session_uri(host_port, relative_uri)
         update_variable_data(port_path, {port_id: session_uri})
