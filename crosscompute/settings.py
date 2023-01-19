@@ -35,7 +35,7 @@ template_environment = RelativeTemplateEnvironment(
     loader=PathTemplateLoader(),
     autoescape=True,
     trim_blocks=True)
-template_environment.globals = {
+template_globals = template_environment.globals = {
     'with_refresh': True,
     'base_template_path': template_path_by_id['base'],
     'live_template_path': template_path_by_id['live'],

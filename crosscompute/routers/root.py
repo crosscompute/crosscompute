@@ -11,7 +11,7 @@ from ..macros.iterable import (
     find_item)
 from ..routines.configuration import (
     AutomationDefinition)
-from ..variables import (
+from ..settings import (
     TemplateResponse,
     site,
     template_path_by_id)

@@ -17,7 +17,6 @@ from ..constants import (
     HEADER_CSS,
     ID_LENGTH,
     MUTATION_ROUTE,
-    STEP_CODE_BY_NAME,
     STEP_ROUTE,
     VARIABLE_ID_TEMPLATE_PATTERN,
     VARIABLE_ROUTE)
@@ -26,17 +25,18 @@ from ..dependencies import (
     get_batch_definition,
     get_data_by_id,
     get_step_name)
-from ..macros.iterable import extend_uniquely, find_item
+from ..macros.iterable import find_item, get_unique_order
 from ..routines.batch import DiskBatch
 from ..routines.configuration import (
     AutomationDefinition,
     BatchDefinition)
-from ..routines.variable import (
-    Element,
-    VariableView)
-from ..variables import (
+from ..routines.step import (
+    get_automation_batch_step_uri,
+    render_variable_html)
+from ..settings import (
     TemplateResponse,
     site,
+    template_globals,
     template_path_by_id)
 
 
@@ -110,6 +110,25 @@ async def see_automation_batch_step(
     step_name: str = Depends(
         get_step_name),
 ):
+    mutation_reference_uri = get_automation_batch_step_uri(
+        automation_definition, batch_definition, step_name)
+    variable_definitions = automation_definition.get_variable_definitions(
+        step_name, with_all=True)
+    css_uris = automation_definition.css_uris
+    m = {'css_uris': css_uris.copy(), 'js_uris': [], 'js_texts': []}
+    i = count()
+    root_uri = template_globals['root_uri']
+    design_name = automation_definition.get_design_name(step_name)
+    request_params = request.query_params
+    for_embed = '_embed' in request_params
+    for_print = '_print' in request_params
+    render_element_html = partial(
+        render_variable_html, variable_definitions, batch, m, i, root_uri,
+        request_params, step_name, design_name, for_print)
+    template_text = automation_definition.get_template_text(
+        step_name)
+    main_text = get_html_from_markdown(VARIABLE_ID_TEMPLATE_PATTERN.sub(
+        render_element_html, template_text))
     return TemplateResponse(template_path_by_id['step'], {
         'request': request,
         'title_text': batch_definition.name,
@@ -118,11 +137,11 @@ async def see_automation_batch_step(
         'step_name': step_name,
         'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri),
         'mutation_timestamp': time(),
-        'css_uris': m['css_uris'],
+        'css_uris': get_unique_order(m['css_uris']),
         'css_text': get_css_text(design_name, for_embed, for_print),
         'main_text': main_text,
-        'js_uris': m['js_uris'],
-        'js_text': '\n'.join(m['js_texts']),
+        'js_uris': get_unique_order(m['js_uris']),
+        'js_text': '\n'.join(get_unique_order(m['js_texts'])),
         'for_embed': for_embed,
     })
 
@@ -152,39 +171,6 @@ async def see_automation_batch_step_variable(
     return response
 
 
-def get_step_response(automation_definition, batch_definition, request):
-    root_uri = template_environment.globals['root_uri']
-    get_step_page_outer_dictionary(automation_definition, batch_definition)
-
-
-def get_step_page_outer_dictionary(batch, step_name, request_params):
-    design_name = automation_definition.get_design_name(step_name)
-    # TODO: get root_uri from globals
-    # TODO: pass params
-    root_uri = ''
-    # root_uri = request.registry.settings['root_uri']
-    mutation_reference_uri = _get_automation_batch_step_uri(
-        automation_definition, batch_definition, step_name)
-    for_embed='_embed' in params
-    for_print='_print' in params
-
-    css_uris = automation_definition.css_uris
-    template_text = automation_definition.get_template_text(
-        step_name)
-    variable_definitions = automation_definition.get_variable_definitions(
-        step_name, with_all=True)
-    m = {'css_uris': css_uris.copy(), 'js_uris': [], 'js_texts': []}
-    i = count()
-    # TODO: pass params here
-    render_element_html = partial(
-        render_html, variable_definitions, batch, m, i, root_uri,
-        design_name, for_print)
-    main_text = get_html_from_markdown(VARIABLE_ID_TEMPLATE_PATTERN.sub(
-        render_element_html, template_text))
-    return m | {
-    }
-
-
 def get_css_text(design_name, for_embed, for_print):
     css_texts = []
     if not for_embed and not for_print:
@@ -206,15 +192,6 @@ def get_variable_definition(automation_definition, step_name, variable_id):
     except StopIteration:
         raise HTTPException(status_code=404)
     return variable_definition
-
-
-def get_automation_batch_step_uri(
-        automation_definition, batch_definition, step_name):
-    automation_uri = automation_definition.uri
-    batch_uri = batch_definition.uri
-    step_code = STEP_CODE_BY_NAME[step_name]
-    step_uri = STEP_ROUTE.format(step_code=step_code)
-    return automation_uri + batch_uri + step_uri
 
 
 L = getLogger(__name__)

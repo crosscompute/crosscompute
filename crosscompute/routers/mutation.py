@@ -6,9 +6,9 @@ from fastapi import APIRouter, Query
 from ..constants import (
     MAXIMUM_MUTATION_AGE_IN_SECONDS,
     MUTATION_ROUTE)
-from ..variables import (
+from ..settings import (
     site,
-    template_environment)
+    template_globals)
 
 
 router = APIRouter()
@@ -48,7 +48,7 @@ async def see_mutation_json(
             elif code == 's':
                 styles.append({})
     return {
-        'server_timestamp': template_environment.globals['server_timestamp'],
+        'server_timestamp': template_globals['server_timestamp'],
         'mutation_timestamp': new_timestamp,
         'configurations': configurations,
         'variables': variables,

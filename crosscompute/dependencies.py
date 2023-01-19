@@ -10,7 +10,7 @@ from .routines.configuration import (
     AutomationDefinition)
 from .routines.variable import (
     parse_data_by_id)
-from .variables import (
+from .settings import (
     site)
 
 

@@ -9,7 +9,7 @@ from watchgod import watch
 from ..constants import HOST, PORT
 from ..exceptions import CrossComputeError
 from ..routers import automation, mutation, root, token
-from ..variables import site, template_environment
+from ..settings import site, template_globals
 from .database import DiskDatabase
 from .interface import Server
 
@@ -44,7 +44,7 @@ class DiskServer(Server):
             'queue': self._queue,
             'environment': self._environment,
             'changes': self._changes})
-        template_environment.globals.update({
+        template_globals.update({
             'server_timestamp': time(),
         })
         # self._safe, self._with_refresh, with_restart, self._allowed_origins

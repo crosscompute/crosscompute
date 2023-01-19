@@ -45,7 +45,7 @@ from ..exceptions import (
     CrossComputeExecutionError)
 from ..macros.iterable import group_by
 from ..macros.security import DictionarySafe
-from ..variables import multiprocessing_context
+from ..settings import multiprocessing_context
 from .configuration import (
     get_folder_plus_path,
     load_configuration)

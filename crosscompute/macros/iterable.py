@@ -47,5 +47,9 @@ def find_item(
     return next(filter(is_match, items))
 
 
+def get_unique_order(items):
+    return list(dict.fromkeys(items))
+
+
 def extend_uniquely(old_items, new_items):
     old_items.extend(_ for _ in new_items if _ not in old_items)

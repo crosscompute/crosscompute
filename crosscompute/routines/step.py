@@ -1,7 +1,19 @@
 from logging import getLogger
 
-from ..macros.iterable import extend_uniquely, find_item
+from ..constants import (
+    STEP_CODE_BY_NAME,
+    STEP_ROUTE)
+from ..macros.iterable import find_item
 from .variable import Element, VariableView
+
+
+def get_automation_batch_step_uri(
+        automation_definition, batch_definition, step_name):
+    automation_uri = automation_definition.uri
+    batch_uri = batch_definition.uri
+    step_code = STEP_CODE_BY_NAME[step_name]
+    step_uri = STEP_ROUTE.format(step_code=step_code)
+    return automation_uri + batch_uri + step_uri
 
 
 def render_variable_html(
@@ -27,7 +39,7 @@ def render_variable_html(
         for_print, terms[1:])
     page_dictionary = view.render(batch, element)
     for k, v in m.items():
-        extend_uniquely(v, [_.strip() for _ in page_dictionary[k]])
+        v.extend(_.strip() for _ in page_dictionary[k])
     return page_dictionary['main_text']
 
 
