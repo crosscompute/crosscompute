@@ -87,3 +87,38 @@ DEBUG_VARIABLE_DICTIONARIES = [{
     'view': 'number',
     'path': 'variables.dictionary',
 }]
+
+
+HEADER_CSS = '''\
+header {
+  margin-bottom: 16px;
+}
+@media print {
+  header {
+    display: none;
+  }
+}'''
+EMBED_CSS = '''\
+body {
+  margin: 0;
+}'''
+FLEX_VERTICAL_CSS = '''\
+main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+main > * {
+  margin: 0;
+}
+._view {
+  display: flex;
+  flex-direction: column;
+}
+._view img {
+  align-self: start;
+  max-width: 100%;
+}
+#_run {
+  padding: 8px 0;
+}'''

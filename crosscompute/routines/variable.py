@@ -251,8 +251,8 @@ class TextView(VariableView):
 
     def render_input(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
-        data = get_data_from(
-        data = b.get_data_from_request(variable_definition)
+        # TODO: get also from batch
+        data = get_data_from(x.request_params, variable_definition)
         value = data.get('value', '')
         variable_id = self.variable_id
         view_name = self.view_name

@@ -12,6 +12,9 @@ from invisibleroads_macros_web.markdown import get_html_from_markdown
 from ..constants import (
     AUTOMATION_ROUTE,
     BATCH_ROUTE,
+    EMBED_CSS,
+    FLEX_VERTICAL_CSS,
+    HEADER_CSS,
     ID_LENGTH,
     MUTATION_ROUTE,
     STEP_CODE_BY_NAME,
@@ -151,10 +154,10 @@ async def see_automation_batch_step_variable(
 
 def get_step_response(automation_definition, batch_definition, request):
     root_uri = template_environment.globals['root_uri']
-    get_step_page_outer_dictionary(automation_definition, batch_definition))
+    get_step_page_outer_dictionary(automation_definition, batch_definition)
 
 
-def _get_step_page_outer_dictionary(batch, step_name, request_params):
+def get_step_page_outer_dictionary(batch, step_name, request_params):
     design_name = automation_definition.get_design_name(step_name)
     # TODO: get root_uri from globals
     # TODO: pass params
@@ -180,33 +183,6 @@ def _get_step_page_outer_dictionary(batch, step_name, request_params):
         render_element_html, template_text))
     return m | {
     }
-
-
-def render_html(
-        match, variable_definitions, batch, m, i, root_uri, request_params,
-        design_name, for_print):
-    matching_inner_text = match.group(1)
-    if matching_inner_text == 'root_uri':
-        return root_uri
-    terms = matching_inner_text.split('|')
-    variable_id = terms[0].strip()
-    try:
-        variable_definition = find_item(
-            variable_definitions, 'id', variable_id)
-    except StopIteration:
-        L.warning(
-            '%s variable in template but not in configuration', variable_id)
-        matching_outer_text = match.group(0)
-        return matching_outer_text
-    view = VariableView.get_from(variable_definition)
-    # !!!
-    element = Element(
-        f'v{next(i)}', root_uri, request_params, design_name, for_print,
-        terms[1:])
-    page_dictionary = view.render(batch, element)
-    for k, v in m.items():
-        extend_uniquely(v, [_.strip() for _ in page_dictionary[k]])
-    return page_dictionary['main_text']
 
 
 def get_css_text(design_name, for_embed, for_print):
@@ -241,37 +217,4 @@ def get_automation_batch_step_uri(
     return automation_uri + batch_uri + step_uri
 
 
-EMBED_CSS = '''\
-body {
-  margin: 0;
-}'''
-HEADER_CSS = '''\
-header {
-  margin-bottom: 16px;
-}
-@media print {
-  header {
-    display: none;
-  }
-}'''
-FLEX_VERTICAL_CSS = '''\
-main {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-main > * {
-  margin: 0;
-}
-._view {
-  display: flex;
-  flex-direction: column;
-}
-._view img {
-  align-self: start;
-  max-width: 100%;
-}
-#_run {
-  padding: 8px 0;
-}'''
 L = getLogger(__name__)
