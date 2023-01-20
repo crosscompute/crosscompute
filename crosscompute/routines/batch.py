@@ -1,6 +1,7 @@
 import json
-from invisibleroads_macros_log import format_path
 from logging import getLogger
+
+from invisibleroads_macros_log import format_path
 
 from ..constants import (
     STEP_CODE_BY_NAME,
@@ -8,8 +9,11 @@ from ..constants import (
     VARIABLE_ROUTE)
 from ..exceptions import (
     CrossComputeDataError)
+from ..settings import (
+    template_globals)
 from .interface import Batch
 from .variable import (
+    get_data_from,
     load_variable_data)
 
 
@@ -45,12 +49,12 @@ class DiskBatch(Batch):
             L.error('must contain a dictionary %s', format_path(path))
         return variable_configuration
 
-    # TODO: Use request params here
-    # def get_data(self, request_params, variable_definition):
-    def get_data(self, variable_definition):
-        variable_data = self.get_data_from_request(variable_definition)
-        if variable_data:
-            return variable_data
+    def load_data_from(self, request_params, variable_definition):
+        return get_data_from(
+            request_params, variable_definition,
+        ) or self.load_data(variable_definition)
+
+    def load_data(self, variable_definition):
         variable_path = variable_definition.path
         if variable_path == 'ENVIRONMENT':
             return {}
@@ -64,10 +68,8 @@ class DiskBatch(Batch):
             return {'error': e}
         return variable_data
 
-    # TODO: Use root_uri from template globals
-    # TODO: Remove root_uri from element
     def get_data_uri(self, variable_definition, element):
-        root_uri = element.root_uri
+        root_uri = template_globals['root_uri']
         automation_uri = self.automation_definition.uri
         batch_uri = self.batch_definition.uri
         step_code = STEP_CODE_BY_NAME[variable_definition.step_name]

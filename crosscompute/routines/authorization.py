@@ -107,7 +107,7 @@ def define_is_match(identities):
                     variable_definitions, 'id', name)
             except StopIteration:
                 continue
-            data = batch.get_data(variable_definition)
+            data = batch.load_data(variable_definition)
             if not has_match(value, data.get('value')):
                 return False
         return True

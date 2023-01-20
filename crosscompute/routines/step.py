@@ -1,9 +1,19 @@
+from functools import partial
+from itertools import count
 from logging import getLogger
 
+from invisibleroads_macros_web.markdown import get_html_from_markdown
+
 from ..constants import (
+    EMBED_CSS,
+    FLEX_VERTICAL_CSS,
+    HEADER_CSS,
     STEP_CODE_BY_NAME,
-    STEP_ROUTE)
-from ..macros.iterable import find_item
+    STEP_ROUTE,
+    VARIABLE_ID_TEMPLATE_PATTERN)
+from ..macros.iterable import find_item, get_unique_order
+from ..settings import template_globals
+from .batch import DiskBatch
 from .variable import Element, VariableView
 
 
@@ -14,6 +24,38 @@ def get_automation_batch_step_uri(
     step_code = STEP_CODE_BY_NAME[step_name]
     step_uri = STEP_ROUTE.format(step_code=step_code)
     return automation_uri + batch_uri + step_uri
+
+
+def get_step_page_dictionary(
+        automation_definition, batch_definition, step_name, request_params,
+        for_embed, for_print):
+    variable_definitions = automation_definition.get_variable_definitions(
+        step_name, with_all=True)
+    batch = DiskBatch(automation_definition, batch_definition)
+    css_uris = automation_definition.css_uris
+    m = {'css_uris': css_uris.copy(), 'js_uris': [], 'js_texts': []}
+    design_name = automation_definition.get_design_name(step_name)
+    render_element_html = partial(
+        render_variable_html,
+        variable_definitions=variable_definitions,
+        batch=batch,
+        m=m,
+        i=count(),
+        root_uri=template_globals['root_uri'],
+        request_params=request_params,
+        step_name=step_name,
+        design_name=design_name,
+        for_print=for_print)
+    template_text = automation_definition.get_template_text(step_name)
+    main_text = get_html_from_markdown(VARIABLE_ID_TEMPLATE_PATTERN.sub(
+        render_element_html, template_text))
+    return {
+        'css_uris': get_unique_order(m['css_uris']),
+        'css_text': get_css_text(design_name, for_embed, for_print),
+        'main_text': main_text,
+        'js_uris': get_unique_order(m['js_uris']),
+        'js_text': '\n'.join(get_unique_order(m['js_texts'])),
+    }
 
 
 def render_variable_html(
@@ -35,12 +77,35 @@ def render_variable_html(
     view = VariableView.get_from(variable_definition)
     mode_name = variable_definition.get('mode', step_name)
     element = Element(
-        f'v{next(i)}', root_uri, request_params, mode_name, design_name,
-        for_print, terms[1:])
+        f'v{next(i)}', request_params, mode_name, design_name, for_print,
+        terms[1:])
     page_dictionary = view.render(batch, element)
     for k, v in m.items():
         v.extend(_.strip() for _ in page_dictionary[k])
     return page_dictionary['main_text']
+
+
+def get_css_text(design_name, for_embed, for_print):
+    css_texts = []
+    if not for_embed and not for_print:
+        css_texts.append(HEADER_CSS)
+    elif for_embed:
+        css_texts.append(EMBED_CSS)
+    if design_name == 'flex-vertical':
+        css_texts.append(FLEX_VERTICAL_CSS)
+    return '\n'.join(css_texts)
+
+
+def get_variable_definition(automation_definition, step_name, variable_id):
+    variable_definitions = automation_definition.get_variable_definitions(
+        step_name)
+    try:
+        variable_definition = find_item(
+            variable_definitions, 'id', variable_id,
+            normalize=str.casefold)
+    except StopIteration:
+        raise KeyError
+    return variable_definition
 
 
 L = getLogger(__name__)

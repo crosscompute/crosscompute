@@ -35,7 +35,6 @@ from .interface import Batch
 class Element():
 
     id: str
-    root_uri: str
     request_params: str
     mode_name: str
     design_name: str
@@ -130,11 +129,8 @@ class LinkView(VariableView):
             }),
         ]
         return {
-            'css_uris': [],
-            'js_uris': [],
-            'main_text': main_text,
-            'js_texts': js_texts,
-        }
+            'css_uris': [], 'js_uris': [], 'main_text': main_text,
+            'js_texts': js_texts}
 
 
 class StringView(VariableView):
@@ -145,9 +141,9 @@ class StringView(VariableView):
         'title': str.title,
     }
 
-    def get_value(self, b: Batch):
+    def get_value(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
-        data = b.get_data(variable_definition)
+        data = b.load_data_from(x.request_params, variable_definition)
         if 'value' in data:
             value = data['value']
         elif 'path' in data:
@@ -161,7 +157,7 @@ class StringView(VariableView):
         variable_id = self.variable_id
         view_name = self.view_name
         element_id = x.id
-        value = self.get_value(b)
+        value = self.get_value(b, x)
         c = b.get_variable_configuration(variable_definition)
         main_text = STRING_HTML_INPUT.render({
             'element_id': element_id,
@@ -178,14 +174,11 @@ class StringView(VariableView):
             STRING_JS_INPUT.substitute({'view_name': view_name}),
         ]
         return {
-            'css_uris': [],
-            'js_uris': [],
-            'main_text': main_text,
-            'js_texts': js_texts,
-        }
+            'css_uris': [], 'js_uris': [], 'main_text': main_text,
+            'js_texts': js_texts}
 
     def render_output(self, b: Batch, x: Element):
-        value = self.get_value(b)
+        value = self.get_value(b, x)
         try:
             value = apply_functions(
                 value, x.function_names, self.function_by_name)
@@ -207,15 +200,10 @@ class StringView(VariableView):
             STRING_JS_OUTPUT.substitute({
                 'variable_id': variable_id,
                 'element_id': element_id,
-                'data_uri': data_uri,
-            }),
-        ]
+                'data_uri': data_uri})]
         return {
-            'css_uris': [],
-            'js_uris': [],
-            'main_text': main_text,
-            'js_texts': js_texts,
-        }
+            'css_uris': [], 'js_uris': [], 'main_text': main_text,
+            'js_texts': js_texts}
 
 
 class NumberView(StringView):
@@ -251,7 +239,6 @@ class TextView(VariableView):
 
     def render_input(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
-        # TODO: get also from batch
         data = get_data_from(x.request_params, variable_definition)
         value = data.get('value', '')
         variable_id = self.variable_id
@@ -264,26 +251,21 @@ class TextView(VariableView):
             'view_name': view_name,
             'variable_id': variable_id,
             'attribute_string': '' if value else ' disabled',
-            'value': value,
-        })
+            'value': value})
         if x.design_name not in ['none']:
             main_text = add_label_html(main_text, c, variable_id, element_id)
         js_texts = [
             STRING_JS_HEADER,
-            STRING_JS_INPUT.substitute({'view_name': view_name}),
-            TEXT_JS_HEADER,
-        ]
+            STRING_JS_INPUT.substitute({'view_name': view_name})]
         if not value:
-            js_texts.append(TEXT_JS_INPUT.substitute({
-                'element_id': element_id,
-                'data_uri': b.get_data_uri(variable_definition, x),
-            }))
+            js_texts.extend([
+                TEXT_JS_HEADER,
+                TEXT_JS_INPUT.substitute({
+                    'element_id': element_id,
+                    'data_uri': b.get_data_uri(variable_definition, x)})])
         return {
-            'css_uris': [],
-            'js_uris': [],
-            'main_text': main_text,
-            'js_texts': js_texts,
-        }
+            'css_uris': [], 'js_uris': [], 'main_text': main_text,
+            'js_texts': js_texts}
 
     def render_output(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
@@ -302,15 +284,10 @@ class TextView(VariableView):
             TEXT_JS_OUTPUT.substitute({
                 'variable_id': variable_id,
                 'element_id': element_id,
-                'data_uri': data_uri,
-            }),
-        ]
+                'data_uri': data_uri})]
         return {
-            'css_uris': [],
-            'js_uris': [],
-            'main_text': main_text,
-            'js_texts': js_texts,
-        }
+            'css_uris': [], 'js_uris': [], 'main_text': main_text,
+            'js_texts': js_texts}
 
 
 class MarkdownView(TextView):
@@ -338,15 +315,10 @@ class MarkdownView(TextView):
             MARKDOWN_JS_OUTPUT.substitute({
                 'variable_id': variable_id,
                 'element_id': element_id,
-                'data_uri': data_uri,
-            }),
-        ]
+                'data_uri': data_uri})]
         return {
-            'css_uris': [],
-            'js_uris': self.js_uris,
-            'main_text': main_text,
-            'js_texts': js_texts,
-        }
+            'css_uris': [], 'js_uris': self.js_uris, 'main_text': main_text,
+            'js_texts': js_texts}
 
 
 class ImageView(VariableView):
@@ -363,7 +335,7 @@ class ImageView(VariableView):
             f'<img id="{x.id}" '
             f'class="_{x.mode_name} _{self.view_name} {variable_id}" '
             f'src="{data_uri}" alt="">')
-        # TODO: Show spinner onerror
+        # TODO: Show spinner on error
         if x.design_name not in ['none']:
             main_text = add_label_html(main_text, c, variable_id, element_id)
         js_texts = [
@@ -371,15 +343,10 @@ class ImageView(VariableView):
             IMAGE_JS_OUTPUT.substitute({
                 'variable_id': variable_id,
                 'element_id': element_id,
-                'data_uri': data_uri,
-            }),
-        ]
+                'data_uri': data_uri})]
         return {
-            'css_uris': [],
-            'js_uris': [],
-            'main_text': main_text,
-            'js_texts': js_texts,
-        }
+            'css_uris': [], 'js_uris': [], 'main_text': main_text,
+            'js_texts': js_texts}
 
 
 class RadioView(VariableView):
@@ -392,7 +359,7 @@ class RadioView(VariableView):
         view_name = self.view_name
         element_id = x.id
         c = b.get_variable_configuration(variable_definition)
-        data = b.get_data(variable_definition)
+        data = b.load_data_from(x.request_params, variable_definition)
         value = data.get('value', '')
         main_text = RADIO_HTML_INPUT.render({
             'element_id': element_id,
@@ -400,8 +367,7 @@ class RadioView(VariableView):
             'view_name': view_name,
             'variable_id': variable_id,
             'options': get_configuration_options(c, [value]),
-            'value': value,
-        })
+            'value': value})
         if x.design_name not in ['none']:
             main_text = add_label_html(main_text, c, variable_id, element_id)
         js_texts = [
@@ -411,15 +377,11 @@ class RadioView(VariableView):
             js_texts.extend([
                 RADIO_JS_HEADER,
                 RADIO_JS_OUTPUT.substitute({
-                    'variable_id': variable_id,
-                    'element_id': element_id,
+                    'variable_id': variable_id, 'element_id': element_id,
                     'data_uri': data_uri})])
         return {
-            'css_uris': [],
-            'js_uris': [],
-            'main_text': main_text,
-            'js_texts': js_texts,
-        }
+            'css_uris': [], 'js_uris': [], 'main_text': main_text,
+            'js_texts': js_texts}
 
 
 class CheckboxView(VariableView):
@@ -432,7 +394,7 @@ class CheckboxView(VariableView):
         variable_id = self.variable_id
         variable_definition = self.variable_definition
         c = b.get_variable_configuration(variable_definition)
-        data = b.get_data(variable_definition)
+        data = b.load_data_from(x.request_params, variable_definition)
         values = data.get('value', '').splitlines()
         main_text = CHECKBOX_HTML_INPUT.render({
             'element_id': element_id,
@@ -454,11 +416,8 @@ class CheckboxView(VariableView):
                     'element_id': element_id,
                     'data_uri': data_uri})])
         return {
-            'css_uris': [],
-            'js_uris': [],
-            'main_text': main_text,
-            'js_texts': js_texts,
-        }
+            'css_uris': [], 'js_uris': [], 'main_text': main_text,
+            'js_texts': js_texts}
 
 
 class TableView(VariableView):
@@ -482,15 +441,10 @@ class TableView(VariableView):
             TABLE_JS_OUTPUT.substitute({
                 'variable_id': variable_id,
                 'element_id': element_id,
-                'data_uri': data_uri,
-            }),
-        ]
+                'data_uri': data_uri})]
         return {
-            'css_uris': [],
-            'js_uris': [],
-            'main_text': main_text,
-            'js_texts': js_texts,
-        }
+            'css_uris': [], 'js_uris': [], 'main_text': main_text,
+            'js_texts': js_texts}
 
 
 class FrameView(VariableView):
@@ -503,7 +457,7 @@ class FrameView(VariableView):
         element_id = x.id
         data_uri = b.get_data_uri(variable_definition, x)
         c = b.get_variable_configuration(variable_definition)
-        data = b.get_data(variable_definition)
+        data = b.load_data(variable_definition)
         if 'value' in data:
             value = data['value']
         else:
@@ -521,15 +475,10 @@ class FrameView(VariableView):
             FRAME_JS_OUTPUT.substitute({
                 'variable_id': variable_id,
                 'element_id': element_id,
-                'data_uri': data_uri,
-            }),
-        ]
+                'data_uri': data_uri})]
         return {
-            'css_uris': [],
-            'js_uris': [],
-            'main_text': main_text,
-            'js_texts': js_texts,
-        }
+            'css_uris': [], 'js_uris': [], 'main_text': main_text,
+            'js_texts': js_texts}
 
 
 def initialize_view_by_name():

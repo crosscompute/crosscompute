@@ -14,7 +14,6 @@ from time import time
 import tomli
 from invisibleroads_macros_log import format_path
 from invisibleroads_macros_text import format_slug
-# from jinja2 import BaseLoader, TemplateNotFound
 from nbconvert import PythonExporter
 from nbformat import read as load_notebook, NO_CONVERT
 from ruamel.yaml import YAML
@@ -35,7 +34,6 @@ from ..constants import (
     PRINTER_BY_NAME,
     STEP_NAMES,
     STYLE_ROUTE,
-    TEMPLATES_FOLDER,
     VARIABLE_ID_PATTERN,
     VARIABLE_ID_TEMPLATE_PATTERN,
     VIEW_BY_NAME)
@@ -103,7 +101,7 @@ class AutomationDefinition(Definition):
         ]
 
     def get_variable_definitions(self, step_name, with_all=False):
-        # TODO: Can be put into variables
+        # TODO: Can be put into settings
         variable_definitions = self.variable_definitions_by_step_name.get(
             step_name, [])
         if with_all:
@@ -115,17 +113,8 @@ class AutomationDefinition(Definition):
                     STEP_NAME))
         return variable_definitions
 
-    def get_template_path(self, template_id):
-        # TODO: Can be put into variables
-        template_path_by_id = self.template_path_by_id
-        if template_id in template_path_by_id:
-            template_path = str(self.folder / template_path_by_id[template_id])
-        else:
-            template_path = f'{TEMPLATES_FOLDER}/{template_id}.html'
-        return template_path
-
     def get_template_text(self, step_name):
-        # TODO: Can be put into variables
+        # TODO: Can be put into settings
         automation_folder = self.folder
         variable_definitions = self.get_variable_definitions(step_name)
         template_definitions = self.template_definitions_by_step_name[
@@ -134,7 +123,7 @@ class AutomationDefinition(Definition):
             template_definitions, automation_folder, variable_definitions)
 
     def get_design_name(self, page_id):
-        # TODO: Can be put into variables
+        # TODO: Can be put into settings
         design_name = DESIGN_NAMES_BY_PAGE_ID[page_id][0]
         if page_id in self.page_definition_by_id:
             page_definition = self.page_definition_by_id[page_id]
@@ -147,7 +136,7 @@ class AutomationDefinition(Definition):
         return design_name
 
     def get_button_text(self, button_id):
-        # TODO: Can be put into variables
+        # TODO: Can be put into settings
         button_text = BUTTON_TEXT_BY_ID[button_id]
         button_definition_by_id = self.button_definition_by_id
         if button_id in button_definition_by_id:

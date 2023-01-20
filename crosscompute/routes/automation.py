@@ -1,6 +1,5 @@
 # TODO: Show runs with command line option
 # TODO: Add unit tests
-import json
 from functools import partial
 from itertools import count
 from logging import getLogger
@@ -15,11 +14,9 @@ from pyramid.response import FileResponse, Response
 
 from ..constants import (
     AUTOMATION_ROUTE,
-    BATCH_ROUTE,
     ID_LENGTH,
     IMAGES_FOLDER,
     MUTATION_ROUTE,
-    RUN_ROUTE,
     STEP_CODE_BY_NAME,
     STEP_NAME_BY_CODE,
     STEP_ROUTE,
@@ -146,93 +143,7 @@ class AutomationRoutes():
         variable_id = request.matchdict['variable_id']
         variable_definition = _get_variable_definition(
             automation_definition, step_name, variable_id)
-        variable_data = batch.get_data(variable_definition)
+        variable_data = batch.load_data(variable_definition)
         if 'error' in variable_data:
             raise HTTPNotFound
         return variable_data, variable_definition, batch
-
-
-def _get_step_name(request):
-    matchdict = request.matchdict
-    step_code = matchdict['step_code']
-    try:
-        step_name = STEP_NAME_BY_CODE[step_code]
-    except KeyError:
-        raise HTTPNotFound
-    return step_name
-
-
-def _get_variable_definition(automation_definition, step_name, variable_id):
-    variable_definitions = automation_definition.get_variable_definitions(
-        step_name)
-    try:
-        variable_definition = find_item(
-            variable_definitions, 'id', variable_id,
-            normalize=str.casefold)
-    except StopIteration:
-        raise HTTPNotFound
-    return variable_definition
-
-
-def _get_automation_batch_step_uri(
-        automation_definition, batch_definition, step_name):
-    automation_uri = automation_definition.uri
-    batch_uri = batch_definition.uri
-    step_code = STEP_CODE_BY_NAME[step_name]
-    step_uri = STEP_ROUTE.format(step_code=step_code)
-    return automation_uri + batch_uri + step_uri
-
-
-def _get_step_page_dictionary(request, batch, step_name):
-    params = request.params
-    automation_definition = batch.automation_definition
-    batch_definition = batch.batch_definition
-    design_name = automation_definition.get_design_name(step_name)
-    root_uri = request.registry.settings['root_uri']
-    mutation_reference_uri = _get_automation_batch_step_uri(
-        automation_definition, batch_definition, step_name)
-    return {
-        'title_text': batch_definition.name,
-        'automation_definition': automation_definition,
-        'batch_definition': batch_definition,
-        'step_name': step_name,
-        'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri),
-        'mutation_timestamp': time(),
-    } | __get_step_page_dictionary(
-        batch, root_uri, step_name, design_name, for_embed='_embed' in params,
-        for_print='_print' in params)
-
-
-def __get_step_page_dictionary(
-        batch, root_uri, step_name, design_name, for_embed, for_print):
-    automation_definition = batch.automation_definition
-    css_uris = automation_definition.css_uris
-    template_text = automation_definition.get_template_text(
-        step_name)
-    variable_definitions = automation_definition.get_variable_definitions(
-        step_name, with_all=True)
-    m = {'css_uris': css_uris.copy(), 'js_uris': [], 'js_texts': []}
-    i = count()
-    render_html = partial(
-        _render_html, variable_definitions=variable_definitions,
-        batch=batch, m=m, i=i, root_uri=root_uri, step_name=step_name,
-        design_name=design_name, for_print=for_print)
-    main_text = get_html_from_markdown(VARIABLE_ID_TEMPLATE_PATTERN.sub(
-        render_html, template_text))
-    return m | {
-        'css_text': __get_css_text(design_name, for_embed, for_print),
-        'main_text': main_text,
-        'js_text': '\n'.join(m['js_texts']),
-        'for_embed': for_embed,
-    }
-
-
-def __get_css_text(design_name, for_embed, for_print):
-    css_texts = []
-    if not for_embed and not for_print:
-        css_texts.append(HEADER_CSS)
-    elif for_embed:
-        css_texts.append(EMBED_CSS)
-    if design_name == 'flex-vertical':
-        css_texts.append(FLEX_VERTICAL_CSS)
-    return '\n'.join(css_texts)

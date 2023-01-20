@@ -4,7 +4,7 @@ from time import time
 from invisibleroads_macros_disk import is_path_in_folder
 
 from ..constants import (
-    RUN_ROUTE,
+    BATCH_ROUTE,
     STEP_CODE_BY_NAME,
     STEP_ROUTE)
 
@@ -44,10 +44,10 @@ class DiskDatabase():
             if not is_path_in_folder(path, runs_folder):
                 continue
             run_id = path.relative_to(runs_folder).parts[0]
-            run_uri = RUN_ROUTE.format(run_slug=run_id)
+            batch_uri = BATCH_ROUTE.format(batch_slug=run_id)
             memory = DiskMemory()
             add_variable_infos_from_folder(
-                memory, automation_definition, runs_folder / run_id, run_uri)
+                memory, automation_definition, runs_folder / run_id, batch_uri)
             infos = memory.get(path)
             break
         else:
