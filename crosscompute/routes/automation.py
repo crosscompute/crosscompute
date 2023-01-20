@@ -1,14 +1,8 @@
 # TODO: Show runs with command line option
 # TODO: Add unit tests
-from functools import partial
-from itertools import count
-from logging import getLogger
-from pathlib import Path
 from time import time
 from types import FunctionType
 
-from invisibleroads_macros_disk import make_random_folder
-from invisibleroads_macros_web.markdown import get_html_from_markdown
 from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPNotFound
 from pyramid.response import FileResponse, Response
 
@@ -21,33 +15,16 @@ from ..constants import (
     STEP_NAME_BY_CODE,
     STEP_ROUTE,
     STYLE_ROUTE,
-    VARIABLE_ID_TEMPLATE_PATTERN,
-    VARIABLE_ROUTE)
+    VARIABLE_ID_TEMPLATE_PATTERN)
 from ..exceptions import CrossComputeDataError
-from ..macros.iterable import extend_uniquely, find_item
 from ..routines.authorization import AuthorizationGuard
 from ..routines.batch import DiskBatch
-from ..routines.configuration import BatchDefinition
 from ..routines.variable import (
-    Element,
-    VariableView,
     load_file_text,
     parse_data_by_id)
 
 
 class AutomationRoutes():
-
-    def __init__(self, configuration, safe, environment, queue):
-        self.configuration = configuration
-        self.safe = safe
-        self.environment = environment
-        self.queue = queue
-
-        config.add_view(
-            self.see_automation_batch_step_variable_json,
-            request_method='GET',
-            route_name='automation run step variable json',
-            renderer='json')
 
     def see_root(self, request):
         guard = AuthorizationGuard(request, self.safe)
@@ -61,7 +38,6 @@ class AutomationRoutes():
         }
 
     def run_automation(self, request):
-        # automation_definition = self.get_automation_definition_from(request)
         guard = AuthorizationGuard(
             request, self.safe, automation_definition.identities_by_token)
         if not guard.check('run_automation', automation_definition):
@@ -78,7 +54,6 @@ class AutomationRoutes():
         guard.save_identities(folder / 'debug' / 'identities.dictionary')
 
     def see_automation(self, request):
-        automation_definition = self.get_automation_definition_from(request)
         guard = AuthorizationGuard(
             request, self.safe, automation_definition.identities_by_token)
         if not guard.check('see_automation', automation_definition):
@@ -96,7 +71,6 @@ class AutomationRoutes():
         }
 
     def see_automation_batch_step(self, request):
-        # automation_definition = self.get_automation_definition_from(request)
         guard = AuthorizationGuard(
             request, self.safe, automation_definition.identities_by_token)
         is_match = guard.check('see_batch', automation_definition)
@@ -107,7 +81,6 @@ class AutomationRoutes():
         batch = DiskBatch(automation_definition, batch_definition)
         if isinstance(is_match, FunctionType) and not is_match(batch):
             raise HTTPForbidden
-        # step_name = _get_step_name(request)
         return _get_step_page_dictionary(request, batch, step_name)
 
     def see_automation_batch_step_variable_json(self, request):

@@ -121,6 +121,13 @@ async def see_automation_batch_step(
 
 
 @router.get(
+    AUTOMATION_ROUTE + BATCH_ROUTE + STEP_ROUTE + VARIABLE_ROUTE + '.json',
+    tags=['automation'])
+async def see_automation_batch_step_variable_json():
+    return {}
+
+
+@router.get(
     AUTOMATION_ROUTE + BATCH_ROUTE + STEP_ROUTE + VARIABLE_ROUTE,
     tags=['automation'])
 async def see_automation_batch_step_variable(

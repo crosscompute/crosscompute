@@ -20,9 +20,7 @@ from ..settings import (
 router = APIRouter()
 
 
-@router.get(
-    '/',
-    tags=['root'])
+@router.get('/', tags=['root'])
 async def see_root(request: Request):
     'Render root with a list of available automations'
     return TemplateResponse(template_path_by_id['root'], {
@@ -32,23 +30,17 @@ async def see_root(request: Request):
     })
 
 
-@router.get(
-    '/favicon.ico',
-    tags=['root'])
+@router.get('/favicon.ico', tags=['root'])
 async def see_icon():
     return FileResponse(IMAGES_FOLDER / 'favicon.ico')
 
 
-@router.get(
-    STYLE_ROUTE,
-    tags=['root'])
+@router.get(STYLE_ROUTE, tags=['root'])
 async def see_style(request: Request):
     return get_style_response(site['configuration'], request.url.path)
 
 
-@router.get(
-    AUTOMATION_ROUTE + STYLE_ROUTE,
-    tags=['root'])
+@router.get(AUTOMATION_ROUTE + STYLE_ROUTE, tags=['root'])
 async def see_automation_style(
     request: Request,
     automation_definition: AutomationDefinition = Depends(

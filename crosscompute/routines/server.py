@@ -45,8 +45,7 @@ class DiskServer(Server):
             'environment': self._environment,
             'changes': self._changes})
         template_globals.update({
-            'server_timestamp': time(),
-        })
+            'server_timestamp': time()})
         # self._safe, self._with_refresh, with_restart, self._allowed_origins
         app = get_app(root_uri)
         L.info('serving at http://%s:%s%s', host, port, root_uri)
@@ -107,50 +106,20 @@ def get_app(root_uri):
 def _get_app(
         configuration, environment, safe, queue, with_refresh, with_restart,
         root_uri, allowed_origins, changes):
-    server_timestamp = time()
     settings = {
-        'root_uri': root_uri,
         'jinja2.trim_blocks': True,
         'jinja2.lstrip_blocks': True,
     }
-    if with_refresh and with_restart:
-        settings.update({'pyramid.reload_templates': True})
     with Configurator(settings=settings) as config:
-        config.include('pyramid_jinja2')
-        config.add_jinja2_renderer('.html')
-        _configure_automation_routes(
-            config, configuration, safe, environment, queue)
         if with_refresh:
             _configure_mutation_routes(
                 config, server_timestamp, changes)
-        _configure_token_routes(
-            config, configuration, safe)
         _configure_renderer_globals(
             config, with_refresh, with_restart, root_uri, server_timestamp,
             configuration)
         _configure_cache_headers(config, with_restart)
         _configure_allowed_origins(config, allowed_origins)
     safe.constant_value_by_key = configuration.identities_by_token
-    return config.make_wsgi_app()
-
-
-def _configure_token_routes(
-        config, configuration, safe):
-    token_routes = TokenRoutes(
-        configuration, safe)
-    config.include(token_routes.includeme)
-
-
-def _configure_automation_routes(
-        config, configuration, safe, environment, queue):
-    automation_routes = AutomationRoutes(
-        configuration, safe, environment, queue)
-    config.include(automation_routes.includeme)
-
-
-def _configure_mutation_routes(config, server_timestamp, changes):
-    mutation_routes = MutationRoutes(server_timestamp, changes)
-    config.include(mutation_routes.includeme)
 
 
 def _configure_renderer_globals(
