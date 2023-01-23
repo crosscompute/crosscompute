@@ -453,15 +453,17 @@ def _proxy_podman_ports(
         automation_slug=automation_definition.slug)
     batch_uri = BATCH_ROUTE.format(batch_slug=batch_folder.name)
     absolute_batch_folder = automation_definition.folder / batch_folder
+    session_uri_by_port_id = {}
     for port_id, host_port, step_name in port_packs:
-        port_path = absolute_batch_folder / 'debug' / 'ports.dictionary'
         step_code = STEP_CODE_BY_NAME[step_name]
         variable_id = port_id
         relative_uri = (
-            f'/sessions{automation_uri}{batch_uri}/{step_code}'
-            f'/{variable_id}')
-        session_uri = get_session_uri(host_port, relative_uri)
-        update_variable_data(port_path, {port_id: session_uri})
+            f'/sessions{automation_uri}{batch_uri}/{step_code}/{variable_id}')
+        session_uri_by_port_id[port_id] = get_session_uri(
+            host_port, relative_uri)
+    update_variable_data(
+        absolute_batch_folder / 'debug' / 'ports.dictionary',
+        session_uri_by_port_id)
     yield
     for relative_uri in relative_uris:
         requests.delete(PROXY_URI + relative_uri)
