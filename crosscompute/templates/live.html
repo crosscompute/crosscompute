@@ -1,26 +1,15 @@
 {% extends BASE_PATH %}
 
 {% block body_js %}
-{{ super() }}
-let mutationTimestamp = {{ mutation_timestamp }};
-let pingInterval = {{ MINIMUM_PING_INTERVAL }};
+const functionsByVariableId = {};
 function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
-async function refreshPage() {
-  response = await fetch(location.href, { method: 'head' });
-  if (response.ok) {
-    location.reload();
-  } else {
-    location.href = '{{ ROOT_URI or '/' }}';
-  }
-}
+{{ super() }}
 async function processMutations() {
   const uri = '{{ ROOT_URI }}{{ mutation_uri }}';
   try {
-    const response = await fetch(`${uri}?t=${mutationTimestamp}`);
-    const d = await response.json();
-    const { styles, variables } = d;
+    const r = await fetch(`${uri}?t=${mutationTimestamp}`), d = await r.json(), { styles, variables } = d;
     if (
       d.server_timestamp != {{ SERVER_TIMESTAMP }} ||
       d.configurations.length ||
@@ -44,13 +33,26 @@ async function processMutations() {
     }
     mutationTimestamp = d.mutation_timestamp;
     pingInterval = {{ MINIMUM_PING_INTERVAL }};
-  } catch (error) {
-    console.error(error);
+  } catch (e) {
     if (pingInterval < {{ MAXIMUM_PING_INTERVAL }}) {
       pingInterval *= 1.1;
     }
+    console.error(e);
   }
   setTimeout(processMutations, pingInterval);
 }
+async function refreshPage() {
+  const r = await fetch(location.href, { method: 'head' });
+  if (r.ok) {
+    location.reload();
+  }
+}
+function refreshVariable(variableId) {
+  const fs = functionsByVariableId[variableId] || [];
+  for (const f of fs) {
+    f();
+  }
+}
+let mutationTimestamp = {{ mutation_timestamp }}, pingInterval = {{ MINIMUM_PING_INTERVAL }};
 setTimeout(processMutations, pingInterval);
 {%- endblock %}

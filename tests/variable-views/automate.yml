@@ -110,6 +110,7 @@ output:
     - path: report-part2.md
 batches:
   - folder: batches/standard
+  - folder: batches/no-output
 display:
   styles:
     - path: style.css

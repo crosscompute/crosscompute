@@ -1,4 +1,4 @@
-function refreshImageOutput(elementId, dataUri) {
-  const element = document.getElementById(elementId);
-  element.src = dataUri + '?' + Date.now();
+function refreshImage(elementId, dataUri) {
+  const l = document.getElementById(elementId);
+  l.src = dataUri + '?' + Date.now();
 }

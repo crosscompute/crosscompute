@@ -1,10 +1,5 @@
 async function refreshText_$element_id() {
-  try {
-    await refreshString('$element_id', 'textContent', '$data_uri');
-  } catch {
-  }
+  await refreshText('$element_id', '$data_uri');
 }
-registerElement('$variable_id', function() {
-  refreshText_$element_id();
-});
+registerElement('$variable_id', refreshText_$element_id);
 refreshText_$element_id();

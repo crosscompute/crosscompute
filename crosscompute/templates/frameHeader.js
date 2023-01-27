@@ -1,10 +1,7 @@
 async function refreshFrame(elementId, dataUri) {
-  let response = await fetch(dataUri);
-  let { status } = response;
-  if (status != 200) {
-    throw { status };
+  try {
+    const r = await fetch(dataUri), e = document.getElementById(elementId);
+    e.src = await r.text();
+  } catch {
   }
-  const frameUri = await response.text();
-  const element = document.getElementById(elementId);
-  element.src = frameUri;
 }

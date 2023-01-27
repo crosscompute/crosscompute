@@ -269,7 +269,6 @@ class TextView(VariableView):
         js_texts = [
             STRING_JS_HEADER,
             STRING_JS_INPUT.substitute({'view_name': view_name}),
-            TEXT_JS_HEADER,
         ]
         if not value:
             js_texts.append(TEXT_JS_INPUT.substitute({
@@ -297,6 +296,7 @@ class TextView(VariableView):
             main_text = add_label_html(main_text, c, variable_id, element_id)
         js_texts = [
             STRING_JS_HEADER,
+            TEXT_JS_HEADER,
             TEXT_JS_OUTPUT.substitute({
                 'variable_id': variable_id,
                 'element_id': element_id,
