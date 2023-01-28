@@ -6,7 +6,7 @@ async function post(uri, d) {
   return await r.json();
 }
 function redirect(uri, d) {
-  location = uri + '/r/' + d['run_id'] + '/' + d['step_code']{% if for_embed %} + '?_embed'{% endif %};
+  location = uri + '/b/' + d['batch_slug'] + '/' + d['step_code']{% if for_embed %} + '?_embed'{% endif %};
 }
 function getDataById() {
   const d = {};
@@ -18,7 +18,7 @@ function getDataById() {
 }
 const GET_DATA_BY_VIEW_NAME = {};
 {% if step_name == 'input' %}
-document.getElementById('_run').onclick = async () => {
+document.getElementById('_run').onclick = async function () {
   const uri = '{{ root_uri }}{{ automation_definition.uri }}';
   let d;
   try {
