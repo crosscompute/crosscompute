@@ -31,10 +31,10 @@ document.getElementById('_run').onclick = async () => {
 };
 {% else %}
 function registerElement(variableId, refreshElement) {
-  if (functionsByVariableId[variableId] === undefined) {
-    functionsByVariableId[variableId] = [];
+  if (callbacks[variableId] === undefined) {
+    callbacks[variableId] = [];
   }
-  functionsByVariableId[variableId].push(refreshElement);
+  callbacks[variableId].push(refreshElement);
 }
 {% if step_name == 'log' %}
 registerElement('return_code', function() {

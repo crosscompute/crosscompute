@@ -1,11 +1,17 @@
 {% extends BASE_PATH %}
 
-{% block body_js %}
-const functionsByVariableId = {};
+{% block head_html %}
+{{ super() }}
+<script>
+const callbacks = {};
 function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
-{{ super() }}
+</script>
+{%- endblock %}
+
+{% block body_js %}
+{{ super() -}}
 async function processMutations() {
   const uri = '{{ ROOT_URI }}{{ mutation_uri }}';
   try {
@@ -48,7 +54,7 @@ async function refreshPage() {
   }
 }
 function refreshVariable(variableId) {
-  const fs = functionsByVariableId[variableId] || [];
+  const fs = callbacks[variableId] || [];
   for (const f of fs) {
     f();
   }
