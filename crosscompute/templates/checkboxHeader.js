@@ -1,14 +1,15 @@
 async function refreshCheckbox(elementId, dataUri) {
-  const r = await fetch(dataUri + '.json'), { status } = r;
-  if (status != 200) {
-    throw { status };
+  let d;
+  try {
+    const r = await fetch(dataUri + '.json');
+    d = await r.json();
+  } catch {
+    return;
   }
-  const d = await r.json(), hs = [], { options } = d.configuration, vs = d.value.split('\n');
-  const e = document.getElementById(elementId), i = e.dataset.variable;
+  const l = document.getElementById(elementId), i = l.dataset.variable, hs = [], { options } = d.configuration, vs = d.value.split('\n');
   for (let j = 0; j < options.length; j++) {
     const option = options[j], v = option.value, n = option.name || v, x = vs.includes(v) ? ' checked' : '';
     hs.push(`<div><input type="checkbox" id="${i}-${j}" name="${i}" value="${v}"${x}> <label for="${i}-${j}">${n}</label></div>`);
   }
-  e.innerHTML = hs.join('\n');
-  return e;
+  l.innerHTML = hs.join('\n');
 }

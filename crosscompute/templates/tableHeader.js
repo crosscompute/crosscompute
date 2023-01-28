@@ -1,11 +1,14 @@
-async function refreshTableOutput(elementId, dataUri) {
-  const response = await fetch(dataUri);
-  const d = await response.json();
-  const index = d.index;
-  const columns = d.columns, columnCount = columns.length;
-  const rows = d.data, rowCount = rows.length;
-  const nodes = document.getElementById(elementId).children;
-  const thead = nodes[0], tbody = nodes[1];
+async function refreshTable(elementId, dataUri) {
+  let d;
+  try {
+    const r = await fetch(dataUri);
+    d = await r.json();
+  } catch {
+    return;
+  }
+  const { index, columns, data: rows } = d;
+  const columnCount = columns.length, rowCount = rows.length;
+  const [thead, tbody] = document.getElementById(elementId).children;
   thead.textContent = '';
   tbody.textContent = '';
   let tr = document.createElement('tr');

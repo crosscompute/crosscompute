@@ -20,23 +20,22 @@ const GET_DATA_BY_VIEW_NAME = {};
 {% if step_name == 'input' %}
 document.getElementById('_run').onclick = async () => {
   const uri = '{{ root_uri }}{{ automation_definition.uri }}';
-  const d = await post(uri + '.json', getDataById());
+  let d;
+  try {
+    d = await post(uri + '.json', getDataById());
+  } catch (e) {
+    console.error(e);
+    return;
+  }
   redirect(uri, d);
 };
 {% else %}
 function registerElement(variableId, refreshElement) {
-  if (functionsByVariableId[variableId] === undefined) {
-    functionsByVariableId[variableId] = [];
+  if (callbacks[variableId] === undefined) {
+    callbacks[variableId] = [];
   }
-  functionsByVariableId[variableId].push(refreshElement);
+  callbacks[variableId].push(refreshElement);
 }
-function refreshVariable(variableId) {
-  const fs = functionsByVariableId[variableId] || [];
-  for (const f of fs) {
-    f();
-  }
-}
-const functionsByVariableId = {};
 {% if step_name == 'log' %}
 registerElement('return_code', function() {
   location = location.href.slice(0, -1) + 'o';

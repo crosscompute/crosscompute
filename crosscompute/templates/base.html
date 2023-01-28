@@ -5,8 +5,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ title_text }}</title>
-{{ head_text | safe }}
-{%- endblock %}
 {% for css_uri in css_uris %}
 <link href="{{ css_uri if '//' in css_uri else root_uri + css_uri }}" rel="stylesheet">
 {% endfor %}
@@ -15,6 +13,7 @@
 {{ css_text | safe }}
 {%- endblock %}
 </style>
+{%- endblock %}
 </head>
 <body>
 <header>
