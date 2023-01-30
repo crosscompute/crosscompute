@@ -7,15 +7,7 @@ from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPNotFound
 from pyramid.response import FileResponse, Response
 
 from ..constants import (
-    AUTOMATION_ROUTE,
-    ID_LENGTH,
-    IMAGES_FOLDER,
-    MUTATION_ROUTE,
-    STEP_CODE_BY_NAME,
-    STEP_NAME_BY_CODE,
-    STEP_ROUTE,
-    STYLE_ROUTE,
-    VARIABLE_ID_TEMPLATE_PATTERN)
+    MUTATION_ROUTE)
 from ..exceptions import CrossComputeDataError
 from ..routines.authorization import AuthorizationGuard
 from ..routines.batch import DiskBatch

@@ -14,10 +14,12 @@ from ..constants import (
     STEP_ROUTE,
     VARIABLE_ROUTE)
 from ..dependencies import (
+    get_authorization_guard,
     get_automation_definition,
     get_batch_definition,
     get_data_by_id,
     get_step_name)
+from ..routines.authorization import AuthorizationGuard
 from ..routines.batch import DiskBatch
 from ..routines.configuration import (
     AutomationDefinition,
@@ -42,6 +44,8 @@ async def see_automation(
     request: Request,
     automation_definition: AutomationDefinition = Depends(
         get_automation_definition),
+    authorization_guard: AuthorizationGuard = Depends(
+        get_authorization_guard),
 ):
     return TemplateResponse(template_path_by_id['automation'], {
         'request': request,

@@ -6,9 +6,11 @@ from ..constants import (
     IMAGES_FOLDER,
     STYLE_ROUTE)
 from ..dependencies import (
+    get_authorization_guard,
     get_automation_definition)
 from ..macros.iterable import (
     find_item)
+from ..routines.authorization import AuthorizationGuard
 from ..routines.configuration import (
     AutomationDefinition)
 from ..settings import (
@@ -21,7 +23,11 @@ router = APIRouter()
 
 
 @router.get('/', tags=['root'])
-async def see_root(request: Request):
+async def see_root(
+    request: Request,
+    authorization_guard: AuthorizationGuard = Depends(
+        get_authorization_guard),
+):
     'Render root with a list of available automations'
     return TemplateResponse(template_path_by_id['root'], {
         'request': request,

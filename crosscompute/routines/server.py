@@ -41,12 +41,13 @@ class DiskServer(Server):
             'name': configuration.name,
             'configuration': configuration,
             'definitions': configuration.automation_definitions,
-            'queue': self._queue,
             'environment': self._environment,
+            'safe': self._safe,
+            'queue': self._queue,
             'changes': self._changes})
         template_globals.update({
             'server_timestamp': time()})
-        # self._safe, self._with_refresh, with_restart, self._allowed_origins
+        # self._with_refresh, with_restart, self._allowed_origins
         app = get_app(root_uri)
         L.info('serving at http://%s:%s%s', host, port, root_uri)
         try:

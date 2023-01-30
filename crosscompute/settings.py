@@ -19,8 +19,9 @@ site = {
     'name': 'Automations',
     'configuration': None,
     'definitions': [],
-    'queue': None,
     'environment': {},
+    'safe': None,
+    'queue': None,
     'changes': {},
 }
 template_path_by_id = {
