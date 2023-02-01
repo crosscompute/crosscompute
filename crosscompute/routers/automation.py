@@ -14,7 +14,7 @@ from ..constants import (
     STEP_ROUTE,
     VARIABLE_ROUTE)
 from ..dependencies import (
-    get_authorization_guard,
+    AuthorizationGuardFactory,
     get_automation_definition,
     get_batch_definition,
     get_data_by_id,
@@ -23,11 +23,13 @@ from ..routines.authorization import AuthorizationGuard
 from ..routines.batch import DiskBatch
 from ..routines.configuration import (
     AutomationDefinition,
-    BatchDefinition)
+    BatchDefinition,
+    VariableDefinition)
 from ..routines.step import (
     get_automation_batch_step_uri,
     get_step_page_dictionary,
     get_variable_definition)
+from ..routines.variable import load_file_text
 from ..settings import (
     TemplateResponse,
     site,
@@ -44,18 +46,30 @@ async def see_automation(
     request: Request,
     automation_definition: AutomationDefinition = Depends(
         get_automation_definition),
-    authorization_guard: AuthorizationGuard = Depends(
-        get_authorization_guard),
+    guard: AuthorizationGuard = Depends(
+        AuthorizationGuardFactory('see_automation')),
 ):
+    automation_uri = automation_definition.uri
+    design_name = automation_definition.get_design_name('automation')
+    mutation_reference_uri = automation_uri
+    if design_name == 'none':
+        d = {'css_uris': automation_definition.css_uris}
+    else:
+        batch_definition = automation_definition.batch_definitions[0]
+        d = get_step_page_dictionary(
+            automation_definition, batch_definition, design_name,
+            request.query_params)
     return TemplateResponse(template_path_by_id['automation'], {
         'request': request,
         'title_text': automation_definition.name,
         'description': automation_definition.description,
-        'host_uri': request.url,
+        'host_uri': request.url.host,
         'name': automation_definition.name,
-        'uri': automation_definition.uri,
-        'batches': automation_definition.batch_definitions,
-    })
+        'uri': automation_uri,
+        'batches': guard.get_batch_definitions(automation_definition),
+        'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri),
+        'mutation_timestamp': time(),
+    } | d)
 
 
 @router.post(
@@ -66,11 +80,14 @@ async def run_automation_json(
         get_automation_definition),
     data_by_id: dict = Depends(
         get_data_by_id),
+    guard: AuthorizationGuard = Depends(
+        AuthorizationGuardFactory('run_automation')),
 ):
     runs_folder = automation_definition.folder / 'runs'
     folder = Path(make_random_folder(runs_folder, ID_LENGTH))
     batch_definition = BatchDefinition({
         'folder': folder}, data_by_id=data_by_id, is_run=True)
+    guard.save_identities(folder / 'debug' / 'identities.dictionary')
 
     queue = site['queue']
     environment = site['environment']
@@ -81,17 +98,19 @@ async def run_automation_json(
         'log') else 'o'
     return {
         'batch_slug': batch_definition.name,
-        'step_code': step_code,
-    }
+        'step_code': step_code}
 
 
 @router.get(
     AUTOMATION_ROUTE + BATCH_ROUTE,
     tags=['automation'])
-async def see_automation_batch(request: Request):
+async def see_automation_batch(
+    request: Request,
+    guard: AuthorizationGuard = Depends(
+        AuthorizationGuardFactory('see_batch')),
+):
     return TemplateResponse(template_path_by_id['batch'], {
-        'request': request,
-    })
+        'request': request})
 
 
 @router.get(
@@ -103,15 +122,14 @@ async def see_automation_batch_step(
         get_automation_definition),
     batch_definition: BatchDefinition = Depends(get_batch_definition),
     step_name: str = Depends(get_step_name),
+    guard: AuthorizationGuard = Depends(
+        AuthorizationGuardFactory('see_batch')),
 ):
     mutation_reference_uri = get_automation_batch_step_uri(
         automation_definition, batch_definition, step_name)
-    request_params = request.query_params
-    for_embed = '_embed' in request_params
-    for_print = '_print' in request_params
     page_dictionary = get_step_page_dictionary(
-        automation_definition, batch_definition, step_name, request_params,
-        for_embed, for_print)
+        automation_definition, batch_definition, step_name,
+        request.query_params)
     return TemplateResponse(template_path_by_id['step'], {
         'request': request,
         'title_text': batch_definition.name,
@@ -120,42 +138,55 @@ async def see_automation_batch_step(
         'step_name': step_name,
         'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri),
         'mutation_timestamp': time(),
-        'for_embed': for_embed,
     } | page_dictionary)
 
 
 @router.get(
     AUTOMATION_ROUTE + BATCH_ROUTE + STEP_ROUTE + VARIABLE_ROUTE + '.json',
     tags=['automation'])
-async def see_automation_batch_step_variable_json():
-    return {}
+async def see_automation_batch_step_variable_json(
+    automation_definition: AutomationDefinition = Depends(
+        get_automation_definition),
+    batch_definition: BatchDefinition = Depends(get_batch_definition),
+    variable_definition: VariableDefinition = Depends(
+        get_variable_definition),
+    guard: AuthorizationGuard = Depends(
+        AuthorizationGuardFactory('see_batch')),
+):
+    batch = DiskBatch(automation_definition, batch_definition)
+    variable_data = batch.load_data(variable_definition)
+    if 'error' in variable_data:
+        raise HTTPException(status_code=404)
+    if 'path' in variable_data:
+        variable_value = load_file_text(variable_data['path'])
+    else:
+        variable_value = variable_data['value']
+    variable_configuration = batch.get_variable_configuration(
+        variable_definition).copy()
+    variable_configuration.pop('path', None)
+    return {'value': variable_value, 'configuration': variable_configuration}
 
 
 @router.get(
     AUTOMATION_ROUTE + BATCH_ROUTE + STEP_ROUTE + VARIABLE_ROUTE,
     tags=['automation'])
 async def see_automation_batch_step_variable(
-    variable_id: str,
     automation_definition: AutomationDefinition = Depends(
         get_automation_definition),
-    batch_definition: BatchDefinition = Depends(
-        get_batch_definition),
-    step_name: str = Depends(
-        get_step_name),
+    batch_definition: BatchDefinition = Depends(get_batch_definition),
+    variable_definition: VariableDefinition = Depends(
+        get_variable_definition),
+    guard: AuthorizationGuard = Depends(
+        AuthorizationGuardFactory('see_batch')),
 ):
     batch = DiskBatch(automation_definition, batch_definition)
-    try:
-        variable_definition = get_variable_definition(
-            automation_definition, step_name, variable_id)
-    except KeyError:
+    variable_data = batch.load_data(variable_definition)
+    if 'error' in variable_data:
         raise HTTPException(status_code=404)
-    data = batch.load_data(variable_definition)
-    if 'error' in data:
-        raise HTTPException(status_code=404)
-    if 'path' in data:
-        response = FileResponse(data['path'])
+    if 'path' in variable_data:
+        response = FileResponse(variable_data['path'])
     else:
-        response = Response(str(data['value']))
+        response = Response(str(variable_data['value']))
     return response
 
 

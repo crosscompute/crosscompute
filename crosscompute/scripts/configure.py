@@ -29,7 +29,6 @@ def do(arguments=None):
     except CrossComputeError as e:
         L.error(e)
         return
-
     configure_with(args)
 
 

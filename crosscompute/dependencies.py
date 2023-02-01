@@ -1,10 +1,13 @@
+from types import FunctionType
+
 from fastapi import Body, Depends, HTTPException, Request
 
 from .constants import STEP_NAME_BY_CODE
 from .exceptions import CrossComputeDataError
 from .macros.iterable import find_item
 from .routines.authorization import AuthorizationGuard
-from .routines.configuration import AutomationDefinition
+from .routines.batch import DiskBatch
+from .routines.configuration import AutomationDefinition, BatchDefinition
 from .routines.variable import parse_data_by_id
 from .settings import site
 
@@ -25,11 +28,11 @@ async def get_automation_definition(
 
 
 async def get_batch_definition(
-    batch_slug: str,
+    batch_slug: str | None = None,
     automation_definition: AutomationDefinition = Depends(
         get_automation_definition),
 ):
-    batch_definitions = getattr(automation_definition, 'batch_definitions')
+    batch_definitions = getattr(automation_definition, 'batch_definitions', [])
     try:
         batch_definition = find_item(batch_definitions, 'slug', batch_slug)
     except StopIteration:
@@ -43,6 +46,20 @@ async def get_step_name(step_code: str):
     except KeyError:
         raise HTTPException(status_code=404)
     return step_name
+
+
+async def get_variable_definition(
+    variable_id: str,
+    automation_definition: AutomationDefinition = Depends(
+        get_automation_definition),
+    step_name: str = Depends(get_step_name),
+):
+    try:
+        variable_definition = get_variable_definition(
+            automation_definition, step_name, variable_id)
+    except KeyError:
+        raise HTTPException(status_code=404)
+    return variable_definition
 
 
 async def get_data_by_id(
@@ -101,8 +118,26 @@ async def get_authorization_identities(
     return identities
 
 
-async def get_authorization_guard(
-    identities: dict = Depends(
-        get_authorization_identities),
-):
-    return AuthorizationGuard(identities)
+class AuthorizationGuardFactory():
+
+    def __init__(self, permission_id):
+        self.permission_id = permission_id
+
+    async def __call__(
+        self,
+        identities: dict = Depends(
+            get_authorization_identities),
+        automation_definition: AutomationDefinition = Depends(
+            get_automation_definition),
+        batch_definition: BatchDefinition = Depends(get_batch_definition),
+    ):
+        guard = AuthorizationGuard(identities)
+        if automation_definition:
+            is_match = guard.check(self.permission_id, automation_definition)
+            if not is_match:
+                raise HTTPException(status_code=403)
+            if batch_definition:
+                batch = DiskBatch(automation_definition, batch_definition)
+                if isinstance(is_match, FunctionType) and not is_match(batch):
+                    raise HTTPException(status_code=403)
+        return guard

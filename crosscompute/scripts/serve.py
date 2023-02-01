@@ -62,11 +62,8 @@ def configure_argument_parser_for_serving(a):
         '--no-browser', dest='with_browser', action='store_false',
         help='do not open browser')
     a.add_argument(
-        '--no-refresh', dest='with_refresh', action='store_false',
-        help='do not refresh page on file change')
-    a.add_argument(
         '--no-restart', dest='with_restart', action='store_false',
-        help='do not restart server on file change')
+        help='do not restart server when configuration changes')
     a.add_argument(
         '--root-uri', metavar='X',
         default='',

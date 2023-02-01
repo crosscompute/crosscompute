@@ -1,2 +1,3 @@
-Move css to templates
 Back port batch.load_data from fastapi branch
+Show runs with command line option
+Add unit tests

@@ -25,14 +25,15 @@ def get_automation_batch_step_uri(
 
 
 def get_step_page_dictionary(
-        automation_definition, batch_definition, step_name, request_params,
-        for_embed, for_print):
+        automation_definition, batch_definition, step_name, request_params):
     variable_definitions = automation_definition.get_variable_definitions(
         step_name, with_all=True)
     batch = DiskBatch(automation_definition, batch_definition)
     css_uris = automation_definition.css_uris
     m = {'css_uris': css_uris.copy(), 'js_uris': [], 'js_texts': []}
     design_name = automation_definition.get_design_name(step_name)
+    for_embed = '_embed' in request_params
+    for_print = '_print' in request_params
     render_element_html = partial(
         render_variable_html,
         variable_definitions=variable_definitions,
@@ -53,7 +54,8 @@ def get_step_page_dictionary(
         'main_text': main_text,
         'js_uris': get_unique_order(m['js_uris']),
         'js_text': '\n'.join(get_unique_order(m['js_texts'])),
-    }
+        'for_embed': for_embed,
+        'for_print': for_print}
 
 
 def render_variable_html(
