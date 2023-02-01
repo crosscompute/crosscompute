@@ -1,31 +1,16 @@
 import json
-from functools import cached_property
 from logging import getLogger
 from types import FunctionType
 
 from ..macros.iterable import find_item
 from ..routines.batch import DiskBatch
+from ..settings import site
 
 
 class AuthorizationGuard():
 
-    def __init__(self, request, safe, identities_by_token=None):
-        self._request = request
-        self._safe = safe
-        self._identities_by_token = identities_by_token or {}
-
-    @cached_property
-    def identities(self):
-        identities = {}
-        request = self._request
-        token = get_token(request)
-        if token:
-            try:
-                d = self._safe.get(token)
-            except KeyError:
-                d = self._identities_by_token.get(token, {})
-            identities.update(d, ip_address=request.client_addr)
-        return identities
+    def __init__(self, identities):
+        self.identities = identities
 
     def check(self, permission_id, configuration):
         group_definitions = configuration.group_definitions
@@ -50,7 +35,7 @@ class AuthorizationGuard():
         return False
 
     def put(self, identities, time_in_seconds):
-        return self._safe.put(identities, time_in_seconds)
+        return site['safe'].put(identities, time_in_seconds)
 
     def get_automation_definitions(self, configuration):
         return [
@@ -72,27 +57,6 @@ class AuthorizationGuard():
         target_path.parent.mkdir(parents=True, exist_ok=True)
         with target_path.open('wt') as f:
             json.dump(self.identities, f)
-
-
-def get_token(request):
-    params = request.params
-    headers = request.headers
-    cookies = request.cookies
-    if '_token' in params:
-        token = params['_token']
-        request.response.set_cookie(
-            'crosscompute-token', value=token, secure=True, httponly=True,
-            samesite='none')
-    elif 'Authorization' in headers:
-        try:
-            token = headers['Authorization'].split(maxsplit=1)[1]
-        except IndexError:
-            token = ''
-    elif 'crosscompute-token' in cookies:
-        token = cookies['crosscompute-token']
-    else:
-        token = ''
-    return token
 
 
 def define_is_match(identities):

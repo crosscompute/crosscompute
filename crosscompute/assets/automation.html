@@ -19,7 +19,7 @@
 {% block main_html %}
 {% if step_name != 'none' %}
 {{ super() }}
-{% include 'stepMain.html' %}
+{% include 'step-main.html' %}
 {% endif %}
 {% if not for_embed %}
 <ul class="_batches">
@@ -35,6 +35,6 @@
 {% endblock %}
 
 {% block body_js %}
-{% include 'stepBody.js' %}
+{% include 'step-body.js' %}
 {{ super() }}
 {% endblock %}

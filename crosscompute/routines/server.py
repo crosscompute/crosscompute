@@ -123,21 +123,6 @@ def _get_app(
     safe.constant_value_by_key = configuration.identities_by_token
 
 
-def _configure_renderer_globals(
-        config, with_refresh, with_restart, root_uri, server_timestamp,
-        configuration):
-    if configuration.template_path_by_id:
-        config.add_jinja2_search_path(str(
-            configuration.folder), prepend=True, name='.html')
-
-    def update_renderer_globals():
-        config.get_jinja2_environment(name='.html').globals.update({
-            'SERVER_TIMESTAMP': server_timestamp,
-        })
-
-    config.action(None, update_renderer_globals)
-
-
 def _configure_cache_headers(config, with_restart):
     if not with_restart:
         return

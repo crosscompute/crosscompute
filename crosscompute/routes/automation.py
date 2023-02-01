@@ -18,17 +18,6 @@ from ..routines.variable import (
 
 class AutomationRoutes():
 
-    def see_root(self, request):
-        guard = AuthorizationGuard(request, self.safe)
-        if not guard.check('see_root', configuration):
-            raise HTTPForbidden
-        return {
-            'automations': guard.get_automation_definitions(configuration),
-            'css_uris': configuration.css_uris,
-            'mutation_uri': MUTATION_ROUTE.format(uri=''),
-            'mutation_timestamp': time(),
-        }
-
     def run_automation(self, request):
         guard = AuthorizationGuard(
             request, self.safe, automation_definition.identities_by_token)

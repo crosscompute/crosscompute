@@ -9,7 +9,11 @@ from .routines.variable import parse_data_by_id
 from .settings import site
 
 
-async def get_automation_definition(automation_slug: str):
+async def get_automation_definition(
+    automation_slug: str | None = None,
+):
+    if not automation_slug:
+        return
     automation_definitions = site['definitions']
     try:
         automation_definition = find_item(
@@ -55,31 +59,50 @@ async def get_data_by_id(
     return data_by_id
 
 
-async def get_authorization_guard(request: Request):
-    safe = site['safe']
-    authorization_guard = AuthorizationGuard(request, safe)
-    from pudb.forked import set_trace; set_trace()
-    '''
-    if not guard.check('add_token', self.configuration):
-        raise HTTPForbidden
+async def get_authorization_token(request: Request):
+    params = request.query_params
+    headers = request.headers
+    cookies = request.cookies
+    if '_token' in params:
+        token = params['_token']
+        request.response.set_cookie(
+            'crosscompute-token', value=token, secure=True, httponly=True,
+            samesite='none')
+    elif 'Authorization' in headers:
+        try:
+            token = headers['Authorization'].split(maxsplit=1)[1]
+        except IndexError:
+            token = ''
+    elif 'crosscompute-token' in cookies:
+        token = cookies['crosscompute-token']
+    else:
+        token = ''
+    return token
 
-    'automations': guard.get_automation_definitions(configuration),
-    'batches': guard.get_batch_definitions(automation_definition),
-    is_match = guard.check('see_batch', automation_definition)
 
-    guard.save_identities(folder / 'debug' / 'identities.dictionary')
+async def get_authorization_identities(
+    request: Request,
+    token: str = Depends(
+        get_authorization_token),
+    automation_definition: AutomationDefinition = Depends(
+        get_automation_definition),
+):
+    identities = {}
+    if token:
+        try:
+            d = site['safe'].get(token)
+        except KeyError:
+            if automation_definition:
+                identities_by_token = automation_definition.identities_by_token
+                d = identities_by_token.get(token, {})
+            else:
+                d = {}
+        identities.update(d, ip_address=request.client.host)
+    return identities
 
-    if not guard.check('see_root', configuration):
-        raise HTTPForbidden
 
-    guard = AuthorizationGuard(
-        request, self.safe, automation_definition.identities_by_token)
-    if not guard.check('run_automation', automation_definition):
-        raise HTTPForbidden
-
-    guard = AuthorizationGuard(
-        request, self.safe, automation_definition.identities_by_token)
-    if not guard.check('see_automation', automation_definition):
-        raise HTTPForbidden
-    '''
-    return authorization_guard
+async def get_authorization_guard(
+    identities: dict = Depends(
+        get_authorization_identities),
+):
+    return AuthorizationGuard(identities)

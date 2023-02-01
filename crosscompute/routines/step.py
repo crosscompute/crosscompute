@@ -5,14 +5,12 @@ from logging import getLogger
 from invisibleroads_macros_web.markdown import get_html_from_markdown
 
 from ..constants import (
-    EMBED_CSS,
-    FLEX_VERTICAL_CSS,
-    HEADER_CSS,
     STEP_CODE_BY_NAME,
     STEP_ROUTE,
     VARIABLE_ID_TEMPLATE_PATTERN)
 from ..macros.iterable import find_item, get_unique_order
 from ..settings import template_globals
+from .asset import asset_storage
 from .batch import DiskBatch
 from .variable import Element, VariableView
 
@@ -88,9 +86,9 @@ def render_variable_html(
 def get_css_text(design_name, for_embed, for_print):
     css_texts = []
     if not for_embed and not for_print:
-        css_texts.append(HEADER_CSS)
+        css_texts.append(DEFAULT_CSS)
     elif for_embed:
-        css_texts.append(EMBED_CSS)
+        css_texts.append(EMBEDDED_CSS)
     if design_name == 'flex-vertical':
         css_texts.append(FLEX_VERTICAL_CSS)
     return '\n'.join(css_texts)
@@ -109,3 +107,8 @@ def get_variable_definition(automation_definition, step_name, variable_id):
 
 
 L = getLogger(__name__)
+
+
+DEFAULT_CSS = asset_storage.load_raw_text('default.css')
+EMBEDDED_CSS = asset_storage.load_raw_text('embedded.css')
+FLEX_VERTICAL_CSS = asset_storage.load_raw_text('flex-vertical.css')

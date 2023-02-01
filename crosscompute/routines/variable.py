@@ -4,7 +4,6 @@ import json
 import shutil
 from dataclasses import dataclass
 from logging import getLogger
-from string import Template as StringTemplate
 from urllib.request import urlretrieve as download_uri
 
 from importlib_metadata import entry_points
@@ -13,12 +12,10 @@ from invisibleroads_macros_text import format_name, format_slug
 from invisibleroads_macros_web.escape import (
     escape_quotes_html,
     escape_quotes_js)
-from jinja2 import Template as JinjaTemplate
 
 from ..constants import (
     CACHED_FILE_SIZE_LIMIT_IN_BYTES,
     MAXIMUM_FILE_CACHE_LENGTH,
-    TEMPLATES_FOLDER,
     VARIABLE_ID_TEMPLATE_PATTERN,
     VIEW_BY_NAME)
 from ..exceptions import (
@@ -28,6 +25,7 @@ from ..exceptions import (
 from ..macros.disk import FileCache
 from ..macros.iterable import find_item
 from ..macros.package import import_attribute
+from .asset import asset_storage
 from .interface import Batch
 
 
@@ -763,66 +761,60 @@ def get_configuration_options(variable_configuration, variable_values):
         options.append({
             'id': d.get('id', i),
             'name': d.get('name', option_value),
-            'value': option_value,
-        })
+            'value': option_value})
     return options
-
-
-def load_view_text(file_name):
-    return open(TEMPLATES_FOLDER / file_name).read().strip()
 
 
 L = getLogger(__name__)
 
 
-LINK_JS_HEADER = load_view_text('linkHeader.js')
-LINK_JS_OUTPUT = StringTemplate(load_view_text('linkOutput.js'))
+LINK_JS_HEADER = asset_storage.load_raw_text('link-header.js')
+LINK_JS_OUTPUT = asset_storage.load_string_text('link-output.js')
 
 
-STRING_HTML_INPUT = JinjaTemplate(load_view_text('stringInput.html'))
-STRING_JS_INPUT = StringTemplate(load_view_text('stringInput.js'))
-STRING_JS_HEADER = load_view_text('stringHeader.js')
-STRING_JS_OUTPUT = StringTemplate(load_view_text('stringOutput.js'))
+STRING_HTML_INPUT = asset_storage.load_jinja_text('string-input.html')
+STRING_JS_INPUT = asset_storage.load_string_text('string-input.js')
+STRING_JS_HEADER = asset_storage.load_raw_text('string-header.js')
+STRING_JS_OUTPUT = asset_storage.load_string_text('string-output.js')
 
 
-TEXT_HTML_INPUT = StringTemplate(load_view_text('textInput.html'))
-TEXT_JS_HEADER = load_view_text('textHeader.js')
-TEXT_JS_INPUT = StringTemplate(load_view_text('textInput.js'))
-TEXT_JS_OUTPUT = StringTemplate(load_view_text('textOutput.js'))
+TEXT_HTML_INPUT = asset_storage.load_string_text('text-input.html')
+TEXT_JS_HEADER = asset_storage.load_raw_text('text-header.js')
+TEXT_JS_INPUT = asset_storage.load_string_text('text-input.js')
+TEXT_JS_OUTPUT = asset_storage.load_string_text('text-output.js')
 
 
-MARKDOWN_JS_HEADER = load_view_text('markdownHeader.js')
-MARKDOWN_JS_OUTPUT = StringTemplate(load_view_text('markdownOutput.js'))
+MARKDOWN_JS_HEADER = asset_storage.load_raw_text('markdown-header.js')
+MARKDOWN_JS_OUTPUT = asset_storage.load_string_text('markdown-output.js')
 
 
-IMAGE_JS_HEADER = load_view_text('imageHeader.js')
-IMAGE_JS_OUTPUT = StringTemplate(load_view_text('imageOutput.js'))
+IMAGE_JS_HEADER = asset_storage.load_raw_text('image-header.js')
+IMAGE_JS_OUTPUT = asset_storage.load_string_text('image-output.js')
 
 
-RADIO_HTML_INPUT = JinjaTemplate(load_view_text('radioInput.html'))
-RADIO_JS_HEADER = load_view_text('radioHeader.js')
-RADIO_JS_INPUT = StringTemplate(load_view_text('radioInput.js'))
-RADIO_JS_OUTPUT = StringTemplate(load_view_text('radioOutput.js'))
+RADIO_HTML_INPUT = asset_storage.load_jinja_text('radio-input.html')
+RADIO_JS_HEADER = asset_storage.load_raw_text('radio-header.js')
+RADIO_JS_INPUT = asset_storage.load_string_text('radio-input.js')
+RADIO_JS_OUTPUT = asset_storage.load_string_text('radio-output.js')
 
 
-CHECKBOX_HTML_INPUT = JinjaTemplate(load_view_text('checkboxInput.html'))
-CHECKBOX_JS_HEADER = load_view_text('checkboxHeader.js')
-CHECKBOX_JS_INPUT = StringTemplate(load_view_text('checkboxInput.js'))
-CHECKBOX_JS_OUTPUT = StringTemplate(load_view_text('checkboxOutput.js'))
+CHECKBOX_HTML_INPUT = asset_storage.load_jinja_text('checkbox-input.html')
+CHECKBOX_JS_HEADER = asset_storage.load_raw_text('checkbox-header.js')
+CHECKBOX_JS_INPUT = asset_storage.load_string_text('checkbox-input.js')
+CHECKBOX_JS_OUTPUT = asset_storage.load_string_text('checkbox-output.js')
 
 
-TABLE_JS_HEADER = load_view_text('tableHeader.js')
-TABLE_JS_OUTPUT = StringTemplate(load_view_text('tableOutput.js'))
+TABLE_JS_HEADER = asset_storage.load_raw_text('table-header.js')
+TABLE_JS_OUTPUT = asset_storage.load_string_text('table-output.js')
 
 
-FRAME_JS_HEADER = load_view_text('frameHeader.js')
-FRAME_JS_OUTPUT = StringTemplate(load_view_text('frameOutput.js'))
+FRAME_JS_HEADER = asset_storage.load_raw_text('frame-header.js')
+FRAME_JS_OUTPUT = asset_storage.load_string_text('frame-output.js')
 
 
 YIELD_DATA_BY_ID_BY_EXTENSION = {
     '.csv': yield_data_by_id_from_csv,
-    '.txt': yield_data_by_id_from_txt,
-}
+    '.txt': yield_data_by_id_from_txt}
 
 
 FILE_DATA_CACHE = FileCache(

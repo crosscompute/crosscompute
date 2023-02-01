@@ -5,10 +5,10 @@ from pathlib import Path
 
 from crosscompute import __version__
 from crosscompute.constants import (
+    ASSETS_FOLDER,
     AUTOMATION_NAME,
     AUTOMATION_PATH,
-    AUTOMATION_VERSION,
-    TEMPLATES_FOLDER)
+    AUTOMATION_VERSION)
 from crosscompute.exceptions import (
     CrossComputeError)
 from crosscompute.routines.configuration import (
@@ -63,7 +63,7 @@ def configure(path_or_folder):
 def input_configuration(configuration, path_or_folder):
     if not configuration:
         configuration = load_raw_configuration(
-            TEMPLATES_FOLDER / 'configuration.yml', with_comments=True)
+            ASSETS_FOLDER / 'configuration.yml', with_comments=True)
     old_automation_name = configuration.get('name', AUTOMATION_NAME)
     old_automation_version = configuration.get('version', AUTOMATION_VERSION)
     old_configuration_path = get_configuration_path(path_or_folder)

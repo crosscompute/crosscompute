@@ -1,9 +1,12 @@
+from time import time
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse
 
 from ..constants import (
+    ASSETS_FOLDER,
     AUTOMATION_ROUTE,
-    IMAGES_FOLDER,
+    MUTATION_ROUTE,
     STYLE_ROUTE)
 from ..dependencies import (
     get_authorization_guard,
@@ -25,20 +28,27 @@ router = APIRouter()
 @router.get('/', tags=['root'])
 async def see_root(
     request: Request,
-    authorization_guard: AuthorizationGuard = Depends(
+    guard: AuthorizationGuard = Depends(
         get_authorization_guard),
 ):
     'Render root with a list of available automations'
+    configuration = site['configuration']
+    if not guard.check('see_root', configuration):
+        raise HTTPException(status_code=403)
     return TemplateResponse(template_path_by_id['root'], {
         'request': request,
         'title_text': site['name'],
-        'automation_definitions': site['definitions'],
+        'css_uris': configuration.css_uris,
+        'automation_definitions': guard.get_automation_definitions(
+            configuration),
+        'mutation_uri': MUTATION_ROUTE.format(uri=''),
+        'mutation_timestamp': time(),
     })
 
 
 @router.get('/favicon.ico', tags=['root'])
 async def see_icon():
-    return FileResponse(IMAGES_FOLDER / 'favicon.ico')
+    return FileResponse(ASSETS_FOLDER / 'favicon.ico')
 
 
 @router.get(STYLE_ROUTE, tags=['root'])

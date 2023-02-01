@@ -9,9 +9,9 @@ from invisibleroads_macros_web.jinja import (
     url_for)
 
 from .constants import (
+    ASSETS_FOLDER,
     MAXIMUM_PING_INTERVAL_IN_SECONDS,
-    MINIMUM_PING_INTERVAL_IN_SECONDS,
-    TEMPLATES_FOLDER)
+    MINIMUM_PING_INTERVAL_IN_SECONDS)
 
 
 multiprocessing_context = mp.get_context('fork')
@@ -22,16 +22,14 @@ site = {
     'environment': {},
     'safe': None,
     'queue': None,
-    'changes': {},
-}
+    'changes': {}}
 template_path_by_id = {
-    'base': str(TEMPLATES_FOLDER / 'base.html'),
-    'live': str(TEMPLATES_FOLDER / 'live.html'),
-    'root': str(TEMPLATES_FOLDER / 'root.html'),
-    'automation': str(TEMPLATES_FOLDER / 'automation.html'),
-    'batch': str(TEMPLATES_FOLDER / 'batch.html'),
-    'step': str(TEMPLATES_FOLDER / 'step.html'),
-}
+    'base': str(ASSETS_FOLDER / 'base.html'),
+    'live': str(ASSETS_FOLDER / 'live.html'),
+    'root': str(ASSETS_FOLDER / 'root.html'),
+    'automation': str(ASSETS_FOLDER / 'automation.html'),
+    'batch': str(ASSETS_FOLDER / 'batch.html'),
+    'step': str(ASSETS_FOLDER / 'step.html')}
 template_environment = RelativeTemplateEnvironment(
     loader=PathTemplateLoader(),
     autoescape=True,
@@ -46,7 +44,6 @@ template_globals = template_environment.globals = {
         MINIMUM_PING_INTERVAL_IN_SECONDS * 1000,
     'server_timestamp': 0,
     'root_uri': '',
-    'url_for': url_for,
-}
+    'url_for': url_for}
 TemplateResponse = TemplateResponseFactory(
     template_environment).TemplateResponse

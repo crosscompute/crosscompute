@@ -1,0 +1,8 @@
+header {
+  margin-bottom: 16px;
+}
+@media print {
+  header {
+    display: none;
+  }
+}
