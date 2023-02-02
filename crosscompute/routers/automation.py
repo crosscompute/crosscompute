@@ -29,7 +29,9 @@ from ..routines.configuration import (
 from ..routines.step import (
     get_automation_batch_step_uri,
     get_step_page_dictionary)
-from ..routines.variable import load_file_text
+from ..routines.variable import (
+    load_file_text,
+    remove_variable_data)
 from ..settings import (
     TemplateResponse,
     site,
@@ -51,18 +53,13 @@ async def see_automation(
 ):
     automation_uri = automation_definition.uri
     design_name = automation_definition.get_design_name('automation')
-    mutation_reference_uri = automation_uri
     if design_name == 'none':
-        d = {'css_uris': automation_definition.css_uris}
-        # is_done = 1
+        d = {'css_uris': automation_definition.css_uris, 'is_done': 1}
     else:
-        batch_definition = automation_definition.batch_definitions[0]
         d = get_step_page_dictionary(
-            automation_definition, batch_definition, design_name,
-            request.query_params)
-        # is_done = batch.is_done()
+            automation_definition, automation_definition.batch_definitions[0],
+            design_name, request.query_params)
     request_uri = request.url
-    # TODO: change is_done if interval defined
     return TemplateResponse(template_path_by_id['automation'], {
         'request': request,
         'title_text': automation_definition.name,
@@ -73,9 +70,8 @@ async def see_automation(
         'automation_definition': automation_definition,
         'step_name': design_name,
         'batches': guard.get_batch_definitions(automation_definition),
-        'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri),
-        'mutation_timestamp': time(),
-    } | d)
+        'mutation_uri': MUTATION_ROUTE.format(uri=automation_uri),
+        'mutation_timestamp': time()} | d)
 
 
 @router.post(
@@ -93,7 +89,10 @@ async def run_automation_json(
     folder = Path(make_random_folder(runs_folder, ID_LENGTH))
     batch_definition = BatchDefinition({
         'folder': folder}, data_by_id=data_by_id, is_run=True)
-    guard.save_identities(folder / 'debug' / 'identities.dictionary')
+    debug_folder = folder / 'debug'
+    guard.save_identities(debug_folder / 'identities.dictionary')
+    remove_variable_data(debug_folder / 'variables.dictionary', [
+        'return_code'])
 
     queue = site['queue']
     environment = site['environment']
@@ -136,9 +135,6 @@ async def see_automation_batch_step(
     page_dictionary = get_step_page_dictionary(
         automation_definition, batch_definition, step_name,
         request.query_params)
-    # is_done = batch.is_done()
-    # TODO: change is_done if interval defined
-    # TODO: check is_done
     return TemplateResponse(template_path_by_id['step'], {
         'request': request,
         'title_text': batch_definition.name,

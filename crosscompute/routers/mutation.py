@@ -1,4 +1,3 @@
-# TODO: Consider having production pages that do not change ignore mutations
 from time import time
 
 from fastapi import APIRouter, Query
@@ -17,7 +16,6 @@ router = APIRouter()
 @router.get(
     MUTATION_ROUTE.format(uri='{uri:path}'),
     tags=['mutation'])
-# async def see_mutation_json(uri: str, t: float = 0):
 async def see_mutation_json(
     uri: str,
     old_timestamp: float = Query(default=0, alias='t'),

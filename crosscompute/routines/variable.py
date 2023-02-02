@@ -589,24 +589,42 @@ def parse_data_by_id(data_by_id, variable_definitions):
     return data_by_id
 
 
-def update_variable_data(target_path, data_by_id):
-    target_path.parent.mkdir(parents=True, exist_ok=True)
+def update_variable_data(path, data_by_id):
+    path.parent.mkdir(parents=True, exist_ok=True)
     try:
-        if target_path.suffix == '.dictionary':
-            if target_path.exists():
-                with target_path.open('r+t') as f:
+        if path.suffix == '.dictionary':
+            if path.exists():
+                with path.open('r+t') as f:
                     d = json.load(f)
                     d.update(data_by_id)
                     f.seek(0)
                     f.truncate()
                     json.dump(d, f)
             else:
-                with target_path.open('wt') as f:
+                with path.open('wt') as f:
                     d = data_by_id
                     json.dump(d, f)
         else:
-            with target_path.open('wt') as f:
+            with path.open('wt') as f:
                 f.write(data_by_id.values()[0])
+    except (json.JSONDecodeError, OSError) as e:
+        raise CrossComputeDataError(e)
+
+
+def remove_variable_data(path, variable_ids):
+    if not path.exists():
+        return
+    try:
+        if path.suffix == '.dictionary':
+            with path.open('r+t') as f:
+                d = json.load(f)
+                for variable_id in variable_ids:
+                    del d[variable_id]
+                f.seek(0)
+                f.truncate()
+                json.dump(d, f)
+        else:
+            path.unlink(missing_ok=True)
     except (json.JSONDecodeError, OSError) as e:
         raise CrossComputeDataError(e)
 

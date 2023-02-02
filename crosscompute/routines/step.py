@@ -35,16 +35,10 @@ def get_step_page_dictionary(
     for_embed = '_embed' in request_params
     for_print = '_print' in request_params
     render_element_html = partial(
-        render_variable_html,
-        variable_definitions=variable_definitions,
-        batch=batch,
-        m=m,
-        i=count(),
-        root_uri=template_globals['root_uri'],
-        request_params=request_params,
-        step_name=step_name,
-        design_name=design_name,
-        for_print=for_print)
+        render_variable_html, variable_definitions=variable_definitions,
+        batch=batch, m=m, i=count(), root_uri=template_globals['root_uri'],
+        request_params=request_params, step_name=step_name,
+        design_name=design_name, for_print=for_print)
     template_text = automation_definition.get_template_text(step_name)
     main_text = get_html_from_markdown(VARIABLE_ID_TEMPLATE_PATTERN.sub(
         render_element_html, template_text))
@@ -54,8 +48,8 @@ def get_step_page_dictionary(
         'main_text': main_text,
         'js_uris': get_unique_order(m['js_uris']),
         'js_text': '\n'.join(get_unique_order(m['js_texts'])),
-        'for_embed': for_embed,
-        'for_print': for_print}
+        'for_embed': for_embed, 'for_print': for_print,
+        'is_done': batch.is_done()}
 
 
 def render_variable_html(

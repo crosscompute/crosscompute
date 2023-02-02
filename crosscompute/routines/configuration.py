@@ -101,7 +101,6 @@ class AutomationDefinition(Definition):
         ]
 
     def get_variable_definitions(self, step_name, with_all=False):
-        # TODO: Can be put into settings
         variable_definitions = self.variable_definitions_by_step_name.get(
             step_name, [])
         if with_all:
@@ -114,7 +113,6 @@ class AutomationDefinition(Definition):
         return variable_definitions
 
     def get_template_text(self, step_name):
-        # TODO: Can be put into settings
         automation_folder = self.folder
         variable_definitions = self.get_variable_definitions(step_name)
         template_definitions = self.template_definitions_by_step_name[
@@ -123,7 +121,6 @@ class AutomationDefinition(Definition):
             template_definitions, automation_folder, variable_definitions)
 
     def get_design_name(self, page_id):
-        # TODO: Can be put into settings
         design_name = DESIGN_NAMES_BY_PAGE_ID[page_id][0]
         if page_id in self.page_definition_by_id:
             page_definition = self.page_definition_by_id[page_id]
@@ -136,14 +133,12 @@ class AutomationDefinition(Definition):
         return design_name
 
     def get_button_text(self, button_id):
-        # TODO: Can be put into settings
         button_text = BUTTON_TEXT_BY_ID[button_id]
         button_definition_by_id = self.button_definition_by_id
         if button_id in button_definition_by_id:
             button_definition = button_definition_by_id[button_id]
             button_configuration = button_definition.configuration
-            button_text = button_configuration.get(
-                'button-text', button_text)
+            button_text = button_configuration.get('button-text', button_text)
         return button_text
 
 

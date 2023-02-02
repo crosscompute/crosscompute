@@ -190,8 +190,7 @@ class AbstractEngine():
         ], {'debug': {
             'source_time': reference_time,
             'execution_time_in_seconds': time() - reference_time,
-            'return_code': return_code,
-        }})
+            'return_code': return_code}})
 
     def prepare(self, automation_definition):
         pass

@@ -78,5 +78,22 @@ class DiskBatch(Batch):
             variable_id=variable_definition.id)
         return root_uri + automation_uri + batch_uri + step_uri + variable_uri
 
+    def is_done(self):
+        if self.automation_definition.interval_timedelta:
+            return False
+        batch_definition = self.batch_definition
+        if hasattr(batch_definition, 'is_done'):
+            return True
+        path = self.folder / 'debug' / 'variables.dictionary'
+        try:
+            with path.open('rt') as f:
+                d = json.load(f)
+            is_done = 'return_code' in d
+        except (OSError, ValueError):
+            return False
+        if is_done:
+            batch_definition.is_done = True
+        return is_done
+
 
 L = getLogger(__name__)
