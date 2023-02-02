@@ -77,7 +77,6 @@ def print_with(automation, args):
             print_packs.append((print_definition, batch_dictionaries))
     args.port = port
     args.with_browser = False
-    args.with_refresh = False
     args.with_restart = False
     server_process = StoppableProcess(
         name='serve', target=serve_with, args=(automation, args))

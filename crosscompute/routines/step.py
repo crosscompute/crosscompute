@@ -96,18 +96,6 @@ def get_css_text(design_name, for_embed, for_print):
     return '\n'.join(css_texts)
 
 
-def get_variable_definition(automation_definition, step_name, variable_id):
-    variable_definitions = automation_definition.get_variable_definitions(
-        step_name)
-    try:
-        variable_definition = find_item(
-            variable_definitions, 'id', variable_id,
-            normalize=str.casefold)
-    except StopIteration:
-        raise KeyError
-    return variable_definition
-
-
 L = getLogger(__name__)
 
 

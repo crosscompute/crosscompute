@@ -1,12 +1,10 @@
 import multiprocessing as mp
 
-# TODO: Set template_environment.auto_reload dynamically
 from invisibleroads_macros_web.fastapi import (
     TemplateResponseFactory)
 from invisibleroads_macros_web.jinja import (
     PathTemplateLoader,
-    RelativeTemplateEnvironment,
-    url_for)
+    RelativeTemplateEnvironment)
 
 from .constants import (
     ASSETS_FOLDER,
@@ -35,7 +33,6 @@ template_environment = RelativeTemplateEnvironment(
     autoescape=True,
     trim_blocks=True)
 template_globals = template_environment.globals = {
-    'with_refresh': True,
     'base_template_path': template_path_by_id['base'],
     'live_template_path': template_path_by_id['live'],
     'maximum_ping_interval_in_milliseconds':
@@ -44,6 +41,6 @@ template_globals = template_environment.globals = {
         MINIMUM_PING_INTERVAL_IN_SECONDS * 1000,
     'server_timestamp': 0,
     'root_uri': '',
-    'url_for': url_for}
+    'with_restart': True}
 TemplateResponse = TemplateResponseFactory(
     template_environment).TemplateResponse

@@ -3,19 +3,23 @@
 {% block head_html %}
 {{ super() -}}
 <script>
-const callbacks = {};
-function sleep(ms) {
-  return new Promise(r => setTimeout(r, ms));
-}
+const callbacks = {}, sleep = t => new Promise(r => setTimeout(r, t));
 </script>
 {%- endblock %}
 
 {% block body_js %}
 {{ super() -}}
+{% if with_restart or is_done == 0 %}
 async function processMutations() {
   const uri = '{{ root_uri }}{{ mutation_uri }}';
   try {
     const r = await fetch(`${uri}?t=${mutationTimestamp}`), d = await r.json(), { styles, variables } = d;
+{% if step_name != 'input' %}
+    for (const v of variables) {
+      refreshVariable(v.id);
+    }
+{% endif %}
+{% if with_restart %}
     if (
       d.server_timestamp != {{ server_timestamp }} ||
       d.configurations.length ||
@@ -23,20 +27,9 @@ async function processMutations() {
     ) {
       refreshPage();
     } else if (styles.length) {
-      const { origin } = location;
-      for (var e of document.getElementsByTagName('link')) {
-        if (e.rel !== 'stylesheet' || new URL(e.href).origin !== origin) {
-          continue;
-        }
-        e.href += '?' + Date.now();
-      }
-{% if step_name != 'input' %}
-    } else if (variables.length) {
-      for (const variable of variables) {
-        refreshVariable(variable.id);
-      }
-{% endif %}
+      refreshStyle();
     }
+{% endif %}
     mutationTimestamp = d.mutation_timestamp;
     pingInterval = {{ minimum_ping_interval_in_milliseconds }};
   } catch (e) {
@@ -45,22 +38,50 @@ async function processMutations() {
     }
     console.error(e);
   }
-  setTimeout(processMutations, pingInterval);
+  schedulePolling();
 }
+{% if with_restart %}
 async function refreshPage() {
   const r = await fetch(location.href, { method: 'head' });
   if (r.ok) {
     location.reload();
-  } else {
-    location.href = '{{ root_uri or '/' }}';
   }
 }
+function refreshStyle() {
+  const { origin } = location;
+  for (var l of document.getElementsByTagName('link')) {
+    if (l.rel !== 'stylesheet' || new URL(l.href).origin !== origin) {
+      continue;
+    }
+    l.href += '?' + Date.now();
+  }
+}
+{% endif %}
+{% if step_name != 'input' %}
 function refreshVariable(variableId) {
   const fs = callbacks[variableId] || [];
   for (const f of fs) {
     f();
   }
+{% if not with_restart %}
+  if (variableId == 'return_code') {
+    isDone = 1;
+  }
+{% endif %}
+}
+{% endif %}
+function schedulePolling() {
+{% if not with_restart %}
+  if (isDone) {
+    return;
+  }
+{% endif %}
+  setTimeout(processMutations, pingInterval);
 }
 let mutationTimestamp = {{ mutation_timestamp }}, pingInterval = {{ minimum_ping_interval_in_milliseconds }};
-setTimeout(processMutations, pingInterval);
+{% if not with_restart %}
+let isDone = 0;
+{% endif %}
+schedulePolling();
+{% endif %}
 {%- endblock %}

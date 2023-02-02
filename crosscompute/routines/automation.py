@@ -101,26 +101,22 @@ class DiskAutomation(Automation):
             sleep(1)
 
     def serve(
-            self, environment, host=HOST, port=PORT, with_refresh=False,
-            with_restart=False, root_uri='', allowed_origins=None,
+            self, environment, host=HOST, port=PORT, with_restart=False,
+            root_uri='', allowed_origins=None,
             disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
             disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS):
         queue = multiprocessing_context.Queue()
         with multiprocessing_context.Manager() as manager:
             changes = manager.dict()
             safe = DictionarySafe({}, manager.dict(), TOKEN_LENGTH)
-            server = DiskServer(
+            DiskServer(
                 environment, safe, queue, _work, changes, host,
-                port, with_refresh, with_restart, root_uri, allowed_origins)
-            configuration = self.configuration
-            if not with_refresh and not with_restart:
-                server.serve(configuration)
-            else:
-                server.watch(
-                    configuration,
-                    disk_poll_in_milliseconds,
-                    disk_debounce_in_milliseconds,
-                    self._reload)
+                port, with_restart, root_uri, allowed_origins,
+            ).watch(
+                self.configuration,
+                disk_poll_in_milliseconds,
+                disk_debounce_in_milliseconds,
+                self._reload)
 
     def _reload(self):
         path = self.path

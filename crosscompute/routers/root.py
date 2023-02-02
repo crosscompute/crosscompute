@@ -9,7 +9,7 @@ from ..constants import (
     MUTATION_ROUTE,
     STYLE_ROUTE)
 from ..dependencies import (
-    get_authorization_guard,
+    AuthorizationGuardFactory,
     get_automation_definition)
 from ..macros.iterable import (
     find_item)
@@ -29,12 +29,10 @@ router = APIRouter()
 async def see_root(
     request: Request,
     guard: AuthorizationGuard = Depends(
-        get_authorization_guard),
+        AuthorizationGuardFactory('see_root')),
 ):
     'Render root with a list of available automations'
     configuration = site['configuration']
-    if not guard.check('see_root', configuration):
-        raise HTTPException(status_code=403)
     return TemplateResponse(template_path_by_id['root'], {
         'request': request,
         'title_text': site['name'],

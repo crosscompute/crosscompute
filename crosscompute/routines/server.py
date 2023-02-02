@@ -9,7 +9,7 @@ from watchgod import watch
 from ..constants import HOST, PORT
 from ..exceptions import CrossComputeError
 from ..routers import automation, mutation, root, token
-from ..settings import site, template_globals
+from ..settings import site, template_environment, template_globals
 from .database import DiskDatabase
 from .interface import Server
 
@@ -18,8 +18,8 @@ class DiskServer(Server):
 
     def __init__(
             self, environment, safe, queue, work, changes,
-            host=HOST, port=PORT, with_refresh=False,
-            with_restart=False, root_uri='', allowed_origins=None):
+            host=HOST, port=PORT, with_restart=False, root_uri='',
+            allowed_origins=None):
         self._environment = environment
         self._safe = safe
         self._queue = queue
@@ -27,7 +27,6 @@ class DiskServer(Server):
         self._changes = changes
         self._host = host
         self._port = port
-        self._with_refresh = with_refresh
         self._with_restart = with_restart
         self._root_uri = root_uri
         self._allowed_origins = allowed_origins
@@ -37,6 +36,7 @@ class DiskServer(Server):
             name='worker', target=self._work, args=(self._queue,))
         worker_process.start()
         host, port, root_uri = self._host, self._port, self._root_uri
+        with_restart = self._with_restart
         site.update({
             'name': configuration.name,
             'configuration': configuration,
@@ -45,16 +45,19 @@ class DiskServer(Server):
             'safe': self._safe,
             'queue': self._queue,
             'changes': self._changes})
+        template_environment.auto_reload = with_restart
         template_globals.update({
-            'server_timestamp': time()})
-        # self._with_refresh, with_restart, self._allowed_origins
+            # 'base_template_path':
+            # 'live_template_path':
+            'server_timestamp': time(),
+            'root_uri': root_uri,
+            'with_restart': with_restart})
+        # self._allowed_origins
         app = get_app(root_uri)
         L.info('serving at http://%s:%s%s', host, port, root_uri)
         try:
             uvicorn.run(
-                app,
-                host=host,
-                port=port,
+                app, host=host, port=port,
                 access_log=L.getEffectiveLevel() <= DEBUG)
         except AssertionError:
             L.error(f'could not start server at {host}:{port}')
@@ -77,7 +80,7 @@ class DiskServer(Server):
             for info in changed_infos:
                 if info['code'] == 'c':
                     should_restart_server = True
-            if should_restart_server:
+            if self._with_restart and should_restart_server:
                 try:
                     configuration = reload()
                 except CrossComputeError as e:
@@ -104,22 +107,10 @@ def get_app(root_uri):
 
 
 '''
-def _get_app(
-        configuration, environment, safe, queue, with_refresh, with_restart,
-        root_uri, allowed_origins, changes):
     settings = {
         'jinja2.trim_blocks': True,
         'jinja2.lstrip_blocks': True,
     }
-    with Configurator(settings=settings) as config:
-        if with_refresh:
-            _configure_mutation_routes(
-                config, server_timestamp, changes)
-        _configure_renderer_globals(
-            config, with_refresh, with_restart, root_uri, server_timestamp,
-            configuration)
-        _configure_cache_headers(config, with_restart)
-        _configure_allowed_origins(config, allowed_origins)
     safe.constant_value_by_key = configuration.identities_by_token
 
 

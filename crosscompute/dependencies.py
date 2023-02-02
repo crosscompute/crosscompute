@@ -32,6 +32,8 @@ async def get_batch_definition(
     automation_definition: AutomationDefinition = Depends(
         get_automation_definition),
 ):
+    if not batch_slug:
+        return
     batch_definitions = getattr(automation_definition, 'batch_definitions', [])
     try:
         batch_definition = find_item(batch_definitions, 'slug', batch_slug)
@@ -54,10 +56,13 @@ async def get_variable_definition(
         get_automation_definition),
     step_name: str = Depends(get_step_name),
 ):
+    variable_definitions = automation_definition.get_variable_definitions(
+        step_name)
     try:
-        variable_definition = get_variable_definition(
-            automation_definition, step_name, variable_id)
-    except KeyError:
+        variable_definition = find_item(
+            variable_definitions, 'id', variable_id,
+            normalize=str.casefold)
+    except StopIteration:
         raise HTTPException(status_code=404)
     return variable_definition
 

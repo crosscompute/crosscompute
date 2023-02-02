@@ -18,7 +18,8 @@ from ..dependencies import (
     get_automation_definition,
     get_batch_definition,
     get_data_by_id,
-    get_step_name)
+    get_step_name,
+    get_variable_definition)
 from ..routines.authorization import AuthorizationGuard
 from ..routines.batch import DiskBatch
 from ..routines.configuration import (
@@ -27,8 +28,7 @@ from ..routines.configuration import (
     VariableDefinition)
 from ..routines.step import (
     get_automation_batch_step_uri,
-    get_step_page_dictionary,
-    get_variable_definition)
+    get_step_page_dictionary)
 from ..routines.variable import load_file_text
 from ..settings import (
     TemplateResponse,
@@ -54,18 +54,24 @@ async def see_automation(
     mutation_reference_uri = automation_uri
     if design_name == 'none':
         d = {'css_uris': automation_definition.css_uris}
+        # is_done = 1
     else:
         batch_definition = automation_definition.batch_definitions[0]
         d = get_step_page_dictionary(
             automation_definition, batch_definition, design_name,
             request.query_params)
+        # is_done = batch.is_done()
+    request_uri = request.url
+    # TODO: change is_done if interval defined
     return TemplateResponse(template_path_by_id['automation'], {
         'request': request,
         'title_text': automation_definition.name,
         'description': automation_definition.description,
-        'host_uri': request.url.host,
+        'host_uri': request_uri.scheme + '://' + request_uri.netloc,
         'name': automation_definition.name,
         'uri': automation_uri,
+        'automation_definition': automation_definition,
+        'step_name': design_name,
         'batches': guard.get_batch_definitions(automation_definition),
         'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri),
         'mutation_timestamp': time(),
@@ -130,6 +136,9 @@ async def see_automation_batch_step(
     page_dictionary = get_step_page_dictionary(
         automation_definition, batch_definition, step_name,
         request.query_params)
+    # is_done = batch.is_done()
+    # TODO: change is_done if interval defined
+    # TODO: check is_done
     return TemplateResponse(template_path_by_id['step'], {
         'request': request,
         'title_text': batch_definition.name,
@@ -164,7 +173,9 @@ async def see_automation_batch_step_variable_json(
     variable_configuration = batch.get_variable_configuration(
         variable_definition).copy()
     variable_configuration.pop('path', None)
-    return {'value': variable_value, 'configuration': variable_configuration}
+    return {
+        'value': variable_value,
+        'configuration': variable_configuration}
 
 
 @router.get(
