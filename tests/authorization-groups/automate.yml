@@ -1,5 +1,5 @@
 ---
-crosscompute: 0.9.2
+crosscompute: 0.9.3
 name: Test Authorization Groups
 version: 0.0.1
 input:
