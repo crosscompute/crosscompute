@@ -3,7 +3,7 @@
 {% block head_html %}
 {{ super() -}}
 <script>
-const callbacks = {}, sleep = t => new Promise(r => setTimeout(r, t));
+const callbacks = {}, isSecure = location.protocol == 'https:', sleep = t => new Promise(r => setTimeout(r, t));
 </script>
 {%- endblock %}
 
