@@ -17,4 +17,7 @@ async def add_token(
         AuthorizationGuardFactory('add_token')),
 ):
     token = guard.put(identities, time_in_seconds)
-    return {'access_token': token, 'token_type': 'bearer'}
+    return {
+        'access_token': token,
+        'token_type': 'bearer',
+    }

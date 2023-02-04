@@ -175,88 +175,6 @@ def run_template(
     return document_blocks
 
 
-def run_result_automation(result_definition, is_mock=True, log=None):
-    if not is_mock:
-        response_json = fetch_resource('prints', method='POST')
-        print_id = response_json['id']
-    else:
-        print_id = None
-
-    def save(document_index, document_dictionary):
-        if not is_mock:
-            fetch_resource(
-                'prints', f'{print_id}/documents/{document_index}',
-                method='PUT', data=document_dictionary)
-        return document_dictionary
-
-    with ThreadPoolExecutor() as executor:
-        document_dictionaries = executor.map(
-            run_result,
-            enumerate(yield_result_dictionary(result_definition)),
-            repeat(log),
-            repeat(save))
-    document_dictionaries = list(document_dictionaries)
-    document_count = len(document_dictionaries)
-    d = {'documents': document_dictionaries}
-    if not is_mock:
-        response_json = fetch_resource('prints', print_id, method='PATCH', data={
-            'count': document_count})
-        d['url'] = response_json['url']
-    return d
-
-
-def run_result(enumerated_result_dictionary, log=None, save=None):
-    result_index, result_dictionary = enumerated_result_dictionary
-    result_name = get_result_name(result_dictionary)
-    log and log({'index': [
-        result_index,
-    ], 'status': 'RUNNING', 'name': result_name})
-    tool_definition = result_dictionary.pop('tool')
-    try:
-        result_dictionary = run_tool(tool_definition, result_dictionary)
-    except CrossComputeError:
-        log and log({'index': [result_index], 'status': 'ERROR'})
-        raise
-    document_dictionary = render_result(tool_definition, result_dictionary)
-    result_name = get_result_name(result_dictionary)  # Recompute
-    log and log({'index': [
-        result_index,
-    ], 'status': 'DONE', 'name': result_name})
-    save and save(result_index, document_dictionary)
-    return document_dictionary
-
-
-def run_tool(tool_definition, result_dictionary, script_command=None):
-    if not script_command:
-        script_command = tool_definition['script']['command']
-    script_folder = join(tool_definition.get(
-        'folder', '.'), tool_definition['script']['folder'])
-    result_folder = get_result_folder(result_dictionary)
-    folder_by_name = {k: make_folder(join(result_folder, k)) for k in [
-        'input', 'output', 'log', 'debug']}
-    folder_by_key = {k + '_folder': v for k, v in folder_by_name.items()}
-    prepare_variable_folder(
-        folder_by_name['input'], tool_definition['input']['variables'],
-        result_dictionary['input']['variables'])
-    script_environment = get_script_environment(tool_definition.get(
-        'environment', {}).get('variables', []), folder_by_key)
-    run_script(script_command.format(
-        **folder_by_key), script_folder, script_environment)
-    for folder_name in 'output', 'log', 'debug':
-        variable_definitions = list(get_nested_value(
-            tool_definition, folder_name, 'variables', []))
-        if folder_name == 'debug':
-            variable_definitions += DEBUG_VARIABLE_DEFINITIONS
-        if not variable_definitions:
-            continue
-        result_dictionary[folder_name] = {
-            'variables': process_variable_folder(folder_by_name[
-                folder_name], variable_definitions)}
-    if 'name' in result_dictionary:
-        result_dictionary['name'] = get_result_name(result_dictionary)
-    return result_dictionary
-
-
 def run_worker(
         script_command=None, with_tests=True, is_quiet=False, as_json=False):
     # TODO: Use token to determine the worker type
@@ -294,26 +212,6 @@ def run_worker(
     return dict(d)
 
 
-def run_script(script_command, script_folder, script_environment):
-    debug_folder = script_environment.get('CROSSCOMPUTE_DEBUG_FOLDER', '')
-    stdout_file = open(join(debug_folder, 'stdout.txt'), 'w+t')
-    stderr_file = open(join(debug_folder, 'stderr.txt'), 'w+t')
-    try:
-        subprocess.run(
-            script_command, env=script_environment, cwd=script_folder,
-            stdout=stdout_file, stderr=stderr_file, encoding='utf-8',
-            shell=True, check=True)
-    except FileNotFoundError:
-        raise CrossComputeDefinitionError({
-            'script': 'could not run command ' + script_command})
-    except subprocess.CalledProcessError:
-        raise CrossComputeExecutionError({
-            'stdout': clean_bash_output(stdout_file),
-            'stderr': clean_bash_output(stderr_file)})
-    stdout_file.close()
-    stderr_file.close()
-
-
 def run_tests(tool_definition):
     tool_definition_folder = tool_definition.get('folder', '.')
     input_variable_definitions = tool_definition['input']['variables']
@@ -344,33 +242,6 @@ def run_tests(tool_definition):
         raise CrossComputeExecutionError(d)
     d['results'] = result_dictionaries
     return d
-
-
-def yield_result_dictionary(result_definition):
-    variable_ids = []
-    variable_data_lists = []
-    for variable_dictionary in get_nested_value(result_definition, 'input', 'variables'):
-        variable_id = variable_dictionary['id']
-        if 'data' not in variable_dictionary:
-            continue
-        variable_data = variable_dictionary['data']
-        if not isinstance(variable_data, list):
-            continue
-        variable_ids.append(variable_id)
-        variable_data_lists.append(variable_data)
-    for variable_data_selection in product(*variable_data_lists):
-        result_dictionary = deepcopy(result_definition)
-        selected_data_by_id = dict(zip(variable_ids, variable_data_selection))
-
-        def update(variable_dictionary):
-            variable_id = variable_dictionary['id']
-            if variable_id in selected_data_by_id:
-                variable_dictionary['data'] = selected_data_by_id[variable_id]
-            return variable_dictionary
-
-        result_dictionary['input']['variables'] = [update(
-            _) for _ in result_dictionary['input']['variables']]
-        yield result_dictionary
 
 
 def prepare_dataset(file_path, file_view, project_dictionaries):
@@ -444,86 +315,6 @@ def prepare_variable_folder(
         file_extension = splitext(file_path)[1]
         if file_extension == '.json':
             save_json(file_path, value_by_id)
-
-
-def process_variable_folder(folder, variable_definitions):
-    load_value_json.cache_clear()
-    variable_dictionaries = []
-    for variable_definition in variable_definitions:
-        variable_id = variable_definition['id']
-        variable_path = variable_definition['path']
-        variable_view = variable_definition['view']
-        file_extension = splitext(variable_path)[1]
-        file_path = join(folder, variable_path)
-        load = define_load(variable_view, file_extension)
-        try:
-            variable_value = load(file_path, variable_id)
-        except OSError:
-            raise CrossComputeDefinitionError({'path': 'is bad ' + file_path})
-        except (ValueError, UnicodeDecodeError):
-            raise CrossComputeExecutionError({
-                'path': 'is unloadable by view ' + variable_view + file_path})
-        except CrossComputeError:
-            raise
-        except Exception:
-            print_exception(*exc_info())
-            raise CrossComputeImplementationError({'path': 'triggered an exception'})
-        variable_dictionaries.append({
-            'id': variable_id, 'data': {'value': variable_value}})
-    return variable_dictionaries
-
-
-def process_variable_dictionary(
-        variable_dictionary, variable_definition, prepare_dataset):
-    variable_view = variable_definition['view']
-    variable_data = variable_dictionary['data']
-    if 'value' not in variable_data:
-        return variable_dictionary
-    variable_value = variable_data['value']
-    variable_value_length = len(repr(variable_value))
-    if variable_view in [
-        'text',
-        'number',
-        'markdown',
-    ] and variable_value_length < S['maximum_variable_value_length']:
-        return variable_dictionary
-    variable_id = variable_definition['id']
-    file_extension, save = list(SAVE_BY_EXTENSION_BY_VIEW[
-        variable_view].items())[0]
-    file_name = f'{variable_id}{file_extension}'
-    with TemporaryStorage() as storage:
-        file_path = join(storage.folder, file_name)
-        save(file_path, variable_value, variable_id, {})
-        dataset_dictionary = prepare_dataset(file_path, variable_view)
-    dataset_id = dataset_dictionary['id']
-    dataset_version_id = dataset_dictionary['version']['id']
-    variable_dictionary['data'] = {'dataset': {
-        'id': dataset_id, 'version': {'id': dataset_version_id}}}
-    return variable_dictionary
-
-
-def process_result_definition(
-        result_dictionary, tool_definition, prepare_dataset):
-    prepare_dataset = partial(
-        prepare_dataset,
-        project_dictionaries=result_dictionary.get('projects', []))
-    for key in 'input', 'output', 'log', 'debug':
-        variable_dictionaries = get_nested_value(
-            result_dictionary, key, 'variables', [])
-        variable_definitions = get_nested_value(
-            tool_definition, key, 'variables', [])
-
-        variable_dictionary_by_id = {
-            _['id']: _ for _ in variable_dictionaries}
-        if not variable_dictionary_by_id:
-            continue
-
-        for variable_definition in variable_definitions:
-            variable_id = variable_definition['id']
-            variable_dictionary = variable_dictionary_by_id[variable_id]
-            process_variable_dictionary(
-                variable_dictionary, variable_definition, prepare_dataset)
-    return result_dictionary
 
 
 def process_result_input_stream(script_command, is_quiet, as_json):

@@ -145,29 +145,6 @@ def normalize_result_variable_dictionaries(
     return variable_dictionaries
 
 
-def normalize_report_template_dictionaries(
-        raw_template_dictionaries, folder=None):
-    # TODO: Support report markdown templates
-    template_dictionaries = []
-    for raw_template_dictionary in raw_template_dictionaries:
-        try:
-            template_path = raw_template_dictionary['path']
-        except KeyError:
-            raise CrossComputeDefinitionError({'path': 'is required'})
-        file_extension = splitext(template_path)[1]
-        if file_extension == '.yml':
-            template_definition = load_definition(join(
-                folder, template_path), kinds=['report', 'result'])
-            template_dictionaries.append(template_definition)
-        elif file_extension == '.md':
-            raise CrossComputeImplementationError({
-                'path': 'is not yet implemented for markdown templates'})
-        else:
-            raise CrossComputeDefinitionError({
-                'path': 'has unsupported extension ' + file_extension})
-    return template_dictionaries
-
-
 def normalize_tool_template_dictionaries(
         raw_template_dictionaries, variable_dictionaries, folder=None):
     template_dictionaries = []
@@ -228,37 +205,6 @@ def normalize_environment_dictionary(raw_environment_dictionary):
     return d
 
 
-def normalize_block_dictionaries(raw_block_dictionaries, with_data=True):
-    check_list(raw_block_dictionaries, 'blocks')
-    block_dictionaries = []
-    for raw_block_dictionary in raw_block_dictionaries:
-        has_id = 'id' in raw_block_dictionary
-        has_view = 'view' in raw_block_dictionary
-        has_data = 'data' in raw_block_dictionary
-        block_dictionary = {}
-        if has_id:
-            block_dictionary['id'] = raw_block_dictionary['id']
-        if has_view:
-            raw_view_name = raw_block_dictionary['view']
-            view_name = normalize_view_name(raw_view_name)
-            block_dictionary['view'] = view_name
-        elif not has_id:
-            raise CrossComputeDefinitionError({
-                'view': 'is required if block lacks id'})
-        if has_data:
-            raw_data_dictionary = raw_block_dictionary['data']
-            data_dictionary = normalize_data_dictionary(
-                raw_data_dictionary, view_name)
-            block_dictionary['data'] = data_dictionary
-        elif with_data:
-            message = 'is required for variable'
-            if has_id:
-                message += ' ' + block_dictionary['id']
-            raise CrossComputeDefinitionError({'data': message})
-        block_dictionaries.append(block_dictionary)
-    return block_dictionaries
-
-
 def get_print_dictionary(dictionary, folder):
     print_dictionary = {}
 
@@ -291,17 +237,3 @@ def get_print_dictionary(dictionary, folder):
         print_dictionary['format'] = raw_format
 
     return print_dictionary
-
-
-def get_template_block_dictionaries(
-        dictionary, variable_dictionaries, folder=None):
-    if 'blocks' in dictionary:
-        raw_block_dictionaries = dictionary['blocks']
-    elif 'path' in dictionary and folder is not None:
-        template_path = join(folder, dictionary['path'])
-        raw_block_dictionaries = load_block_dictionaries(
-            template_path, variable_dictionaries)
-    else:
-        raw_block_dictionaries = []
-    return normalize_block_dictionaries(
-        raw_block_dictionaries, with_data=False)

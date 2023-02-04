@@ -54,13 +54,6 @@ def get_echoes_url():
     return f'{server_url}/echoes/{token}.json'
 
 
-def get_resource_url(server_url, resource_name, resource_id=None):
-    url = server_url + '/' + resource_name
-    if resource_id:
-        url += '/' + resource_id
-    return url + '.json'
-
-
 def get_echoes_client():
     echoes_url = get_echoes_url()
     try:
