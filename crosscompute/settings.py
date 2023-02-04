@@ -1,10 +1,10 @@
 import multiprocessing as mp
 
-from invisibleroads_macros_web.fastapi import (
-    TemplateResponseFactory)
 from invisibleroads_macros_web.jinja import (
     PathTemplateLoader,
     RelativeTemplateEnvironment)
+from invisibleroads_macros_web.starlette import (
+    TemplateResponseFactory)
 
 from .constants import (
     ASSETS_FOLDER,
@@ -31,7 +31,8 @@ template_path_by_id = {
 template_environment = RelativeTemplateEnvironment(
     loader=PathTemplateLoader(),
     autoescape=True,
-    trim_blocks=True)
+    trim_blocks=True,
+    lstrip_blocks=True)
 template_globals = template_environment.globals = {
     'base_template_path': template_path_by_id['base'],
     'live_template_path': template_path_by_id['live'],

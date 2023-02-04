@@ -118,7 +118,7 @@ async def get_authorization_identities(
                 identities_by_token = automation_definition.identities_by_token
                 d = identities_by_token.get(token, {})
             else:
-                d = {}
+                d = site['configuration'].identities_by_token
         identities.update(d, ip_address=request.client.host)
     return identities
 

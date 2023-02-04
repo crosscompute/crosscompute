@@ -7,12 +7,10 @@ from crosscompute.macros.security import DictionarySafe
 
 def test_dictionary_safe():
     with Manager() as manager:
-        a = {'a': 'A'}
-        b = manager.dict()
-        d = DictionarySafe(a, b, variable_key_length=7)
-        assert d.get('a') == 'A'
-        token = d.put('B', time_in_seconds=1)
-        assert d.get(token) == 'B'
+        a = manager.dict()
+        d = DictionarySafe(a, key_length=7)
+        token = d.put('A', time_in_seconds=1)
+        assert d.get(token) == 'A'
         sleep(1)
         with raises(KeyError):
             d.get(token)

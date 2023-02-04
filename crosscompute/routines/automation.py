@@ -108,7 +108,7 @@ class DiskAutomation(Automation):
         queue = multiprocessing_context.Queue()
         with multiprocessing_context.Manager() as manager:
             changes = manager.dict()
-            safe = DictionarySafe({}, manager.dict(), TOKEN_LENGTH)
+            safe = DictionarySafe(manager.dict(), TOKEN_LENGTH)
             DiskServer(
                 environment, safe, queue, _work, changes, host,
                 port, with_restart, root_uri, allowed_origins,

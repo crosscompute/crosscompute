@@ -2,8 +2,10 @@ from logging import getLogger, DEBUG, ERROR
 from time import time
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from invisibleroads_macros_process import LoggableProcess, StoppableProcess
+from invisibleroads_macros_web.starlette import ExtraResponseHeadersMiddleware
 from watchgod import watch
 
 from ..constants import HOST, PORT
@@ -32,28 +34,32 @@ class DiskServer(Server):
         self._allowed_origins = allowed_origins
 
     def serve(self, configuration):
-        worker_process = LoggableProcess(
-            name='worker', target=self._work, args=(self._queue,))
-        worker_process.start()
-        host, port, root_uri = self._host, self._port, self._root_uri
-        with_restart = self._with_restart
+        LoggableProcess(
+            name='worker', target=self._work, args=(self._queue,)).start()
+        [host, port, root_uri, with_restart, allowed_origins] = [
+            self._host, self._port, self._root_uri, self._with_restart,
+            self._allowed_origins]
         site.update({
-            'name': configuration.name,
-            'configuration': configuration,
+            'name': configuration.name, 'configuration': configuration,
             'definitions': configuration.automation_definitions,
-            'environment': self._environment,
-            'safe': self._safe,
-            'queue': self._queue,
-            'changes': self._changes})
+            'environment': self._environment, 'safe': self._safe,
+            'queue': self._queue, 'changes': self._changes})
         template_environment.auto_reload = with_restart
         template_globals.update({
             # 'base_template_path':
             # 'live_template_path':
-            'server_timestamp': time(),
-            'root_uri': root_uri,
+            'server_timestamp': time(), 'root_uri': root_uri,
             'with_restart': with_restart})
-        # self._allowed_origins
         app = get_app(root_uri)
+        if with_restart:
+            app.add_middleware(
+                ExtraResponseHeadersMiddleware,
+                headers={'Cache-Control': 'no-store'})
+        if allowed_origins:
+            app.add_middleware(
+                CORSMiddleware, allow_origins=allowed_origins,
+                allow_credentials=True, allow_methods=['*'],
+                allow_headers=['*'])
         L.info('serving at http://%s:%s%s', host, port, root_uri)
         try:
             uvicorn.run(
@@ -68,9 +74,8 @@ class DiskServer(Server):
         if L.getEffectiveLevel() > DEBUG:
             getLogger('watchgod.watcher').setLevel(ERROR)
         server_process, disk_database = self._serve(configuration)
-        automation_folder = configuration.folder
         for changed_packs in watch(
-                automation_folder, min_sleep=disk_poll_in_milliseconds,
+                configuration.folder, min_sleep=disk_poll_in_milliseconds,
                 debounce=disk_debounce_in_milliseconds):
             L.debug(changed_packs)
             changed_paths = [_[1] for _ in changed_packs]
@@ -104,42 +109,6 @@ def get_app(root_uri):
     app.include_router(mutation.router)
     app.include_router(token.router)
     return app
-
-
-'''
-    settings = {
-        'jinja2.trim_blocks': True,
-        'jinja2.lstrip_blocks': True,
-    }
-    safe.constant_value_by_key = configuration.identities_by_token
-
-
-def _configure_cache_headers(config, with_restart):
-    if not with_restart:
-        return
-
-    def update_cache_headers(e):
-        e.response.headers.update({'Cache-Control': 'no-store'})
-
-    config.add_subscriber(update_cache_headers, NewResponse)
-
-
-def _configure_allowed_origins(config, allowed_origins):
-    if not allowed_origins:
-        return
-
-    def update_cors_headers(e):
-        request_headers = e.request.headers
-        if 'Origin' not in request_headers:
-            return
-        origin = request_headers['Origin']
-        if origin not in allowed_origins:
-            return
-        e.response.headers.update({
-            'Access-Control-Allow-Origin': origin})
-
-    config.add_subscriber(update_cors_headers, NewResponse)
-'''
 
 
 L = getLogger(__name__)
