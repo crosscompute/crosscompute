@@ -46,6 +46,7 @@ router = APIRouter()
     tags=['automation'])
 async def see_automation(
     request: Request,
+    response: Response,
     automation_definition: AutomationDefinition = Depends(
         get_automation_definition),
     guard: AuthorizationGuard = Depends(
@@ -71,7 +72,8 @@ async def see_automation(
         'step_name': design_name,
         'batches': guard.get_batch_definitions(automation_definition),
         'mutation_uri': MUTATION_ROUTE.format(uri=automation_uri),
-        'mutation_timestamp': time()} | d)
+        'mutation_timestamp': time(),
+    } | d, headers=response.headers)
 
 
 @router.post(
@@ -111,11 +113,13 @@ async def run_automation_json(
     tags=['automation'])
 async def see_automation_batch(
     request: Request,
+    response: Response,
     guard: AuthorizationGuard = Depends(
         AuthorizationGuardFactory('see_batch')),
 ):
     return TemplateResponse(template_path_by_id['batch'], {
-        'request': request})
+        'request': request,
+    }, headers=response.headers)
 
 
 @router.get(
@@ -123,6 +127,7 @@ async def see_automation_batch(
     tags=['automation'])
 async def see_automation_batch_step(
     request: Request,
+    response: Response,
     automation_definition: AutomationDefinition = Depends(
         get_automation_definition),
     batch_definition: BatchDefinition = Depends(get_batch_definition),
@@ -143,7 +148,7 @@ async def see_automation_batch_step(
         'step_name': step_name,
         'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri),
         'mutation_timestamp': time(),
-    } | page_dictionary)
+    } | page_dictionary, headers=response.headers)
 
 
 @router.get(
@@ -178,6 +183,7 @@ async def see_automation_batch_step_variable_json(
     AUTOMATION_ROUTE + BATCH_ROUTE + STEP_ROUTE + VARIABLE_ROUTE,
     tags=['automation'])
 async def see_automation_batch_step_variable(
+    response: Response,
     automation_definition: AutomationDefinition = Depends(
         get_automation_definition),
     batch_definition: BatchDefinition = Depends(get_batch_definition),
@@ -191,10 +197,11 @@ async def see_automation_batch_step_variable(
     if 'error' in variable_data:
         raise HTTPException(status_code=404)
     if 'path' in variable_data:
-        response = FileResponse(variable_data['path'])
+        r = FileResponse(variable_data['path'])
     else:
-        response = Response(str(variable_data['value']))
-    return response
+        r = Response(str(variable_data['value']))
+    r.headers = response.headers
+    return r
 
 
 L = getLogger(__name__)

@@ -2,7 +2,7 @@ from logging import getLogger, DEBUG, ERROR
 from time import time
 
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from invisibleroads_macros_process import LoggableProcess, StoppableProcess
 from invisibleroads_macros_web.starlette import ExtraResponseHeadersMiddleware

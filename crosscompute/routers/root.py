@@ -1,6 +1,6 @@
 from time import time
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import FileResponse
 
 from ..constants import (
@@ -28,6 +28,7 @@ router = APIRouter()
 @router.get('/', tags=['root'])
 async def see_root(
     request: Request,
+    response: Response,
     guard: AuthorizationGuard = Depends(
         AuthorizationGuardFactory('see_root')),
 ):
@@ -41,17 +42,20 @@ async def see_root(
             configuration),
         'mutation_uri': MUTATION_ROUTE.format(uri=''),
         'mutation_timestamp': time(),
-    })
+    }, headers=response.headers)
 
 
 @router.get('/favicon.ico', tags=['root'])
-async def see_icon():
-    return FileResponse(ASSETS_FOLDER / 'favicon.ico')
+async def see_icon(response: Response):
+    return FileResponse(
+        ASSETS_FOLDER / 'favicon.ico', headers=response.headers)
 
 
 @router.get(STYLE_ROUTE, tags=['root'])
-async def see_style(request: Request):
-    return get_style_response(site['configuration'], request.url.path)
+async def see_style(request: Request, response: Response):
+    r = get_style_response(site['configuration'], request.url.path)
+    r.headers = response.headers
+    return r
 
 
 @router.get(AUTOMATION_ROUTE + STYLE_ROUTE, tags=['root'])

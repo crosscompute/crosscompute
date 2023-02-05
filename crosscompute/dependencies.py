@@ -1,3 +1,4 @@
+from logging import getLogger
 from types import FunctionType
 
 from fastapi import Body, Depends, HTTPException, Request, Response
@@ -87,9 +88,13 @@ async def get_authorization_token(request: Request, response: Response):
     cookies = request.cookies
     if '_token' in params:
         token = params['_token']
+        if request['scheme'] == 'http':
+            d = {}
+            L.warning('setting insecure cookie')
+        else:
+            d = {'secure': True, 'samesite': 'none'}
         response.set_cookie(
-            'crosscompute-token', value=token, secure=True, httponly=True,
-            samesite='none')
+            'crosscompute-token', value=token, path=None, httponly=True, **d)
     elif 'Authorization' in headers:
         try:
             token = headers['Authorization'].split(maxsplit=1)[1]
@@ -147,3 +152,6 @@ class AuthorizationGuardFactory():
         elif not guard.check(permission_id, site['configuration']):
             raise HTTPException(status_code=403)
         return guard
+
+
+L = getLogger(__name__)
