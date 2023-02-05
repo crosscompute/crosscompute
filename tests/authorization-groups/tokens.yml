@@ -1,9 +1,15 @@
 ---
-token1:
-  example_role_name: a
-token2:
-  example_role_name: b
-token3:
-  example_role_name: c
-token4:
-  example_role_name: d
+0:
+  x: a
+1:
+  x: b
+2:
+  x: c
+3:
+  x: d
+4:
+  x: e
+5:
+  x: f
+6:
+  x: x

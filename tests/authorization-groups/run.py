@@ -17,22 +17,19 @@ output_folder.mkdir(parents=True, exist_ok=True)
 with open(input_folder / 'variables.dictionary', 'rt') as f:
     d = json.load(f)
     x = d['x']
+    y = d['y']
 
 
 try:
     with open(debug_folder / 'identities.dictionary', 'rt') as f:
         d = json.load(f)
-        example_role_name = d['example_role_name']
+        xx = d['x']
 except (OSError, ValueError):
-    example_role_name = None
-if example_role_name == 'c':
-    y = x + 1
-elif example_role_name == 'd':
-    y = x * 2
-else:
-    y = x
+    xx = None
+if xx:
+    y += xx
 
 
 with open(output_folder / 'variables.dictionary', 'wt') as f:
-    d = {'y': y}
+    d = {'z': x + y}
     json.dump(d, f)

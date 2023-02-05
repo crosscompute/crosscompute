@@ -17,8 +17,6 @@ class AuthorizationGuard():
         if not group_definitions:
             return True
         identities = self.identities
-        if not identities:
-            return False
         try:
             group_definition = find_group_definition(
                 group_definitions, identities)
@@ -86,7 +84,6 @@ def find_group_definition(group_definitions, value_by_name):
             try:
                 v = value_by_name[name]
             except KeyError:
-                L.error('"%s" is not defined in identities', name)
                 is_match = False
                 continue
             if not has_match(value, v):

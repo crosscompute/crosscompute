@@ -908,6 +908,7 @@ def validate_token_identifiers(token_dictionary):
             f'{suffix} not supported for token paths')
     identities_by_token = {}
     for token, identities in d.items():
+        token = str(token)
         variable_match = VARIABLE_ID_TEMPLATE_PATTERN.match(token)
         if variable_match:
             variable_id = variable_match.group(1)
@@ -930,7 +931,7 @@ def validate_group_identifiers(group_dictionary):
     group_permissions = [PermissionDefinition(_) for _ in get_dictionaries(
         group_dictionary, 'permissions')]
     return {
-        'configuration': group_configuration,
+        'configuration': group_configuration or {},
         'permissions': group_permissions,
     }
 

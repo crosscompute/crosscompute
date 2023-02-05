@@ -1,6 +1,6 @@
 from types import FunctionType
 
-from fastapi import Body, Depends, HTTPException, Request
+from fastapi import Body, Depends, HTTPException, Request, Response
 
 from .constants import STEP_NAME_BY_CODE
 from .exceptions import CrossComputeDataError
@@ -81,13 +81,13 @@ async def get_data_by_id(
     return data_by_id
 
 
-async def get_authorization_token(request: Request):
+async def get_authorization_token(request: Request, response: Response):
     params = request.query_params
     headers = request.headers
     cookies = request.cookies
     if '_token' in params:
         token = params['_token']
-        request.response.set_cookie(
+        response.set_cookie(
             'crosscompute-token', value=token, secure=True, httponly=True,
             samesite='none')
     elif 'Authorization' in headers:
@@ -114,11 +114,9 @@ async def get_authorization_identities(
         try:
             d = site['safe'].get(token)
         except KeyError:
-            if automation_definition:
-                identities_by_token = automation_definition.identities_by_token
-                d = identities_by_token.get(token, {})
-            else:
-                d = site['configuration'].identities_by_token
+            c = automation_definition if automation_definition else site[
+                'configuration']
+            d = c.identities_by_token.get(token, {})
         identities.update(d, ip_address=request.client.host)
     return identities
 
@@ -137,12 +135,15 @@ class AuthorizationGuardFactory():
         batch_definition: BatchDefinition = Depends(get_batch_definition),
     ):
         guard = AuthorizationGuard(identities)
+        permission_id = self.permission_id
         if automation_definition:
-            is_match = guard.check(self.permission_id, automation_definition)
+            is_match = guard.check(permission_id, automation_definition)
             if not is_match:
                 raise HTTPException(status_code=403)
             if batch_definition:
                 batch = DiskBatch(automation_definition, batch_definition)
                 if isinstance(is_match, FunctionType) and not is_match(batch):
                     raise HTTPException(status_code=403)
+        elif not guard.check(permission_id, site['configuration']):
+            raise HTTPException(status_code=403)
         return guard
