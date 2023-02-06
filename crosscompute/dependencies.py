@@ -71,7 +71,7 @@ async def get_variable_definition(
 async def get_data_by_id(
     automation_definition: AutomationDefinition = Depends(
         get_automation_definition),
-    data_by_id: dict = Body,
+    data_by_id: dict = Body(),
 ):
     variable_definitions = automation_definition.get_variable_definitions(
         'input')

@@ -767,9 +767,13 @@ def validate_dataset_reference(dataset_dictionary):
     dataset_reference = get_dictionary(dataset_dictionary, 'reference')
     reference_path = get_folder_plus_path(dataset_reference)
     if reference_path:
-        if not (automation_folder / reference_path).exists():
-            raise CrossComputeConfigurationError(
-                f'could not find dataset reference {reference_path}')
+        source_path = automation_folder / reference_path
+        if not source_path.exists():
+            if source_path.name == 'runs':
+                source_path.mkdir(parents=True)
+            else:
+                raise CrossComputeConfigurationError(
+                    f'could not find dataset reference {reference_path}')
         target_path = dataset_dictionary.path
         if target_path.exists() and not target_path.is_symlink():
             raise CrossComputeConfigurationError(
@@ -932,8 +936,7 @@ def validate_group_identifiers(group_dictionary):
         group_dictionary, 'permissions')]
     return {
         'configuration': group_configuration or {},
-        'permissions': group_permissions,
-    }
+        'permissions': group_permissions}
 
 
 def validate_permission_identifiers(permission_dictionary):
