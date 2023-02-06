@@ -8,10 +8,11 @@ from invisibleroads_macros_process import LoggableProcess, StoppableProcess
 from invisibleroads_macros_web.starlette import ExtraResponseHeadersMiddleware
 from watchgod import watch
 
-from ..constants import HOST, PORT
+from ..constants import HOST, PORT, TEMPLATE_PATH_BY_ID
 from ..exceptions import CrossComputeError
 from ..routers import automation, mutation, root, token
-from ..settings import site, template_environment, template_globals
+from ..settings import (
+    site, template_environment, template_globals, template_path_by_id)
 from .database import DiskDatabase
 from .interface import Server
 
@@ -36,20 +37,10 @@ class DiskServer(Server):
     def serve(self, configuration):
         LoggableProcess(
             name='worker', target=self._work, args=(self._queue,)).start()
-        [host, port, root_uri, with_restart, allowed_origins] = [
+        host, port, root_uri, with_restart, allowed_origins = [
             self._host, self._port, self._root_uri, self._with_restart,
             self._allowed_origins]
-        site.update({
-            'name': configuration.name, 'configuration': configuration,
-            'definitions': configuration.automation_definitions,
-            'environment': self._environment, 'safe': self._safe,
-            'queue': self._queue, 'changes': self._changes})
-        template_environment.auto_reload = with_restart
-        template_globals.update({
-            # 'base_template_path':
-            # 'live_template_path':
-            'server_timestamp': time(), 'root_uri': root_uri,
-            'with_restart': with_restart})
+        self._refresh(configuration)
         app = get_app(root_uri)
         if with_restart:
             app.add_middleware(
@@ -73,7 +64,7 @@ class DiskServer(Server):
             disk_debounce_in_milliseconds, reload):
         if L.getEffectiveLevel() > DEBUG:
             getLogger('watchgod.watcher').setLevel(ERROR)
-        server_process, disk_database = self._serve(configuration)
+        server_process, disk_database = self._start(configuration)
         for changed_packs in watch(
                 configuration.folder, min_sleep=disk_poll_in_milliseconds,
                 debounce=disk_debounce_in_milliseconds):
@@ -92,14 +83,35 @@ class DiskServer(Server):
                     L.error(e)
                     continue
                 server_process.stop()
-                server_process, disk_database = self._serve(configuration)
+                server_process, disk_database = self._start(configuration)
 
-    def _serve(self, configuration):
+    def _start(self, configuration):
         server_process = StoppableProcess(
             name='server', target=self.serve, args=(configuration,))
         server_process.start()
         disk_database = DiskDatabase(configuration, self._changes)
         return server_process, disk_database
+
+    def _refresh(self, configuration):
+        configuration_name = configuration.name
+        if configuration_name == 'Automation 0':
+            configuration_name = 'Automations'
+        configuration_folder = configuration.folder
+        root_uri, with_restart = self._root_uri, self._with_restart
+        site.update({
+            'name': configuration_name, 'configuration': configuration,
+            'definitions': configuration.automation_definitions,
+            'environment': self._environment, 'safe': self._safe,
+            'queue': self._queue, 'changes': self._changes})
+        template_path_by_id.update(TEMPLATE_PATH_BY_ID)
+        for template_id, path in configuration.template_path_by_id.items():
+            template_path_by_id[template_id] = str(configuration_folder / path)
+        template_globals.update({
+            'base_template_path': template_path_by_id['base'],
+            'live_template_path': template_path_by_id['live'],
+            'server_timestamp': time(), 'root_uri': root_uri,
+            'with_restart': with_restart})
+        template_environment.auto_reload = with_restart
 
 
 def get_app(root_uri):

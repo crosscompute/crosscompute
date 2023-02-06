@@ -97,8 +97,7 @@ class AutomationDefinition(Definition):
             validate_display_templates,
             validate_display_pages,
             validate_display_buttons,
-            validate_prints,
-        ]
+            validate_prints]
 
     def get_variable_definitions(self, step_name, with_all=False):
         variable_definitions = self.variable_definitions_by_step_name.get(
@@ -148,8 +147,7 @@ class VariableDefinition(Definition):
         self.step_name = kwargs['step_name']
         self._validation_functions = [
             validate_variable_identifiers,
-            validate_variable_configuration,
-        ]
+            validate_variable_configuration]
 
 
 class TemplateDefinition(Definition):
@@ -158,8 +156,7 @@ class TemplateDefinition(Definition):
         self.automation_folder = kwargs['automation_folder']
         self.step_name = kwargs.get('step_name')
         self._validation_functions = [
-            validate_template_identifiers,
-        ]
+            validate_template_identifiers]
 
 
 class BatchDefinition(Definition):
@@ -169,8 +166,7 @@ class BatchDefinition(Definition):
         self.is_run = kwargs.get('is_run', False)
         self._validation_functions = [
             validate_batch_identifiers,
-            validate_batch_configuration,
-        ]
+            validate_batch_configuration]
 
     def get_status(self):
         status = Status.NEW
@@ -188,8 +184,7 @@ class DatasetDefinition(Definition):
         self.automation_folder = kwargs['automation_folder']
         self._validation_functions = [
             validate_dataset_identifiers,
-            validate_dataset_reference,
-        ]
+            validate_dataset_reference]
 
 
 class ScriptDefinition(Definition):
@@ -197,8 +192,7 @@ class ScriptDefinition(Definition):
     def _initialize(self, kwargs):
         self.automation_folder = kwargs['automation_folder']
         self._validation_functions = [
-            validate_script_identifiers,
-        ]
+            validate_script_identifiers]
 
     def get_command_string(self):
         command_string = self.command
@@ -239,24 +233,21 @@ class PackageDefinition(Definition):
 
     def _initialize(self, kwargs):
         self._validation_functions = [
-            validate_package_identifiers,
-        ]
+            validate_package_identifiers]
 
 
 class PortDefinition(Definition):
 
     def _initialize(self, kwargs):
         self._validation_functions = [
-            validate_port_identifiers,
-        ]
+            validate_port_identifiers]
 
 
 class StyleDefinition(Definition):
 
     def _initialize(self, kwargs):
         self._validation_functions = [
-            validate_style_identifiers,
-        ]
+            validate_style_identifiers]
 
 
 class PageDefinition(Definition):
@@ -264,8 +255,7 @@ class PageDefinition(Definition):
     def _initialize(self, kwargs):
         self._validation_functions = [
             validate_page_identifiers,
-            validate_page_configuration,
-        ]
+            validate_page_configuration]
 
 
 class ButtonDefinition(Definition):
@@ -273,8 +263,7 @@ class ButtonDefinition(Definition):
     def _initialize(self, kwargs):
         self._validation_functions = [
             validate_button_identifiers,
-            validate_button_configuration,
-        ]
+            validate_button_configuration]
 
 
 class TokenDefinition(Definition):
@@ -282,24 +271,21 @@ class TokenDefinition(Definition):
     def _initialize(self, kwargs):
         self.automation_folder = kwargs['automation_folder']
         self._validation_functions = [
-            validate_token_identifiers,
-        ]
+            validate_token_identifiers]
 
 
 class GroupDefinition(Definition):
 
     def _initialize(self, kwargs):
         self._validation_functions = [
-            validate_group_identifiers,
-        ]
+            validate_group_identifiers]
 
 
 class PermissionDefinition(Definition):
 
     def _initialize(self, kwargs):
         self._validation_functions = [
-            validate_permission_identifiers,
-        ]
+            validate_permission_identifiers]
 
 
 class PrintDefinition(Definition):
@@ -309,8 +295,7 @@ class PrintDefinition(Definition):
             validate_print_identifiers,
             validate_print_configuration,
             validate_header_footer_options,
-            validate_page_number_options,
-        ]
+            validate_page_number_options]
 
 
 def save_raw_configuration(configuration_path, configuration):
@@ -414,8 +399,7 @@ def validate_automation_identifiers(configuration):
         'description': description,
         'version': version,
         'slug': slug,
-        'uri': uri,
-    }
+        'uri': uri}
 
 
 def validate_imports(configuration):
@@ -447,8 +431,7 @@ def validate_imports(configuration):
         _.slug for _ in automation_definitions], 'duplicate slug {x}')
     return {
         'import_configurations': import_configurations,
-        'automation_definitions': automation_definitions,
-    }
+        'automation_definitions': automation_definitions}
 
 
 def validate_variables(configuration):
@@ -470,8 +453,7 @@ def validate_variables(configuration):
     L.debug('view_names = %s', list(view_names))
     return {
         'variable_definitions_by_step_name': variable_definitions_by_step_name,
-        '___view_names': view_names,
-    }
+        '___view_names': view_names}
 
 
 def validate_variable_views(configuration):
@@ -503,8 +485,7 @@ def validate_templates(configuration):
             f'duplicate template id {{x}} in {step_name}')
         template_definitions_by_step_name[step_name] = template_definitions
     return {
-        'template_definitions_by_step_name': template_definitions_by_step_name,
-    }
+        'template_definitions_by_step_name': template_definitions_by_step_name}
 
 
 def validate_batches(configuration):
@@ -524,9 +505,7 @@ def validate_batches(configuration):
         _.name for _ in batch_definitions], 'duplicate batch name {x}')
     assert_unique_values([
         _.uri for _ in batch_definitions], 'duplicate batch uri {x}')
-    return {
-        'batch_definitions': batch_definitions,
-    }
+    return {'batch_definitions': batch_definitions}
 
 
 def validate_environment(configuration):
@@ -550,8 +529,7 @@ def validate_environment(configuration):
         'port_definitions': port_definitions,
         'environment_variable_ids': environment_variable_ids,
         'batch_concurrency_name': batch_concurrency_name,
-        'interval_timedelta': interval_timedelta,
-    }
+        'interval_timedelta': interval_timedelta}
 
 
 def validate_datasets(configuration):
@@ -559,9 +537,7 @@ def validate_datasets(configuration):
     dataset_definitions = [DatasetDefinition(
         _, automation_folder=automation_folder,
     ) for _ in get_dictionaries(configuration, 'datasets')]
-    return {
-        'dataset_definitions': dataset_definitions,
-    }
+    return {'dataset_definitions': dataset_definitions}
 
 
 def validate_scripts(configuration):
@@ -569,9 +545,7 @@ def validate_scripts(configuration):
     script_definitions = [ScriptDefinition(
         _, automation_folder=automation_folder,
     ) for _ in get_dictionaries(configuration, 'scripts')]
-    return {
-        'script_definitions': script_definitions,
-    }
+    return {'script_definitions': script_definitions}
 
 
 def validate_display_styles(configuration):
@@ -601,8 +575,7 @@ def validate_display_styles(configuration):
         style_definitions.append(style_definition)
     return {
         'style_definitions': style_definitions,
-        'css_uris': [_.uri for _ in style_definitions],
-    }
+        'css_uris': [_.uri for _ in style_definitions]}
 
 
 def validate_display_templates(configuration):
@@ -615,9 +588,7 @@ def validate_display_templates(configuration):
             raw_template_definition, automation_folder=automation_folder)
         template_id = template_definition.id
         template_path_by_id[template_id] = template_definition.path
-    return {
-        'template_path_by_id': template_path_by_id,
-    }
+    return {'template_path_by_id': template_path_by_id}
 
 
 def validate_display_pages(configuration):
@@ -625,9 +596,7 @@ def validate_display_pages(configuration):
     page_definitions = [PageDefinition(_) for _ in get_dictionaries(
         display_dictionary, 'pages')]
     page_definition_by_id = {_.id: _ for _ in page_definitions}
-    return {
-        'page_definition_by_id': page_definition_by_id,
-    }
+    return {'page_definition_by_id': page_definition_by_id}
 
 
 def validate_display_buttons(configuration):
@@ -635,9 +604,7 @@ def validate_display_buttons(configuration):
     button_definitions = [ButtonDefinition(_) for _ in get_dictionaries(
         display_dictionary, 'buttons')]
     button_definition_by_id = {_.id: _ for _ in button_definitions}
-    return {
-        'button_definition_by_id': button_definition_by_id,
-    }
+    return {'button_definition_by_id': button_definition_by_id}
 
 
 def validate_authorization(configuration):
@@ -654,16 +621,13 @@ def validate_authorization(configuration):
     group_definitions = child_group_definitions + parent_group_definitions
     return {
         'identities_by_token': identities_by_token,
-        'group_definitions': group_definitions,
-    }
+        'group_definitions': group_definitions}
 
 
 def validate_prints(configuration):
     print_definitions = [PrintDefinition(_) for _ in get_dictionaries(
         configuration, 'prints')]
-    return {
-        'print_definitions': print_definitions,
-    }
+    return {'print_definitions': print_definitions}
 
 
 def validate_template_identifiers(template_dictionary):
@@ -678,8 +642,7 @@ def validate_template_identifiers(template_dictionary):
             f'could not find template {template_path}')
     return {
         'id': template_dictionary.get('id', template_path.stem),
-        'path': template_path,
-    }
+        'path': template_path}
 
 
 def validate_variable_identifiers(variable_dictionary):
@@ -700,16 +663,13 @@ def validate_variable_identifiers(variable_dictionary):
     return {
         'id': variable_id,
         'view_name': view_name,
-        'path': Path(variable_path),
-    }
+        'path': Path(variable_path)}
 
 
 def validate_variable_configuration(variable_dictionary):
     variable_configuration = get_dictionary(
         variable_dictionary, 'configuration')
-    return {
-        'configuration': variable_configuration,
-    }
+    return {'configuration': variable_configuration}
 
 
 def validate_batch_identifiers(batch_dictionary):
@@ -752,14 +712,11 @@ def validate_batch_configuration(batch_dictionary):
     batch_configuration = get_dictionary(batch_dictionary, 'configuration')
     return {
         'reference': batch_reference,
-        'configuration': batch_configuration,
-    }
+        'configuration': batch_configuration}
 
 
 def validate_dataset_identifiers(dataset_dictionary):
-    return {
-        'path': get_folder_plus_path(dataset_dictionary),
-    }
+    return {'path': get_folder_plus_path(dataset_dictionary)}
 
 
 def validate_dataset_reference(dataset_dictionary):
@@ -779,9 +736,7 @@ def validate_dataset_reference(dataset_dictionary):
             raise CrossComputeConfigurationError(
                 'refusing to overwrite existing dataset; please delete '
                 f'{target_path} from the disk as defined')
-    return {
-        'reference': dataset_reference,
-    }
+    return {'reference': dataset_reference}
 
 
 def validate_script_identifiers(script_dictionary):
@@ -804,8 +759,7 @@ def validate_script_identifiers(script_dictionary):
     return {
         'folder': Path(folder),
         'path': path,
-        'command': command,
-    }
+        'command': command}
 
 
 def validate_package_identifiers(package_dictionary):
@@ -819,8 +773,7 @@ def validate_package_identifiers(package_dictionary):
             f'"{manager_name}" manager is not supported')
     return {
         'id': package_id,
-        'manager_name': manager_name,
-    }
+        'manager_name': manager_name}
 
 
 def validate_port_identifiers(port_dictionary):
@@ -836,8 +789,7 @@ def validate_port_identifiers(port_dictionary):
             f'{port_number} must be an integer')
     return {
         'id': port_id,
-        'number': port_number,
-    }
+        'number': port_number}
 
 
 def validate_style_identifiers(style_dictionary):
@@ -846,10 +798,7 @@ def validate_style_identifiers(style_dictionary):
     if not uri and not path:
         raise CrossComputeConfigurationError(
             'uri or path required for each style')
-    return {
-        'uri': uri,
-        'path': Path(path),
-    }
+    return {'uri': uri, 'path': Path(path)}
 
 
 def validate_page_identifiers(page_dictionary):
@@ -860,9 +809,7 @@ def validate_page_identifiers(page_dictionary):
     if page_id not in DESIGN_NAMES_BY_PAGE_ID:
         raise CrossComputeConfigurationError(
             f'{page_id} page not supported for page configuration')
-    return {
-        'id': page_id,
-    }
+    return {'id': page_id}
 
 
 def validate_page_configuration(page_dictionary):
@@ -873,9 +820,7 @@ def validate_page_configuration(page_dictionary):
     if design_name not in design_names:
         raise CrossComputeConfigurationError(
             f'"{design_name}" design not supported for {page_id} page')
-    return {
-        'configuration': page_configuration,
-    }
+    return {'configuration': page_configuration}
 
 
 def validate_button_identifiers(button_dictionary):
@@ -886,16 +831,12 @@ def validate_button_identifiers(button_dictionary):
     if button_id not in BUTTON_TEXT_BY_ID:
         raise CrossComputeConfigurationError(
             f'{button_id} button not supported for button configuration')
-    return {
-        'id': button_id,
-    }
+    return {'id': button_id}
 
 
 def validate_button_configuration(button_dictionary):
     button_configuration = get_dictionary(button_dictionary, 'configuration')
-    return {
-        'configuration': button_configuration,
-    }
+    return {'configuration': button_configuration}
 
 
 def validate_token_identifiers(token_dictionary):
@@ -952,10 +893,7 @@ def validate_permission_identifiers(permission_dictionary):
     if permission_action not in PERMISSION_ACTIONS:
         raise CrossComputeConfigurationError(
             f'"{permission_action}" action not supported')
-    return {
-        'id': permission_id,
-        'action': permission_action,
-    }
+    return {'id': permission_id, 'action': permission_action}
 
 
 def validate_print_identifiers(print_dictionary):
@@ -977,16 +915,13 @@ def validate_print_identifiers(print_dictionary):
     return {
         'format': print_format,
         'folder': print_folder,
-        'name': print_name,
-    }
+        'name': print_name}
 
 
 def validate_print_configuration(print_dictionary):
     print_configuration = get_dictionary(
         print_dictionary, 'configuration')
-    return {
-        'configuration': print_configuration,
-    }
+    return {'configuration': print_configuration}
 
 
 def validate_header_footer_options(print_dictionary):

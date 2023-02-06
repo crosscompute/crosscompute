@@ -19,6 +19,15 @@ class Status(IntEnum):
 
 PACKAGE_FOLDER = Path(__file__).parent
 ASSETS_FOLDER = PACKAGE_FOLDER / 'assets'
+TEMPLATE_PATH_BY_ID = {
+    'base': str(ASSETS_FOLDER / 'base.html'),
+    'live': str(ASSETS_FOLDER / 'live.html'),
+    'root': str(ASSETS_FOLDER / 'root.html'),
+    'automation': str(ASSETS_FOLDER / 'automation.html'),
+    'batch': str(ASSETS_FOLDER / 'batch.html'),
+    'step': str(ASSETS_FOLDER / 'step.html')}
+
+
 ID_LENGTH = 32
 TOKEN_LENGTH = 32
 

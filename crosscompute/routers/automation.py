@@ -197,10 +197,11 @@ async def see_automation_batch_step_variable(
     if 'error' in variable_data:
         raise HTTPException(status_code=404)
     if 'path' in variable_data:
-        r = FileResponse(variable_data['path'])
+        r = FileResponse(
+            variable_data['path'], headers=response.headers)
     else:
-        r = Response(str(variable_data['value']))
-    r.headers = response.headers
+        r = Response(str(
+            variable_data['value']), headers=response.headers)
     return r
 
 
