@@ -65,6 +65,9 @@ def configure_argument_parser_for_serving(a):
         '--no-restart', dest='with_restart', action='store_false',
         help='do not restart server when configuration changes')
     a.add_argument(
+        '--no-prefix', dest='with_prefix', action='store_false',
+        help='do not prefix root uri to routes')
+    a.add_argument(
         '--root-uri', metavar='X',
         default='',
         help='specify root uri for all routes')
@@ -96,6 +99,7 @@ def serve_with(automation, args):
         port=args.port,
         with_browser=args.with_browser,
         with_restart=args.with_restart,
+        with_prefix=args.with_prefix,
         root_uri=args.root_uri,
         allowed_origins=args.allowed_origins,
         disk_poll_in_milliseconds=args.disk_poll,
@@ -107,8 +111,9 @@ def serve(
         environment,
         host=HOST,
         port=PORT,
-        with_browser=False,
-        with_restart=False,
+        with_browser=True,
+        with_restart=True,
+        with_prefix=True,
         root_uri='',
         allowed_origins=None,
         disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
@@ -122,6 +127,7 @@ def serve(
             host=host,
             port=port,
             with_restart=with_restart,
+            with_prefix=with_prefix,
             root_uri=root_uri,
             allowed_origins=allowed_origins,
             disk_poll_in_milliseconds=disk_poll_in_milliseconds,

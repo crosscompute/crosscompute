@@ -101,8 +101,8 @@ class DiskAutomation(Automation):
             sleep(1)
 
     def serve(
-            self, environment, host=HOST, port=PORT, with_restart=False,
-            root_uri='', allowed_origins=None,
+            self, environment, host=HOST, port=PORT, with_restart=True,
+            with_prefix=True, root_uri='', allowed_origins=None,
             disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
             disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS):
         queue = multiprocessing_context.Queue()
@@ -110,8 +110,8 @@ class DiskAutomation(Automation):
             changes = manager.dict()
             safe = DictionarySafe(manager.dict(), TOKEN_LENGTH)
             DiskServer(
-                environment, safe, queue, _work, changes, host,
-                port, with_restart, root_uri, allowed_origins,
+                environment, safe, queue, _work, changes, host, port,
+                with_restart, with_prefix, root_uri, allowed_origins,
             ).watch(
                 self.configuration,
                 disk_poll_in_milliseconds,

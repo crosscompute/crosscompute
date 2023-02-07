@@ -21,8 +21,8 @@ class DiskServer(Server):
 
     def __init__(
             self, environment, safe, queue, work, changes,
-            host=HOST, port=PORT, with_restart=False, root_uri='',
-            allowed_origins=None):
+            host=HOST, port=PORT, with_restart=True, with_prefix=True,
+            root_uri='', allowed_origins=None):
         self._environment = environment
         self._safe = safe
         self._queue = queue
@@ -31,17 +31,18 @@ class DiskServer(Server):
         self._host = host
         self._port = port
         self._with_restart = with_restart
+        self._with_prefix = with_prefix
         self._root_uri = root_uri
         self._allowed_origins = allowed_origins
 
     def serve(self, configuration):
         LoggableProcess(
             name='worker', target=self._work, args=(self._queue,)).start()
-        host, port, root_uri, with_restart, allowed_origins = [
+        host, port, root_uri, with_restart, with_prefix, allowed_origins = [
             self._host, self._port, self._root_uri, self._with_restart,
-            self._allowed_origins]
+            self._with_prefix, self._allowed_origins]
         self._refresh(configuration)
-        app = get_app(root_uri)
+        app = get_app(root_uri, with_prefix)
         if with_restart:
             app.add_middleware(
                 ExtraResponseHeadersMiddleware,
@@ -114,12 +115,13 @@ class DiskServer(Server):
         template_environment.auto_reload = with_restart
 
 
-def get_app(root_uri):
-    app = FastAPI(root_path=root_uri)
-    app.include_router(root.router)
-    app.include_router(automation.router)
-    app.include_router(mutation.router)
-    app.include_router(token.router)
+def get_app(root_uri, with_prefix):
+    prefix = root_uri if with_prefix else ''
+    app = FastAPI(root_path='' if with_prefix else root_uri)
+    app.include_router(root.router, prefix=prefix)
+    app.include_router(automation.router, prefix=prefix)
+    app.include_router(mutation.router, prefix=prefix)
+    app.include_router(token.router, prefix=prefix)
     return app
 
 

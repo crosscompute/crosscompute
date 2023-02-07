@@ -4,6 +4,7 @@ from logging import getLogger
 from invisibleroads_macros_process import (
     LoggableProcess)
 
+from crosscompute import __version__
 from crosscompute.exceptions import (
     CrossComputeConfigurationNotFoundError,
     CrossComputeError)
@@ -30,6 +31,7 @@ from crosscompute.scripts.serve import (
 
 def do(arguments=None):
     args = _get_args(arguments)
+    L.info(f'launching crosscompute {__version__}')
     launch_id = get_launch_id_from(args)
     if launch_id == 'configure':
         configure_with(args)
