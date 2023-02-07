@@ -5,6 +5,7 @@ from logging import getLogger
 from invisibleroads_macros_web.markdown import get_html_from_markdown
 
 from ..constants import (
+    MUTATION_ROUTE,
     STEP_CODE_BY_NAME,
     STEP_ROUTE,
     VARIABLE_ID_TEMPLATE_PATTERN)
@@ -24,7 +25,7 @@ def get_automation_batch_step_uri(
     return automation_uri + batch_uri + step_uri
 
 
-def get_step_page_dictionary(
+def get_step_response_dictionary(
         automation_definition, batch_definition, step_name, request_params):
     variable_definitions = automation_definition.get_variable_definitions(
         step_name, with_all=True)
@@ -42,14 +43,18 @@ def get_step_page_dictionary(
     template_text = automation_definition.get_template_text(step_name)
     main_text = get_html_from_markdown(VARIABLE_ID_TEMPLATE_PATTERN.sub(
         render_element_html, template_text))
+    mutation_reference_uri = get_automation_batch_step_uri(
+        automation_definition, batch_definition, step_name)
     return {
         'css_uris': get_unique_order(m['css_uris']),
         'css_text': get_css_text(design_name, for_embed, for_print),
         'main_text': main_text,
         'js_uris': get_unique_order(m['js_uris']),
         'js_text': '\n'.join(get_unique_order(m['js_texts'])),
-        'for_embed': for_embed, 'for_print': for_print,
-        'is_done': batch.is_done()}
+        'for_embed': for_embed,
+        'for_print': for_print,
+        'is_done': batch.is_done(),
+        'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri)}
 
 
 def render_variable_html(
