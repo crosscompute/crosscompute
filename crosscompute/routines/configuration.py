@@ -555,8 +555,7 @@ def validate_display_styles(configuration):
     automation_uri = configuration.uri
     reference_time = time()
     style_definitions = []
-    for raw_style_definition in get_dictionaries(
-            display_dictionary, 'styles'):
+    for raw_style_definition in get_dictionaries(display_dictionary, 'styles'):
         style_definition = StyleDefinition(raw_style_definition)
         style_uri = style_definition.uri
         if '//' not in style_uri:

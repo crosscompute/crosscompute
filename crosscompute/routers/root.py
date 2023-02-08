@@ -19,6 +19,7 @@ from ..routines.configuration import (
 from ..settings import (
     TemplateResponse,
     site,
+    template_globals,
     template_path_by_id)
 
 
@@ -52,12 +53,9 @@ async def see_icon(response: Response):
 
 
 @router.get(STYLE_ROUTE, tags=['root'])
-async def see_style(
-    request: Request,
-    response: Response,
-):
-    return get_style_response(site[
-        'configuration'], request.url.path, response.headers)
+async def see_style(request: Request, response: Response):
+    return get_style_response(
+        site['configuration'], request.url.path, response.headers)
 
 
 @router.get(AUTOMATION_ROUTE + STYLE_ROUTE, tags=['root'])
@@ -73,9 +71,10 @@ async def see_automation_style(
 
 def get_style_response(automation_definition, uri_path, response_headers):
     style_definitions = automation_definition.style_definitions
+    if site['with_prefix']:
+        uri_path = uri_path.replace(template_globals['root_uri'], '', 1)
     try:
-        style_definition = find_item(
-            style_definitions, 'uri', uri_path)
+        style_definition = find_item(style_definitions, 'uri', uri_path)
     except StopIteration:
         raise HTTPException(status_code=404)
     path = automation_definition.folder / style_definition['path']

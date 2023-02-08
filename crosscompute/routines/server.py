@@ -103,7 +103,8 @@ class DiskServer(Server):
             'name': configuration_name, 'configuration': configuration,
             'definitions': configuration.automation_definitions,
             'environment': self._environment, 'safe': self._safe,
-            'queue': self._queue, 'changes': self._changes})
+            'queue': self._queue, 'changes': self._changes,
+            'with_prefix': self._with_prefix})
         template_path_by_id.update(TEMPLATE_PATH_BY_ID)
         for template_id, path in configuration.template_path_by_id.items():
             template_path_by_id[template_id] = str(configuration_folder / path)

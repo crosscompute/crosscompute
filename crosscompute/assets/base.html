@@ -8,6 +8,9 @@
 {% for css_uri in css_uris %}
 <link href="{{ css_uri if '//' in css_uri else root_uri + css_uri }}" rel="stylesheet">
 {% endfor %}
+{% if root_uri %}
+<link rel="icon" href="{{ root_uri }}/favicon.ico"/>
+{% endif %}
 <style>
 {% block head_css %}
 {{ css_text | safe }}
