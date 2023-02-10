@@ -22,7 +22,8 @@ site = {
     'safe': None,
     'queue': None,
     'changes': {},
-    'with_prefix': False}
+    'with_prefix': True,
+    'with_hidden': True}
 template_path_by_id = TEMPLATE_PATH_BY_ID.copy()
 template_environment = RelativeTemplateEnvironment(
     loader=PathTemplateLoader(),

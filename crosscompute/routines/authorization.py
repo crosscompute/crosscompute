@@ -45,6 +45,8 @@ class AuthorizationGuard():
         if not is_match:
             return []
         batch_definitions = configuration.batch_definitions
+        if site['with_hidden']:
+            batch_definitions = [_ for _ in batch_definitions if not _.is_run]
         if not isinstance(is_match, FunctionType):
             return batch_definitions
         return [

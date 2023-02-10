@@ -25,7 +25,7 @@ class DiskServer(Server):
     def __init__(
             self, environment, safe, queue, work, changes,
             host=HOST, port=PORT, with_restart=True, with_prefix=True,
-            root_uri='', allowed_origins=None):
+            with_hidden=True, root_uri='', allowed_origins=None):
         self._environment = environment
         self._safe = safe
         self._queue = queue
@@ -35,6 +35,7 @@ class DiskServer(Server):
         self._port = port
         self._with_restart = with_restart
         self._with_prefix = with_prefix
+        self._with_hidden = with_hidden
         self._root_uri = root_uri
         self._allowed_origins = allowed_origins
 
@@ -107,7 +108,8 @@ class DiskServer(Server):
             'definitions': configuration.automation_definitions,
             'environment': self._environment, 'safe': self._safe,
             'queue': self._queue, 'changes': self._changes,
-            'with_prefix': self._with_prefix})
+            'with_prefix': self._with_prefix,
+            'with_hidden': self._with_hidden})
         template_path_by_id.update(TEMPLATE_PATH_BY_ID)
         for template_id, path in configuration.template_path_by_id.items():
             template_path_by_id[template_id] = str(configuration_folder / path)
