@@ -3,9 +3,12 @@ from time import time
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.exception_handlers import http_exception_handler
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 from invisibleroads_macros_process import LoggableProcess, StoppableProcess
 from invisibleroads_macros_web.starlette import ExtraResponseHeadersMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from watchgod import watch
 
 from ..constants import HOST, PORT, TEMPLATE_PATH_BY_ID
@@ -119,11 +122,20 @@ class DiskServer(Server):
 def get_app(root_uri, with_prefix):
     prefix = root_uri if with_prefix else ''
     app = FastAPI(root_path='' if with_prefix else root_uri)
+    app.add_exception_handler(StarletteHTTPException, handle_http_exception)
     app.include_router(root.router, prefix=prefix)
     app.include_router(automation.router, prefix=prefix)
     app.include_router(mutation.router, prefix=prefix)
     app.include_router(token.router, prefix=prefix)
     return app
+
+
+async def handle_http_exception(request, e):
+    if request.url.path.endswith('.json'):
+        response = await http_exception_handler(request, e)
+    else:
+        response = PlainTextResponse(status_code=e.status_code)
+    return response
 
 
 L = getLogger(__name__)
