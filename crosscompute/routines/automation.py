@@ -438,29 +438,29 @@ def _proxy_podman_ports(
     origin_uri = custom_environment.get('CROSSCOMPUTE_ORIGIN_URI', '')
     relative_uris = []
     if PROXY_URI:
-        def get_session_uri(host_port, relative_uri):
+        def get_port_uri(host_port, relative_uri):
             requests.post(PROXY_URI + relative_uri, json={
                 'target': f'http://localhost:{host_port}'})
             relative_uris.append(relative_uri)
             return origin_uri + relative_uri
     else:
-        def get_session_uri(host_port, relative_uri):
+        def get_port_uri(host_port, relative_uri):
             return f'http://localhost:{host_port}'
     automation_uri = AUTOMATION_ROUTE.format(
         automation_slug=automation_definition.slug)
     batch_uri = BATCH_ROUTE.format(batch_slug=batch_folder.name)
     absolute_batch_folder = automation_definition.folder / batch_folder
-    session_uri_by_port_id = {}
+    port_uri_by_port_id = {}
     for port_id, host_port, step_name in port_packs:
         step_code = STEP_CODE_BY_NAME[step_name]
         variable_id = port_id
         relative_uri = (
             f'/sessions{automation_uri}{batch_uri}/{step_code}/{variable_id}')
-        session_uri_by_port_id[port_id] = get_session_uri(
+        port_uri_by_port_id[port_id] = get_port_uri(
             host_port, relative_uri)
     update_variable_data(
         absolute_batch_folder / 'debug' / 'ports.dictionary',
-        session_uri_by_port_id)
+        port_uri_by_port_id)
     yield
     for relative_uri in relative_uris:
         requests.delete(PROXY_URI + relative_uri)
