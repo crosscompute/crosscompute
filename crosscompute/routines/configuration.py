@@ -1149,7 +1149,7 @@ folder_by_name = {}
 for x in 'input_folder', 'output_folder', 'log_folder', 'debug_folder':
     folder_by_name[x] = Path(getenv('CROSSCOMPUTE_' + x.upper()))
 d = {}
-for x in inspect.getargspec(run.plot).args:
+for x in inspect.getargspec($function_string).args:
     d[x] = folder_by_name[x]
 $function_string(**d)''')
 
