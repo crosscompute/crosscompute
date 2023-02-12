@@ -3,9 +3,12 @@ from time import time
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.exception_handlers import http_exception_handler
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 from invisibleroads_macros_process import LoggableProcess, StoppableProcess
 from invisibleroads_macros_web.starlette import ExtraResponseHeadersMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from watchgod import watch
 
 from ..constants import HOST, PORT, TEMPLATE_PATH_BY_ID
@@ -22,7 +25,7 @@ class DiskServer(Server):
     def __init__(
             self, environment, safe, queue, work, changes,
             host=HOST, port=PORT, with_restart=True, with_prefix=True,
-            root_uri='', allowed_origins=None):
+            with_hidden=True, root_uri='', allowed_origins=None):
         self._environment = environment
         self._safe = safe
         self._queue = queue
@@ -32,6 +35,7 @@ class DiskServer(Server):
         self._port = port
         self._with_restart = with_restart
         self._with_prefix = with_prefix
+        self._with_hidden = with_hidden
         self._root_uri = root_uri
         self._allowed_origins = allowed_origins
 
@@ -104,7 +108,8 @@ class DiskServer(Server):
             'definitions': configuration.automation_definitions,
             'environment': self._environment, 'safe': self._safe,
             'queue': self._queue, 'changes': self._changes,
-            'with_prefix': self._with_prefix})
+            'with_prefix': self._with_prefix,
+            'with_hidden': self._with_hidden})
         template_path_by_id.update(TEMPLATE_PATH_BY_ID)
         for template_id, path in configuration.template_path_by_id.items():
             template_path_by_id[template_id] = str(configuration_folder / path)
@@ -119,11 +124,20 @@ class DiskServer(Server):
 def get_app(root_uri, with_prefix):
     prefix = root_uri if with_prefix else ''
     app = FastAPI(root_path='' if with_prefix else root_uri)
+    app.add_exception_handler(StarletteHTTPException, handle_http_exception)
     app.include_router(root.router, prefix=prefix)
     app.include_router(automation.router, prefix=prefix)
     app.include_router(mutation.router, prefix=prefix)
     app.include_router(token.router, prefix=prefix)
     return app
+
+
+async def handle_http_exception(request, e):
+    if request.url.path.endswith('.json'):
+        response = await http_exception_handler(request, e)
+    else:
+        response = PlainTextResponse(status_code=e.status_code)
+    return response
 
 
 L = getLogger(__name__)

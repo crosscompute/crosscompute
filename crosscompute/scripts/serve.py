@@ -52,12 +52,12 @@ def configure_argument_parser_for_serving(a):
     a.add_argument(
         '--host', metavar='X',
         default=HOST,
-        help='specify 0.0.0.0 to listen for requests from all ip addresses')
+        help='specify server host or 0.0.0.0 to accept all ip addresses')
     a.add_argument(
         '--port', metavar='X',
         default=find_open_port(
             PORT, minimum_port=MINIMUM_PORT, maximum_port=MAXIMUM_PORT),
-        help='specify port to listen to for requests')
+        help='specify server port')
     a.add_argument(
         '--no-browser', dest='with_browser', action='store_false',
         help='do not open browser')
@@ -67,6 +67,9 @@ def configure_argument_parser_for_serving(a):
     a.add_argument(
         '--no-prefix', dest='with_prefix', action='store_false',
         help='do not prefix root uri to routes')
+    a.add_argument(
+        '--no-hidden', dest='with_hidden', action='store_false',
+        help='do not hide runs')
     a.add_argument(
         '--root-uri', metavar='X',
         default='',
@@ -100,6 +103,7 @@ def serve_with(automation, args):
         with_browser=args.with_browser,
         with_restart=args.with_restart,
         with_prefix=args.with_prefix,
+        with_hidden=args.with_hidden,
         root_uri=args.root_uri,
         allowed_origins=args.allowed_origins,
         disk_poll_in_milliseconds=args.disk_poll,
@@ -107,14 +111,8 @@ def serve_with(automation, args):
 
 
 def serve(
-        automation,
-        environment,
-        host=HOST,
-        port=PORT,
-        with_browser=True,
-        with_restart=True,
-        with_prefix=True,
-        root_uri='',
+        automation, environment, host=HOST, port=PORT, with_browser=True,
+        with_restart=True, with_prefix=True, with_hidden=True, root_uri='',
         allowed_origins=None,
         disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
         disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS):
@@ -128,6 +126,7 @@ def serve(
             port=port,
             with_restart=with_restart,
             with_prefix=with_prefix,
+            with_hidden=with_hidden,
             root_uri=root_uri,
             allowed_origins=allowed_origins,
             disk_poll_in_milliseconds=disk_poll_in_milliseconds,
