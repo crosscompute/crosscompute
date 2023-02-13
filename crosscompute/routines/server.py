@@ -1,4 +1,5 @@
 from logging import getLogger, DEBUG, ERROR
+from os import getenv
 from time import time
 
 import uvicorn
@@ -63,6 +64,8 @@ class DiskServer(Server):
                 access_log=L.getEffectiveLevel() <= DEBUG)
         except AssertionError:
             L.error(f'could not start server at {host}:{port}')
+        except KeyboardInterrupt:
+            pass
 
     def watch(
             self, configuration, disk_poll_in_milliseconds,
@@ -104,10 +107,13 @@ class DiskServer(Server):
         configuration_folder = configuration.folder
         root_uri, with_restart = self._root_uri, self._with_restart
         site.update({
-            'name': configuration_name, 'configuration': configuration,
+            'name': configuration_name,
+            'configuration': configuration,
             'definitions': configuration.automation_definitions,
-            'environment': self._environment, 'safe': self._safe,
-            'queue': self._queue, 'changes': self._changes,
+            'environment': self._environment,
+            'safe': self._safe,
+            'queue': self._queue,
+            'changes': self._changes,
             'with_prefix': self._with_prefix,
             'with_hidden': self._with_hidden})
         template_path_by_id.update(TEMPLATE_PATH_BY_ID)
@@ -116,7 +122,9 @@ class DiskServer(Server):
         template_globals.update({
             'base_template_path': template_path_by_id['base'],
             'live_template_path': template_path_by_id['live'],
-            'server_timestamp': time(), 'root_uri': root_uri,
+            'google_analytics_id': getenv('GOOGLE_ANALYTICS_ID', ''),
+            'server_timestamp': time(),
+            'root_uri': root_uri,
             'with_restart': with_restart})
         template_environment.auto_reload = with_restart
 

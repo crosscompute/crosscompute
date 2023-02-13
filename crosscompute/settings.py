@@ -1,5 +1,4 @@
 import multiprocessing as mp
-from os import getenv
 
 from invisibleroads_macros_web.jinja import (
     PathTemplateLoader,
@@ -33,13 +32,13 @@ template_environment = RelativeTemplateEnvironment(
 template_globals = template_environment.globals = {
     'base_template_path': template_path_by_id['base'],
     'live_template_path': template_path_by_id['live'],
-    'google_analytics_id': getenv('GOOGLE_ANALYTICS_ID', ''),
+    'google_analytics_id': '',
+    'server_timestamp': 0,
+    'root_uri': '',
+    'with_restart': True,
     'maximum_ping_interval_in_milliseconds':
         MAXIMUM_PING_INTERVAL_IN_SECONDS * 1000,
     'minimum_ping_interval_in_milliseconds':
-        MINIMUM_PING_INTERVAL_IN_SECONDS * 1000,
-    'server_timestamp': 0,
-    'root_uri': '',
-    'with_restart': True}
+        MINIMUM_PING_INTERVAL_IN_SECONDS * 1000}
 TemplateResponse = TemplateResponseFactory(
     template_environment).TemplateResponse

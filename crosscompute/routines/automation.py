@@ -1,6 +1,5 @@
 # TODO: Return unvalidated configuration when there is an exception
 # TODO: Watch multiple folders if not all under parent folder
-# TODO: Kill running containers at exit
 import requests
 import shlex
 import subprocess
@@ -32,6 +31,7 @@ from ..constants import (
     MAXIMUM_PORT,
     MINIMUM_PORT,
     PORT,
+    PORT_ROUTE,
     PROXY_URI,
     STEP_CODE_BY_NAME,
     STEP_NAMES,
@@ -46,9 +46,7 @@ from ..exceptions import (
 from ..macros.iterable import group_by
 from ..macros.security import DictionarySafe
 from ..settings import multiprocessing_context
-from .configuration import (
-    get_folder_plus_path,
-    load_configuration)
+from .configuration import get_folder_plus_path, load_configuration
 from .interface import Automation
 from .server import DiskServer
 from .variable import (
@@ -79,13 +77,13 @@ class DiskAutomation(Automation):
                 future.result()
         return instance
 
-    def run(self, user_environment, with_rebuild=True):
+    def run(self, environment, with_rebuild=True):
         for automation_definition in self.definitions:
             prepare_automation(automation_definition, with_rebuild)
         recurring_definitions = []
         for automation_definition in self.definitions:
             run_automation(
-                automation_definition, user_environment, with_rebuild)
+                automation_definition, environment, with_rebuild)
             if automation_definition.interval_timedelta:
                 recurring_definitions.append(automation_definition)
         if not recurring_definitions:
@@ -96,8 +94,7 @@ class DiskAutomation(Automation):
                 delta = automation_definition.interval_timedelta
                 if datetime.now() > last + delta:
                     run_automation(
-                        automation_definition, user_environment,
-                        with_rebuild=False)
+                        automation_definition, environment, with_rebuild=False)
             sleep(1)
 
     def serve(
@@ -110,15 +107,18 @@ class DiskAutomation(Automation):
         with multiprocessing_context.Manager() as manager:
             changes = manager.dict()
             safe = DictionarySafe(manager.dict(), TOKEN_LENGTH)
-            DiskServer(
-                environment, safe, queue, _work, changes, host, port,
-                with_restart, with_prefix, with_hidden, root_uri,
-                allowed_origins,
-            ).watch(
-                self.configuration,
-                disk_poll_in_milliseconds,
-                disk_debounce_in_milliseconds,
-                self._reload)
+            try:
+                DiskServer(
+                    environment, safe, queue, _work, changes, host, port,
+                    with_restart, with_prefix, with_hidden, root_uri,
+                    allowed_origins,
+                ).watch(
+                    self.configuration,
+                    disk_poll_in_milliseconds,
+                    disk_debounce_in_milliseconds,
+                    self._reload)
+            except KeyboardInterrupt:
+                pass
 
     def _reload(self):
         path = self.path
@@ -185,6 +185,9 @@ class AbstractEngine():
             e.automation_definition = automation_definition
             return_code = e.code
             L.error('%s failed; %s', batch_identifier, e)
+        except KeyboardInterrupt:
+            return_code = Error.COMMAND_INTERRUPTED
+            L.error('%s interrupted')
         else:
             L.info('%s done', batch_identifier)
         return _process_batch(automation_definition, batch_definition, [
@@ -242,19 +245,27 @@ class PodmanEngine(AbstractEngine):
 
     def run(self, automation_definition, batch_folder, custom_environment):
         automation_folder = automation_definition.folder
+        absolute_batch_folder = automation_folder / batch_folder
         container_id, port_packs = _run_podman_image(
             automation_definition, batch_folder, custom_environment)
-        with _proxy_podman_ports(
-                automation_definition, batch_folder, custom_environment,
-                port_packs):
-            return_code = _run_podman_script(
-                automation_definition, batch_folder, container_id)
+        try:
+            with _proxy_podman_ports(
+                    automation_definition, batch_folder, custom_environment,
+                    port_packs):
+                _copy_datasets_into_podman(container_id, automation_definition)
+                _set_podman_folder_owner(absolute_batch_folder, 1000)
+                return_code = _run_podman_command({'cwd': automation_folder}, [
+                    'exec', '--env-file', CONTAINER_ENV_NAME, container_id,
+                    'bash', CONTAINER_SCRIPT_NAME]).returncode
+        except Exception:
+            raise
+        finally:
+            _set_podman_folder_owner(absolute_batch_folder, 0)
+            _run_podman_command({}, ['kill', container_id])
         if return_code in [126, 127]:
-            error_text = (
-                'permission denied' if return_code == 126 else 'not found')
+            x = 'denied permission' if return_code == 126 else 'not found'
             error = CrossComputeConfigurationError(
-                f'command {error_text} in container; please check script '
-                'definitions')
+                'command %s in container; check script definitions' % x)
             error.code = Error.COMMAND_NOT_RUNNABLE
             raise error
         elif return_code > 0:
@@ -328,8 +339,7 @@ def run_automation(automation_definition, user_environment, with_rebuild=True):
     return ds
 
 
-def _run_automation_single(
-        automation_definition, run_batch, user_environment):
+def _run_automation_single(automation_definition, run_batch, user_environment):
     ds = []
     for batch_definition in automation_definition.batch_definitions:
         ds.append(run_batch(
@@ -350,8 +360,11 @@ def _run_automation_multiple(
             futures.append(executor.submit(
                 run_batch, automation_definition, batch_definition,
                 user_environment))
-        for future in as_completed(futures):
-            ds.append(future.result())
+        try:
+            for future in as_completed(futures):
+                ds.append(future.result())
+        except KeyboardInterrupt:
+            pass
     return ds
 
 
@@ -438,14 +451,14 @@ def _proxy_podman_ports(
     origin_uri = custom_environment.get('CROSSCOMPUTE_ORIGIN_URI', '')
     relative_uris = []
     if PROXY_URI:
-        def get_port_uri(host_port, relative_uri):
+        def get_port_uri(target_uri, relative_uri):
             requests.post(PROXY_URI + relative_uri, json={
-                'target': f'http://localhost:{host_port}'})
+                'target': target_uri})
             relative_uris.append(relative_uri)
             return origin_uri + relative_uri
     else:
-        def get_port_uri(host_port, relative_uri):
-            return f'http://localhost:{host_port}'
+        def get_port_uri(target_uri, relative_uri):
+            return target_uri
     automation_uri = AUTOMATION_ROUTE.format(
         automation_slug=automation_definition.slug)
     batch_uri = BATCH_ROUTE.format(batch_slug=batch_folder.name)
@@ -454,39 +467,38 @@ def _proxy_podman_ports(
     for port_id, host_port, step_name in port_packs:
         step_code = STEP_CODE_BY_NAME[step_name]
         variable_id = port_id
-        relative_uri = (
-            f'/sessions{automation_uri}{batch_uri}/{step_code}/{variable_id}')
+        relative_uri = PORT_ROUTE.format(
+            uri=f'{automation_uri}{batch_uri}/{step_code}/{variable_id}')
         port_uri_by_port_id[port_id] = get_port_uri(
-            host_port, relative_uri)
+            f'http://localhost:{host_port}', relative_uri)
     update_variable_data(
         absolute_batch_folder / 'debug' / 'ports.dictionary',
         port_uri_by_port_id)
-    yield
-    for relative_uri in relative_uris:
-        requests.delete(PROXY_URI + relative_uri)
+    try:
+        yield
+    except Exception as e:
+        L.error(e)
+    finally:
+        for relative_uri in relative_uris:
+            requests.delete(PROXY_URI + relative_uri)
 
 
-def _run_podman_script(automation_definition, batch_folder, container_id):
+def _copy_datasets_into_podman(container_id, automation_definition):
     automation_folder = automation_definition.folder
-    absolute_batch_folder = automation_folder / batch_folder
-
     for dataset_definition in automation_definition.dataset_definitions:
         dataset_path = dataset_definition.path
-        _run_podman_command({}, [
-            'exec', container_id, 'mkdir', dataset_path.parent, '-p'])
+        _make_podman_folder(container_id, dataset_path.parent)
         _run_podman_command({'cwd': automation_folder}, [
             'cp', dataset_path, f'{container_id}:{dataset_path}'])
 
-    _run_podman_command({}, [
-        'unshare', 'chown', '1000:1000', str(absolute_batch_folder), '-R'])
-    process = _run_podman_command({'cwd': automation_folder}, [
-        'exec', '--env-file', CONTAINER_ENV_NAME, container_id,
-        'bash', CONTAINER_SCRIPT_NAME])
-    _run_podman_command({}, [
-        'unshare', 'chown', '0:0', str(absolute_batch_folder), '-R'])
 
-    _run_podman_command({}, ['kill', container_id])
-    return process.returncode
+def _make_podman_folder(container_id, folder):
+    _run_podman_command({}, ['exec', container_id, 'mkdir', folder, '-p'])
+
+
+def _set_podman_folder_owner(folder, user_id):
+    _run_podman_command({}, [
+        'unshare', 'chown', f'{user_id}:{user_id}', str(folder), '-R'])
 
 
 def _run_podman_command(options, terms):
@@ -511,11 +523,10 @@ def _work_one(automation_pack):
         engine = get_script_engine(
             automation_definition.engine_name, with_rebuild=False)
         update_datasets(automation_definition)
-        try:
-            engine.run_batch(*automation_pack)
-        except CrossComputeError as e:
-            e.automation_definition = automation_definition
-            L.error(e)
+        engine.run_batch(*automation_pack)
+    except CrossComputeError as e:
+        e.automation_definition = automation_definition
+        L.error(e)
     except KeyboardInterrupt:
         pass
 
@@ -593,9 +604,8 @@ def _prepare_container_file_text(automation_definition):
 
 def _prepare_script_environment(
         step_folder_by_name, custom_environment, with_path=False):
-    script_environment = {
-        'CROSSCOMPUTE_' + k.upper(): v for k, v in step_folder_by_name.items()
-    } | custom_environment
+    script_environment = custom_environment | {
+        'CROSSCOMPUTE_' + k.upper(): v for k, v in step_folder_by_name.items()}
     if with_path:
         script_environment['PATH'] = getenv('PATH', '')
     return script_environment

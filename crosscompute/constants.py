@@ -8,6 +8,7 @@ class Error(IntEnum):
 
     CONFIGURATION_NOT_FOUND = -100
     COMMAND_NOT_RUNNABLE = -10
+    COMMAND_INTERRUPTED = -1
 
 
 class Status(IntEnum):
@@ -49,6 +50,7 @@ STEP_ROUTE = '/{step_code}'
 VARIABLE_ROUTE = '/{variable_id}'
 STYLE_ROUTE = '/s/{style_name}.css'
 MUTATION_ROUTE = '/mutations{uri}.json'
+PORT_ROUTE = '/ports{uri}'
 
 
 PACKAGE_MANAGER_NAMES = 'apt', 'dnf', 'npm', 'pip'
@@ -93,5 +95,4 @@ DEBUG_VARIABLE_DICTIONARIES = [{
 }, {
     'id': 'return_code',
     'view': 'number',
-    'path': 'variables.dictionary',
-}]
+    'path': 'variables.dictionary'}]

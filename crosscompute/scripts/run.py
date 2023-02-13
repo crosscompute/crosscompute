@@ -39,19 +39,14 @@ def configure_running_from(args):
     port = getattr(args, 'port', None)
     origin_uri = getenv('CROSSCOMPUTE_ORIGIN_URI') or (
         f'http://localhost:{port}' if port else 'http://localhost')
-    args.environment = {
-        'CROSSCOMPUTE_ORIGIN_URI': origin_uri,
-    }
+    args.environment = {'CROSSCOMPUTE_ORIGIN_URI': origin_uri}
 
 
 def run_with(automation, args):
     return run(automation, args.environment, args.with_rebuild)
 
 
-def run(
-        automation,
-        environment,
-        with_rebuild=True):
+def run(automation, environment, with_rebuild=True):
     try:
         automation.run(environment, with_rebuild)
     except CrossComputeError as e:

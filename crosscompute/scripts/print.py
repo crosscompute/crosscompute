@@ -70,7 +70,7 @@ def print_with(automation, args):
             automation.definitions):
         # TODO: Consider using ds returned from run_automation
         run_automation(
-            automation_definition, user_environment={}, with_rebuild=True)
+            automation_definition, args.environment, with_rebuild=True)
         for print_definition in automation_definition.print_definitions:
             batch_dictionaries = get_batch_dictionaries(
                 automation_definition, print_definition, timestamp)
@@ -86,6 +86,8 @@ def print_with(automation, args):
             Printer = PRINTER_BY_NAME[print_definition.format]
             printer = Printer(f'http://127.0.0.1:{port}{args.root_uri}')
             printer.render(batch_dictionaries, print_definition)
+    except Exception as e:
+        L.error(e)
     finally:
         server_process.stop()
 
