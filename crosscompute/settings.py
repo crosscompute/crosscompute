@@ -1,5 +1,7 @@
 import multiprocessing as mp
+from functools import partial
 
+import invisibleroads_macros_process
 from invisibleroads_macros_web.jinja import (
     PathTemplateLoader,
     RelativeTemplateEnvironment)
@@ -13,6 +15,9 @@ from .constants import (
 
 
 multiprocessing_context = mp.get_context('fork')
+StoppableProcess = partial(
+    invisibleroads_macros_process.StoppableProcess,
+    multiprocessing_context.Process)
 site = {
     'name': 'Automations',
     'configuration': None,

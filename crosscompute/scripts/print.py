@@ -3,7 +3,6 @@ from logging import getLogger
 
 from invisibleroads_macros_disk import make_folder, make_random_folder
 from invisibleroads_macros_log import get_timestamp, LONGSTAMP_TEMPLATE
-from invisibleroads_macros_process import StoppableProcess
 from invisibleroads_macros_web.port import find_open_port
 
 from crosscompute.constants import (
@@ -30,6 +29,8 @@ from crosscompute.scripts.serve import (
     configure_argument_parser_for_serving,
     configure_serving_from,
     serve_with)
+from crosscompute.settings import (
+    StoppableProcess)
 
 
 def do(arguments=None):
@@ -81,15 +82,15 @@ def print_with(automation, args):
     server_process = StoppableProcess(
         name='serve', target=serve_with, args=(automation, args))
     server_process.start()
-    try:
-        for print_definition, batch_dictionaries in print_packs:
-            Printer = PRINTER_BY_NAME[print_definition.format]
-            printer = Printer(f'http://127.0.0.1:{port}{args.root_uri}')
-            printer.render(batch_dictionaries, print_definition)
-    except Exception as e:
-        L.error(e)
-    finally:
-        server_process.stop()
+#   try:
+    for print_definition, batch_dictionaries in print_packs:
+        Printer = PRINTER_BY_NAME[print_definition.format]
+        printer = Printer(f'http://127.0.0.1:{port}{args.root_uri}')
+        printer.render(batch_dictionaries, print_definition)
+#   except Exception as e:
+#       L.error(e)
+#   finally:
+#       server_process.stop()
 
 
 def get_selected_automation_definitions(automation_definitions):

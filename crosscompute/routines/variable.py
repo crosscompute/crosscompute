@@ -598,8 +598,8 @@ def update_variable_data(path, data_by_id):
                     d = json.load(f)
                     d.update(data_by_id)
                     f.seek(0)
-                    f.truncate()
                     json.dump(d, f)
+                    f.truncate()
             else:
                 with path.open('wt') as f:
                     d = data_by_id
@@ -621,8 +621,8 @@ def remove_variable_data(path, variable_ids):
                 for variable_id in variable_ids:
                     del d[variable_id]
                 f.seek(0)
-                f.truncate()
                 json.dump(d, f)
+                f.truncate()
         else:
             path.unlink(missing_ok=True)
     except (json.JSONDecodeError, OSError) as e:

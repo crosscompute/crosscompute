@@ -107,18 +107,15 @@ class DiskAutomation(Automation):
         with multiprocessing_context.Manager() as manager:
             changes = manager.dict()
             safe = DictionarySafe(manager.dict(), TOKEN_LENGTH)
-            try:
-                DiskServer(
-                    environment, safe, queue, _work, changes, host, port,
-                    with_restart, with_prefix, with_hidden, root_uri,
-                    allowed_origins,
-                ).watch(
-                    self.configuration,
-                    disk_poll_in_milliseconds,
-                    disk_debounce_in_milliseconds,
-                    self._reload)
-            except KeyboardInterrupt:
-                pass
+            DiskServer(
+                environment, safe, queue, _work, changes, host, port,
+                with_restart, with_prefix, with_hidden, root_uri,
+                allowed_origins,
+            ).watch(
+                self.configuration,
+                disk_poll_in_milliseconds,
+                disk_debounce_in_milliseconds,
+                self._reload)
 
     def _reload(self):
         path = self.path

@@ -3,21 +3,12 @@
 import json
 import re
 import requests
-import subprocess
 import time
 from collections import defaultdict
 from concurrent.futures import (
     ThreadPoolExecutor)
 from copy import deepcopy
-from functools import partial
-from invisibleroads_macros_disk import (
-    TemporaryStorage, make_folder, make_random_folder)
 from io import StringIO
-from itertools import product, repeat
-from mimetypes import guess_type
-from os import environ, getcwd
-from os.path import (
-    abspath, basename, dirname, getsize, exists, isdir, join, splitext)
 from sys import exc_info
 from traceback import print_exception
 
@@ -28,17 +19,11 @@ from .connection import (
     yield_echo)
 from .definition import (
     get_nested_value,
-    get_template_dictionary,
-    get_variable_dictionary_by_id,
-    load_definition)
+    get_variable_dictionary_by_id)
 from .serialization import (
-    define_load,
     define_save,
-    load_value_json,
     render_object,
-    save_json,
-    SAVE_BY_EXTENSION_BY_VIEW)
-from ..constants import DEBUG_VARIABLE_DEFINITIONS, S
+    save_json)
 from ..exceptions import (
     CrossComputeConnectionError,
     CrossComputeDefinitionError,
@@ -54,40 +39,6 @@ from ..symmetries import download
 
 # https://stackoverflow.com/a/14693789/192092
 ANSI_ESCAPE_PATTERN = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
-
-
-def run_report_automation(report_definition, is_mock=True, log=None):
-    style_dictionary = get_nested_value(
-        report_definition, 'print', 'style', {})
-    style_rules = style_dictionary.get('rules', [])
-    if not is_mock:
-        response_json = fetch_resource('prints', method='POST')
-        print_id = response_json['id']
-    else:
-        print_id = None
-
-    def save(document_index, document_dictionary):
-        if not is_mock:
-            fetch_resource(
-                'prints', f'{print_id}/documents/{document_index}',
-                method='PUT', data=document_dictionary)
-        return document_dictionary
-
-    with ThreadPoolExecutor() as executor:
-        document_dictionaries = executor.map(
-            run_report,
-            enumerate(yield_result_dictionary(report_definition)),
-            repeat(style_rules),
-            repeat(log),
-            repeat(save))
-    document_dictionaries = list(document_dictionaries)
-    document_count = len(document_dictionaries)
-    d = {'documents': document_dictionaries}
-    if not is_mock:
-        response_json = fetch_resource(
-            'prints', print_id, method='PATCH', data={'count': document_count})
-        d['url'] = response_json['url']
-    return d
 
 
 def run_report(enumerated_report_dictionary, style_rules, log=None, save=None):
@@ -122,57 +73,6 @@ def run_report(enumerated_report_dictionary, style_rules, log=None, save=None):
     }
     save and save(report_index, document_dictionary)
     return document_dictionary
-
-
-def run_template(
-        enumerated_template_dictionary,
-        variable_dictionaries,
-        report_index,
-        log):
-    document_blocks = []
-    template_index, template_dictionary = enumerated_template_dictionary
-    template_kind = template_dictionary.get('kind')
-    if template_kind == 'result':
-        result_dictionary = deepcopy(template_dictionary)
-        tool_definition = result_dictionary.pop('tool')
-        old_variable_dictionary_by_id = get_variable_dictionary_by_id(
-            get_nested_value(result_dictionary, 'input', 'variables'))
-        new_variable_dictionary_by_id = get_variable_dictionary_by_id(
-            variable_dictionaries)
-        variable_dictionary_by_id = {
-            **old_variable_dictionary_by_id,
-            **new_variable_dictionary_by_id}
-        variable_dictionaries = variable_dictionary_by_id.values()
-        result_dictionary['input']['variables'] = variable_dictionaries
-        result_name = get_result_name(result_dictionary)
-        log and log({'index': [
-            report_index, template_index,
-        ], 'status': 'RUNNING', 'name': result_name})
-        try:
-            result_dictionary = run_tool(tool_definition, result_dictionary)
-        except CrossComputeError:
-            log and log({'index': [
-                report_index, template_index], 'status': 'ERROR'})
-            raise
-        document_dictionary = render_result(
-            tool_definition, result_dictionary)
-        result_name = get_result_name(result_dictionary)  # Recompute
-        log and log({'index': [
-            report_index, template_index,
-        ], 'status': 'DONE', 'name': result_name})
-        document_blocks.extend(document_dictionary.get('blocks', []))
-        # TODO: Replace this with article wrappers
-        document_blocks.append({
-            'view': 'markdown',
-            'data': {'value': '<div style="page-break-after: always;" />'},
-        })
-    elif template_kind == 'report':
-        raise CrossComputeImplementationError({
-            'template': 'does not yet support report definitions'})
-    elif 'blocks' in template_dictionary:
-        raise CrossComputeImplementationError({
-            'template': 'does not yet support report blocks'})
-    return document_blocks
 
 
 def run_worker(

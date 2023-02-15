@@ -26,6 +26,11 @@ from ..settings import (
 router = APIRouter()
 
 
+@router.api_route('/{uri:path}', methods=['HEAD'], tags=['root'])
+async def check():
+    return Response()
+
+
 @router.get('/', tags=['root'])
 async def see_root(
     request: Request,
