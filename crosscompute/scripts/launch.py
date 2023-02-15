@@ -55,7 +55,7 @@ def do(arguments=None):
     except KeyboardInterrupt:
         L.info('waiting for processes to stop')
     except Exception as e:
-        L.error(e)
+        L.exception(e)
     finally:
         for process in processes:
             process.stop()

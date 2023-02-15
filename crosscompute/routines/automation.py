@@ -474,7 +474,7 @@ def _proxy_podman_ports(
     try:
         yield
     except Exception as e:
-        L.error(e)
+        L.exception(e)
     finally:
         for relative_uri in relative_uris:
             requests.delete(PROXY_URI + relative_uri)

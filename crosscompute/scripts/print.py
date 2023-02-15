@@ -88,7 +88,7 @@ def print_with(automation, args):
             printer = Printer(f'http://127.0.0.1:{port}{args.root_uri}')
             printer.render(batch_dictionaries, print_definition)
     except Exception as e:
-        L.error(e)
+        L.exception(e)
     finally:
         server_process.stop()
 

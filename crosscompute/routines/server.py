@@ -68,7 +68,7 @@ class DiskServer(Server):
         except KeyboardInterrupt:
             pass
         except Exception as e:
-            L.error(e)
+            L.exception(e)
         finally:
             worker_process.stop()
 
@@ -99,7 +99,7 @@ class DiskServer(Server):
         except KeyboardInterrupt:
             pass
         except Exception as e:
-            L.error(e)
+            L.exception(e)
         finally:
             server_process.stop()
 
