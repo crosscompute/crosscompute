@@ -98,10 +98,10 @@ class DiskServer(Server):
                     server_process, disk_database = self._start(configuration)
         except KeyboardInterrupt:
             pass
-#       except Exception as e:
-#           L.error(e)
-#       finally:
-#           server_process.stop()
+        except Exception as e:
+            L.error(e)
+        finally:
+            server_process.stop()
 
     def _start(self, configuration):
         server_process = StoppableProcess(
