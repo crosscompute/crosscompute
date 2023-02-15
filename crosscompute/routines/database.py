@@ -21,6 +21,9 @@ class DiskDatabase():
         changed_infos = []
         variable_ids = []
         for path in paths:
+            path = Path(path).resolve()
+            if path.is_dir():
+                continue
             try:
                 infos = self._get(path)
             except KeyError:
@@ -38,15 +41,11 @@ class DiskDatabase():
 
     def _get(self, path):
         configuration = self._configuration
-        path = Path(path).resolve()
         for automation_definition in configuration.automation_definitions:
             automation_folder = automation_definition.folder
             runs_folder = automation_folder / 'runs'
             if not is_path_in_folder(path, runs_folder):
                 continue
-            L.debug(f'path = {path}')
-            L.debug(f'runs_folder = {runs_folder}')
-            L.debug(f'runs_folder = {runs_folder.resolve()}')
             run_id = path.relative_to(runs_folder).parts[0]
             batch_uri = BATCH_ROUTE.format(batch_slug=run_id)
             memory = DiskMemory()
