@@ -1,3 +1,4 @@
+from logging import getLogger
 from pathlib import Path
 from time import time
 
@@ -43,6 +44,9 @@ class DiskDatabase():
             runs_folder = automation_folder / 'runs'
             if not is_path_in_folder(path, runs_folder):
                 continue
+            L.debug(f'path = {path}')
+            L.debug(f'runs_folder = {runs_folder}')
+            L.debug(f'runs_folder = {runs_folder.resolve()}')
             run_id = path.relative_to(runs_folder).parts[0]
             batch_uri = BATCH_ROUTE.format(batch_slug=run_id)
             memory = DiskMemory()
@@ -165,3 +169,6 @@ def add_style_infos(memory, configuration):
                 continue
             path = automation_folder / style_definition['path']
             memory.add(path, info)
+
+
+L = getLogger(__name__)
