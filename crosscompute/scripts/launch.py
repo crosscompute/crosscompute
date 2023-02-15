@@ -54,11 +54,11 @@ def do(arguments=None):
             process.join()
     except KeyboardInterrupt:
         L.info('waiting for processes to stop')
-#   except Exception as e:
-#       L.error(e)
-#   finally:
-#       for process in processes:
-#           process.stop()
+    except Exception as e:
+        L.error(e)
+    finally:
+        for process in processes:
+            process.stop()
 
 
 def configure_argument_parser_for_launching(a):
