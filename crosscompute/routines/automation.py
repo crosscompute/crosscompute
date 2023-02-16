@@ -254,6 +254,8 @@ class PodmanEngine(AbstractEngine):
                 return_code = _run_podman_command({'cwd': automation_folder}, [
                     'exec', '--env-file', CONTAINER_ENV_NAME, container_id,
                     'bash', CONTAINER_SCRIPT_NAME]).returncode
+        except KeyboardInterrupt:
+            return_code = Error.COMMAND_INTERRUPTED
         except Exception:
             raise
         finally:
@@ -265,7 +267,7 @@ class PodmanEngine(AbstractEngine):
                 'command %s in container; check script definitions' % x)
             error.code = Error.COMMAND_NOT_RUNNABLE
             raise error
-        elif return_code > 0:
+        elif return_code != 0:
             error_text = (
                 automation_folder / batch_folder / 'debug' / 'stderr.txt'
             ).read_text()
@@ -473,6 +475,8 @@ def _proxy_podman_ports(
         port_uri_by_port_id)
     try:
         yield
+    except KeyboardInterrupt:
+        pass
     except Exception as e:
         L.exception(e)
     finally:

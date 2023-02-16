@@ -87,6 +87,8 @@ def print_with(automation, args):
             Printer = PRINTER_BY_NAME[print_definition.format]
             printer = Printer(f'http://127.0.0.1:{port}{args.root_uri}')
             printer.render(batch_dictionaries, print_definition)
+    except KeyboardInterrupt:
+        pass
     except Exception as e:
         L.exception(e)
     finally:
