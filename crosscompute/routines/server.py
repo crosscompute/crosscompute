@@ -1,3 +1,5 @@
+from asyncio import CancelledError
+from contextlib import suppress
 from logging import getLogger, DEBUG
 from os import getenv
 from time import time
@@ -60,9 +62,10 @@ class DiskServer(Server):
                 allow_headers=['*'])
         L.info('serving at http://%s:%s%s', host, port, root_uri)
         try:
-            uvicorn.run(
-                app, host=host, port=port,
-                access_log=L.getEffectiveLevel() <= DEBUG)
+            with suppress(CancelledError):
+                uvicorn.run(
+                    app, host=host, port=port,
+                    access_log=L.getEffectiveLevel() <= DEBUG)
         except AssertionError:
             L.error(f'could not start server at {host}:{port}')
         except KeyboardInterrupt:

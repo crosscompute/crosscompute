@@ -289,14 +289,14 @@ def get_script_engine(engine_name, with_rebuild=True):
 def update_datasets(automation_definition):
     automation_folder = automation_definition.folder
     for dataset_definition in automation_definition.dataset_definitions:
-        target_path = (automation_folder / dataset_definition.path).resolve()
+        target_path = automation_folder / dataset_definition.path
         target_folder = make_folder(target_path.parent)
         reference_configuration = dataset_definition.reference
         reference_path = get_folder_plus_path(reference_configuration)
         if reference_path:
-            source_path = (automation_folder / reference_path).resolve()
+            source_path = automation_folder / reference_path
             if target_path.is_symlink():
-                if target_path == source_path:
+                if target_path.resolve() == source_path.resolve():
                     continue
                 target_path.unlink()
             elif target_path.exists():
