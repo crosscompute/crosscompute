@@ -487,13 +487,11 @@ class JsonView(VariableView):
     def render_output(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
         variable_id = self.variable_id
-        element_id = x.id
         data_uri = b.get_data_uri(variable_definition, x)
         js_texts = [
             JSON_JS_HEADER,
             JSON_JS_OUTPUT.substitute({
                 'variable_id': variable_id,
-                'element_id': element_id,
                 'data_uri': data_uri})]
         return {
             'css_uris': [], 'js_uris': [], 'main_text': '',

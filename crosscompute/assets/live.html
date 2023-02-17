@@ -3,7 +3,7 @@
 {% block head_html %}
 {{ super() -}}
 <script>
-const variables = {}, callbacks = {}, isSecure = location.protocol == 'https:', sleep = t => new Promise(r => setTimeout(r, t));
+const variables = {}, callbacks = {}, isSecure = location.protocol == 'https:', getTime = () => (new Date).getTime(), sleep = t => new Promise(r => setTimeout(r, t));
 function register(xs, k, v) {
   const ys = xs[k];
   if (ys === undefined) {

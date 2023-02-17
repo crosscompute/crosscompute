@@ -1,7 +1,7 @@
-async function refreshJson(elementId, dataUri) {
+async function refreshJson(variableId, dataUri) {
   try {
     const r = await fetch(dataUri);
-    variables[elementId] = await r.json();
+    variables[variableId] = await r.json();
   } catch {
   }
 }

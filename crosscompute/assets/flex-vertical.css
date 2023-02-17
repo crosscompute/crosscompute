@@ -1,10 +1,10 @@
-main {
+main > * {
+  margin: 0;
+}
+._vertical {
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-main > * {
-  margin: 0;
 }
 ._view {
   display: flex;
