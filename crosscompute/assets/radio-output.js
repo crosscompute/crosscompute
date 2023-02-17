@@ -1,3 +1,3 @@
-registerElement('$variable_id', async function() {
-  await refreshRadio('$element_id', '$data_uri');
+registerFunction('$variable_id', function() {
+  refreshRadio('$element_id', '$data_uri');
 });

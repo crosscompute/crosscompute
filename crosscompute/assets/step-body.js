@@ -30,14 +30,12 @@ document.getElementById('_run').onclick = async function () {
   redirect(uri, d);
 };
 {% else %}
-function registerElement(variableId, refreshElement) {
-  if (callbacks[variableId] === undefined) {
-    callbacks[variableId] = [];
-  }
-  callbacks[variableId].push(refreshElement);
+const functions = {};
+function registerFunction(variableId, f) {
+  register(functions, variableId, f);
 }
 {% if step_name == 'log' %}
-registerElement('return_code', function() {
+registerFunction('return_code', function() {
   location = location.href.slice(0, -1) + 'o';
 });
 {% endif %}

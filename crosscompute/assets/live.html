@@ -4,6 +4,17 @@
 {{ super() -}}
 <script>
 const variables = {}, callbacks = {}, isSecure = location.protocol == 'https:', sleep = t => new Promise(r => setTimeout(r, t));
+function register(xs, k, v) {
+  const ys = xs[k];
+  if (ys === undefined) {
+    xs[k] = [v];
+  } else {
+    ys.push(v);
+  }
+}
+function registerCallback(variableId, f) {
+  register(callbacks, variableId, f);
+}
 </script>
 {%- endblock %}
 
@@ -13,12 +24,7 @@ const variables = {}, callbacks = {}, isSecure = location.protocol == 'https:', 
 async function processMutations() {
   const uri = '{{ root_uri }}{{ mutation_uri }}';
   try {
-    const r = await fetch(`${uri}?t=${mutationTimestamp}`), d = await r.json(), { styles, variables } = d;
-{% if step_name != 'input' %}
-    for (const v of variables) {
-      refreshVariable(v.id);
-    }
-{% endif %}
+    const r = await fetch(`${uri}?t=${mutationTimestamp}`), d = await r.json(), { styles: ss, variables: vs } = d;
 {% if with_restart %}
     if (
       d.server_timestamp != {{ server_timestamp }} ||
@@ -26,9 +32,12 @@ async function processMutations() {
       d.templates.length
     ) {
       refreshPage();
-    } else if (styles.length) {
+    } else if (ss.length) {
       refreshStyle();
     }
+{% endif %}
+{% if step_name != 'input' %}
+    await Promise.all(vs.map(_ => refreshVariable(_.id)));
 {% endif %}
     mutationTimestamp = d.mutation_timestamp;
     pingInterval = {{ minimum_ping_interval_in_milliseconds }};
@@ -58,11 +67,12 @@ function refreshStyle() {
 }
 {% endif %}
 {% if step_name != 'input' %}
-function refreshVariable(variableId) {
-  const fs = callbacks[variableId] || [];
-  for (const f of fs) {
-    f();
-  }
+async function runEach(xs) {
+  await Promise.all((xs || []).map(_ => _()));
+}
+async function refreshVariable(variableId) {
+  await runEach(functions[variableId]);
+  await runEach(callbacks[variableId]);
 {% if not with_restart %}
   if (variableId == 'return_code') {
     isDone = 1;

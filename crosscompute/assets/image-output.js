@@ -1,3 +1,3 @@
-registerElement('$variable_id', function() {
+registerFunction('$variable_id', function() {
   refreshImage('$element_id', '$data_uri');
 });

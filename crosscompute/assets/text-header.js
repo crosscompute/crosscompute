@@ -1,3 +1,3 @@
-async function refreshText(elementId, dataUri) {
-  await refreshString(elementId, 'textContent', dataUri);
+function refreshText(elementId, dataUri) {
+  refreshString(elementId, 'textContent', dataUri);
 }

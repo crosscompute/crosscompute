@@ -1,3 +1,3 @@
-registerElement('$variable_id', function() {
+registerFunction('$variable_id', function() {
   refreshFrame('$element_id', '$data_uri');
 });
