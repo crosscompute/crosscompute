@@ -54,6 +54,8 @@ async function refreshPage() {
   const r = await fetch(location.href, { method: 'head' });
   if (r.ok) {
     location.reload();
+  } else {
+    location.href = '{{ root_uri or '/' }}';
   }
 }
 function refreshStyle() {
