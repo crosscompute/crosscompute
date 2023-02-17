@@ -1,5 +1,5 @@
-function refreshMarkdown(elementId, dataUri) {
-  refreshString(elementId, 'innerHTML', dataUri, formatMarkdown);
+async function refreshMarkdown(elementId, dataUri) {
+  await refreshString(elementId, 'innerHTML', dataUri, formatMarkdown);
 }
 function formatMarkdown(text) {
   let h = marked.parse(text).trim();

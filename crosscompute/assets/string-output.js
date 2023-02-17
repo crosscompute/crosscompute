@@ -1,3 +1,3 @@
-registerFunction('$variable_id', function() {
-  refreshString('$element_id', 'textContent', '$data_uri');
+registerFunction('$variable_id', async function() {
+  await refreshString('$element_id', 'textContent', '$data_uri');
 });

@@ -1,3 +1,3 @@
-registerFunction('$variable_id', function() {
-  refreshJson('$element_id', '$data_uri');
+registerFunction('$variable_id', async function() {
+  await refreshJson('$element_id', '$data_uri');
 });

@@ -20,7 +20,7 @@ with open(
 ) as log_markdown_file:
     for i in range(iteration_count):
         print(i)
-        print(i, file=log_markdown_file)
+        print(f'- <span class="i">{i}</span>', file=log_markdown_file)
         log_markdown_file.flush()
         sleep(delay_in_seconds)
 

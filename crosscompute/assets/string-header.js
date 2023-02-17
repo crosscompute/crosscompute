@@ -12,6 +12,5 @@ async function refreshString(elementId, elementAttribute, dataUri, formatText) {
   }
   const l = document.getElementById(elementId);
   l[elementAttribute] = x;
-  console.debug('refreshString done')
   return l;
 }

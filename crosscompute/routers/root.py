@@ -6,7 +6,9 @@ from fastapi.responses import FileResponse
 from ..constants import (
     ASSETS_FOLDER,
     AUTOMATION_ROUTE,
+    BATCH_ROUTE,
     MUTATION_ROUTE,
+    STEP_ROUTE,
     STYLE_ROUTE)
 from ..dependencies import (
     AuthorizationGuardFactory,
@@ -27,9 +29,25 @@ from ..settings import (
 router = APIRouter()
 
 
-@router.api_route('/{uri:path}', methods=['HEAD'], dependencies=[
+@router.api_route(AUTOMATION_ROUTE + BATCH_ROUTE + STEP_ROUTE, methods=[
+    'HEAD',
+], dependencies=[
     Depends(get_automation_definition),
     Depends(get_batch_definition),
+], tags=['root'])
+@router.api_route(AUTOMATION_ROUTE + BATCH_ROUTE, methods=[
+    'HEAD',
+], dependencies=[
+    Depends(get_automation_definition),
+    Depends(get_batch_definition),
+], tags=['root'])
+@router.api_route(AUTOMATION_ROUTE, methods=[
+    'HEAD',
+], dependencies=[
+    Depends(get_automation_definition),
+], tags=['root'])
+@router.api_route('/', methods=[
+    'HEAD',
 ], tags=['root'])
 async def check():
     return Response()
