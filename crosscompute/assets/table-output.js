@@ -1,5 +1,4 @@
-async function refreshTable_$element_id() {
+registerFunction('$variable_id', async function() {
   await refreshTable('$element_id', '$data_uri');
-}
-registerFunction('$variable_id', refreshTable_$element_id);
-refreshTable_$element_id();
+});
+refreshVariable('$variable_id');
