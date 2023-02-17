@@ -29,6 +29,7 @@ Here are some available views:
 - checkbox
 - table
 - frame
+- json
 - map-mapbox (crosscompute-views-map)
 - map-mapbox-location (crosscompute-views-map)
 - map-deck-screengrid (crosscompute-views-map)
