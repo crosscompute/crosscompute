@@ -19,6 +19,20 @@ function registerCallback(variableId, f) {
 {%- endblock %}
 
 {% block body_js %}
+{% if step_name != 'input' %}
+async function runEach(xs) {
+  await Promise.all((xs || []).map(_ => _()));
+}
+async function refreshVariable(variableId) {
+  await runEach(functions[variableId]);
+  await runEach(callbacks[variableId]);
+{% if not with_restart %}
+  if (variableId == 'return_code') {
+    isDone = 1;
+  }
+{% endif %}
+}
+{% endif %}
 {{ super() -}}
 {% if with_restart or is_done == 0 %}
 async function processMutations() {
@@ -66,20 +80,6 @@ function refreshStyle() {
     }
     l.href += '?' + Date.now();
   }
-}
-{% endif %}
-{% if step_name != 'input' %}
-async function runEach(xs) {
-  await Promise.all((xs || []).map(_ => _()));
-}
-async function refreshVariable(variableId) {
-  await runEach(functions[variableId]);
-  await runEach(callbacks[variableId]);
-{% if not with_restart %}
-  if (variableId == 'return_code') {
-    isDone = 1;
-  }
-{% endif %}
 }
 {% endif %}
 function schedulePolling() {
