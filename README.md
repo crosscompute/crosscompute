@@ -33,6 +33,7 @@ Here are some available views:
 - map-mapbox (crosscompute-views-map)
 - map-mapbox-location (crosscompute-views-map)
 - map-deck-screengrid (crosscompute-views-map)
+- barcode (crosscompute-views-barcode)
 
 [Here are the currently supported configuration options](https://github.com/crosscompute/crosscompute/blob/develop/crosscompute/templates/configuration.yaml).
 
