@@ -107,18 +107,15 @@ class DiskAutomation(Automation):
         with multiprocessing_context.Manager() as manager:
             changes = manager.dict()
             safe = DictionarySafe(manager.dict(), TOKEN_LENGTH)
-            try:
-                DiskServer(
-                    environment, safe, queue, _work, changes, host, port,
-                    with_restart, with_prefix, with_hidden, root_uri,
-                    allowed_origins,
-                ).watch(
-                    self.configuration,
-                    disk_poll_in_milliseconds,
-                    disk_debounce_in_milliseconds,
-                    self._reload)
-            except KeyboardInterrupt:
-                pass
+            DiskServer(
+                environment, safe, queue, _work, changes, host, port,
+                with_restart, with_prefix, with_hidden, root_uri,
+                allowed_origins,
+            ).watch(
+                self.configuration,
+                disk_poll_in_milliseconds,
+                disk_debounce_in_milliseconds,
+                self._reload)
 
     def _reload(self):
         path = self.path
@@ -257,6 +254,8 @@ class PodmanEngine(AbstractEngine):
                 return_code = _run_podman_command({'cwd': automation_folder}, [
                     'exec', '--env-file', CONTAINER_ENV_NAME, container_id,
                     'bash', CONTAINER_SCRIPT_NAME]).returncode
+        except KeyboardInterrupt:
+            return_code = Error.COMMAND_INTERRUPTED
         except Exception:
             raise
         finally:
@@ -268,7 +267,7 @@ class PodmanEngine(AbstractEngine):
                 'command %s in container; check script definitions' % x)
             error.code = Error.COMMAND_NOT_RUNNABLE
             raise error
-        elif return_code > 0:
+        elif return_code != 0:
             error_text = (
                 automation_folder / batch_folder / 'debug' / 'stderr.txt'
             ).read_text()
@@ -292,14 +291,14 @@ def get_script_engine(engine_name, with_rebuild=True):
 def update_datasets(automation_definition):
     automation_folder = automation_definition.folder
     for dataset_definition in automation_definition.dataset_definitions:
-        target_path = (automation_folder / dataset_definition.path).resolve()
+        target_path = automation_folder / dataset_definition.path
         target_folder = make_folder(target_path.parent)
         reference_configuration = dataset_definition.reference
         reference_path = get_folder_plus_path(reference_configuration)
         if reference_path:
-            source_path = (automation_folder / reference_path).resolve()
+            source_path = automation_folder / reference_path
             if target_path.is_symlink():
-                if target_path == source_path:
+                if target_path.resolve() == source_path.resolve():
                     continue
                 target_path.unlink()
             elif target_path.exists():
@@ -476,8 +475,10 @@ def _proxy_podman_ports(
         port_uri_by_port_id)
     try:
         yield
+    except KeyboardInterrupt:
+        pass
     except Exception as e:
-        L.error(e)
+        L.exception(e)
     finally:
         for relative_uri in relative_uris:
             requests.delete(PROXY_URI + relative_uri)

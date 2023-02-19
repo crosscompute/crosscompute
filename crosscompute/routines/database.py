@@ -1,3 +1,4 @@
+from logging import getLogger
 from pathlib import Path
 from time import time
 
@@ -20,6 +21,9 @@ class DiskDatabase():
         changed_infos = []
         variable_ids = []
         for path in paths:
+            path = Path(path).resolve()
+            if path.is_dir():
+                continue
             try:
                 infos = self._get(path)
             except KeyError:
@@ -37,7 +41,6 @@ class DiskDatabase():
 
     def _get(self, path):
         configuration = self._configuration
-        path = Path(path).resolve()
         for automation_definition in configuration.automation_definitions:
             automation_folder = automation_definition.folder
             runs_folder = automation_folder / 'runs'
@@ -165,3 +168,6 @@ def add_style_infos(memory, configuration):
                 continue
             path = automation_folder / style_definition['path']
             memory.add(path, info)
+
+
+L = getLogger(__name__)

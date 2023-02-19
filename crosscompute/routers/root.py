@@ -6,11 +6,14 @@ from fastapi.responses import FileResponse
 from ..constants import (
     ASSETS_FOLDER,
     AUTOMATION_ROUTE,
+    BATCH_ROUTE,
     MUTATION_ROUTE,
+    STEP_ROUTE,
     STYLE_ROUTE)
 from ..dependencies import (
     AuthorizationGuardFactory,
-    get_automation_definition)
+    get_automation_definition,
+    get_batch_definition)
 from ..macros.iterable import (
     find_item)
 from ..routines.authorization import AuthorizationGuard
@@ -24,6 +27,30 @@ from ..settings import (
 
 
 router = APIRouter()
+
+
+@router.api_route(AUTOMATION_ROUTE + BATCH_ROUTE + STEP_ROUTE, methods=[
+    'HEAD',
+], dependencies=[
+    Depends(get_automation_definition),
+    Depends(get_batch_definition),
+], tags=['root'])
+@router.api_route(AUTOMATION_ROUTE + BATCH_ROUTE, methods=[
+    'HEAD',
+], dependencies=[
+    Depends(get_automation_definition),
+    Depends(get_batch_definition),
+], tags=['root'])
+@router.api_route(AUTOMATION_ROUTE, methods=[
+    'HEAD',
+], dependencies=[
+    Depends(get_automation_definition),
+], tags=['root'])
+@router.api_route('/', methods=[
+    'HEAD',
+], tags=['root'])
+async def check():
+    return Response()
 
 
 @router.get('/', tags=['root'])

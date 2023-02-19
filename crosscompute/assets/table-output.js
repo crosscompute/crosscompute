@@ -1,10 +1,4 @@
-function refreshTable_$element_id() {
-  refreshTable('$element_id', '$data_uri');
-}
-registerElement('$variable_id', function() {
-  refreshTable_$element_id();
+registerFunction('$variable_id', async function() {
+  await refreshTable('$element_id', '$data_uri');
 });
-try {
-  refreshTable_$element_id();
-} catch {
-}
+refreshVariable('$variable_id');

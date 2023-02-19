@@ -49,6 +49,7 @@ def get_step_response_dictionary(
         'css_uris': get_unique_order(m['css_uris']),
         'css_text': get_css_text(design_name, for_embed, for_print),
         'main_text': main_text,
+        'main_class': get_main_class(design_name),
         'js_uris': get_unique_order(m['js_uris']),
         'js_text': '\n'.join(get_unique_order(m['js_texts'])),
         'for_embed': for_embed,
@@ -93,6 +94,15 @@ def get_css_text(design_name, for_embed, for_print):
     if design_name == 'flex-vertical':
         css_texts.append(FLEX_VERTICAL_CSS)
     return '\n'.join(css_texts)
+
+
+def get_main_class(design_name):
+    match design_name:
+        case 'flex-vertical':
+            main_class = '_vertical'
+        case _:
+            main_class = ''
+    return main_class
 
 
 L = getLogger(__name__)

@@ -480,6 +480,24 @@ class FrameView(VariableView):
             'js_texts': js_texts}
 
 
+class JsonView(VariableView):
+
+    view_name = 'json'
+
+    def render_output(self, b: Batch, x: Element):
+        variable_definition = self.variable_definition
+        variable_id = self.variable_id
+        data_uri = b.get_data_uri(variable_definition, x)
+        js_texts = [
+            JSON_JS_HEADER,
+            JSON_JS_OUTPUT.substitute({
+                'variable_id': variable_id,
+                'data_uri': data_uri})]
+        return {
+            'css_uris': [], 'js_uris': [], 'main_text': '',
+            'js_texts': js_texts}
+
+
 def initialize_view_by_name():
     for entry_point in entry_points().select(group='crosscompute.views'):
         VIEW_BY_NAME[entry_point.name] = import_attribute(entry_point.value)
@@ -598,8 +616,8 @@ def update_variable_data(path, data_by_id):
                     d = json.load(f)
                     d.update(data_by_id)
                     f.seek(0)
-                    f.truncate()
                     json.dump(d, f)
+                    f.truncate()
             else:
                 with path.open('wt') as f:
                     d = data_by_id
@@ -621,8 +639,8 @@ def remove_variable_data(path, variable_ids):
                 for variable_id in variable_ids:
                     del d[variable_id]
                 f.seek(0)
-                f.truncate()
                 json.dump(d, f)
+                f.truncate()
         else:
             path.unlink(missing_ok=True)
     except (json.JSONDecodeError, OSError) as e:
@@ -828,6 +846,10 @@ TABLE_JS_OUTPUT = asset_storage.load_string_text('table-output.js')
 
 FRAME_JS_HEADER = asset_storage.load_raw_text('frame-header.js')
 FRAME_JS_OUTPUT = asset_storage.load_string_text('frame-output.js')
+
+
+JSON_JS_HEADER = asset_storage.load_raw_text('json-header.js')
+JSON_JS_OUTPUT = asset_storage.load_string_text('json-output.js')
 
 
 YIELD_DATA_BY_ID_BY_EXTENSION = {

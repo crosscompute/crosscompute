@@ -1,9 +1,6 @@
 from argparse import ArgumentParser
 from logging import getLogger
 
-from invisibleroads_macros_process import (
-    LoggableProcess)
-
 from crosscompute import __version__
 from crosscompute.exceptions import (
     CrossComputeConfigurationNotFoundError,
@@ -27,6 +24,8 @@ from crosscompute.scripts.serve import (
     configure_argument_parser_for_serving,
     configure_serving_from,
     serve_with)
+from crosscompute.settings import (
+    StoppableProcess)
 
 
 def do(arguments=None):
@@ -43,10 +42,10 @@ def do(arguments=None):
     processes = []
     if launch_id in ['serve', 'all']:
         check_port(args.port)
-        processes.append(LoggableProcess(
+        processes.append(StoppableProcess(
             name='serve', target=serve_with, args=(automation, args)))
     if launch_id in ['run', 'all']:
-        processes.append(LoggableProcess(
+        processes.append(StoppableProcess(
             name='run', target=run_with, args=(automation, args)))
     try:
         for process in processes:
@@ -55,6 +54,11 @@ def do(arguments=None):
             process.join()
     except KeyboardInterrupt:
         L.info('waiting for processes to stop')
+    except Exception as e:
+        L.exception(e)
+    finally:
+        for process in processes:
+            process.stop()
 
 
 def configure_argument_parser_for_launching(a):

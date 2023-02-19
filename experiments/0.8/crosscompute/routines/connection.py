@@ -1,6 +1,5 @@
 import json
 import requests
-from sseclient import SSEClient
 
 from ..constants import (
     BASH_CONFIGURATION_TEXT,
@@ -46,22 +45,6 @@ def fetch_resource(
             CrossComputeExecutionError if status_code == 400 else
             CrossComputeImplementationError)(d)
     return response_json
-
-
-def get_echoes_url():
-    server_url = get_environment_value('CROSSCOMPUTE_ECHOES', get_server_url())
-    token = get_token()
-    return f'{server_url}/echoes/{token}.json'
-
-
-def get_echoes_client():
-    echoes_url = get_echoes_url()
-    try:
-        client = SSEClient(echoes_url)
-    except Exception:
-        raise CrossComputeConnectionError({
-            'url': 'could not connect to echoes ' + echoes_url})
-    return client
 
 
 def yield_echo(statistics_dictionary, is_quiet=False, as_json=False):

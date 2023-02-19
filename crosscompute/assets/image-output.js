@@ -1,3 +1,3 @@
-registerElement('$variable_id', function() {
-  refreshImage('$element_id', '$data_uri');
+registerFunction('$variable_id', async function() {
+  await refreshImage('$element_id', '$data_uri');
 });

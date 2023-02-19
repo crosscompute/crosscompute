@@ -725,7 +725,10 @@ def validate_dataset_reference(dataset_dictionary):
     if reference_path:
         source_path = automation_folder / reference_path
         if not source_path.exists():
-            if source_path.name == 'runs':
+            if source_path.is_symlink():
+                raise CrossComputeConfigurationError(
+                    f'invalid symlink for dataset reference {reference_path}')
+            elif source_path.name == 'runs':
                 source_path.mkdir(parents=True)
             else:
                 raise CrossComputeConfigurationError(

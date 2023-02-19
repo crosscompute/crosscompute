@@ -1,4 +1,4 @@
-from logging import getLogger, DEBUG, ERROR
+from logging import getLogger, DEBUG
 from os import getenv
 from time import time
 
@@ -7,16 +7,16 @@ from fastapi import FastAPI
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
-from invisibleroads_macros_process import LoggableProcess, StoppableProcess
 from invisibleroads_macros_web.starlette import ExtraResponseHeadersMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from watchgod import watch
+from watchfiles import watch
 
 from ..constants import HOST, PORT, TEMPLATE_PATH_BY_ID
 from ..exceptions import CrossComputeError
 from ..routers import automation, mutation, root, token
 from ..settings import (
-    site, template_environment, template_globals, template_path_by_id)
+    StoppableProcess, site, template_environment, template_globals,
+    template_path_by_id)
 from .database import DiskDatabase
 from .interface import Server
 
@@ -41,8 +41,9 @@ class DiskServer(Server):
         self._allowed_origins = allowed_origins
 
     def serve(self, configuration):
-        LoggableProcess(
-            name='worker', target=self._work, args=(self._queue,)).start()
+        worker_process = StoppableProcess(
+            name='worker', target=self._work, args=(self._queue,))
+        worker_process.start()
         host, port, root_uri, with_restart, with_prefix, allowed_origins = [
             self._host, self._port, self._root_uri, self._with_restart,
             self._with_prefix, self._allowed_origins]
@@ -66,32 +67,41 @@ class DiskServer(Server):
             L.error(f'could not start server at {host}:{port}')
         except KeyboardInterrupt:
             pass
+        except Exception as e:
+            L.exception(e)
+        finally:
+            worker_process.stop()
 
     def watch(
             self, configuration, disk_poll_in_milliseconds,
             disk_debounce_in_milliseconds, reload):
-        if L.getEffectiveLevel() > DEBUG:
-            getLogger('watchgod.watcher').setLevel(ERROR)
         server_process, disk_database = self._start(configuration)
-        for changed_packs in watch(
-                configuration.folder, min_sleep=disk_poll_in_milliseconds,
-                debounce=disk_debounce_in_milliseconds):
-            L.debug(changed_packs)
-            changed_paths = [_[1] for _ in changed_packs]
-            changed_infos = disk_database.grok(changed_paths)
-            L.debug(changed_infos)
-            should_restart_server = False
-            for info in changed_infos:
-                if info['code'] == 'c':
-                    should_restart_server = True
-            if self._with_restart and should_restart_server:
-                try:
-                    configuration = reload()
-                except CrossComputeError as e:
-                    L.error(e)
-                    continue
-                server_process.stop()
-                server_process, disk_database = self._start(configuration)
+        try:
+            for changed_packs in watch(
+                    configuration.folder, step=disk_poll_in_milliseconds,
+                    debounce=disk_debounce_in_milliseconds):
+                L.debug(changed_packs)
+                changed_paths = [_[1] for _ in changed_packs]
+                changed_infos = disk_database.grok(changed_paths)
+                L.debug(changed_infos)
+                should_restart_server = False
+                for info in changed_infos:
+                    if info['code'] == 'c':
+                        should_restart_server = True
+                if self._with_restart and should_restart_server:
+                    try:
+                        configuration = reload()
+                    except CrossComputeError as e:
+                        L.error(e)
+                        continue
+                    server_process.stop()
+                    server_process, disk_database = self._start(configuration)
+        except KeyboardInterrupt:
+            pass
+        except Exception as e:
+            L.exception(e)
+        finally:
+            server_process.stop()
 
     def _start(self, configuration):
         server_process = StoppableProcess(
