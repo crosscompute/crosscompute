@@ -199,13 +199,13 @@ version: 0.0.0
 # - command to run your script, if path is not specified
 # - folder where your script should run
 # scripts:
-#   - path: run1.py
-#   - path: run2.py
+#   - path: run.py
+#   - path: run.py
 #     folder: scripts
-#   - path: run3.ipynb
-#   - command: python run4.py {input_folder} {output_folder}
+#   - path: run.ipynb
+#   - command: python run.py {input_folder} {output_folder}
 #   - command: >
-#       python run5.py
+#       python run.py
 #       {input_folder} {output_folder} {log_folder} {debug_folder}
 
 # environment configuration
