@@ -1,4 +1,5 @@
 from functools import partial
+from html.parser import HTMLParser
 from itertools import count
 from logging import getLogger
 
@@ -14,6 +15,38 @@ from ..settings import template_globals
 from .asset import asset_storage
 from .batch import DiskBatch
 from .variable import Element, VariableView
+
+
+class VariableParser(HTMLParser):
+
+    def __init__(self, render_html, *args, **kwargs):
+        self.render_html = render_html
+        self.in_script = False
+        self.template_parts = []
+        super().__init__(*args, **kwargs)
+
+    def handle_starttag(self, tag, attrs):
+        if tag == 'script':
+            self.in_script = True
+        attribute_strings = [f'{k}="{v}"' for k, v in attrs]
+        attributes_string = ' ' + ' '.join(
+            attribute_strings) if attribute_strings else ''
+        self.template_parts.append(f'<{tag}{attributes_string}>')
+
+    def handle_endtag(self, tag):
+        if tag == 'script':
+            self.in_script = False
+        self.template_parts.append(f'</{tag}>')
+
+    def handle_data(self, data):
+        if not self.in_script:
+            data = VARIABLE_ID_TEMPLATE_PATTERN.sub(self.render_html, data)
+        self.template_parts.append(data)
+
+    def parse_text(self, text):
+        self.template_parts = []
+        self.feed(text)
+        return ''.join(self.template_parts)
 
 
 def get_automation_batch_step_uri(
@@ -41,8 +74,8 @@ def get_step_response_dictionary(
         request_params=request_params, step_name=step_name,
         design_name=design_name, for_print=for_print)
     template_text = automation_definition.get_template_text(step_name)
-    main_text = get_html_from_markdown(VARIABLE_ID_TEMPLATE_PATTERN.sub(
-        render_element_html, template_text))
+    main_text = get_html_from_markdown(VariableParser(
+        render_element_html).parse_text(template_text))
     mutation_reference_uri = get_automation_batch_step_uri(
         automation_definition, batch_definition, step_name)
     return {

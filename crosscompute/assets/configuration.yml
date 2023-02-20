@@ -134,6 +134,9 @@ version: 0.0.0
   #   - id: demo
   #     view: frame
   #     path: variables.dictionary
+  #   - id: cards
+  #     view: json
+  #     path: variables.dictionary
   #   - id: region
   #     view: map-mapbox
   #     path: region.geojson
@@ -150,6 +153,9 @@ version: 0.0.0
   #     path: incidents.json
   #     configuration:
   #       style: mapbox://styles/mapbox/dark-v10
+  #   - id: identity
+  #     view: barcode
+  #     path: variables.dictionary
 
   # output templates
   # - path to your markdown template or jupyter notebook form (required)
