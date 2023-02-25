@@ -39,8 +39,12 @@ class VariableParser(HTMLParser):
         self.template_parts.append(f'</{tag}>')
 
     def handle_data(self, data):
-        if not self.in_script:
-            data = VARIABLE_ID_TEMPLATE_PATTERN.sub(self.render_html, data)
+        in_script = self.in_script
+        render_html = self.render_html
+        if in_script:
+            data = VARIABLE_ID_WHITELIST_PATTERN.sub(render_html, data)
+        else:
+            data = VARIABLE_ID_TEMPLATE_PATTERN.sub(render_html, data)
         self.template_parts.append(data)
 
     def parse_text(self, text):
