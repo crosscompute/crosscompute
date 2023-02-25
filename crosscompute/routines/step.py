@@ -9,7 +9,8 @@ from ..constants import (
     MUTATION_ROUTE,
     STEP_CODE_BY_NAME,
     STEP_ROUTE,
-    VARIABLE_ID_TEMPLATE_PATTERN)
+    VARIABLE_ID_TEMPLATE_PATTERN,
+    VARIABLE_ID_WHITELIST_PATTERN)
 from ..macros.iterable import find_item, get_unique_order
 from ..settings import template_globals
 from .asset import asset_storage
