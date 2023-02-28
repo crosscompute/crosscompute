@@ -26,8 +26,8 @@
 {% for batch in batches %}
 <li>
 {{ batch['name'] }}
-<a href="{{ root_uri }}{{ uri }}{{ batch['uri'] }}/i">[input]</a>
-<a href="{{ root_uri }}{{ uri }}{{ batch['uri'] }}/o">[output]</a>
+<a href="{{ root_uri }}{{ uri }}{{ batch['uri'] }}/i">input</a>
+<a href="{{ root_uri }}{{ uri }}{{ batch['uri'] }}/o">output</a>
 </li>
 {% endfor %}
 </ul>
