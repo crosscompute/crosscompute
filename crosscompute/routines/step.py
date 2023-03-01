@@ -125,10 +125,12 @@ def render_variable_html(
 
 def get_css_text(design_name, for_embed, for_print):
     css_texts = []
-    if not for_embed and not for_print:
-        css_texts.append(DEFAULT_CSS)
-    elif for_embed:
+    if for_embed:
         css_texts.append(EMBEDDED_CSS)
+    elif for_print:
+        css_texts.append(PRINTED_CSS)
+    else:
+        css_texts.append(DEFAULT_CSS)
     if design_name == 'flex-vertical':
         css_texts.append(FLEX_VERTICAL_CSS)
     return '\n'.join(css_texts)
@@ -146,6 +148,7 @@ def get_main_class(design_name):
 L = getLogger(__name__)
 
 
-DEFAULT_CSS = asset_storage.load_raw_text('default.css')
 EMBEDDED_CSS = asset_storage.load_raw_text('embedded.css')
+PRINTED_CSS = asset_storage.load_raw_text('printed.css')
+DEFAULT_CSS = asset_storage.load_raw_text('default.css')
 FLEX_VERTICAL_CSS = asset_storage.load_raw_text('flex-vertical.css')
