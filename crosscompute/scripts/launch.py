@@ -74,6 +74,9 @@ def configure_argument_parser_for_launching(a):
     a.add_argument(
         '--print', dest='is_print_only', action='store_true',
         help='print only')
+    a.add_argument(
+        '--version', dest='is_version_only', action='store_true',
+        help='show version')
 
 
 def get_launch_id_from(args):
@@ -97,6 +100,9 @@ def _get_args(arguments):
     configure_argument_parser_for_serving(a)
     configure_argument_parser_for_running(a)
     args = a.parse_args(arguments)
+    if args.is_version_only:
+        print(__version__)
+        raise SystemExit
     try:
         configure_logging_from(args)
         configure_serving_from(args)
