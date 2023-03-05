@@ -9,8 +9,6 @@ from invisibleroads_macros_web.starlette import (
     TemplateResponseFactory)
 
 from .constants import (
-    MAXIMUM_PING_INTERVAL_IN_SECONDS,
-    MINIMUM_PING_INTERVAL_IN_SECONDS,
     TEMPLATE_PATH_BY_ID)
 
 
@@ -40,10 +38,6 @@ template_globals = template_environment.globals = {
     'google_analytics_id': '',
     'server_timestamp': 0,
     'root_uri': '',
-    'with_restart': True,
-    'maximum_ping_interval_in_milliseconds':
-        MAXIMUM_PING_INTERVAL_IN_SECONDS * 1000,
-    'minimum_ping_interval_in_milliseconds':
-        MINIMUM_PING_INTERVAL_IN_SECONDS * 1000}
+    'with_restart': True}
 TemplateResponse = TemplateResponseFactory(
     template_environment).TemplateResponse

@@ -13,7 +13,7 @@ from watchfiles import watch
 
 from ..constants import HOST, PORT, TEMPLATE_PATH_BY_ID
 from ..exceptions import CrossComputeError
-from ..routers import automation, mutation, root, token
+from ..routers import automation, root, stream, token
 from ..settings import (
     StoppableProcess, site, template_environment, template_globals,
     template_path_by_id)
@@ -80,7 +80,6 @@ class DiskServer(Server):
             for changed_packs in watch(
                     configuration.folder, step=disk_poll_in_milliseconds,
                     debounce=disk_debounce_in_milliseconds):
-                L.debug(changed_packs)
                 changed_paths = [_[1] for _ in changed_packs]
                 changed_infos = disk_database.grok(changed_paths)
                 L.debug(changed_infos)
@@ -145,8 +144,8 @@ def get_app(root_uri, with_prefix):
     app.add_exception_handler(StarletteHTTPException, handle_http_exception)
     app.include_router(root.router, prefix=prefix)
     app.include_router(automation.router, prefix=prefix)
-    app.include_router(mutation.router, prefix=prefix)
     app.include_router(token.router, prefix=prefix)
+    app.include_router(stream.router, prefix=prefix)
     return app
 
 

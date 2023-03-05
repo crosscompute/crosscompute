@@ -3,7 +3,7 @@
 {% block head_html %}
 {{ super() -}}
 <script>
-const variables = {}, callbacks = {}, isSecure = location.protocol == 'https:', getTime = () => (new Date).getTime(), sleep = t => new Promise(r => setTimeout(r, t));
+const getTime = () => (new Date).getTime(), sleep = t => new Promise(r => setTimeout(r, t)), rootUri = '{{ root_uri }}', variables = {}, callbacks = {}, isSecure = location.protocol == 'https:';
 function register(xs, k, v) {
   const ys = xs[k];
   if (ys === undefined) {
@@ -26,43 +26,15 @@ async function runEach(xs) {
 async function refreshVariable(variableId) {
   await runEach(functions[variableId]);
   await runEach(callbacks[variableId]);
-{% if not with_restart %}
+{% if not with_restart and not has_interval %}
   if (variableId == 'return_code') {
-    isDone = 1;
+    mutationStream.close();
   }
 {% endif %}
 }
 {% endif %}
 {{ super() -}}
 {% if with_restart or is_done == 0 %}
-async function processMutations() {
-  const uri = '{{ root_uri }}{{ mutation_uri }}';
-  try {
-    const r = await fetch(`${uri}?t=${mutationTimestamp}`), d = await r.json(), { styles: ss, variables: vs } = d;
-{% if with_restart %}
-    if (
-      d.server_timestamp != {{ server_timestamp }} ||
-      d.configurations.length ||
-      d.templates.length
-    ) {
-      refreshPage();
-    } else if (ss.length) {
-      refreshStyle();
-    }
-{% endif %}
-{% if step_name != 'input' %}
-    await Promise.all(vs.map(_ => refreshVariable(_.id)));
-{% endif %}
-    mutationTimestamp = d.mutation_timestamp;
-    pingInterval = {{ minimum_ping_interval_in_milliseconds }};
-  } catch (e) {
-    if (pingInterval < {{ maximum_ping_interval_in_milliseconds }}) {
-      pingInterval *= 1.1;
-    }
-    console.error(e);
-  }
-  schedulePolling();
-}
 {% if with_restart %}
 async function refreshPage() {
   const r = await fetch(location.href, { method: 'head' });
@@ -82,18 +54,39 @@ function refreshStyle() {
   }
 }
 {% endif %}
-function schedulePolling() {
-{% if not with_restart %}
-  if (isDone) {
-    return;
-  }
+function setupMutationStream() {
+  mutationStream = new EventSource(rootUri + '/streams{{ mutation_uri }}?t=' + mutationTimestamp);
+  mutationStream.onopen = () => {
+    retryMilliseconds = 1000;
+  };
+  mutationStream.onerror = () => {
+    mutationStream.close();
+    clearTimeout(mutationTimeout);
+    mutationTimeout = setTimeout(setupMutationStream, retryMilliseconds);
+    if (retryMilliseconds < 60000) {
+      retryMilliseconds *= 2;
+    }
+  };
+  mutationStream.onmessage = async ({ data }) => {
+    d = JSON.parse(data);
+{% if with_restart %}
+    if (
+      d.server_timestamp != {{ server_timestamp }} ||
+      d.configurations.length ||
+      d.templates.length
+    ) {
+      refreshPage();
+    } else if (d.styles.length) {
+      refreshStyle();
+    }
 {% endif %}
-  setTimeout(processMutations, pingInterval);
+{% if step_name != 'input' %}
+    await Promise.all(d.variables.map(_ => refreshVariable(_.id)));
+{% endif %}
+    mutationTimestamp = d.mutation_timestamp;
+  };
 }
-let mutationTimestamp = {{ mutation_timestamp }}, pingInterval = {{ minimum_ping_interval_in_milliseconds }};
-{% if not with_restart %}
-let isDone = 0;
-{% endif %}
-schedulePolling();
+let mutationStream, mutationTimeout, mutationTimestamp = {{ mutation_timestamp }}, retryMilliseconds = 1000;
+setupMutationStream();
 {% endif %}
 {%- endblock %}

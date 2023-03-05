@@ -515,7 +515,7 @@ def validate_environment(configuration):
         + configuration.get_variable_definitions('debug'))
     environment_variable_ids = get_environment_variable_ids(get_dictionaries(
         d, 'variables'))
-    batch_concurrency_name = d.get('batch', 'process').lower()
+    batch_concurrency_name = d.get('batch', 'thread').lower()
     if batch_concurrency_name not in ('process', 'thread', 'single'):
         raise CrossComputeConfigurationError(
             f'"{batch_concurrency_name}" batch concurrency is not supported')

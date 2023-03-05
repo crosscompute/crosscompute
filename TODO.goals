@@ -1,2 +1,3 @@
+Consider replacing multiprocessing with threading where possible
 Consider replacing multiprocessing with asyncio or anyio where appropriate
 Add unit tests

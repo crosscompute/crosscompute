@@ -78,6 +78,7 @@ def learn(configuration):
     'Get c = configuration, v = variable, t = template, s = style'
     memory = DiskMemory()
     add_configuration_infos(memory, configuration)
+    # TODO: add_script_infos
     add_variable_infos(memory, configuration)
     add_template_infos(memory, configuration)
     add_style_infos(memory, configuration)

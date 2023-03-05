@@ -86,12 +86,11 @@ def get_step_response_dictionary(
     return {
         'css_uris': get_unique_order(m['css_uris']),
         'css_text': get_css_text(design_name, for_embed, for_print),
-        'main_text': main_text,
-        'main_class': get_main_class(design_name),
+        'main_text': main_text, 'main_class': get_main_class(design_name),
         'js_uris': get_unique_order(m['js_uris']),
         'js_text': '\n'.join(get_unique_order(m['js_texts'])),
-        'for_embed': for_embed,
-        'for_print': for_print,
+        'for_embed': for_embed, 'for_print': for_print,
+        'has_interval': automation_definition.interval_timedelta is not None,
         'is_done': batch.is_done(),
         'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri)}
 

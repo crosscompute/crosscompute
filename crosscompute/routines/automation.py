@@ -349,10 +349,10 @@ def _run_automation_single(automation_definition, run_batch, user_environment):
 def _run_automation_multiple(
         automation_definition, run_batch, user_environment, concurrency_name):
     ds = []
-    if concurrency_name == 'process':
-        BatchExecutor = ProcessPoolExecutor
-    else:
+    if concurrency_name == 'thread':
         BatchExecutor = ThreadPoolExecutor
+    else:
+        BatchExecutor = ProcessPoolExecutor
     with BatchExecutor() as executor:
         futures = []
         for batch_definition in automation_definition.batch_definitions:
@@ -519,6 +519,7 @@ def _work(automation_queue):
 
 
 def _work_one(automation_pack):
+    # TODO: Run and/or print
     try:
         automation_definition = automation_pack[0]
         engine = get_script_engine(

@@ -1,29 +1,16 @@
 from time import time
 
-from fastapi import APIRouter, Query
-
 from ..constants import (
-    MAXIMUM_MUTATION_AGE_IN_SECONDS,
-    MUTATION_ROUTE)
+    MAXIMUM_MUTATION_AGE_IN_SECONDS)
 from ..settings import (
     site,
     template_globals)
 
 
-router = APIRouter()
-
-
-@router.get(
-    MUTATION_ROUTE.format(uri='{uri:path}'),
-    tags=['mutation'])
-async def see_mutation_json(
-    uri: str,
-    old_timestamp: float = Query(default=0, alias='t'),
-):
-    # TODO: Consider adding guard
+def get_mutation(reference_uri, old_timestamp):
+    configurations, scripts, variables, templates, styles = [], [], [], [], []
     new_timestamp = time()
     changes = site['changes']
-    configurations, variables, templates, styles = [], [], [], []
     for timestamp, infos in changes.copy().items():
         if new_timestamp - timestamp > MAXIMUM_MUTATION_AGE_IN_SECONDS:
             try:
@@ -37,19 +24,16 @@ async def see_mutation_json(
             if code == 'c':
                 configurations.append({})
             elif code == 'v':
-                if uri.startswith(info['uri']):
-                    # TODO: Send value or diff if authorized
+                if reference_uri.startswith(info['uri']):
+                    # TODO: Send value if authorized
                     variables.append({'id': info['id']})
             elif code == 't':
-                if uri.startswith(info['uri']):
+                if reference_uri.startswith(info['uri']):
                     templates.append({})
             elif code == 's':
                 styles.append({})
     return {
-        'server_timestamp': template_globals['server_timestamp'],
+        'configurations': configurations, 'scripts': scripts,
+        'variables': variables, 'templates': templates, 'styles': styles,
         'mutation_timestamp': new_timestamp,
-        'configurations': configurations,
-        'variables': variables,
-        'templates': templates,
-        'styles': styles,
-    }
+        'server_timestamp': template_globals['server_timestamp']}
