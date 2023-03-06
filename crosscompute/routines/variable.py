@@ -123,9 +123,7 @@ class LinkView(VariableView):
             LINK_JS_OUTPUT.substitute({
                 'variable_id': variable_id,
                 'element_id': element_id,
-                'link_text': escape_quotes_js(link_text),
-            }),
-        ]
+                'link_text': escape_quotes_js(link_text)})]
         return {
             'css_uris': [], 'js_uris': [], 'main_text': main_text,
             'js_texts': js_texts}
@@ -498,6 +496,31 @@ class JsonView(VariableView):
             'js_texts': js_texts}
 
 
+class PdfView(VariableView):
+
+    view_name = 'pdf'
+
+    def render_output(self, b: Batch, x: Element):
+        variable_definition = self.variable_definition
+        variable_id = self.variable_id
+        element_id = x.id
+        data_uri = b.get_data_uri(variable_definition, x)
+        main_text = (
+            f'<iframe id="{element_id}" '
+            f'class="_{x.mode_name} _{self.view_name} {variable_id}" '
+            f'src="{data_uri}" frameborder="0">'
+            '</iframe>')
+        js_texts = [
+            PDF_JS_HEADER,
+            PDF_JS_OUTPUT.substitute({
+                'variable_id': variable_id,
+                'element_id': element_id,
+                'data_uri': data_uri})]
+        return {
+            'css_uris': [], 'js_uris': [], 'main_text': main_text,
+            'js_texts': js_texts}
+
+
 def initialize_view_by_name():
     for entry_point in entry_points().select(group='crosscompute.views'):
         VIEW_BY_NAME[entry_point.name] = import_attribute(entry_point.value)
@@ -850,6 +873,10 @@ FRAME_JS_OUTPUT = asset_storage.load_string_text('frame-output.js')
 
 JSON_JS_HEADER = asset_storage.load_raw_text('json-header.js')
 JSON_JS_OUTPUT = asset_storage.load_string_text('json-output.js')
+
+
+PDF_JS_HEADER = asset_storage.load_raw_text('pdf-header.js')
+PDF_JS_OUTPUT = asset_storage.load_string_text('pdf-output.js')
 
 
 YIELD_DATA_BY_ID_BY_EXTENSION = {
