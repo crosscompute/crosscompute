@@ -24,13 +24,13 @@ from .interface import Server
 class DiskServer(Server):
 
     def __init__(
-            self, environment, safe, queue, work, changes,
-            host=HOST, port=PORT, with_restart=True, with_prefix=True,
-            with_hidden=True, root_uri='', allowed_origins=None):
+            self, work, environment, safe, tasks, changes, host=HOST,
+            port=PORT, with_restart=True, with_prefix=True, with_hidden=True,
+            root_uri='', allowed_origins=None):
+        self._work = work
         self._environment = environment
         self._safe = safe
-        self._queue = queue
-        self._work = work
+        self._tasks = tasks
         self._changes = changes
         self._host = host
         self._port = port
@@ -42,7 +42,7 @@ class DiskServer(Server):
 
     def serve(self, configuration):
         worker_process = StoppableProcess(
-            name='worker', target=self._work, args=(self._queue,))
+            name='worker', target=self._work, args=(self._tasks,))
         worker_process.start()
         host, port, root_uri, with_restart, with_prefix, allowed_origins = [
             self._host, self._port, self._root_uri, self._with_restart,
@@ -121,8 +121,9 @@ class DiskServer(Server):
             'definitions': configuration.automation_definitions,
             'environment': self._environment,
             'safe': self._safe,
-            'queue': self._queue,
+            'tasks': self._tasks,
             'changes': self._changes,
+            'port': self._port,
             'with_prefix': self._with_prefix,
             'with_hidden': self._with_hidden})
         template_path_by_id.update(TEMPLATE_PATH_BY_ID)

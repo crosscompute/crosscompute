@@ -553,6 +553,19 @@ def save_variable_data(target_path, data_by_id, variable_definitions):
         variable_view.process(target_path)
 
 
+def get_data_by_id(automation_definition, batch_definition):
+    automation_folder = automation_definition.folder
+    batch_folder = batch_definition.folder
+    absolute_batch_folder = automation_folder / batch_folder
+    input_data_by_id = get_data_by_id_from_folder(
+        absolute_batch_folder / 'input',
+        automation_definition.get_variable_definitions('input'))
+    output_data_by_id = get_data_by_id_from_folder(
+        absolute_batch_folder / 'output',
+        automation_definition.get_variable_definitions('output'))
+    return input_data_by_id | output_data_by_id
+
+
 def get_data_by_id_from_folder(folder, variable_definitions):
     data_by_id = {}
     for variable_definition in variable_definitions:

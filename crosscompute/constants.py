@@ -18,6 +18,12 @@ class Status(IntEnum):
     DONE = 100
 
 
+class Task(IntEnum):
+
+    PRINT_ONLY = 0
+    RUN_PRINT = 1
+
+
 PACKAGE_FOLDER = Path(__file__).parent
 ASSETS_FOLDER = PACKAGE_FOLDER / 'assets'
 TEMPLATE_PATH_BY_ID = {

@@ -19,7 +19,7 @@ from crosscompute.routines.log import (
     configure_logging_from)
 from crosscompute.routines.variable import (
     format_text,
-    get_data_by_id_from_folder)
+    get_data_by_id)
 from crosscompute.scripts.configure import (
     configure_argument_parser_for_configuring)
 from crosscompute.scripts.run import (
@@ -129,19 +129,6 @@ def get_batch_dictionaries(automation_definition, print_definition, timestamp):
             'path': path,
             'uri': automation_uri + batch_definition.uri})
     return batch_dictionaries
-
-
-def get_data_by_id(automation_definition, batch_definition):
-    automation_folder = automation_definition.folder
-    batch_folder = batch_definition.folder
-    absolute_batch_folder = automation_folder / batch_folder
-    input_data_by_id = get_data_by_id_from_folder(
-        absolute_batch_folder / 'input',
-        automation_definition.get_variable_definitions('input'))
-    output_data_by_id = get_data_by_id_from_folder(
-        absolute_batch_folder / 'output',
-        automation_definition.get_variable_definitions('output'))
-    return input_data_by_id | output_data_by_id
 
 
 L = getLogger(__name__)

@@ -93,9 +93,9 @@ async def run_automation_json(
     remove_variable_data(debug_folder / 'variables.dictionary', [
         'return_code'])
 
-    queue = site['queue']
-    environment = site['environment']
-    queue.put((automation_definition, batch_definition, environment))
+    site['tasks'].append((
+        automation_definition, batch_definition, site['environment'],
+        task_mode, task_timestamp))
     automation_definition.batch_definitions.append(batch_definition)
 
     step_code = 'l' if automation_definition.get_variable_definitions(
