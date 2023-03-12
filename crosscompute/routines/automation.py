@@ -52,6 +52,7 @@ class DiskAutomation(Automation):
         return instance
 
     def run(self, environment, with_rebuild=True):
+        # TODO: Remove recurring definitions
         for automation_definition in self.definitions:
             prepare_automation(automation_definition, with_rebuild)
         recurring_definitions = []
@@ -127,11 +128,6 @@ class DiskAutomation(Automation):
         self.path = path
         self.folder = configuration.folder
         self.definitions = configuration.automation_definitions
-
-
-def prepare_automation(automation_definition, with_rebuild=True):
-    engine = get_script_engine(automation_definition.engine_name, with_rebuild)
-    engine.prepare(automation_definition)
 
 
 def run_automation(automation_definition, user_environment, with_rebuild=True):

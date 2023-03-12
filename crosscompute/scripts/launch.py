@@ -44,7 +44,8 @@ def do(arguments=None):
         check_port(args.port)
         processes.append(StoppableProcess(
             name='serve', target=serve_with, args=(automation, args)))
-    if launch_id in ['run', 'all']:
+    elif launch_id in ['run']:
+        # TODO: use process_loop
         processes.append(StoppableProcess(
             name='run', target=run_with, args=(automation, args)))
     try:

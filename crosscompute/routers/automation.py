@@ -5,8 +5,10 @@ from time import time
 from fastapi import APIRouter, Depends, Request, Response, HTTPException
 from fastapi.responses import FileResponse
 from invisibleroads_macros_disk import make_random_folder
+from invisibleroads_macros_log import get_timestamp, LONGSTAMP_TEMPLATE
 
 from ..constants import (
+    Task,
     AUTOMATION_ROUTE,
     BATCH_ROUTE,
     ID_LENGTH,
@@ -93,9 +95,10 @@ async def run_automation_json(
     remove_variable_data(debug_folder / 'variables.dictionary', [
         'return_code'])
 
+    task_timestamp = get_timestamp(template=LONGSTAMP_TEMPLATE)
     site['tasks'].append((
         automation_definition, batch_definition, site['environment'],
-        task_mode, task_timestamp))
+        Task.RUN_PRINT, task_timestamp))
     automation_definition.batch_definitions.append(batch_definition)
 
     step_code = 'l' if automation_definition.get_variable_definitions(

@@ -2,9 +2,11 @@ import shlex
 import subprocess
 from collections import defaultdict
 from contextlib import contextmanager
+from datetime import datetime
 from logging import getLogger
 from os import environ, getenv, symlink
 from os.path import relpath
+from random import choice
 from threading import Thread
 from time import sleep, time
 from urllib.error import URLError
@@ -33,6 +35,7 @@ from ..exceptions import (
     CrossComputeExecutionError,
     CrossComputeError)
 from ..macros.iterable import group_by
+from ..macros.log import get_longstamp
 from ..settings import (
     site,
     template_globals)
@@ -205,15 +208,48 @@ def update_datasets(automation_definition):
                 L.error(f'could not download dataset from {reference_uri}')
 
 
-def process_loop(tasks):
-    while True:
-        try:
-            task = tasks.pop(0)
-        except IndexError:
-            sleep(1)
-        else:
-            thread = Thread(target=_process_task, args=task, daemon=True)
+def process_loop(automation_tasks, automation_definitions, with_rebuild):
+    for automation_definition in automation_definitions:
+        _prepare_automation(automation_definition, with_rebuild)
+    try:
+        while True:
+            try:
+                automation_task = _get_automation_task(
+                    automation_tasks, automation_definitions)
+            except IndexError:
+                sleep(1)
+                continue
+            thread = Thread(
+                target=_process_task, args=automation_task, daemon=True)
             thread.start()
+    except KeyboardInterrupt:
+        pass
+
+
+def _get_automation_task(automation_tasks, automation_definitions, is_lazy):
+    try:
+        automation_task = automation_tasks.pop(0)
+    except IndexError:
+        automation_definition = choice(automation_definitions)
+        batch_definition = choice(automation_definition.batch_definitions)
+        has_run = batch_definition.last_datetime
+        interval_timedelta = automation_definition.interval_timedelta
+
+        has_task = False
+        if not has_run and not is_lazy:
+            has_task = True
+        elif interval_timedelta:
+            last_datetime = batch_definition.last_datetime
+            if datetime.now() > last_datetime + interval_timedelta:
+                has_task = True
+        if not has_task:
+            raise IndexError
+
+        task_timestamp = get_longstamp()
+        automation_task = (
+            automation_definition, batch_definition, site['environment'],
+            Task.RUN_PRINT, task_timestamp)
+    return automation_task
 
 
 def _process_task(
@@ -224,7 +260,8 @@ def _process_task(
     try:
         if task_mode == Task.RUN_PRINT:
             _run_batch(
-                automation_definition, batch_definition, user_environment)
+                automation_definition, batch_definition, user_environment,
+                task_timestamp)
         _print_batch(automation_definition, batch_definition, task_timestamp)
     except CrossComputeError as e:
         e.automation_definition = automation_definition
@@ -236,6 +273,7 @@ def _process_task(
 def _run_batch(
         automation_definition, batch_definition, user_environment,
         task_timestamp):
+    # TODO: Record task timestamp
     engine = get_script_engine(
         automation_definition.engine_name, with_rebuild=False)
     update_datasets(automation_definition)
@@ -244,6 +282,7 @@ def _run_batch(
 
 
 def _print_batch(automation_definition, batch_definition, task_timestamp):
+    # TODO: Record task timestamp
     port = site['port']
     root_uri = template_globals['root_uri']
     for print_definition in automation_definition.print_definitions:
@@ -260,6 +299,11 @@ def _print_batch(automation_definition, batch_definition, task_timestamp):
         Printer = PRINTER_BY_NAME[print_definition.format]
         printer = Printer(f'http://127.0.0.1:{port}{root_uri}')
         printer.render([batch_dictionary], print_definition)
+
+
+def _prepare_automation(automation_definition, with_rebuild=True):
+    engine = get_script_engine(automation_definition.engine_name, with_rebuild)
+    engine.prepare(automation_definition)
 
 
 def _prepare_batch(automation_definition, batch_definition):
