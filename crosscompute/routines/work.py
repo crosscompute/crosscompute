@@ -1,6 +1,8 @@
 import shlex
 import subprocess
 from collections import defaultdict
+from concurrent.futures import (
+    ProcessPoolExecutor, ThreadPoolExecutor, as_completed)
 from contextlib import contextmanager
 from datetime import datetime
 from logging import getLogger
@@ -173,6 +175,27 @@ class PodmanEngine(AbstractEngine):
         return return_code
 
 
+def run_automation(automation_definition, user_environment, with_rebuild=True):
+    ds = []
+    run_batch = get_script_engine(
+        automation_definition.engine_name, with_rebuild).run_batch
+    concurrency_name = automation_definition.batch_concurrency_name
+    update_datasets(automation_definition)
+    try:
+        if concurrency_name == 'single':
+            ds.extend(_run_automation_single(
+                automation_definition, run_batch, user_environment))
+        else:
+            ds.extend(_run_automation_multiple(
+                automation_definition, run_batch, user_environment,
+                concurrency_name))
+    except CrossComputeError as e:
+        e.automation_definition = automation_definition
+        L.error(e)
+    automation_definition.interval_datetime = datetime.now()
+    return ds
+
+
 def get_script_engine(engine_name, with_rebuild=True):
     try:
         ScriptEngine = {
@@ -226,6 +249,35 @@ def process_loop(automation_tasks, automation_definitions, with_rebuild):
         pass
 
 
+def _run_automation_single(automation_definition, run_batch, user_environment):
+    ds = []
+    for batch_definition in automation_definition.batch_definitions:
+        ds.append(run_batch(
+            automation_definition, batch_definition, user_environment))
+    return ds
+
+
+def _run_automation_multiple(
+        automation_definition, run_batch, user_environment, concurrency_name):
+    ds = []
+    if concurrency_name == 'thread':
+        BatchExecutor = ThreadPoolExecutor
+    else:
+        BatchExecutor = ProcessPoolExecutor
+    with BatchExecutor() as executor:
+        futures = []
+        for batch_definition in automation_definition.batch_definitions:
+            futures.append(executor.submit(
+                run_batch, automation_definition, batch_definition,
+                user_environment))
+        try:
+            for future in as_completed(futures):
+                ds.append(future.result())
+        except KeyboardInterrupt:
+            pass
+    return ds
+
+
 def _get_automation_task(automation_tasks, automation_definitions, is_lazy):
     try:
         automation_task = automation_tasks.pop(0)
@@ -256,7 +308,6 @@ def _process_task(
         automation_definition, batch_definition, user_environment, task_mode,
         task_timestamp):
     # TODO: If there are newer changes corresponding to the batch, skip it
-    # TODO: timestamp = get_timestamp(template=LONGSTAMP_TEMPLATE)
     try:
         if task_mode == Task.RUN_PRINT:
             _run_batch(

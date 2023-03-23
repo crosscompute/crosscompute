@@ -1,7 +1,5 @@
 # TODO: Return unvalidated configuration when there is an exception
 # TODO: Watch multiple folders if not all under parent folder
-from concurrent.futures import (
-    ProcessPoolExecutor, ThreadPoolExecutor, as_completed)
 from datetime import datetime
 from logging import getLogger
 from pathlib import Path
@@ -25,10 +23,7 @@ from ..settings import multiprocessing_context
 from .configuration import load_configuration
 from .interface import Automation
 from .server import DiskServer
-from .work import (
-    get_script_engine,
-    process_loop,
-    update_datasets)
+from .work import process_loop
 
 
 class DiskAutomation(Automation):
@@ -128,56 +123,6 @@ class DiskAutomation(Automation):
         self.path = path
         self.folder = configuration.folder
         self.definitions = configuration.automation_definitions
-
-
-def run_automation(automation_definition, user_environment, with_rebuild=True):
-    ds = []
-    run_batch = get_script_engine(
-        automation_definition.engine_name, with_rebuild).run_batch
-    concurrency_name = automation_definition.batch_concurrency_name
-    update_datasets(automation_definition)
-    try:
-        if concurrency_name == 'single':
-            ds.extend(_run_automation_single(
-                automation_definition, run_batch, user_environment))
-        else:
-            ds.extend(_run_automation_multiple(
-                automation_definition, run_batch, user_environment,
-                concurrency_name))
-    except CrossComputeError as e:
-        e.automation_definition = automation_definition
-        L.error(e)
-    automation_definition.interval_datetime = datetime.now()
-    return ds
-
-
-def _run_automation_single(automation_definition, run_batch, user_environment):
-    ds = []
-    for batch_definition in automation_definition.batch_definitions:
-        ds.append(run_batch(
-            automation_definition, batch_definition, user_environment))
-    return ds
-
-
-def _run_automation_multiple(
-        automation_definition, run_batch, user_environment, concurrency_name):
-    ds = []
-    if concurrency_name == 'thread':
-        BatchExecutor = ThreadPoolExecutor
-    else:
-        BatchExecutor = ProcessPoolExecutor
-    with BatchExecutor() as executor:
-        futures = []
-        for batch_definition in automation_definition.batch_definitions:
-            futures.append(executor.submit(
-                run_batch, automation_definition, batch_definition,
-                user_environment))
-        try:
-            for future in as_completed(futures):
-                ds.append(future.result())
-        except KeyboardInterrupt:
-            pass
-    return ds
 
 
 L = getLogger(__name__)
