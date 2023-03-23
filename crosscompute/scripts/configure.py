@@ -1,7 +1,8 @@
 from argparse import ArgumentParser
-from invisibleroads_macros_log import format_path
 from logging import getLogger
 from pathlib import Path
+
+from invisibleroads_macros_log import format_path
 
 from crosscompute import __version__
 from crosscompute.constants import (

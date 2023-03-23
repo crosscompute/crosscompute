@@ -233,12 +233,12 @@ def update_datasets(automation_definition):
 
 def process_loop(automation_tasks, automation_definitions, with_rebuild):
     for automation_definition in automation_definitions:
-        _prepare_automation(automation_definition, with_rebuild)
+        prepare_automation(automation_definition, with_rebuild)
     try:
         while True:
             try:
                 automation_task = _get_automation_task(
-                    automation_tasks, automation_definitions)
+                    automation_tasks, automation_definitions, is_lazy=True)
             except IndexError:
                 sleep(1)
                 continue
@@ -247,6 +247,11 @@ def process_loop(automation_tasks, automation_definitions, with_rebuild):
             thread.start()
     except KeyboardInterrupt:
         pass
+
+
+def prepare_automation(automation_definition, with_rebuild=True):
+    engine = get_script_engine(automation_definition.engine_name, with_rebuild)
+    engine.prepare(automation_definition)
 
 
 def _run_automation_single(automation_definition, run_batch, user_environment):
@@ -284,7 +289,7 @@ def _get_automation_task(automation_tasks, automation_definitions, is_lazy):
     except IndexError:
         automation_definition = choice(automation_definitions)
         batch_definition = choice(automation_definition.batch_definitions)
-        has_run = batch_definition.last_datetime
+        has_run = hasattr(batch_definition, 'last_datetime')
         interval_timedelta = automation_definition.interval_timedelta
 
         has_task = False
@@ -328,7 +333,7 @@ def _run_batch(
     engine = get_script_engine(
         automation_definition.engine_name, with_rebuild=False)
     update_datasets(automation_definition)
-    engine.run_batch(
+    return engine.run_batch(
         automation_definition, batch_definition, user_environment)
 
 
@@ -336,25 +341,22 @@ def _print_batch(automation_definition, batch_definition, task_timestamp):
     # TODO: Record task timestamp
     port = site['port']
     root_uri = template_globals['root_uri']
+    extra_data_by_id = {'timestamp': {'value': task_timestamp}}
+    folder = make_folder(
+        automation_definition.folder / batch_definition.folder / 'print')
     for print_definition in automation_definition.print_definitions:
         automation_uri = automation_definition.uri
         name = print_definition.name
-        folder = print_definition.folder
-        extra_data_by_id = {'timestamp': {'value': task_timestamp}}
         name_template = name or batch_definition.name
         data_by_id = get_data_by_id(
             automation_definition, batch_definition) | extra_data_by_id
         path = format_text(folder / name_template, data_by_id)
         batch_dictionary = {
-            'path': path, 'uri': automation_uri + batch_definition.uri}
+            'path': path,
+            'uri': automation_uri + batch_definition.uri}
         Printer = PRINTER_BY_NAME[print_definition.format]
         printer = Printer(f'http://127.0.0.1:{port}{root_uri}')
         printer.render([batch_dictionary], print_definition)
-
-
-def _prepare_automation(automation_definition, with_rebuild=True):
-    engine = get_script_engine(automation_definition.engine_name, with_rebuild)
-    engine.prepare(automation_definition)
 
 
 def _prepare_batch(automation_definition, batch_definition):

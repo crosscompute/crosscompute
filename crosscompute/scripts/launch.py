@@ -39,27 +39,22 @@ def do(arguments=None):
     if launch_id == 'print':
         print_with(automation, args)
         return
-    processes = []
     if launch_id in ['serve', 'all']:
         check_port(args.port)
-        processes.append(StoppableProcess(
-            name='serve', target=serve_with, args=(automation, args)))
+        process = StoppableProcess(
+            name='serve', target=serve_with, args=(automation, args))
     elif launch_id in ['run']:
-        # TODO: use process_loop
-        processes.append(StoppableProcess(
-            name='run', target=run_with, args=(automation, args)))
+        process = StoppableProcess(
+            name='run', target=run_with, args=(automation, args))
     try:
-        for process in processes:
-            process.start()
-        for process in reversed(processes):
-            process.join()
+        process.start()
+        process.join()
     except KeyboardInterrupt:
-        L.info('waiting for processes to stop')
+        L.info('waiting for process to stop')
     except Exception as e:
         L.exception(e)
     finally:
-        for process in processes:
-            process.stop()
+        process.stop()
 
 
 def configure_argument_parser_for_launching(a):

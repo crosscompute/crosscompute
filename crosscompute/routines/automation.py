@@ -1,9 +1,9 @@
 # TODO: Return unvalidated configuration when there is an exception
 # TODO: Watch multiple folders if not all under parent folder
-from datetime import datetime
+from concurrent.futures import (
+    ThreadPoolExecutor, as_completed)
 from logging import getLogger
 from pathlib import Path
-from time import sleep
 
 from ..constants import (
     AUTOMATION_PATH,
@@ -23,7 +23,10 @@ from ..settings import multiprocessing_context
 from .configuration import load_configuration
 from .interface import Automation
 from .server import DiskServer
-from .work import process_loop
+from .work import (
+    prepare_automation,
+    process_loop,
+    run_automation)
 
 
 class DiskAutomation(Automation):
@@ -47,25 +50,11 @@ class DiskAutomation(Automation):
         return instance
 
     def run(self, environment, with_rebuild=True):
-        # TODO: Remove recurring definitions
         for automation_definition in self.definitions:
             prepare_automation(automation_definition, with_rebuild)
-        recurring_definitions = []
         for automation_definition in self.definitions:
             run_automation(
                 automation_definition, environment, with_rebuild)
-            if automation_definition.interval_timedelta:
-                recurring_definitions.append(automation_definition)
-        if not recurring_definitions:
-            return
-        while True:
-            for automation_definition in recurring_definitions:
-                last = automation_definition.interval_datetime
-                delta = automation_definition.interval_timedelta
-                if datetime.now() > last + delta:
-                    run_automation(
-                        automation_definition, environment, with_rebuild=False)
-            sleep(1)
 
     def serve(
             self, environment, host=HOST, port=PORT, with_restart=True,

@@ -69,7 +69,6 @@ def print_with(automation, args):
     print_packs = []
     for automation_definition in get_selected_automation_definitions(
             automation.definitions):
-        # TODO: Consider using ds returned from run_automation
         run_automation(
             automation_definition, args.environment, with_rebuild=True)
         for print_definition in automation_definition.print_definitions:

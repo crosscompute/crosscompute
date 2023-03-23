@@ -41,18 +41,18 @@ class DiskServer(Server):
         self._allowed_origins = allowed_origins
 
     def serve(self, configuration):
-        worker_process = StoppableProcess(
-            name='worker', target=self._work, args=(self._tasks,))
-        worker_process.start()
-        host, port, root_uri, with_restart, with_prefix, allowed_origins = [
-            self._host, self._port, self._root_uri, self._with_restart,
-            self._with_prefix, self._allowed_origins]
         self._refresh(configuration)
-        app = get_app(root_uri, with_prefix)
-        if with_restart:
-            app.add_middleware(
-                ExtraResponseHeadersMiddleware,
-                headers={'Cache-Control': 'no-store'})
+        host, port, root_uri, allowed_origins = [
+            self._host, self._port, self._root_uri, self._allowed_origins]
+        worker_process = StoppableProcess(
+            name='worker', target=self._work,
+            args=(self._tasks, site['definitions']),
+            kwargs={'with_rebuild': True})
+        worker_process.start()
+        app = get_app(root_uri, self._with_prefix)
+        if self._with_restart:
+            app.add_middleware(ExtraResponseHeadersMiddleware, headers={
+                'Cache-Control': 'no-store'})
         if allowed_origins:
             app.add_middleware(
                 CORSMiddleware, allow_origins=allowed_origins,
