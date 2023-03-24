@@ -31,12 +31,11 @@ from ..constants import (
     DESIGN_NAMES_BY_PAGE_ID,
     INTERVAL_UNIT_NAMES,
     PACKAGE_MANAGER_NAMES,
-    PRINTER_BY_NAME,
+    PRINTER_NAMES,
     STEP_NAMES,
     STYLE_ROUTE,
     VARIABLE_ID_PATTERN,
-    VARIABLE_ID_TEMPLATE_PATTERN,
-    VIEW_BY_NAME)
+    VARIABLE_ID_TEMPLATE_PATTERN)
 from ..exceptions import (
     CrossComputeConfigurationError,
     CrossComputeConfigurationFormatError,
@@ -44,6 +43,9 @@ from ..exceptions import (
     CrossComputeError)
 from ..macros.iterable import find_item
 from ..macros.package import is_equivalent_version
+from ..settings import (
+    PRINTER_BY_NAME,
+    VIEW_BY_NAME)
 from .printer import initialize_printer_by_name
 from .variable import (
     format_text,
@@ -96,8 +98,7 @@ class AutomationDefinition(Definition):
             validate_display_styles,
             validate_display_templates,
             validate_display_pages,
-            validate_display_buttons,
-            validate_prints]
+            validate_display_buttons]
 
     def get_variable_definitions(self, step_name, with_all=False):
         variable_definitions = self.variable_definitions_by_step_name.get(
@@ -437,6 +438,8 @@ def validate_imports(configuration):
 def validate_variables(configuration):
     variable_definitions_by_step_name = {}
     view_names = set()
+    if 'print' in configuration:
+        initialize_printer_by_name()
     for step_name in STEP_NAMES:
         step_configuration = get_dictionary(configuration, step_name)
         variable_dictionaries = get_dictionaries(
@@ -623,12 +626,6 @@ def validate_authorization(configuration):
         'group_definitions': group_definitions}
 
 
-def validate_prints(configuration):
-    print_definitions = [PrintDefinition(_) for _ in get_dictionaries(
-        configuration, 'prints')]
-    return {'print_definitions': print_definitions}
-
-
 def validate_template_identifiers(template_dictionary):
     try:
         template_path = template_dictionary['path']
@@ -655,6 +652,13 @@ def validate_variable_identifiers(variable_dictionary):
         raise CrossComputeConfigurationError(
             f'{variable_id} is not a valid variable id; please use only '
             'lowercase, uppercase, numbers, hyphens, underscores and spaces')
+    if variable_dictionary.step_name == 'print':
+        if view_name not in PRINTER_NAMES:
+            raise CrossComputeConfigurationError(
+                f'{view_name} is not a supported printer')
+        elif view_name not in PRINTER_BY_NAME:
+            raise CrossComputeConfigurationError(
+                f'install crosscompute-printers-{view_name}')
     if relpath(variable_path).startswith('..'):
         raise CrossComputeConfigurationError(
             f'path {variable_path} for variable {variable_id} must be within '
@@ -899,22 +903,10 @@ def validate_permission_identifiers(permission_dictionary):
 
 
 def validate_print_identifiers(print_dictionary):
-    initialize_printer_by_name()
-    print_format = print_dictionary.get('format', '').strip()
-    if print_format:
-        try:
-            PRINTER_BY_NAME[print_format]
-        except KeyError:
-            printer_names = PRINTER_BY_NAME.keys()
-            if printer_names:
-                extra_message = 'try ' + ' '.join(printer_names)
-            else:
-                extra_message = 'install crosscompute-printers-pdf'
-            raise CrossComputeConfigurationError(
-                f'{print_format} is not a supported printer; {extra_message}')
     print_folder = Path(print_dictionary.get('folder', '')).expanduser()
     print_name = print_dictionary.get('name', '')
     return {
+        'id': print_id,
         'format': print_format,
         'folder': print_folder,
         'name': print_name}

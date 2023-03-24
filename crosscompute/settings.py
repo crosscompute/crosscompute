@@ -42,3 +42,7 @@ template_globals = template_environment.globals = {
     'with_restart': True}
 TemplateResponse = TemplateResponseFactory(
     template_environment).TemplateResponse
+
+
+printer_by_name = {}
+view_by_name = {}

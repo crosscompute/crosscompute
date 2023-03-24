@@ -22,6 +22,7 @@ async def see_mutation_stream(
 ):
     # TODO: Consider adding guard
     async def loop():
+        # TODO: connected
         reference_timestamp = old_timestamp
         while True:
             await asyncio.sleep(1)

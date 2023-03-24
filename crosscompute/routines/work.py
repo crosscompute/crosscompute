@@ -357,6 +357,7 @@ def _print_batch(automation_definition, batch_definition, task_timestamp):
         Printer = PRINTER_BY_NAME[print_definition.format]
         printer = Printer(f'http://127.0.0.1:{port}{root_uri}')
         printer.render([batch_dictionary], print_definition)
+        symlink(path, folder / print_definition.id)
 
 
 def _prepare_batch(automation_definition, batch_definition):

@@ -60,6 +60,9 @@ MUTATION_ROUTE = '/mutations{uri}.json'
 PORT_ROUTE = '/ports{uri}'
 
 
+PRINTER_NAMES = 'pdf',
+
+
 PACKAGE_MANAGER_NAMES = 'apt', 'dnf', 'npm', 'pip'
 DESIGN_NAMES_BY_PAGE_ID = {
     'automation': ['input', 'output', 'none'],
@@ -72,7 +75,7 @@ BUTTON_TEXT_BY_ID = {'run': 'Run'}
 
 
 INTERVAL_UNIT_NAMES = 'seconds', 'minutes', 'hours', 'days', 'weeks'
-STEP_NAMES = 'input', 'output', 'log', 'debug'
+STEP_NAMES = 'input', 'output', 'log', 'debug', 'print'
 STEP_NAME_BY_CODE = {_[0]: _ for _ in STEP_NAMES}
 STEP_CODE_BY_NAME = {k: v for v, k in STEP_NAME_BY_CODE.items()}
 MAXIMUM_MUTATION_AGE_IN_SECONDS = 180
@@ -83,10 +86,6 @@ VARIABLE_ID_TEMPLATE_PATTERN = re.compile(r'{ *([a-zA-Z0-9-_| ]+?) *}')
 VARIABLE_ID_WHITELIST_PATTERN = re.compile(r'{ *(ROOT_URI) *}')
 CACHED_FILE_SIZE_LIMIT_IN_BYTES = 1024
 MAXIMUM_FILE_CACHE_LENGTH = 256
-
-
-PRINTER_BY_NAME = {}
-VIEW_BY_NAME = {}
 
 
 MINIMUM_PORT = int(getenv('CROSSCOMPUTE_MINIMUM_PORT', 1024))
