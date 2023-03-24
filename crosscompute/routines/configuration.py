@@ -44,8 +44,8 @@ from ..exceptions import (
 from ..macros.iterable import find_item
 from ..macros.package import is_equivalent_version
 from ..settings import (
-    PRINTER_BY_NAME,
-    VIEW_BY_NAME)
+    printer_by_name,
+    view_by_name)
 from .printer import initialize_printer_by_name
 from .variable import (
     format_text,
@@ -464,7 +464,7 @@ def validate_variable_views(configuration):
     initialize_view_by_name()
     for view_name in configuration.___view_names:
         try:
-            View = VIEW_BY_NAME[view_name]
+            View = view_by_name[view_name]
         except KeyError:
             raise CrossComputeConfigurationError(f'{view_name} not installed')
         environment_variable_ids = get_environment_variable_ids(
@@ -656,7 +656,7 @@ def validate_variable_identifiers(variable_dictionary):
         if view_name not in PRINTER_NAMES:
             raise CrossComputeConfigurationError(
                 f'{view_name} is not a supported printer')
-        elif view_name not in PRINTER_BY_NAME:
+        elif view_name not in printer_by_name:
             raise CrossComputeConfigurationError(
                 f'install crosscompute-printers-{view_name}')
     if relpath(variable_path).startswith('..'):

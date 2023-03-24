@@ -16,8 +16,7 @@ from invisibleroads_macros_web.escape import (
 from ..constants import (
     CACHED_FILE_SIZE_LIMIT_IN_BYTES,
     MAXIMUM_FILE_CACHE_LENGTH,
-    VARIABLE_ID_TEMPLATE_PATTERN,
-    VIEW_BY_NAME)
+    VARIABLE_ID_TEMPLATE_PATTERN)
 from ..exceptions import (
     CrossComputeConfigurationError,
     CrossComputeConfigurationNotImplementedError,
@@ -25,6 +24,8 @@ from ..exceptions import (
 from ..macros.disk import FileCache
 from ..macros.iterable import find_item
 from ..macros.package import import_attribute
+from ..settings import (
+    view_by_name)
 from .asset import asset_storage
 from .interface import Batch
 
@@ -54,7 +55,7 @@ class VariableView():
     def get_from(Class, variable_definition):
         view_name = variable_definition.view_name
         try:
-            View = VIEW_BY_NAME[view_name]
+            View = view_by_name[view_name]
         except KeyError:
             L.error('%s view not installed', view_name)
             View = Class
@@ -523,8 +524,8 @@ class PdfView(VariableView):
 
 def initialize_view_by_name():
     for entry_point in entry_points().select(group='crosscompute.views'):
-        VIEW_BY_NAME[entry_point.name] = import_attribute(entry_point.value)
-    return VIEW_BY_NAME
+        view_by_name[entry_point.name] = import_attribute(entry_point.value)
+    return view_by_name
 
 
 def save_variable_data(target_path, data_by_id, variable_definitions):

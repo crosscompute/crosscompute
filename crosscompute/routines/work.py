@@ -27,7 +27,6 @@ from ..constants import (
     MAXIMUM_PORT,
     MINIMUM_PORT,
     PORT_ROUTE,
-    PRINTER_BY_NAME,
     PROXY_URI,
     STEP_CODE_BY_NAME,
     STEP_NAMES)
@@ -39,6 +38,7 @@ from ..exceptions import (
 from ..macros.iterable import group_by
 from ..macros.log import get_longstamp
 from ..settings import (
+    printer_by_name,
     site,
     template_globals)
 from .configuration import (
@@ -354,7 +354,7 @@ def _print_batch(automation_definition, batch_definition, task_timestamp):
         batch_dictionary = {
             'path': path,
             'uri': automation_uri + batch_definition.uri}
-        Printer = PRINTER_BY_NAME[print_definition.format]
+        Printer = printer_by_name[print_definition.format]
         printer = Printer(f'http://127.0.0.1:{port}{root_uri}')
         printer.render([batch_dictionary], print_definition)
         symlink(path, folder / print_definition.id)

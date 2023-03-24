@@ -7,8 +7,7 @@ from invisibleroads_macros_web.port import find_open_port
 
 from crosscompute.constants import (
     MAXIMUM_PORT,
-    MINIMUM_PORT,
-    PRINTER_BY_NAME)
+    MINIMUM_PORT)
 from crosscompute.exceptions import (
     CrossComputeConfigurationError,
     CrossComputeError)
@@ -30,7 +29,8 @@ from crosscompute.scripts.serve import (
     configure_serving_from,
     serve_with)
 from crosscompute.settings import (
-    StoppableProcess)
+    StoppableProcess,
+    printer_by_name)
 
 
 def do(arguments=None):
@@ -83,7 +83,7 @@ def print_with(automation, args):
     server_process.start()
     try:
         for print_definition, batch_dictionaries in print_packs:
-            Printer = PRINTER_BY_NAME[print_definition.format]
+            Printer = printer_by_name[print_definition.format]
             printer = Printer(f'http://127.0.0.1:{port}{args.root_uri}')
             printer.render(batch_dictionaries, print_definition)
     except KeyboardInterrupt:
