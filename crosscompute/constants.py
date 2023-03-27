@@ -70,6 +70,7 @@ DESIGN_NAMES_BY_PAGE_ID = {
     'output': ['flex-vertical', 'none'],
     'log': ['flex-vertical', 'none'],
     'debug': ['flex-vertical', 'none'],
+    'print': ['flex-vertical', 'none'],
 }
 BUTTON_TEXT_BY_ID = {'run': 'Run'}
 

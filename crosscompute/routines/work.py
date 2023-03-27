@@ -16,6 +16,7 @@ from urllib.request import urlretrieve as download_uri
 
 import requests
 from invisibleroads_macros_disk import make_folder
+from invisibleroads_macros_log import get_timestamp, LONGSTAMP_TEMPLATE
 from invisibleroads_macros_web.port import find_open_port
 from jinja2 import Template
 
@@ -36,7 +37,6 @@ from ..exceptions import (
     CrossComputeExecutionError,
     CrossComputeError)
 from ..macros.iterable import group_by
-from ..macros.log import get_longstamp
 from ..settings import (
     printer_by_name,
     site,
@@ -192,7 +192,6 @@ def run_automation(automation_definition, user_environment, with_rebuild=True):
     except CrossComputeError as e:
         e.automation_definition = automation_definition
         L.error(e)
-    automation_definition.interval_datetime = datetime.now()
     return ds
 
 
@@ -242,6 +241,12 @@ def process_loop(automation_tasks, automation_definitions, with_rebuild):
             except IndexError:
                 sleep(1)
                 continue
+            task_datetime = datetime.now()
+            batch_definition, task_mode = automation_task[1:3]
+            if task_mode == Task.RUN_PRINT:
+                batch_definition.run_datetime = task_datetime
+            batch_definition.print_datetime = task_datetime
+            # !!! check if variables modified in thread get saved
             thread = Thread(
                 target=_process_task, args=automation_task, daemon=True)
             thread.start()
@@ -289,36 +294,35 @@ def _get_automation_task(automation_tasks, automation_definitions, is_lazy):
     except IndexError:
         automation_definition = choice(automation_definitions)
         batch_definition = choice(automation_definition.batch_definitions)
-        has_run = hasattr(batch_definition, 'last_datetime')
+        has_run = hasattr(batch_definition, 'run_datetime')
         interval_timedelta = automation_definition.interval_timedelta
 
         has_task = False
         if not has_run and not is_lazy:
             has_task = True
         elif interval_timedelta:
-            last_datetime = batch_definition.last_datetime
-            if datetime.now() > last_datetime + interval_timedelta:
+            run_datetime = batch_definition.run_datetime
+            if datetime.now() > run_datetime + interval_timedelta:
                 has_task = True
         if not has_task:
             raise IndexError
 
-        task_timestamp = get_longstamp()
         automation_task = (
             automation_definition, batch_definition, site['environment'],
-            Task.RUN_PRINT, task_timestamp)
+            Task.RUN_PRINT, datetime.now())
     return automation_task
 
 
 def _process_task(
         automation_definition, batch_definition, user_environment, task_mode,
-        task_timestamp):
+        task_datetime):
     # TODO: If there are newer changes corresponding to the batch, skip it
     try:
         if task_mode == Task.RUN_PRINT:
             _run_batch(
                 automation_definition, batch_definition, user_environment,
-                task_timestamp)
-        _print_batch(automation_definition, batch_definition, task_timestamp)
+                task_datetime)
+        _print_batch(automation_definition, batch_definition, task_datetime)
     except CrossComputeError as e:
         e.automation_definition = automation_definition
         L.error(e)
@@ -328,8 +332,7 @@ def _process_task(
 
 def _run_batch(
         automation_definition, batch_definition, user_environment,
-        task_timestamp):
-    # TODO: Record task timestamp
+        task_datetime):
     engine = get_script_engine(
         automation_definition.engine_name, with_rebuild=False)
     update_datasets(automation_definition)
@@ -337,11 +340,11 @@ def _run_batch(
         automation_definition, batch_definition, user_environment)
 
 
-def _print_batch(automation_definition, batch_definition, task_timestamp):
-    # TODO: Record task timestamp
+def _print_batch(automation_definition, batch_definition, task_datetime):
     port = site['port']
     root_uri = template_globals['root_uri']
-    extra_data_by_id = {'timestamp': {'value': task_timestamp}}
+    extra_data_by_id = {'timestamp': {'value': get_timestamp(
+        task_datetime, LONGSTAMP_TEMPLATE)}}
     folder = make_folder(
         automation_definition.folder / batch_definition.folder / 'print')
     variable_definitions = automation_definition.get_variable_definitions(
