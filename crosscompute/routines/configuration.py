@@ -438,8 +438,6 @@ def validate_imports(configuration):
 def validate_variables(configuration):
     variable_definitions_by_step_name = {}
     view_names = set()
-    if 'print' in configuration:
-        initialize_printer_by_name()
     for step_name in STEP_NAMES:
         step_configuration = get_dictionary(configuration, step_name)
         variable_dictionaries = get_dictionaries(
@@ -454,13 +452,14 @@ def validate_variables(configuration):
         variable_definitions_by_step_name[step_name] = variable_definitions
         view_names.update(_.view_name for _ in variable_definitions)
     L.debug('view_names = %s', list(view_names))
+    if 'print' in configuration:
+        initialize_printer_by_name()
     return {
         'variable_definitions_by_step_name': variable_definitions_by_step_name,
         '___view_names': view_names}
 
 
 def validate_variable_views(configuration):
-    # TODO: Validate variable view configurations
     initialize_view_by_name()
     for view_name in configuration.___view_names:
         try:
@@ -670,8 +669,12 @@ def validate_variable_identifiers(variable_dictionary):
 
 
 def validate_variable_configuration(variable_dictionary):
+    # TODO: Validate variable view configurations
     variable_configuration = get_dictionary(
         variable_dictionary, 'configuration')
+    if variable_definition.step_name == 'print':
+        variable_configuration['folder'] = Path(variable_configuration[
+            'folder']).expanduser()
     return {'configuration': variable_configuration}
 
 
@@ -900,22 +903,6 @@ def validate_permission_identifiers(permission_dictionary):
         raise CrossComputeConfigurationError(
             f'"{permission_action}" action not supported')
     return {'id': permission_id, 'action': permission_action}
-
-
-def validate_print_identifiers(print_dictionary):
-    print_folder = Path(print_dictionary.get('folder', '')).expanduser()
-    print_name = print_dictionary.get('name', '')
-    return {
-        'id': print_id,
-        'format': print_format,
-        'folder': print_folder,
-        'name': print_name}
-
-
-def validate_print_configuration(print_dictionary):
-    print_configuration = get_dictionary(
-        print_dictionary, 'configuration')
-    return {'configuration': print_configuration}
 
 
 def validate_header_footer_options(print_dictionary):
