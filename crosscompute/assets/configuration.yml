@@ -4,326 +4,403 @@
 # Documentation: https://docs.crosscompute.com
 # Forum: https://forum.crosscompute.com
 
-# version of crosscompute (required)
+# crosscompute version determines how this file is interpreted (required)
 crosscompute: 0.0.0
 
-# name of your automation
+# name summarizes what your automation does
 name: Automation X
 
-# description of your automation
+# description explains why your automation is useful
 description: Improve health, safety, quality of life in our communities
 
-# slug for automation URI
-# slug: automation-x
+# slug customizes the automation uri
+slug: automation-x
 
-# version of your automation
+# version should increment after you make changes to your automation
 version: 0.0.0
 
-# imports configuration
-# - path to the configuration file that you want to import (required)
-# - id to use when referencing this import in your template
-# imports:
-#   - path: tools/automation-y/automate.yml
-#     id: automation-y
+# imports let you embed other automations in this automation
+imports:
+  # id references this import in your templates when embedding;
+  # path specifies the location of the automation file to import (required)
+  - id: automation-a
+    path: automation-a/automate.yml
 
-# input configuration
-# input:
+# input is how your scripts get data from the user
+input:
 
-  # input variables
-  # - id to use when referencing your variable in the template (required)
-  # - view to use when rendering your variable on the display (required)
-  # - path where your script loads the variable, relative to the input folder;
-  #   specify ENVIRONMENT to prevent saving the variable to disk (required)
-  # - configuration of the view
-  # variables:
-  #   - id: town
-  #     view: string
-  #     path: variables.dictionary
-  #     configuration:
-  #       label: What is the name of your town?
-  #       suggestions:
-  #         - value: Springfield
-  #         - value: Branson
-  #         - value: Nixa
-  #         - value: Mansfield
-  #         - value: Independence
-  #   - id: age
-  #     view: number
-  #     path: variables.dictionary
-  #     configuration:
-  #       label: What is your age?
-  #   - id: secret_code
-  #     view: password
-  #     path: ENVIRONMENT
-  #     configuration:
-  #       label: What is your secret code?
-  #   - id: support_email
-  #     view: email
-  #     path: ENVIRONMENT
-  #   - id: problem_description
-  #     view: text
-  #     path: problem.txt
-  #   - id: blurb
-  #     view: markdown
-  #     path: blurb.md
-  #   - id: flavor
-  #     view: radio
-  #     path: variables.dictionary
-  #     configuration:
-  #       options:
-  #         - name: Vanilla
-  #           value: vanilla
-  #         - name: Chocolate
-  #           value: chocolate
-  #         - name: Strawberry
-  #           value: strawberry
-  #   - id: topics
-  #     view: checkbox
-  #     path: variables.dictionary
-  #     configuration:
-  #       options:
-  #          - value: cooking
-  #          - value: reading
-  #          - value: writing
-  #          - value: mathematics
-  #          - value: swimming
-  #   - id: region
-  #     view: map-mapbox-location
-  #     path: variables.dictionary
+  # input variables are provided to your scripts from the user or from batches
+  variables:
+    # id references this variable in your templates (required);
+    # view specifies how to render your variable (required);
+    # path specifies the file where your scripts load this variable (required);
+    #   note that path is relative to the input folder;
+    #   specify ENVIRONMENT to prevent saving the variable to disk;
+    # configuration customizes the look and feel of the view
+    - id: town_name
+      view: string
+      path: variables.dictionary
+      configuration:
+        label: What is the name of your town?
+        suggestions:
+          - value: Springfield
+          - value: Branson
+          - value: Nixa
+          - value: Mansfield
+          - value: Independence
+    - id: age
+      view: number
+      path: variables.dictionary
+      configuration:
+        label: What is your age?
+    - id: secret_code
+      view: password
+      path: ENVIRONMENT
+      configuration:
+        label: What is your secret code?
+    - id: support_email
+      view: email
+      path: ENVIRONMENT
+    - id: problem_description
+      view: text
+      path: problem.txt
+    - id: blurb
+      view: markdown
+      path: blurb.md
+    - id: flavor
+      view: radio
+      path: variables.dictionary
+      configuration:
+        options:
+          - name: Vanilla
+            value: vanilla
+          - name: Chocolate
+            value: chocolate
+          - name: Strawberry
+            value: strawberry
+    - id: topics
+      view: checkbox
+      path: variables.dictionary
+      configuration:
+        options:
+          - value: cooking
+          - value: reading
+          - value: writing
+          - value: mathematics
+          - value: swimming
+    - id: region
+      view: map-mapbox-location
+      path: variables.dictionary
 
-  # input templates
-  # - path to your markdown template or jupyter notebook form (required)
-  # templates:
-  #   - path: form1.md
-  #   - path: form2.md
+  # input templates guide the user on how to specify the input variables
+  templates:
+    # path specifies the markdown file for your template (required)
+    - path: input.md
 
-# output configuration
-# output:
+# output is how your scripts set data for the user
+output:
 
-  # output variables
-  # - id to use when referencing your variable in the template (required)
-  # - view to use when rendering your variable on the display (required)
-  # - path where your script saves the variable, relative to the output
-  #   folder (required)
-  # - configuration of the view
-  # variables:
-  #   - id: document
-  #     view: link
-  #     path: document.pdf
-  #     configuration:
-  #       link-text: YOUR-LINK-TEXT
-  #       file-name: YOUR-FILE-NAME
-  #   - id: message
-  #     view: string
-  #     path: variables.dictionary
-  #   - id: count
-  #     view: number
-  #     path: variables.dictionary
-  #   - id: lyrics
-  #     view: text
-  #     path: lyrics.txt
-  #   - id: monologue
-  #     view: markdown
-  #     path: monologue.md
-  #   - id: logo
-  #     view: image
-  #     path: logo.svg
-  #   - id: counts
-  #     view: table
-  #     path: counts.json
-  #   - id: demo
-  #     view: frame
-  #     path: variables.dictionary
-  #   - id: cards
-  #     view: json
-  #     path: variables.dictionary
-  #   - id: region
-  #     view: map-mapbox
-  #     path: region.geojson
-  #     configuration:
-  #       style: mapbox://styles/mapbox/dark-v10
-  #       layers:
-  #         - type: fill
-  #           type: circle
-  #           paint:
-  #             fill-color: blue
-  #             circle-color: red
-  #   - id: incidents
-  #     view: map-deck-screengrid
-  #     path: incidents.json
-  #     configuration:
-  #       style: mapbox://styles/mapbox/dark-v10
-  #   - id: identity
-  #     view: barcode
-  #     path: variables.dictionary
+  # output variables are provided by your scripts
+  variables:
+    # id references this variable in your templates (required);
+    # view specifies how to render your variable (required);
+    # path specifies the file where your scripts save this variable (required);
+    #   note that path is relative to the output folder;
+    # configuration customizes the look and feel of the view
+    - id: document
+      view: link
+      path: document.pdf
+      configuration:
+        link-text: YOUR-LINK-TEXT
+        file-name: YOUR-FILE-NAME
+    - id: message
+      view: string
+      path: variables.dictionary
+    - id: count
+      view: number
+      path: variables.dictionary
+    - id: lyrics
+      view: text
+      path: lyrics.txt
+    - id: monologue
+      view: markdown
+      path: monologue.md
+    - id: logo
+      view: image
+      path: logo.svg
+    - id: counts
+      view: table
+      path: counts.json
+    - id: demo
+      view: frame
+      path: variables.dictionary
+    - id: cards
+      view: json
+      path: variables.dictionary
+    - id: region
+      view: map-mapbox
+      path: region.geojson
+      configuration:
+        style: mapbox://styles/mapbox/dark-v10
+        layers:
+          - type: fill
+            paint:
+              fill-color: blue
+          - type: circle
+            paint:
+              circle-color: red
+    - id: incidents
+      view: map-deck-screengrid
+      path: incidents.json
+      configuration:
+        style: mapbox://styles/mapbox/dark-v10
+    - id: identity
+      view: barcode
+      path: variables.dictionary
 
-  # output templates
-  # - path to your markdown template or jupyter notebook form (required)
-  # templates:
-  #   - path: report-section1.md
-  #   - path: report-section2.md
+  # output templates guide the user on how to interpret the output variables
+  templates:
+    # path specifies the markdown file for your template (required)
+    - path: output.md
 
-# batches configuration
-# - folder that contains an input subfolder with paths for
-#   input variables; can include variable ids and filters (required)
-# - name of the batch; can include variable ids and filters
-# - slug for batch URI; can include variable ids and filters
-# - reference batch to use to fill omitted variables in batch configuration
-# - configuration for batch template
-# batches:
+# log is how your scripts communicate with the user while they are running
+log:
+  variables:
+  templates:
 
-  # case 0: use a batch folder to set values for input variables
-  # - folder: batches/standard
+# debug is how your scripts record information for troubleshooting bugs
+debug:
+  variables:
+  templates:
 
-  # case 1: use a batch configuration to vary values for input variables
-  # - folder: batches/{x1 | slug}-{x2}
-  #   name: '{x1 | title} {x2}'
-  #   slug: '{x1 | slug}-{x2}'
-  #   configuration:
-  #     path: datasets/batches.csv
+# print defines how your output will render as a document or presentation
+print:
+  # print variables are generated by crosscompute printers
+  variables:
+    # id references this file in your templates (required);
+    # view specifies how to render your file (required);
+    # path specifies where the printer should save the file (required);
+    # configuration customizes how the printer generates the file
+    - id: report
+      view: pdf
+      path: report.pdf
+      configuration:
+        header-footer:
+          font-family: sans-serif
+          font-size: 8pt
+          color: '#808080'
+          padding: 0.1in 0.25in
+          skip-first: true
+        page-number:
+          location: footer
+          alignment: right
+        name: '{y2 | slug}-{y3}.pdf'
 
-  # case 2: use a reference folder to set default values for missing variables
-  #         use a batch configuration to vary selected variables
-  # - folder: batches/{x1 | slug}-{x2}
-  #   name: '{x1 | title} {x2}'
-  #   slug: '{x1 | slug}-{x2}'
-  #   reference:
-  #     folder: batches/standard
-  #   configuration:
-  #     path: datasets/batches.csv
+# batches are pre-defined runs with specific values set for each input variable
+batches:
 
-# datasets configuration
-# - path of a dataset expected by your script
-# - reference dataset if expected path does not exist
-# datasets:
-#   - path: datasets/abc.csv
-#     reference:
-#       path: datasets/abc-2022.csv
+  # case 0:
+  # folder sets values for input variables;
+  # folder contains an input subfolder;
+  # input subfolder contains files for the input variables
+  - folder: batches/standard
 
-# scripts configuration
-# - path to your script or notebook, relative to the script folder
-# - command to run your script, if path is not specified
-# - folder where your script should run
-# scripts:
-#   - path: run.py
-#   - path: run.py
-#     folder: scripts
-#   - path: run.ipynb
-#   - command: python run.py {input_folder} {output_folder}
-#   - command: >
-#       python run.py
-#       {input_folder} {output_folder} {log_folder} {debug_folder}
+  # case 1:
+  # csv sets values for input variables, where each row is a separate batch;
+  # folder is the name of the folder saved to disk;
+  # name is the batch name displayed online;
+  # slug is the batch uri;
+  # the above string templates can include variable ids and filters
+  - folder: batches/{x1 | slug}-{x2}
+    name: '{x1 | title} {x2}'
+    slug: '{x1 | slug}-{x2}'
+    configuration:
+      path: datasets/batches.csv
 
-# environment configuration
-# environment:
+  # case 2:
+  # reference folder sets default values for variables missing in the csv;
+  # csv sets values for input variables, where each row is a separate batch
+  - folder: batches/{x1 | slug}-{x2}
+    name: '{x1 | title} {x2}'
+    slug: '{x1 | slug}-{x2}'
+    reference:
+      folder: batches/standard
+    configuration:
+      path: datasets/batches.csv
 
-  # engine to use to run your script
-  # engine: podman
+# datasets are files that are expected by your scripts
+datasets:
+  # path specifies the location that your scripts should use to load the file;
+  # reference path specifies the location of your actual file;
+  # use reference paths to avoid changing the code in your scripts;
+  # for example, suppose you have a report that relies on a monthly dataset;
+  # use path to fix a location where your scripts can expect to find the file;
+  # use reference path to point to the latest version of your monthly dataset
+  - path: datasets/abc.csv
+    reference:
+      path: datasets/abc-2022.csv
 
-  # image to use to initialize your container
-  # image: python
+# scripts contain code that turn input variables into output variables
+scripts:
+  # case 0:
+  # command runs in the automation folder;
+  # folder paths are passed as arguments
+  - command: >
+      python run.py
+      {input_folder} {output_folder} {log_folder} {debug_folder}
+  # case 1:
+  # path is a python script that runs in the automation folder;
+  # folder paths are passed as environment variables
+  - path: run.py
+  # case 2:
+  # path is a python script that runs in the specified folder;
+  # folder paths are passed as environment variables
+  - path: run.py
+    folder: scripts
+  # case 3:
+  # path is a jupyter notebook that runs in the automation folder;
+  # folder paths are passed as environment variables
+  - path: run.ipynb
+  # case 4:
+  # function is a python function that runs in the automation folder;
+  # folder paths are passed as function arguments
+  - function: run.plot_all
 
-  # packages needed by your scripts
-  # packages:
-  #   - id: chromium
-  #     manager: apt
+# environment configures how your scripts run
+environment:
 
-  # ports needed by your scripts
-  # ports:
-  #   - id: y8
-  #     number: 8888
+  # engine runs your scripts and can be either podman or unsafe;
+  # podman is a container engine (see https://podman.io);
+  # unsafe means that the scripts will run directly on your machine
+  engine: podman
 
-  # environment variables needed by your scripts
-  # - id of the environment variable to make available to your script (required)
-  # variables:
-  #   - id: GOOGLE_KEY
+  # image is the container used to run your scripts when using podman engine
+  image: python
 
-  # batch concurrency, either thread, process, single
-  # batch: process
+  # packages are installed in the container when using podman engine
+  packages:
+    # id is the name of the package as defined in the package manager
+    # manager is the name of a package manager such as apt, dnf, npm, pip
+    - id: chromium
+      manager: apt
 
-  # interval to wait before running your scripts again
-  # interval: 30 minutes
+  # ports expose server processes running in your scripts
+  ports:
+    # id should correspond to a log or debug variable id that uses frame view;
+    # number is the port on which your script server process is listening
+    - id: demo
+      number: 8888
 
-# display configuration
-# display:
+  # variables are environment variables needed by your scripts
+  variables:
+    # id is the environment variable to make available to your script
+    - id: GOOGLE_KEY
 
-  # styles configuration
-  # - path to CSS stylesheet that will be used to render your templates
-  # - uri to CSS stylesheet that will be used to render your templates
-  # styles:
-  #   - path: style.css
-  #   - uri: https://fonts.googleapis.com/css?family=Tangerine
+  # batch concurrency defines how your batches run;
+  # batch thread runs each batch as a separate thread;
+  # batch process runs each batch as a separate process;
+  # batch single runs each batch one at a time
+  batch: process
 
-  # templates configuration
-  # - path to template (required)
-  # - id of template
-  # templates:
-  #   - path: base.html
-  #     id: base
-  #   - path: live.html
-  #     id: live
-  #   - path: root.html
-  #     id: root
+  # interval specifies how long to wait before running your scripts again;
+  # use this setting to have dashboards update themselves
+  interval: 30 minutes
 
-  # pages configuration
-  # - id of the page (required)
-  # - configuration of the page
-  # pages:
-  #   - id: automation
-  #     configuration:
-  #       design: input
-  #       design: output
-  #       design: none
-  #   - id: input
-  #     configuration:
-  #       design: flex-vertical
-  #   - id: output
-  #     configuration:
-  #       design: none
+# display configures the overall look and feel of your automation
+display:
 
-  # buttons configuration
-  # - id of the button (required)
-  # - configuration of the button
-  # buttons:
-  #   - id: run
-  #     configuration:
-  #       button-text: Apply
+  # styles customize how your templates look
+  styles:
+    # path specifies the location of a css file
+    - path: style.css
+    # uri specifies the uri of a css file
+    - uri: https://fonts.googleapis.com/css?family=Tangerine
 
-# authorization configuration
-# authorization:
-#   tokens:
-#     - path: tokens.yml
-#   groups:
-#     - configuration:
-#         role_name: admin
-#       permissions:
-#         - id: add_token
-#         - id: see_root
-#         - id: see_automation
-#         - id: see_batch
-#         - id: run_automation
-#     - configuration:
-#         role_name:
-#           - leader
-#           - member
-#       permissions:
-#         - id: see_root
-#         - id: see_automation
-#         - id: see_batch
-#           action: match
+  # templates override the core templates used to render the site
+  templates:
+    # id specifies the name of the template to override;
+    # path specifies the location of a jinja template
+    - id: base
+      path: base.html
+    - id: live
+      path: live.html
+    - id: root
+      path: root.html
 
-# prints configuration
-# prints:
-#   - format: pdf
-#     configuration:
-#       header-footer:
-#         font-family: sans-serif
-#         font-size: 8pt
-#         color: '#808080'
-#         padding: 0.1in 0.25in
-#         skip-first: true
-#       page-number:
-#         location: footer
-#         alignment: right
-#     folder: ~/Documents/attachments/automation-x-{timestamp}
-#     name: '{y2 | slug}-{y3}.pdf'
+  # pages override the design of specific pages
+  pages:
+    # id specifies the name of the page to override;
+    # configuration sets the design of the page
+    - id: automation
+      configuration:
+        # design input puts the input template on the automation page
+        design: input
+    - id: automation
+      configuration:
+        # design output puts the output template on the automation page
+        design: output
+    - id: automation
+      configuration:
+        # design none only renders the list of batches on the automation page
+        design: none
+    - id: input
+      configuration:
+        # design none removes all variable labels and css
+        design: none
+    - id: output
+      configuration:
+        # design none removes all variable labels and css
+        design: none
+
+  # buttons override the design of specific buttons
+  buttons:
+    # id specifies the name of the button to override;
+    # configuration sets the design of the button
+    - id: run
+      configuration:
+        button-text: Apply
+
+# authorization restricts access to your automation
+authorization:
+  # tokens are api keys for your automation;
+  # each token defines an identity
+  tokens:
+    # path specifies the location of a yaml file;
+    # the file should have tokens as keys and configuration settings as values;
+    # abcd:
+    #   role_name: admin
+    #   town_name: Springfield
+    # bcde:
+    #   role_name: leader
+    #   town_name: Branson
+    # cdef:
+    #   role_name: member
+    #   town_name: Mansfield
+    - path: tokens.yml
+  # groups define permissions
+  groups:
+    # configuration settings define how a group matches an identity
+    # permission ids specify which privileges the identity can access
+    - configuration:
+        role_name: admin
+      permissions:
+        - id: add_token
+        - id: see_root
+        - id: see_automation
+        - id: see_batch
+        - id: run_automation
+    # note that the value for each configuration setting can also be a list;
+    # then an identity will match this group if its setting matches a value
+    - configuration:
+        role_name:
+          - leader
+          - member
+      permissions:
+        - id: see_root
+        - id: see_automation
+        - id: see_batch
+          # action match is specific to the permission see_batch;
+          # in the example above, suppose that a user uses the token cdef;
+          # then the user will have town_name Mansfield and
+          # can only see batches whose input variable town_name is Mansfield
+          action: match
