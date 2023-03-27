@@ -344,20 +344,24 @@ def _print_batch(automation_definition, batch_definition, task_timestamp):
     extra_data_by_id = {'timestamp': {'value': task_timestamp}}
     folder = make_folder(
         automation_definition.folder / batch_definition.folder / 'print')
-    for print_definition in automation_definition.print_definitions:
-        automation_uri = automation_definition.uri
-        name = print_definition.name
-        name_template = name or batch_definition.name
+    variable_definitions = automation_definition.get_variable_definitions(
+        'print')
+    automation_uri = automation_definition.uri
+    batch_name = batch_definition.name
+    batch_uri = batch_definition.uri
+    for variable_definition in variable_definitions:
+        view_name = variable_definition.view_name
+        variable_configuration = variable_definition.configuration
+        name = variable_configuration.get(
+            'name', '').strip() or f'{batch_name}.{view_name}'
         data_by_id = get_data_by_id(
             automation_definition, batch_definition) | extra_data_by_id
-        path = format_text(folder / name_template, data_by_id)
-        batch_dictionary = {
-            'path': path,
-            'uri': automation_uri + batch_definition.uri}
-        Printer = printer_by_name[print_definition.format]
+        path = format_text(folder / name, data_by_id)
+        batch_dictionary = {'path': path, 'uri': automation_uri + batch_uri}
+        Printer = printer_by_name[view_name]
         printer = Printer(f'http://127.0.0.1:{port}{root_uri}')
-        printer.render([batch_dictionary], print_definition)
-        symlink(path, folder / print_definition.id)
+        printer.render([batch_dictionary], variable_configuration)
+        symlink(path, folder / variable_definition.path)
 
 
 def _prepare_batch(automation_definition, batch_definition):

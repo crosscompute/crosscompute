@@ -29,7 +29,7 @@
 {{ batch['name'] }}
 <a href="{{ absolute_batch_uri }}/i">input</a>
 <a href="{{ absolute_batch_uri }}/o">output</a>
-{% if automation_definition.print_definitions %}
+{% if automation_definition.variable_definitions_by_step_name['print'] %}
 <a href="{{ absolute_batch_uri }}/p">print</a>
 {% endif %}
 </li>

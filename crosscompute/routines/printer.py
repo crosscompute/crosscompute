@@ -9,7 +9,7 @@ class BatchPrinter():
     def __init__(self, server_uri):
         self.server_uri = server_uri
 
-    def render(self, batch_dictionaries, print_definition):
+    def render(self, batch_dictionaries, variable_configuration):
         pass
 
 

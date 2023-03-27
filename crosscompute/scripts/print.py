@@ -9,7 +9,6 @@ from crosscompute.constants import (
     MAXIMUM_PORT,
     MINIMUM_PORT)
 from crosscompute.exceptions import (
-    CrossComputeConfigurationError,
     CrossComputeError)
 from crosscompute.routines.automation import (
     DiskAutomation, run_automation)
@@ -66,26 +65,26 @@ def print_with(automation, args):
     except OSError as e:
         raise CrossComputeError(e)
     timestamp = get_timestamp(template=LONGSTAMP_TEMPLATE)
-    print_packs = []
-    for automation_definition in get_selected_automation_definitions(
-            automation.definitions):
+    packs = []
+    for automation_definition in automation.definitions:
+        ds = automation_definition.get_variable_definitions('print')
+        if not ds:
+            continue
         run_automation(
             automation_definition, args.environment, with_rebuild=True)
-        for print_definition in automation_definition.print_definitions:
-            batch_dictionaries = get_batch_dictionaries(
-                automation_definition, print_definition, timestamp)
-            print_packs.append((print_definition, batch_dictionaries))
-    args.port = port
-    args.with_browser = False
-    args.with_restart = False
+        for variable_definition in ds:
+            variable_configuration = variable_definition.configuration
+            packs.append((variable_configuration, get_batch_dictionaries(
+                automation_definition, variable_definition, timestamp)))
+    args.port, args.with_browser, args.with_restart = port, False, False
     server_process = StoppableProcess(
         name='serve', target=serve_with, args=(automation, args))
     server_process.start()
     try:
-        for print_definition, batch_dictionaries in print_packs:
-            Printer = printer_by_name[print_definition.format]
+        for variable_configuration, batch_dictionaries in packs:
+            Printer = printer_by_name[variable_definition.view_name]
             printer = Printer(f'http://127.0.0.1:{port}{args.root_uri}')
-            printer.render(batch_dictionaries, print_definition)
+            printer.render(batch_dictionaries, variable_configuration)
     except KeyboardInterrupt:
         pass
     except Exception as e:
@@ -94,39 +93,26 @@ def print_with(automation, args):
         server_process.stop()
 
 
-def get_selected_automation_definitions(automation_definitions):
-    selected_automation_definitions = []
-    for automation_definition in automation_definitions:
-        for print_definition in automation_definition.print_definitions:
-            print_format = print_definition.format
-            if print_format:
-                break
-        else:
-            L.warning(
-                'no print formats defined for %s %s',
-                automation_definition.name, automation_definition.version)
-            continue
-        selected_automation_definitions.append(automation_definition)
-    if not selected_automation_definitions:
-        raise CrossComputeConfigurationError(
-            'print format not defined in any automation definitions')
-    return selected_automation_definitions
-
-
-def get_batch_dictionaries(automation_definition, print_definition, timestamp):
+def get_batch_dictionaries(
+        automation_definition, variable_definition, timestamp):
     batch_dictionaries = []
+    automation_folder = automation_definition.folder
     automation_uri = automation_definition.uri
-    name = print_definition.name
-    folder = print_definition.folder
+    variable_id = variable_definition.id
+    view_name = variable_definition.view_name
+    variable_configuration = variable_definition.configuration
+    name = variable_configuration.get('name', '').strip()
+    folder = automation_folder / 'prints' / f'{variable_id}-{timestamp}'
     extra_data_by_id = {'timestamp': {'value': timestamp}}
     for batch_definition in automation_definition.batch_definitions:
-        name_template = name or batch_definition.name
+        batch_name = batch_definition.name
+        batch_uri = batch_definition.uri
+        name_template = name or f'{batch_name}.{view_name}'
         data_by_id = get_data_by_id(
             automation_definition, batch_definition) | extra_data_by_id
         path = format_text(folder / name_template, data_by_id)
         batch_dictionaries.append({
-            'path': path,
-            'uri': automation_uri + batch_definition.uri})
+            'path': path, 'uri': automation_uri + batch_uri})
     return batch_dictionaries
 
 

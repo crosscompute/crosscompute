@@ -46,7 +46,8 @@ from ..macros.package import is_equivalent_version
 from ..settings import (
     printer_by_name,
     view_by_name)
-from .printer import initialize_printer_by_name
+from .printer import (
+    initialize_printer_by_name)
 from .variable import (
     format_text,
     get_data_by_id_from_folder,
@@ -289,16 +290,6 @@ class PermissionDefinition(Definition):
             validate_permission_identifiers]
 
 
-class PrintDefinition(Definition):
-
-    def _initialize(self, kwargs):
-        self._validation_functions = [
-            validate_print_identifiers,
-            validate_print_configuration,
-            validate_header_footer_options,
-            validate_page_number_options]
-
-
 def save_raw_configuration(configuration_path, configuration):
     configuration_format = get_configuration_format(configuration_path)
     save_raw_configuration = {
@@ -438,6 +429,8 @@ def validate_imports(configuration):
 def validate_variables(configuration):
     variable_definitions_by_step_name = {}
     view_names = set()
+    if 'print' in configuration:
+        initialize_printer_by_name()
     for step_name in STEP_NAMES:
         step_configuration = get_dictionary(configuration, step_name)
         variable_dictionaries = get_dictionaries(
@@ -452,8 +445,6 @@ def validate_variables(configuration):
         variable_definitions_by_step_name[step_name] = variable_definitions
         view_names.update(_.view_name for _ in variable_definitions)
     L.debug('view_names = %s', list(view_names))
-    if 'print' in configuration:
-        initialize_printer_by_name()
     return {
         'variable_definitions_by_step_name': variable_definitions_by_step_name,
         '___view_names': view_names}
@@ -657,7 +648,7 @@ def validate_variable_identifiers(variable_dictionary):
                 f'{view_name} is not a supported printer')
         elif view_name not in printer_by_name:
             raise CrossComputeConfigurationError(
-                f'install crosscompute-printers-{view_name}')
+                f'pip install crosscompute-printers-{view_name}')
     if relpath(variable_path).startswith('..'):
         raise CrossComputeConfigurationError(
             f'path {variable_path} for variable {variable_id} must be within '
@@ -670,12 +661,23 @@ def validate_variable_identifiers(variable_dictionary):
 
 def validate_variable_configuration(variable_dictionary):
     # TODO: Validate variable view configurations
-    variable_configuration = get_dictionary(
+    c = get_dictionary(
         variable_dictionary, 'configuration')
-    if variable_definition.step_name == 'print':
-        variable_configuration['folder'] = Path(variable_configuration[
-            'folder']).expanduser()
-    return {'configuration': variable_configuration}
+    if variable_dictionary.step_name == 'print':
+        k = 'header-footer'
+        d = get_dictionary(c, k)
+        d['skip-first'] = bool(d.get('skip-first'))
+        k = 'page-number'
+        d = get_dictionary(c, k)
+        location = d.get('location')
+        if location and location not in ['header', 'footer']:
+            raise CrossComputeConfigurationError(
+                f'location {location} not supported for {k}')
+        alignment = d.get('alignment')
+        if alignment and alignment not in ['left', 'center', 'right']:
+            raise CrossComputeConfigurationError(
+                f'alignment {alignment} not supported for {k}')
+    return {'configuration': c}
 
 
 def validate_batch_identifiers(batch_dictionary):
@@ -903,29 +905,6 @@ def validate_permission_identifiers(permission_dictionary):
         raise CrossComputeConfigurationError(
             f'"{permission_action}" action not supported')
     return {'id': permission_id, 'action': permission_action}
-
-
-def validate_header_footer_options(print_dictionary):
-    print_configuration = print_dictionary.configuration
-    key = 'header-footer'
-    options = get_dictionary(print_configuration, key)
-    options['skip-first'] = bool(options.get('skip-first'))
-    return {}
-
-
-def validate_page_number_options(print_dictionary):
-    print_configuration = print_dictionary.configuration
-    key = 'page-number'
-    options = get_dictionary(print_configuration, key)
-    location = options.get('location')
-    if location and location not in ['header', 'footer']:
-        raise CrossComputeConfigurationError(
-            f'{location} location not supported for {key}')
-    alignment = options.get('alignment')
-    if alignment and alignment not in ['left', 'center', 'right']:
-        raise CrossComputeConfigurationError(
-            f'{alignment} alignment not supported for {key}')
-    return {}
 
 
 def get_configuration_format(path):
