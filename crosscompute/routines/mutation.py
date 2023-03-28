@@ -8,7 +8,7 @@ from ..settings import (
 
 
 def get_mutation(reference_uri, old_timestamp):
-    configurations, scripts, variables, templates, styles = [], [], [], [], []
+    codes, variables, templates, styles = [], [], [], []
     new_timestamp = time()
     changes = site['changes']
     for timestamp, infos in changes.copy().items():
@@ -22,7 +22,7 @@ def get_mutation(reference_uri, old_timestamp):
         for info in infos:
             code = info['code']
             if code == 'c':
-                configurations.append({})
+                codes.append({})
             elif code == 'v':
                 if reference_uri.startswith(info['uri']):
                     # TODO: Send value if authorized
@@ -33,7 +33,7 @@ def get_mutation(reference_uri, old_timestamp):
             elif code == 's':
                 styles.append({})
     return {
-        'configurations': configurations, 'scripts': scripts,
-        'variables': variables, 'templates': templates, 'styles': styles,
+        'codes': codes, 'variables': variables,
+        'templates': templates, 'styles': styles,
         'mutation_timestamp': new_timestamp,
         'server_timestamp': template_globals['server_timestamp']}

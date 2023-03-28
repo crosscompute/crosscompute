@@ -237,16 +237,17 @@ def process_loop(automation_tasks, automation_definitions, with_rebuild):
         while True:
             try:
                 automation_task = _get_automation_task(
-                    automation_tasks, automation_definitions, is_lazy=True)
+                    automation_tasks, automation_definitions)
             except IndexError:
                 sleep(1)
                 continue
+            '''
             task_datetime = datetime.now()
             batch_definition, task_mode = automation_task[1:3]
             if task_mode == Task.RUN_PRINT:
                 batch_definition.run_datetime = task_datetime
             batch_definition.print_datetime = task_datetime
-            # !!! check if variables modified in thread get saved
+            '''
             thread = Thread(
                 target=_process_task, args=automation_task, daemon=True)
             thread.start()
@@ -288,16 +289,36 @@ def _run_automation_multiple(
     return ds
 
 
-def _get_automation_task(automation_tasks, automation_definitions, is_lazy):
+def _get_automation_task(automation_tasks, automation_definitions):
+    automation_task = automation_tasks.pop(0)
+    '''
     try:
-        automation_task = automation_tasks.pop(0)
     except IndexError:
         automation_definition = choice(automation_definitions)
         batch_definition = choice(automation_definition.batch_definitions)
+        automation_task = (
+            automation_definition, batch_definition, site['environment'],
+            Task.RUN_PRINT, datetime.now())
+    else:
+
+    # Skip if a newer duplicate is scheduled
+    search tasks
+    # postpone if this batch is running
+    check if start datetime but no end datetime
+
+    # Skip if the interval is not ready
+    check if end datetime + interval is greater than now
+    # Skip if it already ran and is not out of date
+    if there is an end date and there are no new changes
+
         has_run = hasattr(batch_definition, 'run_datetime')
         interval_timedelta = automation_definition.interval_timedelta
 
         has_task = False
+        if not batch_clock.has('run') and not is_lazy:
+            if not batch_clock.is('run'):
+                has_task = True
+
         if not has_run and not is_lazy:
             has_task = True
         elif interval_timedelta:
@@ -306,17 +327,13 @@ def _get_automation_task(automation_tasks, automation_definitions, is_lazy):
                 has_task = True
         if not has_task:
             raise IndexError
-
-        automation_task = (
-            automation_definition, batch_definition, site['environment'],
-            Task.RUN_PRINT, datetime.now())
+    '''
     return automation_task
 
 
 def _process_task(
         automation_definition, batch_definition, user_environment, task_mode,
         task_datetime):
-    # TODO: If there are newer changes corresponding to the batch, skip it
     try:
         if task_mode == Task.RUN_PRINT:
             _run_batch(

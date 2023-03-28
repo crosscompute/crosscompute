@@ -75,17 +75,16 @@ class DiskMemory():
 
 
 def learn(configuration):
-    'Get c = configuration, v = variable, t = template, s = style'
+    'Set c:code, v:variable, t:template, s:style'
     memory = DiskMemory()
-    add_configuration_infos(memory, configuration)
-    # TODO: add_script_infos
+    add_code_infos(memory, configuration)
     add_variable_infos(memory, configuration)
     add_template_infos(memory, configuration)
     add_style_infos(memory, configuration)
     return memory
 
 
-def add_configuration_infos(memory, configuration):
+def add_code_infos(memory, configuration):
     info = {'code': 'c'}
     # Get automation configuration paths
     memory.add(configuration.path, info)
@@ -101,6 +100,11 @@ def add_configuration_infos(memory, configuration):
             if 'path' not in batch_configuration:
                 continue
             memory.add(automation_folder / batch_configuration['path'], info)
+        # Get script paths
+        for script_definition in automation_definition.script_definitions:
+            path = script_definition.path
+            if path:
+                memory.add(automation_folder / path, info)
 
 
 def add_variable_infos(memory, configuration):

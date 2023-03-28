@@ -22,22 +22,11 @@ async def see_mutation_stream(
 ):
     # TODO: Consider adding guard
     async def loop():
-        # TODO: connected
         reference_timestamp = old_timestamp
         while True:
             await asyncio.sleep(1)
             d = get_mutation(reference_uri, reference_timestamp)
-            if d[
-                'configurations'
-            ] or d[
-                'scripts'
-            ] or d[
-                'variables'
-            ] or d[
-                'templates'
-            ] or d[
-                'styles'
-            ]:
+            if d['codes'] or d['variables'] or d['templates'] or d['styles']:
                 reference_timestamp = d['mutation_timestamp']
                 yield {'data': json.dumps(d)}
     return EventSourceResponse(
