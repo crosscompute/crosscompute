@@ -1,10 +1,11 @@
+import re
 import shlex
 import subprocess
 from collections import defaultdict
 from concurrent.futures import (
     ProcessPoolExecutor, ThreadPoolExecutor, as_completed)
 from contextlib import contextmanager
-from datetime import datetime
+# from datetime import datetime
 from logging import getLogger
 from os import environ, getenv, symlink
 from os.path import relpath
@@ -16,15 +17,13 @@ from urllib.request import urlretrieve as download_uri
 
 import requests
 from invisibleroads_macros_disk import make_folder
-from invisibleroads_macros_log import get_timestamp, LONGSTAMP_TEMPLATE
+# from invisibleroads_macros_log import get_timestamp, LONGSTAMP_TEMPLATE
 from invisibleroads_macros_web.port import find_open_port
 from jinja2 import Template
 
 from ..constants import (
     Error,
     Task,
-    AUTOMATION_BATCH_PATTERN,
-    AUTOMATION_PATTERN,
     AUTOMATION_ROUTE,
     BATCH_ROUTE,
     MAXIMUM_PORT,
@@ -49,8 +48,8 @@ from ..settings import (
 from .configuration import (
     get_folder_plus_path)
 from .variable import (
-    format_text,
-    get_data_by_id,
+    # format_text,
+    # get_data_by_id,
     get_variable_data_by_id,
     get_variable_value_by_id,
     process_variable_data,
@@ -246,13 +245,6 @@ def process_loop(automation_tasks, automation_definitions, with_rebuild):
             except IndexError:
                 sleep(1)
                 continue
-            '''
-            task_datetime = datetime.now()
-            batch_definition, task_mode = automation_task[1:3]
-            if task_mode == Task.RUN_PRINT:
-                batch_definition.run_datetime = task_datetime
-            batch_definition.print_datetime = task_datetime
-            '''
             thread = Thread(
                 target=_process_task, args=automation_task, daemon=True)
             thread.start()
@@ -304,6 +296,8 @@ def _get_automation_task(automation_tasks, automation_definitions):
         print('uris reference_uri', reference_uri)
         automation_definition, batch_definition = _get_automation_pack(
             reference_uri)
+        print(automation_definition)
+        print(batch_definition)
         if automation_definition:
             task_mode = _get_task_mode(automation_definition, batch_definition)
             print('uris task_mode', task_mode)
@@ -329,7 +323,7 @@ def _get_automation_task(automation_tasks, automation_definitions):
         raise IndexError
     return (
         automation_definition, batch_definition, site['environment'],
-        task_mode, datetime.now())
+        task_mode, time())
 
 
 def _get_automation_pack(reference_uri):
@@ -338,10 +332,11 @@ def _get_automation_pack(reference_uri):
         return None, None
     automation_slug = automation_match.group(1)
     automation_definition = get_automation_definition(automation_slug)
-    automation_batch_match = AUTOMATION_BATCH_PATTERN.match(reference_uri)
-    if automation_batch_match:
-        batch_slug = automation_batch_match.group(2)
-        batch_definition = get_batch_definition(batch_slug)
+    batch_match = BATCH_PATTERN.search(reference_uri)
+    if batch_match:
+        batch_slug = batch_match.group(1)
+        batch_definition = get_batch_definition(
+            batch_slug, automation_definition)
     else:
         batch_definition = automation_definition.batch_definitions[0]
     return automation_definition, batch_definition
@@ -349,8 +344,10 @@ def _get_automation_pack(reference_uri):
 
 def _get_task_mode(automation_definition, batch_definition):
     batch_clock = batch_definition.clock
-    run_time = batch_clock.get_time('run')
-    print_time = batch_clock.get_time('print')
+    run_time = batch_clock.get_start_time('run')
+    if not run_time:
+        return Task.RUN_PRINT
+    print_time = batch_clock.get_start_time('print')
     for t, infos in site['changes'].items():
         if t < run_time:
             continue
@@ -370,13 +367,16 @@ def _get_task_mode(automation_definition, batch_definition):
 
 def _process_task(
         automation_definition, batch_definition, user_environment, task_mode,
-        task_datetime):
+        task_time):
+    batch_clock = batch_definition.clock
     try:
         if task_mode == Task.RUN_PRINT:
-            _run_batch(
-                automation_definition, batch_definition, user_environment,
-                task_datetime)
-        _print_batch(automation_definition, batch_definition, task_datetime)
+            with batch_clock.time('run', task_time):
+                _run_batch(
+                    automation_definition, batch_definition, user_environment,
+                    task_time)
+        with batch_clock.time('print', task_time):
+            _print_batch(automation_definition, batch_definition, task_time)
     except CrossComputeError as e:
         e.automation_definition = automation_definition
         L.error(e)
@@ -386,39 +386,32 @@ def _process_task(
 
 def _run_batch(
         automation_definition, batch_definition, user_environment,
-        task_datetime):
+        task_time):
     engine = get_script_engine(
         automation_definition.engine_name, with_rebuild=False)
     update_datasets(automation_definition)
-    return engine.run_batch(
+    engine.run_batch(
         automation_definition, batch_definition, user_environment)
 
 
-def _print_batch(automation_definition, batch_definition, task_datetime):
+def _print_batch(automation_definition, batch_definition, task_time):
     port = site['port']
     root_uri = template_globals['root_uri']
-    extra_data_by_id = {'timestamp': {'value': get_timestamp(
-        task_datetime, LONGSTAMP_TEMPLATE)}}
     folder = make_folder(
         automation_definition.folder / batch_definition.folder / 'print')
     variable_definitions = automation_definition.get_variable_definitions(
         'print')
     automation_uri = automation_definition.uri
-    batch_name = batch_definition.name
     batch_uri = batch_definition.uri
     for variable_definition in variable_definitions:
         view_name = variable_definition.view_name
         variable_configuration = variable_definition.configuration
-        name = variable_configuration.get(
-            'name', '').strip() or f'{batch_name}.{view_name}'
-        data_by_id = get_data_by_id(
-            automation_definition, batch_definition) | extra_data_by_id
-        path = format_text(folder / name, data_by_id)
-        batch_dictionary = {'path': path, 'uri': automation_uri + batch_uri}
+        batch_dictionary = {
+            'path': str(folder / variable_definition.path),
+            'uri': automation_uri + batch_uri}
         Printer = printer_by_name[view_name]
         printer = Printer(f'http://127.0.0.1:{port}{root_uri}')
         printer.render([batch_dictionary], variable_configuration)
-        symlink(path, folder / variable_definition.path)
 
 
 def _prepare_batch(automation_definition, batch_definition):
@@ -700,6 +693,8 @@ def _run_podman_command(options, terms):
     return subprocess.run(command_terms, **options)
 
 
+AUTOMATION_PATTERN = re.compile('/a/([^/]+)')
+BATCH_PATTERN = re.compile('/b/([^/]+)')
 CONTAINER_IGNORE_TEXT = '''\
 **/.git
 **/.gitignore

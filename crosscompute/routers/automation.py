@@ -1,4 +1,3 @@
-from datetime import datetime
 from logging import getLogger
 from pathlib import Path
 from time import time
@@ -97,7 +96,7 @@ async def run_automation_json(
 
     site['tasks'].append((
         automation_definition, batch_definition, site['environment'],
-        Task.RUN_PRINT, datetime.now()))
+        Task.RUN_PRINT, time()))
     automation_definition.batch_definitions.append(batch_definition)
 
     step_code = 'l' if automation_definition.get_variable_definitions(
