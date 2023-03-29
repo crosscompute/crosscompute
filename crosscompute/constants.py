@@ -3,6 +3,8 @@ from enum import IntEnum
 from os import getenv
 from pathlib import Path
 
+from starlette.routing import compile_path
+
 
 class Error(IntEnum):
 
@@ -58,6 +60,10 @@ STREAM_ROUTE = '/streams'
 STYLE_ROUTE = '/styles/{style_name}.css'
 MUTATION_ROUTE = '/mutations{uri}.json'
 PORT_ROUTE = '/ports{uri}'
+
+
+AUTOMATION_PATTERN = compile_path(AUTOMATION_ROUTE)[0]
+AUTOMATION_BATCH_PATTERN = compile_path(AUTOMATION_ROUTE + BATCH_ROUTE)[0]
 
 
 PRINTER_NAMES = 'pdf',

@@ -23,6 +23,8 @@ from jinja2 import Template
 from ..constants import (
     Error,
     Task,
+    AUTOMATION_BATCH_PATTERN,
+    AUTOMATION_PATTERN,
     AUTOMATION_ROUTE,
     BATCH_ROUTE,
     MAXIMUM_PORT,
@@ -31,6 +33,9 @@ from ..constants import (
     PROXY_URI,
     STEP_CODE_BY_NAME,
     STEP_NAMES)
+from ..dependencies import (
+    get_automation_definition,
+    get_batch_definition)
 from ..exceptions import (
     CrossComputeConfigurationError,
     CrossComputeDataError,
@@ -292,14 +297,32 @@ def _run_automation_multiple(
 def _get_automation_task(automation_tasks, automation_definitions):
     if automation_tasks:
         return automation_tasks.pop(0)
+    automation_definition = None
     uris = site['uris']
     if uris:
         reference_uri = choice(uris)
-        automation_definition =
-        batch_definition =
-    else:
-        automation_definition = choice(automation_definitions)
+        automation_definition, batch_definition = _get_automation_pack(
+            reference_uri)
+        if automation_definition:
+            task_mode = _get_task_mode(batch_definition)
+            if not task_mode:
+                automation_definition = None
+    if not automation_definition:
+        automation_definition = choice([
+            _ for _ in automation_definitions if _.interval_timedelta])
         batch_definition = choice(automation_definition.batch_definitions)
+        run_t = batch_definition.clock.get('run')
+        # !!! datetime vs time
+        if datetime.now() > run_t + automation_definition.interval_timedelta
+
+            if datetime.now() > run_datetime + interval_timedelta:
+                has_task = True
+
+    batch_clock = batch_definition.clock
+    if batch_clock.is('run') or batch_clock.is('print'):
+        raise IndexError
+
+    '''
     # if batch is already running,
         # skip it
     # if newer code change than when batch was last run or printed
@@ -310,7 +333,6 @@ def _get_automation_task(automation_tasks, automation_definitions):
         # skip it
     # if it has not run yet,
         # run and print
-    '''
         automation_task = (
             automation_definition, batch_definition, site['environment'],
             Task.RUN_PRINT, datetime.now())
@@ -333,6 +355,40 @@ def _get_automation_task(automation_tasks, automation_definitions):
             raise IndexError
     '''
     return automation_task
+
+
+def _get_automation_pack(reference_uri):
+    automation_match = AUTOMATION_PATTERN.match(reference_uri)
+    if not automation_match:
+        return None, None
+    automation_slug = automation_match.group(1)
+    automation_definition = get_automation_definition(automation_slug)
+    automation_batch_match = AUTOMATION_BATCH_PATTERN.match(reference_uri)
+    if automation_batch_match:
+        batch_slug = automation_batch_match.group(2)
+        batch_definition = get_batch_definition(batch_slug)
+    else:
+        batch_definition = automation_definition.batch_definitions[0]
+    return automation_definition, batch_definition
+
+
+def _get_task_mode(batch_definition):
+    batch_clock = batch_definition.clock
+    run_t = batch_clock.get('run')
+    print_t = batch_clock.get('print')
+    for t, infos in site['changes'].items():
+        if t < run_t:
+            continue
+        for info in infos:
+            code = info['code']
+            if code == 'c':
+                return Task.RUN_PRINT
+        if t < print_t:
+            continue
+        for info in infos:
+            code = info['code']
+            if code in ['s', 't']:
+                return Task.PRINT_ONLY
 
 
 def _process_task(

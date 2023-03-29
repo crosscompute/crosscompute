@@ -7,17 +7,17 @@ from ..settings import (
     template_globals)
 
 
-def get_mutation(reference_uri, old_timestamp):
+def get_mutation(reference_uri, old_t):
     codes, variables, templates, styles = [], [], [], []
-    new_timestamp = time()
+    new_t = time()
     changes = site['changes']
-    for timestamp, infos in changes.copy().items():
-        if new_timestamp - timestamp > MAXIMUM_MUTATION_AGE_IN_SECONDS:
+    for t, infos in changes.copy().items():
+        if new_t - t > MAXIMUM_MUTATION_AGE_IN_SECONDS:
             try:
-                del changes[timestamp]
+                del changes[t]
             except KeyError:
                 pass
-        if timestamp <= old_timestamp:
+        if t <= old_t:
             continue
         for info in infos:
             code = info['code']
@@ -35,5 +35,5 @@ def get_mutation(reference_uri, old_timestamp):
     return {
         'codes': codes, 'variables': variables,
         'templates': templates, 'styles': styles,
-        'mutation_timestamp': new_timestamp,
+        'mutation_timestamp': new_t,
         'server_timestamp': template_globals['server_timestamp']}
