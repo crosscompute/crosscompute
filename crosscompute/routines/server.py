@@ -24,12 +24,13 @@ from .interface import Server
 class DiskServer(Server):
 
     def __init__(
-            self, work, environment, safe, tasks, changes, host=HOST,
+            self, work, environment, safe, uris, tasks, changes, host=HOST,
             port=PORT, with_restart=True, with_prefix=True, with_hidden=True,
             root_uri='', allowed_origins=None):
         self._work = work
         self._environment = environment
         self._safe = safe
+        self._uris = uris
         self._tasks = tasks
         self._changes = changes
         self._host = host
@@ -121,6 +122,7 @@ class DiskServer(Server):
             'definitions': configuration.automation_definitions,
             'environment': self._environment,
             'safe': self._safe,
+            'uris': self._uris,
             'tasks': self._tasks,
             'changes': self._changes,
             'port': self._port,

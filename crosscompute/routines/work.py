@@ -290,26 +290,30 @@ def _run_automation_multiple(
 
 
 def _get_automation_task(automation_tasks, automation_definitions):
-    automation_task = automation_tasks.pop(0)
-    '''
-    try:
-    except IndexError:
+    if automation_tasks:
+        return automation_tasks.pop(0)
+    uris = site['uris']
+    if uris:
+        reference_uri = choice(uris)
+        automation_definition =
+        batch_definition =
+    else:
         automation_definition = choice(automation_definitions)
         batch_definition = choice(automation_definition.batch_definitions)
+    # if batch is already running,
+        # skip it
+    # if newer code change than when batch was last run or printed
+        # run and print
+    # elif newer template or style change,
+        # print
+    # if there is an interval defined but not ready,
+        # skip it
+    # if it has not run yet,
+        # run and print
+    '''
         automation_task = (
             automation_definition, batch_definition, site['environment'],
             Task.RUN_PRINT, datetime.now())
-    else:
-
-    # Skip if a newer duplicate is scheduled
-    search tasks
-    # postpone if this batch is running
-    check if start datetime but no end datetime
-
-    # Skip if the interval is not ready
-    check if end datetime + interval is greater than now
-    # Skip if it already ran and is not out of date
-    if there is an end date and there are no new changes
 
         has_run = hasattr(batch_definition, 'run_datetime')
         interval_timedelta = automation_definition.interval_timedelta

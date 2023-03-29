@@ -22,6 +22,7 @@ site = {
     'definitions': [],
     'environment': {},
     'safe': None,
+    'uris': [],
     'tasks': [],
     'changes': {},
     'port': None,
