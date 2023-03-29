@@ -42,6 +42,7 @@ from ..exceptions import (
     CrossComputeConfigurationNotImplementedError,
     CrossComputeError)
 from ..macros.iterable import find_item
+from ..macros.log import Clock
 from ..macros.package import is_equivalent_version
 from ..settings import (
     printer_by_name,
@@ -727,7 +728,8 @@ def validate_batch_configuration(batch_dictionary):
     batch_configuration = get_dictionary(batch_dictionary, 'configuration')
     return {
         'reference': batch_reference,
-        'configuration': batch_configuration}
+        'configuration': batch_configuration,
+        'clock': Clock()}
 
 
 def validate_dataset_identifiers(dataset_dictionary):

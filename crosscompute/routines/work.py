@@ -296,28 +296,34 @@ def _run_automation_multiple(
 
 def _get_automation_task(automation_tasks, automation_definitions):
     if automation_tasks:
+        print('manual')
         return automation_tasks.pop(0)
-    automation_definition = None
-    uris = site['uris']
+    automation_definition, uris = None, site['uris']
     if uris:
         reference_uri = choice(uris)
+        print('uris reference_uri', reference_uri)
         automation_definition, batch_definition = _get_automation_pack(
             reference_uri)
         if automation_definition:
             task_mode = _get_task_mode(automation_definition, batch_definition)
+            print('uris task_mode', task_mode)
             if not task_mode:
                 automation_definition = None
     if not automation_definition:
-        automation_definition = choice([
-            _ for _ in automation_definitions if _.is_interval_strict])
-        batch_definition = choice(automation_definition.batch_definitions)
-        if automation_definition.is_interval_ready(batch_definition):
-            task_mode = Task.RUN_PRINT
-        else:
-            automation_definition = None
+        selected_automation_definitions = [
+            _ for _ in automation_definitions if _.is_interval_strict]
+        if selected_automation_definitions:
+            print('strict')
+            automation_definition = choice(selected_automation_definitions)
+            batch_definition = choice(automation_definition.batch_definitions)
+            if automation_definition.is_interval_ready(batch_definition):
+                task_mode = Task.RUN_PRINT
+            else:
+                automation_definition = None
     if automation_definition:
         batch_clock = batch_definition.clock
         if batch_clock.is_in('run') or batch_clock.is_in('print'):
+            print('is running')
             automation_definition = None
     if not automation_definition:
         raise IndexError

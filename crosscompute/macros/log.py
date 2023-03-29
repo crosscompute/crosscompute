@@ -1,24 +1,27 @@
-from datetime import datetime
+from time import time
 
 
 class Clock:
 
-    def __init__(self, get_now=datetime.now):
-        self.get_now = get_now
-        self.datetimes = {}
+    def __init__(self):
+        self.time_by_key = {}
 
     def start(self, name):
-        self.datetimes[name + '<'] = self.get_now()
+        self.time_by_key[name + '<'] = time()
+        self.time_by_key['>' + name] = None
 
     def end(self, name):
-        self.datetimes['>' + name] = self.get_now()
+        self.time_by_key['>' + name] = time()
 
-    def in(self, name):
-        d = self.datetimes
-        datetime_a = d.get(name + '<')
-        datetime_z = d.get('>' + name)
-        if not datetime_a:
+    def is_in(self, name):
+        d = self.time_by_key
+        time_a = d.get(name + '<')
+        time_z = d.get('>' + name)
+        if not time_a:
             return False
-        if not datetime_z:
+        if not time_z:
             return True
         return False
+
+    def get_time(self, name):
+        return self.time_by_key.get('>' + name, 0)
