@@ -71,7 +71,7 @@ async def see_automation(
         'automation_definition': automation_definition,
         'step_name': design_name,
         'batches': guard.get_batch_definitions(automation_definition),
-        'mutation_timestamp': time(),
+        'mutation_time': time(),
     } | d, headers=response.headers)
 
 
@@ -143,7 +143,7 @@ async def see_automation_batch_step(
         'automation_definition': automation_definition,
         'batch_definition': batch_definition,
         'step_name': step_name,
-        'mutation_timestamp': time(),
+        'mutation_time': time(),
     } | page_dictionary, headers=response.headers)
 
 

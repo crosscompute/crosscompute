@@ -90,7 +90,7 @@ def get_step_response_dictionary(
         'js_uris': get_unique_order(m['js_uris']),
         'js_text': '\n'.join(get_unique_order(m['js_texts'])),
         'for_embed': for_embed, 'for_print': for_print,
-        'has_interval': automation_definition.interval_timedelta is not None,
+        'has_interval': automation_definition.interval_pack is not None,
         'is_done': batch.is_done(),
         'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri)}
 

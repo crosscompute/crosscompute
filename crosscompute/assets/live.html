@@ -55,7 +55,7 @@ function refreshStyle() {
 }
 {% endif %}
 function setupMutationStream() {
-  mutationStream = new EventSource(rootUri + '/streams{{ mutation_uri }}?t=' + mutationTimestamp);
+  mutationStream = new EventSource(rootUri + '/streams{{ mutation_uri }}?t=' + mutationTime);
   mutationStream.onopen = () => {
     retryMilliseconds = 1000;
   };
@@ -71,7 +71,7 @@ function setupMutationStream() {
     d = JSON.parse(data);
 {% if with_restart %}
     if (
-      d.server_timestamp != {{ server_timestamp }} ||
+      d.server_time != {{ server_time }} ||
       d.codes.length ||
       d.templates.length
     ) {
@@ -83,10 +83,10 @@ function setupMutationStream() {
 {% if step_name != 'input' %}
     await Promise.all(d.variables.map(_ => refreshVariable(_.id)));
 {% endif %}
-    mutationTimestamp = d.mutation_timestamp;
+    mutationTime = d.mutation_time;
   };
 }
-let mutationStream, mutationTimeout, mutationTimestamp = {{ mutation_timestamp }}, retryMilliseconds = 1000;
+let mutationStream, mutationTimeout, mutationTime = {{ mutation_time }}, retryMilliseconds = 1000;
 setupMutationStream();
 {% endif %}
 {%- endblock %}

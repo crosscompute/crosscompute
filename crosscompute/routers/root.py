@@ -69,7 +69,7 @@ async def see_root(
         'automation_definitions': guard.get_automation_definitions(
             configuration),
         'mutation_uri': MUTATION_ROUTE.format(uri=''),
-        'mutation_timestamp': time(),
+        'mutation_time': time(),
     }, headers=response.headers)
 
 

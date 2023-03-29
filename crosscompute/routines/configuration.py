@@ -3,7 +3,7 @@ import json
 import shutil
 from collections import Counter
 from configparser import ConfigParser
-from datetime import timedelta
+from datetime import datetime, timedelta
 from logging import getLogger
 from os import environ
 from os.path import basename, relpath, splitext
@@ -141,6 +141,14 @@ class AutomationDefinition(Definition):
             button_configuration = button_definition.configuration
             button_text = button_configuration.get('button-text', button_text)
         return button_text
+
+    def is_interval_ready(self, batch_definition):
+        interval_timedelta = self.interval_timedelta
+        if interval_timedelta:
+            run_datetime = batch_definition.clock.get_datetime('run')
+            if datetime.now() > run_datetime + interval_timedelta:
+                return True
+        return False
 
 
 class VariableDefinition(Definition):
@@ -512,8 +520,8 @@ def validate_environment(configuration):
     if batch_concurrency_name not in ('process', 'thread', 'single'):
         raise CrossComputeConfigurationError(
             f'"{batch_concurrency_name}" batch concurrency is not supported')
-    interval_text = d.get('interval', '').strip()
-    interval_timedelta = get_interval_timedelta(interval_text)
+    interval_timedelta, is_interval_strict = get_interval_pack(d.get(
+        'interval', '').strip())
     return {
         'engine_name': get_engine_name(d),
         'parent_image_name': d.get('image', 'python').strip(),
@@ -522,7 +530,8 @@ def validate_environment(configuration):
         'port_definitions': port_definitions,
         'environment_variable_ids': environment_variable_ids,
         'batch_concurrency_name': batch_concurrency_name,
-        'interval_timedelta': interval_timedelta}
+        'interval_timedelta': interval_timedelta,
+        'is_interval_strict': is_interval_strict}
 
 
 def validate_datasets(configuration):
@@ -988,11 +997,11 @@ def get_environment_variable_ids(environment_variable_definitions):
     return variable_ids
 
 
-def get_interval_timedelta(interval_text):
+def get_interval_pack(interval_text):
     if not interval_text:
-        return
+        return None, None
     try:
-        count, name = interval_text.split()
+        count, name = interval_text.split(maxsplit=1)
         count = int(count)
     except ValueError:
         raise CrossComputeConfigurationError(
@@ -1006,7 +1015,8 @@ def get_interval_timedelta(interval_text):
         raise CrossComputeConfigurationError(
             f'unsupported interval unit "{name}" in "{interval_text}"; '
             f'expected {unit_names_text}')
-    return timedelta(**{unit_name: count})
+    is_strict = True if '!' in name else False
+    return timedelta(**{unit_name: count}), is_strict
 
 
 def get_scalar_text(d, key, default=None):

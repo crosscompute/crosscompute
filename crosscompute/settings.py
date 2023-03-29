@@ -38,7 +38,7 @@ template_globals = template_environment.globals = {
     'base_template_path': template_path_by_id['base'],
     'live_template_path': template_path_by_id['live'],
     'google_analytics_id': '',
-    'server_timestamp': 0,
+    'server_time': 0,
     'root_uri': '',
     'with_restart': True}
 TemplateResponse = TemplateResponseFactory(

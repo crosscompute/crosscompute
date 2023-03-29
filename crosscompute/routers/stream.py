@@ -19,21 +19,21 @@ router = APIRouter()
     tags=['stream'])
 async def see_mutation_stream(
     reference_uri: str,
-    old_timestamp: float = Query(default=0, alias='t'),
+    old_time: float = Query(default=0, alias='t'),
 ):
     # TODO: Consider adding guard
     uris = site['uris']
 
     async def loop():
         uris.append(reference_uri)
-        reference_timestamp = old_timestamp
+        reference_time = old_time
         try:
             while True:
                 await asyncio.sleep(1)
-                d = get_mutation(reference_uri, reference_timestamp)
+                d = get_mutation(reference_uri, reference_time)
                 if d['codes'] or d['variables'] or d['templates'] or d[
                         'styles']:
-                    reference_timestamp = d['mutation_timestamp']
+                    reference_time = d['mutation_time']
                     yield {'data': json.dumps(d)}
         except asyncio.CancelledError:
             uris.remove(reference_uri)

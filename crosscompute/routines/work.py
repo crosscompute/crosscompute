@@ -304,57 +304,26 @@ def _get_automation_task(automation_tasks, automation_definitions):
         automation_definition, batch_definition = _get_automation_pack(
             reference_uri)
         if automation_definition:
-            task_mode = _get_task_mode(batch_definition)
+            task_mode = _get_task_mode(automation_definition, batch_definition)
             if not task_mode:
                 automation_definition = None
     if not automation_definition:
         automation_definition = choice([
-            _ for _ in automation_definitions if _.interval_timedelta])
+            _ for _ in automation_definitions if _.is_interval_strict])
         batch_definition = choice(automation_definition.batch_definitions)
-        run_t = batch_definition.clock.get('run')
-        # !!! datetime vs time
-        if datetime.now() > run_t + automation_definition.interval_timedelta
-
-            if datetime.now() > run_datetime + interval_timedelta:
-                has_task = True
-
-    batch_clock = batch_definition.clock
-    if batch_clock.is('run') or batch_clock.is('print'):
+        if automation_definition.is_interval_ready(batch_definition):
+            task_mode = Task.RUN_PRINT
+        else:
+            automation_definition = None
+    if automation_definition:
+        batch_clock = batch_definition.clock
+        if batch_clock.is_in('run') or batch_clock.is_in('print'):
+            automation_definition = None
+    if not automation_definition:
         raise IndexError
-
-    '''
-    # if batch is already running,
-        # skip it
-    # if newer code change than when batch was last run or printed
-        # run and print
-    # elif newer template or style change,
-        # print
-    # if there is an interval defined but not ready,
-        # skip it
-    # if it has not run yet,
-        # run and print
-        automation_task = (
-            automation_definition, batch_definition, site['environment'],
-            Task.RUN_PRINT, datetime.now())
-
-        has_run = hasattr(batch_definition, 'run_datetime')
-        interval_timedelta = automation_definition.interval_timedelta
-
-        has_task = False
-        if not batch_clock.has('run') and not is_lazy:
-            if not batch_clock.is('run'):
-                has_task = True
-
-        if not has_run and not is_lazy:
-            has_task = True
-        elif interval_timedelta:
-            run_datetime = batch_definition.run_datetime
-            if datetime.now() > run_datetime + interval_timedelta:
-                has_task = True
-        if not has_task:
-            raise IndexError
-    '''
-    return automation_task
+    return (
+        automation_definition, batch_definition, site['environment'],
+        task_mode, datetime.now())
 
 
 def _get_automation_pack(reference_uri):
@@ -372,23 +341,25 @@ def _get_automation_pack(reference_uri):
     return automation_definition, batch_definition
 
 
-def _get_task_mode(batch_definition):
+def _get_task_mode(automation_definition, batch_definition):
     batch_clock = batch_definition.clock
-    run_t = batch_clock.get('run')
-    print_t = batch_clock.get('print')
+    run_time = batch_clock.get_time('run')
+    print_time = batch_clock.get_time('print')
     for t, infos in site['changes'].items():
-        if t < run_t:
+        if t < run_time:
             continue
         for info in infos:
             code = info['code']
             if code == 'c':
                 return Task.RUN_PRINT
-        if t < print_t:
+        if t < print_time:
             continue
         for info in infos:
             code = info['code']
             if code in ['s', 't']:
                 return Task.PRINT_ONLY
+    if automation_definition.is_interval_ready(batch_definition):
+        return Task.RUN_PRINT
 
 
 def _process_task(

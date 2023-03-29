@@ -135,7 +135,7 @@ class DiskServer(Server):
             'base_template_path': template_path_by_id['base'],
             'live_template_path': template_path_by_id['live'],
             'google_analytics_id': getenv('GOOGLE_ANALYTICS_ID', ''),
-            'server_timestamp': time(),
+            'server_time': time(),
             'root_uri': root_uri,
             'with_restart': with_restart})
         template_environment.auto_reload = with_restart
