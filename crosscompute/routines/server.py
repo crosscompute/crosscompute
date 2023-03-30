@@ -24,32 +24,28 @@ from .interface import Server
 class DiskServer(Server):
 
     def __init__(
-            self, work, environment, safe, uris, tasks, changes, host=HOST,
-            port=PORT, with_restart=True, with_prefix=True, with_hidden=True,
-            root_uri='', allowed_origins=None):
+            self, work, environment, safe,
+            definitions, uris, tasks, changes,
+            host=HOST, port=PORT, root_uri='', allowed_origins=None,
+            with_restart=True, with_prefix=True, with_hidden=True):
         self._work = work
         self._environment = environment
         self._safe = safe
+        self._definitions = definitions
         self._uris = uris
         self._tasks = tasks
         self._changes = changes
         self._host = host
         self._port = port
+        self._root_uri = root_uri
+        self._allowed_origins = allowed_origins
         self._with_restart = with_restart
         self._with_prefix = with_prefix
         self._with_hidden = with_hidden
-        self._root_uri = root_uri
-        self._allowed_origins = allowed_origins
 
     def serve(self, configuration):
-        self._refresh(configuration)
         host, port, root_uri, allowed_origins = [
             self._host, self._port, self._root_uri, self._allowed_origins]
-        worker_process = StoppableProcess(
-            name='worker', target=self._work,
-            args=(self._tasks, site['definitions']),
-            kwargs={'with_rebuild': True})
-        worker_process.start()
         app = get_app(root_uri, self._with_prefix)
         if self._with_restart:
             app.add_middleware(ExtraResponseHeadersMiddleware, headers={
@@ -70,19 +66,17 @@ class DiskServer(Server):
             pass
         except Exception as e:
             L.exception(e)
-        finally:
-            worker_process.stop()
 
     def watch(
             self, configuration, disk_poll_in_milliseconds,
             disk_debounce_in_milliseconds, reload):
-        server_process, disk_database = self._start(configuration)
+        s_process, w_process, d_database = self.start(configuration)
         try:
             for changed_packs in watch(
                     configuration.folder, step=disk_poll_in_milliseconds,
                     debounce=disk_debounce_in_milliseconds):
                 changed_paths = [_[1] for _ in changed_packs]
-                changed_infos = disk_database.grok(changed_paths)
+                changed_infos = d_database.grok(changed_paths)
                 L.debug(changed_infos)
                 should_restart_server = False
                 for info in changed_infos:
@@ -94,51 +88,65 @@ class DiskServer(Server):
                     except CrossComputeError as e:
                         L.error(e)
                         continue
-                    server_process.stop()
-                    server_process, disk_database = self._start(configuration)
+                    s_process.stop()
+                    w_process.stop()
+                    s_process, w_process, d_database = self.start(
+                        configuration)
         except KeyboardInterrupt:
             pass
         except Exception as e:
             L.exception(e)
         finally:
-            server_process.stop()
+            s_process.stop()
+            w_process.stop()
 
-    def _start(self, configuration):
+    def start(self, configuration):
+        self.refresh(configuration)
         server_process = StoppableProcess(
-            name='server', target=self.serve, args=(configuration,))
+            name='server', target=self.serve,
+            args=(configuration,))
         server_process.start()
+        worker_process = StoppableProcess(
+            name='worker', target=self._work,
+            args=(
+                self._definitions,
+                self._tasks,
+                self._uris,
+                self._changes,
+                self._environment,
+                self._port),
+            kwargs={'with_rebuild': True})
+        worker_process.start()
         disk_database = DiskDatabase(configuration, self._changes)
-        return server_process, disk_database
+        return server_process, worker_process, disk_database
 
-    def _refresh(self, configuration):
-        configuration_name = configuration.name
-        if configuration_name == 'Automation 0':
-            configuration_name = 'Automations'
-        configuration_folder = configuration.folder
-        root_uri, with_restart = self._root_uri, self._with_restart
+    def refresh(self, configuration):
+        name = configuration.name
+        definitions = self._definitions
+        del definitions[:]
+        definitions.extend(configuration.automation_definitions)
         site.update({
-            'name': configuration_name,
+            'name': 'Automations' if name == 'Automation 0' else name,
             'configuration': configuration,
-            'definitions': configuration.automation_definitions,
+            'definitions': definitions,
             'environment': self._environment,
             'safe': self._safe,
             'uris': self._uris,
             'tasks': self._tasks,
             'changes': self._changes,
-            'port': self._port,
             'with_prefix': self._with_prefix,
             'with_hidden': self._with_hidden})
         template_path_by_id.update(TEMPLATE_PATH_BY_ID)
         for template_id, path in configuration.template_path_by_id.items():
-            template_path_by_id[template_id] = str(configuration_folder / path)
+            template_path_by_id[template_id] = str(configuration.folder / path)
         template_globals.update({
             'base_template_path': template_path_by_id['base'],
             'live_template_path': template_path_by_id['live'],
             'google_analytics_id': getenv('GOOGLE_ANALYTICS_ID', ''),
             'server_time': time(),
-            'root_uri': root_uri,
-            'with_restart': with_restart})
-        template_environment.auto_reload = with_restart
+            'root_uri': self._root_uri,
+            'with_restart': self._with_restart})
+        template_environment.auto_reload = self._with_restart
 
 
 def get_app(root_uri, with_prefix):

@@ -63,14 +63,16 @@ class DiskAutomation(Automation):
             disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
             disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS):
         with multiprocessing_context.Manager() as manager:
+            safe = DictionarySafe(manager.dict(), TOKEN_LENGTH)
+            definitions = manager.list()
             uris = manager.list()
             tasks = manager.list()
             changes = manager.dict()
-            safe = DictionarySafe(manager.dict(), TOKEN_LENGTH)
             DiskServer(
-                process_loop, environment, safe, uris, tasks, changes, host,
-                port, with_restart, with_prefix, with_hidden, root_uri,
-                allowed_origins,
+                process_loop, environment, safe,
+                definitions, uris, tasks, changes,
+                host, port, root_uri, allowed_origins,
+                with_restart, with_prefix, with_hidden,
             ).watch(
                 self.configuration,
                 disk_poll_in_milliseconds,

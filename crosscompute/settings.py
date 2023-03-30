@@ -25,7 +25,6 @@ site = {
     'uris': [],
     'tasks': [],
     'changes': {},
-    'port': None,
     'with_prefix': True,
     'with_hidden': True}
 template_path_by_id = TEMPLATE_PATH_BY_ID.copy()

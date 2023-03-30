@@ -3,18 +3,16 @@ from time import time
 from ..constants import (
     MAXIMUM_MUTATION_AGE_IN_SECONDS)
 from ..settings import (
-    site,
     template_globals)
 
 
-def get_mutation(reference_uri, old_time):
+def get_mutation(file_changes, reference_uri, old_time):
     codes, variables, templates, styles = [], [], [], []
     new_time = time()
-    changes = site['changes']
-    for t, infos in changes.copy().items():
+    for t, infos in file_changes.copy().items():
         if new_time - t > MAXIMUM_MUTATION_AGE_IN_SECONDS:
             try:
-                del changes[t]
+                del file_changes[t]
             except KeyError:
                 pass
         if t <= old_time:
