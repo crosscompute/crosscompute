@@ -7,7 +7,7 @@ from ..settings import (
 
 
 def get_mutation(file_changes, reference_uri, old_time):
-    codes, variables, templates, styles = [], [], [], []
+    configurations, variables, templates, styles = [], [], [], []
     new_time = time()
     for t, infos in file_changes.copy().items():
         if new_time - t > MAXIMUM_MUTATION_AGE_IN_SECONDS:
@@ -20,7 +20,7 @@ def get_mutation(file_changes, reference_uri, old_time):
         for info in infos:
             code = info['code']
             if code == 'c':
-                codes.append({})
+                configurations.append({})
             elif code == 'v':
                 if reference_uri.startswith(info['uri']):
                     # TODO: Send value if authorized
@@ -31,7 +31,7 @@ def get_mutation(file_changes, reference_uri, old_time):
             elif code == 's':
                 styles.append({})
     return {
-        'codes': codes, 'variables': variables,
+        'configurations': configurations, 'variables': variables,
         'templates': templates, 'styles': styles,
         'mutation_time': new_time,
         'server_time': template_globals['server_time']}

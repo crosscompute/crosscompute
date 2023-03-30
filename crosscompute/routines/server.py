@@ -25,13 +25,12 @@ class DiskServer(Server):
 
     def __init__(
             self, work, environment, safe,
-            definitions, uris, tasks, changes,
+            uris, tasks, changes,
             host=HOST, port=PORT, root_uri='', allowed_origins=None,
             with_restart=True, with_prefix=True, with_hidden=True):
         self._work = work
         self._environment = environment
         self._safe = safe
-        self._definitions = definitions
         self._uris = uris
         self._tasks = tasks
         self._changes = changes
@@ -109,7 +108,7 @@ class DiskServer(Server):
         worker_process = StoppableProcess(
             name='worker', target=self._work,
             args=(
-                self._definitions,
+                configuration.automation_definitions,
                 self._tasks,
                 self._uris,
                 self._changes,
@@ -122,13 +121,10 @@ class DiskServer(Server):
 
     def refresh(self, configuration):
         name = configuration.name
-        definitions = self._definitions
-        del definitions[:]
-        definitions.extend(configuration.automation_definitions)
         site.update({
             'name': 'Automations' if name == 'Automation 0' else name,
             'configuration': configuration,
-            'definitions': definitions,
+            'definitions': configuration.automation_definitions,
             'environment': self._environment,
             'safe': self._safe,
             'uris': self._uris,

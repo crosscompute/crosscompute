@@ -72,7 +72,7 @@ function setupMutationStream() {
 {% if with_restart %}
     if (
       d.server_time != {{ server_time }} ||
-      d.codes.length ||
+      d.configurations.length ||
       d.templates.length
     ) {
       refreshPage();

@@ -30,15 +30,12 @@ from ..constants import (
     PROXY_URI,
     STEP_CODE_BY_NAME,
     STEP_NAMES)
-from ..dependencies import (
-    get_automation_definition,
-    get_batch_definition)
 from ..exceptions import (
     CrossComputeConfigurationError,
     CrossComputeDataError,
     CrossComputeExecutionError,
     CrossComputeError)
-from ..macros.iterable import group_by
+from ..macros.iterable import find_item, group_by
 from ..settings import (
     printer_by_name,
     template_globals)
@@ -238,14 +235,13 @@ def process_loop(
         prepare_automation(automation_definition, with_rebuild)
     try:
         while True:
-            sleep(3)
+            sleep(1)
             try:
                 automation_task = _get_automation_task(
                     automation_tasks, automation_definitions, live_uris,
                     file_changes, user_environment)
             except IndexError:
                 continue
-            print(automation_task)
             thread = Thread(
                 target=_process_task, args=automation_task + (server_port,),
                 daemon=True)
@@ -295,12 +291,15 @@ def _get_automation_task(
         return automation_tasks.pop(0)
     automation_definition = None
     if live_uris:
-        automation_definition, batch_definition = _get_automation_pack(choice(
-            live_uris))
+        try:
+            automation_definition, batch_definition = _get_automation_pack(
+                automation_definitions, choice(live_uris))
+        except IndexError:
+            pass
         if automation_definition:
             task_mode = _get_task_mode(
                 automation_definition, batch_definition, file_changes)
-            if not task_mode:
+            if task_mode is None:
                 automation_definition = None
     if not automation_definition:
         selected_automation_definitions = [
@@ -314,7 +313,6 @@ def _get_automation_task(
                 automation_definition = None
     if automation_definition:
         batch_clock = batch_definition.clock
-        print(batch_clock.time_by_key)
         if batch_clock.is_in('run') or batch_clock.is_in('print'):
             automation_definition = None
     if not automation_definition:
@@ -324,17 +322,25 @@ def _get_automation_task(
         time())
 
 
-def _get_automation_pack(reference_uri):
+def _get_automation_pack(automation_definitions, reference_uri):
     automation_match = AUTOMATION_PATTERN.match(reference_uri)
     if not automation_match:
-        return None, None
+        raise IndexError
     automation_slug = automation_match.group(1)
-    automation_definition = get_automation_definition(automation_slug)
+    try:
+        automation_definition = find_item(
+            automation_definitions, 'slug', automation_slug,
+            normalize=str.casefold)
+    except StopIteration:
+        raise IndexError
     batch_match = BATCH_PATTERN.search(reference_uri)
     if batch_match:
         batch_slug = batch_match.group(1)
-        batch_definition = get_batch_definition(
-            batch_slug, automation_definition)
+        try:
+            batch_definition = find_item(
+                automation_definition.batch_definitions, 'slug', batch_slug)
+        except StopIteration:
+            raise IndexError
     else:
         batch_definition = automation_definition.batch_definitions[0]
     return automation_definition, batch_definition
@@ -351,7 +357,7 @@ def _get_task_mode(automation_definition, batch_definition, file_changes):
             continue
         for info in infos:
             code = info['code']
-            if code == 'c':
+            if code in ['f']:
                 return Task.RUN_PRINT
         if t < print_time:
             continue
@@ -366,12 +372,10 @@ def _get_task_mode(automation_definition, batch_definition, file_changes):
 def _process_task(
         automation_definition, batch_definition, user_environment, task_mode,
         task_time, server_port):
-    print(user_environment, task_mode, task_time, server_port)
     batch_clock = batch_definition.clock
     try:
         if task_mode == Task.RUN_PRINT:
             with batch_clock.time('run', task_time):
-                print(batch_clock.time_by_key)
                 _run_batch(
                     automation_definition, batch_definition, user_environment)
         with batch_clock.time('print', task_time):

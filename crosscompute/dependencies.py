@@ -13,7 +13,7 @@ from .routines.variable import parse_data_by_id
 from .settings import site
 
 
-def get_automation_definition(
+async def get_automation_definition(
     automation_slug: str | None = None,
 ):
     if not automation_slug:
@@ -28,7 +28,7 @@ def get_automation_definition(
     return automation_definition
 
 
-def get_batch_definition(
+async def get_batch_definition(
     batch_slug: str | None = None,
     automation_definition: AutomationDefinition = Depends(
         get_automation_definition),

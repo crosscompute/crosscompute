@@ -20,8 +20,8 @@ class Status(IntEnum):
 
 class Task(IntEnum):
 
-    PRINT_ONLY = 0
-    RUN_PRINT = 1
+    PRINT_ONLY = 10
+    RUN_PRINT = 100
 
 
 PACKAGE_FOLDER = Path(__file__).parent

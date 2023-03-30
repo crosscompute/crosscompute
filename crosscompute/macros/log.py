@@ -13,14 +13,16 @@ class Clock:
         key_a = _get_start_key(name)
         key_b = _get_end_key(name)
         d[key_a] = t
-        d[key_b] = None
+        try:
+            del d[key_b]
+        except KeyError:
+            pass
         yield
-        d[key_a] = time()
+        d[key_b] = time()
 
     def is_in(self, name):
         time_a = self.get_start_time(name)
         time_b = self.get_end_time(name)
-        print(name, time_a, time_b)
         if not time_a:
             return False
         if not time_b:
