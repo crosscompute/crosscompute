@@ -1,3 +1,4 @@
+import shlex
 from logging import getLogger
 from pathlib import Path
 from time import time
@@ -111,6 +112,12 @@ def add_script_infos(memory, configuration):
             path = script_definition.path
             if path:
                 memory.add(automation_folder / path, info)
+            command = script_definition.command
+            if command:
+                for term in shlex.split(command):
+                    file_path = automation_folder / term
+                    if file_path.exists():
+                        memory.add(file_path, info)
 
 
 def add_variable_infos(memory, configuration):

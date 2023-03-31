@@ -763,6 +763,11 @@ def validate_dataset_reference(dataset_dictionary):
 def validate_script_identifiers(script_dictionary):
     folder = script_dictionary.get('folder', '.').strip()
 
+    if 'command' in script_dictionary:
+        command = script_dictionary['command'].strip()
+    else:
+        command = None
+
     if 'path' in script_dictionary:
         path = Path(script_dictionary['path'].strip())
         suffix = path.suffix
@@ -772,15 +777,13 @@ def validate_script_identifiers(script_dictionary):
     else:
         path = None
 
-    if 'command' in script_dictionary:
-        command = script_dictionary['command'].strip()
-    else:
-        command = None
-
+    if command and path:
+        raise CrossComputeConfigurationError(
+            'set script command or script path but not both')
     return {
         'folder': Path(folder),
-        'path': path,
-        'command': command}
+        'command': command,
+        'path': path}
 
 
 def validate_package_identifiers(package_dictionary):
