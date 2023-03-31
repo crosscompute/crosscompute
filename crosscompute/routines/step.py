@@ -68,8 +68,9 @@ def get_step_response_dictionary(
     variable_definitions = automation_definition.get_variable_definitions(
         step_name, with_all=True)
     batch = DiskBatch(automation_definition, batch_definition)
-    css_uris = automation_definition.css_uris
-    m = {'css_uris': css_uris.copy(), 'js_uris': [], 'js_texts': []}
+    m = {
+        'css_uris': automation_definition.css_uris.copy(), 'css_texts': [],
+        'js_uris': [], 'js_texts': []}
     design_name = automation_definition.get_design_name(step_name)
     for_embed = '_embed' in request_params
     for_print = '_print' in request_params
@@ -85,7 +86,7 @@ def get_step_response_dictionary(
         automation_definition, batch_definition, step_name)
     return {
         'css_uris': get_unique_order(m['css_uris']),
-        'css_text': get_css_text(design_name, for_embed, for_print),
+        'css_text': get_css_text(design_name, for_embed, for_print, m),
         'main_text': main_text, 'main_class': get_main_class(design_name),
         'js_uris': get_unique_order(m['js_uris']),
         'js_text': '\n'.join(get_unique_order(m['js_texts'])),
@@ -122,7 +123,7 @@ def render_variable_html(
     return page_dictionary['main_text']
 
 
-def get_css_text(design_name, for_embed, for_print):
+def get_css_text(design_name, for_embed, for_print, m):
     css_texts = []
     if for_embed:
         css_texts.append(EMBEDDED_CSS)
@@ -132,7 +133,7 @@ def get_css_text(design_name, for_embed, for_print):
         css_texts.append(DEFAULT_CSS)
     if design_name == 'flex-vertical':
         css_texts.append(FLEX_VERTICAL_CSS)
-    return '\n'.join(css_texts)
+    return '\n'.join(css_texts + get_unique_order(m['css_texts']))
 
 
 def get_main_class(design_name):

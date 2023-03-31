@@ -26,7 +26,38 @@ from ..macros.iterable import find_item
 from ..macros.package import import_attribute
 from ..settings import (
     view_by_name)
-from .asset import asset_storage
+from .asset import (
+    CHECKBOX_HTML_INPUT,
+    CHECKBOX_JS_HEADER,
+    CHECKBOX_JS_INPUT,
+    CHECKBOX_JS_OUTPUT,
+    FRAME_JS_HEADER,
+    FRAME_JS_OUTPUT,
+    IMAGE_JS_HEADER,
+    IMAGE_JS_OUTPUT,
+    JSON_JS_HEADER,
+    JSON_JS_OUTPUT,
+    LINK_JS_HEADER,
+    LINK_JS_OUTPUT,
+    MARKDOWN_JS_HEADER,
+    MARKDOWN_JS_OUTPUT,
+    PDF_CSS,
+    PDF_JS_HEADER,
+    PDF_JS_OUTPUT,
+    RADIO_HTML_INPUT,
+    RADIO_JS_HEADER,
+    RADIO_JS_INPUT,
+    RADIO_JS_OUTPUT,
+    STRING_HTML_INPUT,
+    STRING_JS_HEADER,
+    STRING_JS_INPUT,
+    STRING_JS_OUTPUT,
+    TABLE_JS_HEADER,
+    TABLE_JS_OUTPUT,
+    TEXT_HTML_INPUT,
+    TEXT_JS_HEADER,
+    TEXT_JS_INPUT,
+    TEXT_JS_OUTPUT)
 from .interface import Batch
 
 
@@ -86,18 +117,18 @@ class VariableView():
     def render_input(self, b: Batch, x: Element):
         return {
             'css_uris': [],
+            'css_texts': [],
             'js_uris': [],
-            'main_text': '',
             'js_texts': [],
-        }
+            'main_text': ''}
 
     def render_output(self, b: Batch, x: Element):
         return {
             'css_uris': [],
+            'css_texts': [],
             'js_uris': [],
-            'main_text': '',
             'js_texts': [],
-        }
+            'main_text': ''}
 
 
 class LinkView(VariableView):
@@ -126,8 +157,8 @@ class LinkView(VariableView):
                 'element_id': element_id,
                 'link_text': escape_quotes_js(link_text)})]
         return {
-            'css_uris': [], 'js_uris': [], 'main_text': main_text,
-            'js_texts': js_texts}
+            'css_uris': [], 'css_texts': [], 'js_uris': [],
+            'js_texts': js_texts, 'main_text': main_text}
 
 
 class StringView(VariableView):
@@ -163,16 +194,14 @@ class StringView(VariableView):
             'variable_id': variable_id,
             'value': escape_quotes_html(value),
             'input_type': self.input_type,
-            'suggestions': c.get('suggestions', []),
-        })
+            'suggestions': c.get('suggestions', [])})
         if x.design_name not in ['none']:
             main_text = add_label_html(main_text, c, variable_id, element_id)
         js_texts = [
-            STRING_JS_INPUT.substitute({'view_name': view_name}),
-        ]
+            STRING_JS_INPUT.substitute({'view_name': view_name})]
         return {
-            'css_uris': [], 'js_uris': [], 'main_text': main_text,
-            'js_texts': js_texts}
+            'css_uris': [], 'css_texts': [], 'js_uris': [],
+            'main_text': main_text, 'js_texts': js_texts}
 
     def render_output(self, b: Batch, x: Element):
         value = self.get_value(b, x)
@@ -199,8 +228,8 @@ class StringView(VariableView):
                 'element_id': element_id,
                 'data_uri': data_uri})]
         return {
-            'css_uris': [], 'js_uris': [], 'main_text': main_text,
-            'js_texts': js_texts}
+            'css_uris': [], 'css_texts': [], 'js_uris': [],
+            'js_texts': js_texts, 'main_text': main_text}
 
 
 class NumberView(StringView):
@@ -261,8 +290,8 @@ class TextView(VariableView):
                     'element_id': element_id,
                     'data_uri': b.get_data_uri(variable_definition, x)})])
         return {
-            'css_uris': [], 'js_uris': [], 'main_text': main_text,
-            'js_texts': js_texts}
+            'css_uris': [], 'css_texts': [], 'js_uris': [],
+            'main_text': main_text, 'js_texts': js_texts}
 
     def render_output(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
@@ -284,8 +313,8 @@ class TextView(VariableView):
                 'element_id': element_id,
                 'data_uri': data_uri})]
         return {
-            'css_uris': [], 'js_uris': [], 'main_text': main_text,
-            'js_texts': js_texts}
+            'css_uris': [], 'css_texts': [], 'js_uris': [],
+            'js_texts': js_texts, 'main_text': main_text}
 
 
 class MarkdownView(TextView):
@@ -315,8 +344,8 @@ class MarkdownView(TextView):
                 'element_id': element_id,
                 'data_uri': data_uri})]
         return {
-            'css_uris': [], 'js_uris': self.js_uris, 'main_text': main_text,
-            'js_texts': js_texts}
+            'css_uris': [], 'css_texts': [], 'js_uris': self.js_uris,
+            'js_texts': js_texts, 'main_text': main_text}
 
 
 class ImageView(VariableView):
@@ -343,8 +372,8 @@ class ImageView(VariableView):
                 'element_id': element_id,
                 'data_uri': data_uri})]
         return {
-            'css_uris': [], 'js_uris': [], 'main_text': main_text,
-            'js_texts': js_texts}
+            'css_uris': [], 'css_texts': [], 'js_uris': [],
+            'js_texts': js_texts, 'main_text': main_text}
 
 
 class RadioView(VariableView):
@@ -378,8 +407,8 @@ class RadioView(VariableView):
                     'variable_id': variable_id, 'element_id': element_id,
                     'data_uri': data_uri})])
         return {
-            'css_uris': [], 'js_uris': [], 'main_text': main_text,
-            'js_texts': js_texts}
+            'css_uris': [], 'css_texts': [], 'js_uris': [],
+            'main_text': main_text, 'js_texts': js_texts}
 
 
 class CheckboxView(VariableView):
@@ -414,8 +443,8 @@ class CheckboxView(VariableView):
                     'element_id': element_id,
                     'data_uri': data_uri})])
         return {
-            'css_uris': [], 'js_uris': [], 'main_text': main_text,
-            'js_texts': js_texts}
+            'css_uris': [], 'css_texts': [], 'js_uris': [],
+            'main_text': main_text, 'js_texts': js_texts}
 
 
 class TableView(VariableView):
@@ -441,8 +470,8 @@ class TableView(VariableView):
                 'element_id': element_id,
                 'data_uri': data_uri})]
         return {
-            'css_uris': [], 'js_uris': [], 'main_text': main_text,
-            'js_texts': js_texts}
+            'css_uris': [], 'css_texts': [], 'js_uris': [],
+            'js_texts': js_texts, 'main_text': main_text}
 
 
 class FrameView(VariableView):
@@ -475,8 +504,8 @@ class FrameView(VariableView):
                 'element_id': element_id,
                 'data_uri': data_uri})]
         return {
-            'css_uris': [], 'js_uris': [], 'main_text': main_text,
-            'js_texts': js_texts}
+            'css_uris': [], 'css_texts': [], 'js_uris': [],
+            'js_texts': js_texts, 'main_text': main_text}
 
 
 class JsonView(VariableView):
@@ -493,13 +522,14 @@ class JsonView(VariableView):
                 'variable_id': variable_id,
                 'data_uri': data_uri})]
         return {
-            'css_uris': [], 'js_uris': [], 'main_text': '',
-            'js_texts': js_texts}
+            'css_uris': [], 'css_texts': [], 'js_uris': [],
+            'js_texts': js_texts, 'main_text': ''}
 
 
 class PdfView(VariableView):
 
     view_name = 'pdf'
+    css_texts = [PDF_CSS]
 
     def render_output(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
@@ -518,8 +548,8 @@ class PdfView(VariableView):
                 'element_id': element_id,
                 'data_uri': data_uri})]
         return {
-            'css_uris': [], 'js_uris': [], 'main_text': main_text,
-            'js_texts': js_texts}
+            'css_uris': [], 'css_texts': self.css_texts, 'js_uris': [],
+            'js_texts': js_texts, 'main_text': main_text}
 
 
 def initialize_view_by_name():
@@ -838,66 +868,10 @@ def get_configuration_options(variable_configuration, variable_values):
     return options
 
 
-L = getLogger(__name__)
-
-
-LINK_JS_HEADER = asset_storage.load_raw_text('link-header.js')
-LINK_JS_OUTPUT = asset_storage.load_string_text('link-output.js')
-
-
-STRING_HTML_INPUT = asset_storage.load_jinja_text('string-input.html')
-STRING_JS_INPUT = asset_storage.load_string_text('string-input.js')
-STRING_JS_HEADER = asset_storage.load_raw_text('string-header.js')
-STRING_JS_OUTPUT = asset_storage.load_string_text('string-output.js')
-
-
-TEXT_HTML_INPUT = asset_storage.load_string_text('text-input.html')
-TEXT_JS_HEADER = asset_storage.load_raw_text('text-header.js')
-TEXT_JS_INPUT = asset_storage.load_string_text('text-input.js')
-TEXT_JS_OUTPUT = asset_storage.load_string_text('text-output.js')
-
-
-MARKDOWN_JS_HEADER = asset_storage.load_raw_text('markdown-header.js')
-MARKDOWN_JS_OUTPUT = asset_storage.load_string_text('markdown-output.js')
-
-
-IMAGE_JS_HEADER = asset_storage.load_raw_text('image-header.js')
-IMAGE_JS_OUTPUT = asset_storage.load_string_text('image-output.js')
-
-
-RADIO_HTML_INPUT = asset_storage.load_jinja_text('radio-input.html')
-RADIO_JS_HEADER = asset_storage.load_raw_text('radio-header.js')
-RADIO_JS_INPUT = asset_storage.load_string_text('radio-input.js')
-RADIO_JS_OUTPUT = asset_storage.load_string_text('radio-output.js')
-
-
-CHECKBOX_HTML_INPUT = asset_storage.load_jinja_text('checkbox-input.html')
-CHECKBOX_JS_HEADER = asset_storage.load_raw_text('checkbox-header.js')
-CHECKBOX_JS_INPUT = asset_storage.load_string_text('checkbox-input.js')
-CHECKBOX_JS_OUTPUT = asset_storage.load_string_text('checkbox-output.js')
-
-
-TABLE_JS_HEADER = asset_storage.load_raw_text('table-header.js')
-TABLE_JS_OUTPUT = asset_storage.load_string_text('table-output.js')
-
-
-FRAME_JS_HEADER = asset_storage.load_raw_text('frame-header.js')
-FRAME_JS_OUTPUT = asset_storage.load_string_text('frame-output.js')
-
-
-JSON_JS_HEADER = asset_storage.load_raw_text('json-header.js')
-JSON_JS_OUTPUT = asset_storage.load_string_text('json-output.js')
-
-
-PDF_JS_HEADER = asset_storage.load_raw_text('pdf-header.js')
-PDF_JS_OUTPUT = asset_storage.load_string_text('pdf-output.js')
-
-
 YIELD_DATA_BY_ID_BY_EXTENSION = {
     '.csv': yield_data_by_id_from_csv,
     '.txt': yield_data_by_id_from_txt}
-
-
 FILE_DATA_CACHE = FileCache(
     load_file_data=load_file_data,
     maximum_length=MAXIMUM_FILE_CACHE_LENGTH)
+L = getLogger(__name__)

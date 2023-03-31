@@ -1,0 +1,5 @@
+@layer pdf {
+  ._pdf {
+    height: 75vh;
+  }
+}

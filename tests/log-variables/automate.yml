@@ -1,5 +1,5 @@
 ---
-crosscompute: 0.9.3
+crosscompute: 0.9.4
 name: Test Log Variables
 version: 0.0.1
 input:

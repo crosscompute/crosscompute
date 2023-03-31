@@ -4,7 +4,7 @@
 {% if not for_embed and not for_print %}
 <a href="{{ root_uri or '/' }}">Root</a> &gt;
 <a href="{{ root_uri }}{{ automation_definition.uri }}">{{ automation_definition.name }}</a> &gt;
-<a>{{ batch_definition.name }}</a> &gt;
+{{ batch_definition.name }} &gt;
 {{ step_name.title() }}
 {% endif %}
 {% endblock %}

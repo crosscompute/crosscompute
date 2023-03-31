@@ -1,5 +1,5 @@
 ---
-crosscompute: 0.9.3
+crosscompute: 0.9.4
 name: Test Variable Views
 version: 0.3.0
 input:
