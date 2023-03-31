@@ -715,12 +715,8 @@ def validate_batch_identifiers(batch_dictionary):
             raise
     d = {'folder': Path(folder), 'name': name, 'slug': slug}
     if data_by_id is not None:
-        if not is_run:
-            d['slug'] = format_slug(slug)
+        d['slug'] = slug = format_slug(slug)
         d['uri'] = BATCH_ROUTE.format(batch_slug=slug)
-    for k, v in d.items():
-        if k in batch_dictionary:
-            batch_dictionary[k] = v
     return d
 
 

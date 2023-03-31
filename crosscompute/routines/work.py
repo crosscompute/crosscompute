@@ -340,6 +340,11 @@ def _get_automation_pack(automation_definitions, reference_uri):
             batch_definition = find_item(
                 automation_definition.batch_definitions, 'slug', batch_slug)
         except StopIteration:
+            print(automation_definition.batch_definitions)
+            print(batch_slug)
+            for x in automation_definition.batch_definitions:
+                print(x.slug)
+                print(x.slug == batch_slug)
             raise IndexError
     else:
         batch_definition = automation_definition.batch_definitions[0]

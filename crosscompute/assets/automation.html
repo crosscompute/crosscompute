@@ -23,10 +23,10 @@
 {% endif %}
 {% if not for_embed %}
 <ul class="_batches">
-{% for batch in batches %}
-{% set absolute_batch_uri = root_uri + uri + batch['uri'] %}
+{% for batch_definition in batch_definitions %}
+{% set absolute_batch_uri = root_uri + uri + batch_definition.uri %}
 <li>
-{{ batch['name'] }}
+{{ batch_definition.name }}
 <a href="{{ absolute_batch_uri }}/i">input</a>
 <a href="{{ absolute_batch_uri }}/o">output</a>
 {% if automation_definition.variable_definitions_by_step_name['print'] %}
