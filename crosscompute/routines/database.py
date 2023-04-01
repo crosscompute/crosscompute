@@ -178,7 +178,8 @@ def add_template_infos(memory, configuration):
                 if 'path' not in template_definition:
                     continue
                 path = automation_folder / template_definition.path
-                memory.add(path, template_info)
+                step_code = STEP_CODE_BY_NAME[step_name]
+                memory.add(path, template_info | {'step': step_code})
         d = automation_definition.template_path_by_id
         for template_id, template_path in d.items():
             path = automation_folder / template_path

@@ -1,4 +1,3 @@
-import re
 import shlex
 import subprocess
 from collections import defaultdict
@@ -41,6 +40,9 @@ from ..settings import (
     template_globals)
 from .configuration import (
     get_folder_plus_path)
+from .uri import (
+    get_automation_slug,
+    get_batch_slug)
 from .variable import (
     get_variable_data_by_id,
     get_variable_value_by_id,
@@ -322,19 +324,17 @@ def _get_automation_task(
 
 
 def _get_automation_pack(automation_definitions, reference_uri):
-    automation_match = AUTOMATION_PATTERN.match(reference_uri)
-    if not automation_match:
+    automation_slug = get_automation_slug(reference_uri)
+    if not automation_slug:
         raise IndexError
-    automation_slug = automation_match.group(1)
     try:
         automation_definition = find_item(
             automation_definitions, 'slug', automation_slug,
             normalize=str.casefold)
     except StopIteration:
         raise IndexError
-    batch_match = BATCH_PATTERN.search(reference_uri)
-    if batch_match:
-        batch_slug = batch_match.group(1)
+    batch_slug = get_batch_slug(reference_uri)
+    if batch_slug:
         try:
             batch_definition = find_item(
                 automation_definition.batch_definitions, 'slug', batch_slug)
@@ -695,8 +695,6 @@ def _run_podman_command(options, terms):
     return subprocess.run(command_terms, **options)
 
 
-AUTOMATION_PATTERN = re.compile('/a/([^/]+)')
-BATCH_PATTERN = re.compile('/b/([^/]+)')
 CONTAINER_IGNORE_TEXT = '''\
 **/.git
 **/.gitignore
