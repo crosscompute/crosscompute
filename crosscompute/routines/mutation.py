@@ -21,7 +21,7 @@ def get_mutation(file_changes, reference_uri, old_time):
             code = info['code']
             if code == 'c':
                 configurations.append({})
-            elif code == 'v':
+            elif code == 'v' and info['step'] != 'i':
                 if reference_uri.startswith(info['uri']):
                     # TODO: Send value if authorized
                     variables.append({'id': info['id']})

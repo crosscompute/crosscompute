@@ -97,7 +97,7 @@ async def run_automation_json(
 
     site['tasks'].append((
         automation_definition, batch_definition, site['environment'],
-        Task.RUN_PRINT, time()))
+        Task.RUN_PRINT))
     automation_definition.batch_definitions.append(batch_definition)
 
     step_code = 'l' if automation_definition.get_variable_definitions(

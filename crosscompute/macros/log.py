@@ -8,11 +8,11 @@ class Clock:
         self.time_by_key = {}
 
     @contextmanager
-    def time(self, name, t):
+    def time(self, name):
         d = self.time_by_key
         key_a = _get_start_key(name)
         key_b = _get_end_key(name)
-        d[key_a] = t
+        d[key_a] = time()
         try:
             del d[key_b]
         except KeyError:
@@ -20,13 +20,15 @@ class Clock:
         yield
         d[key_b] = time()
 
-    def is_in(self, name):
+    def is_in(self, name, t=None):
         time_a = self.get_start_time(name)
         time_b = self.get_end_time(name)
         if not time_a:
             return False
         if not time_b:
             return True
+        if t:
+            return time_a < t and t < time_b
         return False
 
     def get_start_time(self, name):

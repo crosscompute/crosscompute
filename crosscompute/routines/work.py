@@ -42,8 +42,6 @@ from ..settings import (
 from .configuration import (
     get_folder_plus_path)
 from .variable import (
-    # format_text,
-    # get_data_by_id,
     get_variable_data_by_id,
     get_variable_value_by_id,
     process_variable_data,
@@ -59,7 +57,7 @@ class AbstractEngine():
     def run_batch(
             self, automation_definition, batch_definition, user_environment):
         reference_time = time()
-        batch_folder, batch_environment = _prepare_batch(
+        batch_folder, batch_environment = prepare_batch(
             automation_definition, batch_definition)
         if not automation_definition.script_definitions:
             return
@@ -220,8 +218,8 @@ def update_datasets(automation_definition):
             elif target_path.exists():
                 continue
             symlink(relpath(source_path, target_folder), target_path)
-        elif 'url' in reference_configuration:
-            reference_uri = reference_configuration['url']
+        elif 'uri' in reference_configuration:
+            reference_uri = reference_configuration['uri']
             try:
                 download_uri(reference_uri, target_path)
             except URLError:
@@ -231,8 +229,11 @@ def update_datasets(automation_definition):
 def process_loop(
         automation_definitions, automation_tasks, live_uris, file_changes,
         user_environment, server_port, with_rebuild):
-    for automation_definition in automation_definitions:
-        prepare_automation(automation_definition, with_rebuild)
+    with ThreadPoolExecutor() as executor:
+        for a in automation_definitions:
+            for b in a.batch_definitions:
+                executor.submit(prepare_automation, a, b)
+                executor.submit(prepare_batch, a, b)
     try:
         while True:
             sleep(1)
@@ -317,9 +318,7 @@ def _get_automation_task(
             automation_definition = None
     if not automation_definition:
         raise IndexError
-    return (
-        automation_definition, batch_definition, user_environment, task_mode,
-        time())
+    return automation_definition, batch_definition, user_environment, task_mode
 
 
 def _get_automation_pack(automation_definitions, reference_uri):
@@ -340,11 +339,6 @@ def _get_automation_pack(automation_definitions, reference_uri):
             batch_definition = find_item(
                 automation_definition.batch_definitions, 'slug', batch_slug)
         except StopIteration:
-            print(automation_definition.batch_definitions)
-            print(batch_slug)
-            for x in automation_definition.batch_definitions:
-                print(x.slug)
-                print(x.slug == batch_slug)
             raise IndexError
     else:
         batch_definition = automation_definition.batch_definitions[0]
@@ -362,7 +356,10 @@ def _get_task_mode(automation_definition, batch_definition, file_changes):
             continue
         for info in infos:
             code = info['code']
-            if code in ['f']:
+            if code == 'v' and info['step'] == 'i':
+                if batch_clock.is_in('run', t):
+                    continue
+            elif code == 'f':
                 return Task.RUN_PRINT
         if t < print_time:
             continue
@@ -376,14 +373,14 @@ def _get_task_mode(automation_definition, batch_definition, file_changes):
 
 def _process_task(
         automation_definition, batch_definition, user_environment, task_mode,
-        task_time, server_port):
+        server_port):
     batch_clock = batch_definition.clock
     try:
         if task_mode == Task.RUN_PRINT:
-            with batch_clock.time('run', task_time):
+            with batch_clock.time('run'):
                 _run_batch(
                     automation_definition, batch_definition, user_environment)
-        with batch_clock.time('print', task_time):
+        with batch_clock.time('print'):
             _print_batch(automation_definition, batch_definition, server_port)
     except CrossComputeError as e:
         e.automation_definition = automation_definition
@@ -419,7 +416,7 @@ def _print_batch(automation_definition, batch_definition, server_port):
         printer.render([batch_dictionary], variable_configuration)
 
 
-def _prepare_batch(automation_definition, batch_definition):
+def prepare_batch(automation_definition, batch_definition):
     variable_definitions = automation_definition.get_variable_definitions(
         'input')
     variable_definitions_by_path = group_by(variable_definitions, 'path')

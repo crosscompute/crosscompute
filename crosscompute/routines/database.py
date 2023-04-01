@@ -9,6 +9,8 @@ from ..constants import (
     BATCH_ROUTE,
     STEP_CODE_BY_NAME,
     STEP_ROUTE)
+from .configuration import (
+    get_folder_plus_path)
 
 
 class DiskDatabase():
@@ -26,7 +28,7 @@ class DiskDatabase():
             if path.is_dir():
                 continue
             try:
-                infos = self._get(path)
+                infos = self.get(path)
             except KeyError:
                 continue
             for info in infos:
@@ -40,20 +42,20 @@ class DiskDatabase():
             self._changes[time()] = changed_infos
         return changed_infos
 
-    def _get(self, path):
+    def get(self, path):
         configuration = self._configuration
         for automation_definition in configuration.automation_definitions:
             automation_folder = automation_definition.folder
             runs_folder = automation_folder / 'runs'
-            if not is_path_in_folder(path, runs_folder):
-                continue
-            run_id = path.relative_to(runs_folder).parts[0]
-            batch_uri = BATCH_ROUTE.format(batch_slug=run_id)
-            memory = DiskMemory()
-            add_variable_infos_from_folder(
-                memory, automation_definition, runs_folder / run_id, batch_uri)
-            infos = memory.get(path)
-            break
+            if is_path_in_folder(path, runs_folder):
+                run_id = path.relative_to(runs_folder).parts[0]
+                batch_uri = BATCH_ROUTE.format(batch_slug=run_id)
+                memory = DiskMemory()
+                add_variable_infos_from_folder(
+                    memory, automation_definition, runs_folder / run_id,
+                    batch_uri)
+                infos = memory.get(path)
+                break
         else:
             infos = self._memory.get(path)
         return infos
@@ -76,7 +78,7 @@ class DiskMemory():
 
 
 def learn(configuration):
-    'Set c:code, v:variable, t:template, s:style'
+    'Set c:code, f:script, v:variable, t:template, s:style'
     memory = DiskMemory()
     add_code_infos(memory, configuration)
     add_script_infos(memory, configuration)
@@ -107,8 +109,14 @@ def add_code_infos(memory, configuration):
 def add_script_infos(memory, configuration):
     info = {'code': 'f'}
     for automation_definition in configuration.automation_definitions:
+        automation_folder = automation_definition.folder
+        for dataset_definition in automation_definition.dataset_definitions:
+            reference_configuration = dataset_definition.reference
+            reference_path = get_folder_plus_path(reference_configuration)
+            if reference_path:
+                file_path = automation_folder / reference_path
+                memory.add(file_path, info)
         for script_definition in automation_definition.script_definitions:
-            automation_folder = automation_definition.folder
             path = script_definition.path
             if path:
                 memory.add(automation_folder / path, info)
@@ -148,7 +156,8 @@ def add_variable_infos_from_folder(
                 info_uri = uri + step_uri
             else:
                 info_uri = uri
-            variable_info = info | {'id': variable_id, 'uri': info_uri}
+            variable_info = info | {
+                'id': variable_id, 'uri': info_uri, 'step': step_code}
             variable_configuration = variable_definition.configuration
             if 'path' in variable_configuration:
                 path = folder / variable_configuration['path']
