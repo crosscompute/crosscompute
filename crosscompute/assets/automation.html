@@ -18,7 +18,7 @@
 
 {% block main_html %}
 {% if step_name != 'none' %}
-{{ super() }}
+{{ super() -}}
 {% include 'step-main.html' %}
 {% endif %}
 {% if not for_embed %}
@@ -40,5 +40,5 @@
 
 {% block body_js %}
 {% include 'step-body.js' %}
-{{ super() }}
+{{ super() -}}
 {% endblock %}

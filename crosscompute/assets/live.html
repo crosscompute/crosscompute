@@ -16,7 +16,7 @@ function registerCallback(variableId, f) {
   register(callbacks, variableId, f);
 }
 </script>
-{%- endblock %}
+{% endblock %}
 
 {% block body_js %}
 {% if step_name != 'input' %}
@@ -89,4 +89,4 @@ function setupMutationStream() {
 let mutationStream, mutationTimeout, mutationTime = {{ mutation_time }}, retryMilliseconds = 1000;
 setupMutationStream();
 {% endif %}
-{%- endblock %}
+{% endblock %}
