@@ -1,14 +1,12 @@
 main > * {
   margin: 0;
 }
-._vertical {
+._vertical, ._view {
   display: flex;
   flex-direction: column;
-  gap: 16px;
 }
-._view {
-  display: flex;
-  flex-direction: column;
+._vertical {
+  gap: 16px;
 }
 ._view img {
   align-self: start;

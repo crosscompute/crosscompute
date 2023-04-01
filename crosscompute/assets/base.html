@@ -13,7 +13,7 @@
 {% endif %}
 <style>
 {% block head_css %}
-{{ css_text | safe }}
+{{ css_text | safe -}}
 {% endblock %}
 </style>
 {% endblock %}
@@ -21,7 +21,7 @@
 <body>
 <header>
 {% block header_html %}
-{{ header_text | safe }}
+{{ header_text | safe -}}
 {% endblock %}
 </header>
 {% if main_class %}
@@ -30,12 +30,12 @@
 <main>
 {% endif %}
 {% block main_html %}
-{{ main_text | safe }}
+{{ main_text | safe -}}
 {% endblock %}
 </main>
 <footer>
 {% block footer_html %}
-{{ footer_text | safe }}
+{{ footer_text | safe -}}
 {% endblock %}
 </footer>
 {% for js_uri in js_uris %}
@@ -43,7 +43,7 @@
 {% endfor %}
 <script>
 {% block body_js %}
-{{ js_text | safe }}
+{{ js_text | safe -}}
 {% endblock %}
 </script>
 </body>
