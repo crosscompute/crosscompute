@@ -20,9 +20,6 @@ function registerCallback(variableId, f) {
 
 {% block body_js %}
 {% if step_name != 'input' %}
-async function runEach(xs) {
-  await Promise.all((xs || []).map(_ => _()));
-}
 async function refreshVariable(variableId) {
   await runEach(functions[variableId]);
   await runEach(callbacks[variableId]);
@@ -31,6 +28,9 @@ async function refreshVariable(variableId) {
     mutationStream.close();
   }
 {% endif %}
+}
+async function runEach(xs) {
+  await Promise.all((xs || []).map(_ => _()));
 }
 {% endif %}
 {{ super() -}}
@@ -57,14 +57,14 @@ function refreshStyle() {
 function setupMutationStream() {
   mutationStream = new EventSource(rootUri + '/streams{{ mutation_uri }}?t=' + mutationTime);
   mutationStream.onopen = () => {
-    retryMilliseconds = 1000;
+    retrySeconds = 1;
   };
   mutationStream.onerror = () => {
     mutationStream.close();
     clearTimeout(mutationTimeout);
-    mutationTimeout = setTimeout(setupMutationStream, retryMilliseconds);
-    if (retryMilliseconds < 60000) {
-      retryMilliseconds *= 2;
+    mutationTimeout = setTimeout(setupMutationStream, retrySeconds);
+    if (retrySeconds < 60) {
+      retrySeconds *= 2;
     }
   };
   mutationStream.onmessage = async ({ data }) => {
@@ -86,7 +86,7 @@ function setupMutationStream() {
     mutationTime = d.mutation_time;
   };
 }
-let mutationStream, mutationTimeout, mutationTime = {{ mutation_time }}, retryMilliseconds = 1000;
+let mutationStream, mutationTimeout, mutationTime = {{ mutation_time }}, retrySeconds = 1;
 setupMutationStream();
 {% endif %}
 {% endblock %}
