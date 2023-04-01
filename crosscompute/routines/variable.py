@@ -320,9 +320,7 @@ class TextView(VariableView):
 class MarkdownView(TextView):
 
     view_name = 'markdown'
-    js_uris = [
-        'https://cdn.jsdelivr.net/npm/marked/marked.min.js',
-    ]
+    js_uris = ['https://cdn.jsdelivr.net/npm/marked/marked.min.js']
 
     def render_output(self, b: Batch, x: Element):
         variable_definition = self.variable_definition

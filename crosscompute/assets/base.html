@@ -8,6 +8,7 @@
 {% for css_uri in css_uris %}
 <link href="{{ css_uri if '//' in css_uri else root_uri + css_uri }}" rel="stylesheet">
 {% endfor %}
+<link href="https://cdn.jsdelivr.net/npm/pygments-css@1.0.0/default.css" rel="stylesheet">
 {% if root_uri %}
 <link rel="icon" href="{{ root_uri }}/favicon.ico"/>
 {% endif %}
