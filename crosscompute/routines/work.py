@@ -1,3 +1,4 @@
+import json
 import shlex
 import subprocess
 from collections import defaultdict
@@ -15,6 +16,7 @@ from urllib.request import urlretrieve as download_uri
 
 import requests
 from invisibleroads_macros_disk import make_folder
+from invisibleroads_macros_log import get_timestamp, LONGSTAMP_TEMPLATE
 from invisibleroads_macros_web.port import find_open_port
 from jinja2 import Template
 
@@ -44,6 +46,8 @@ from .uri import (
     get_automation_slug,
     get_batch_slug)
 from .variable import (
+    format_text,
+    get_data_by_id,
     get_variable_data_by_id,
     get_variable_value_by_id,
     process_variable_data,
@@ -399,21 +403,49 @@ def _run_batch(automation_definition, batch_definition, user_environment):
 
 def _print_batch(automation_definition, batch_definition, server_port):
     root_uri = template_globals['root_uri']
-    folder = make_folder(
-        automation_definition.folder / batch_definition.folder / 'print')
-    variable_definitions = automation_definition.get_variable_definitions(
-        'print')
     automation_uri = automation_definition.uri
+    automation_folder = automation_definition.folder
     batch_uri = batch_definition.uri
-    for variable_definition in variable_definitions:
+    batch_folder = batch_definition.folder
+    batch_name = batch_definition.name
+    folder = make_folder(automation_folder / batch_folder / 'print')
+    print_definitions = automation_definition.get_variable_definitions('print')
+    link_definitions = []
+    name_by_path = {}
+    for variable_definition in print_definitions:
         view_name = variable_definition.view_name
-        variable_configuration = variable_definition.configuration
-        batch_dictionary = {
-            'path': str(folder / variable_definition.path),
-            'uri': automation_uri + batch_uri}
-        Printer = printer_by_name[view_name]
-        printer = Printer(f'http://127.0.0.1:{server_port}{root_uri}')
-        printer.render([batch_dictionary], variable_configuration)
+        if view_name in printer_by_name:
+            variable_path = variable_definition.path
+            variable_configuration = variable_definition.configuration
+
+            extra_data_by_id = {'timestamp': {'value': get_timestamp(
+                template=LONGSTAMP_TEMPLATE)}}
+            data_by_id = get_data_by_id(
+                automation_definition, batch_definition) | extra_data_by_id
+            name_template = variable_configuration.get(
+                'name', '').strip() or f'{batch_name}.{view_name}'
+            name_by_path[variable_path] = format_text(
+                folder / name_template, data_by_id)
+
+            batch_dictionary = {
+                'path': str(folder / variable_path),
+                'uri': automation_uri + batch_uri}
+            Printer = printer_by_name[view_name]
+            printer = Printer(f'http://127.0.0.1:{server_port}{root_uri}')
+            printer.render([batch_dictionary], variable_configuration)
+        elif view_name == 'link':
+            link_definitions.append(variable_definition)
+    for variable_definition in link_definitions:
+        if 'path' not in variable_configuration:
+            continue
+        d = {}
+        variable_path = variable_definition.path
+        if 'link-text' not in variable_configuration:
+            d['link-text'] = name_by_path[variable_path]
+        if 'file-name' not in variable_configuration:
+            d['file-name'] = name_by_path[variable_path]
+        with (folder / variable_configuration['path']).open('wt') as f:
+            json.dump(d, f)
 
 
 def prepare_batch(automation_definition, batch_definition):

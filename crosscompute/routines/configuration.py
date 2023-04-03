@@ -654,7 +654,9 @@ def validate_variable_identifiers(variable_dictionary):
             f'{variable_id} is not a valid variable id; please use only '
             'lowercase, uppercase, numbers, hyphens, underscores and spaces')
     if variable_dictionary.step_name == 'print':
-        if view_name not in PRINTER_NAMES:
+        if view_name in ['link']:
+            pass
+        elif view_name not in PRINTER_NAMES:
             raise CrossComputeConfigurationError(
                 f'{view_name} is not a supported printer')
         elif view_name not in printer_by_name:
@@ -675,19 +677,26 @@ def validate_variable_configuration(variable_dictionary):
     c = get_dictionary(
         variable_dictionary, 'configuration')
     if variable_dictionary.step_name == 'print':
-        k = 'header-footer'
-        d = get_dictionary(c, k)
-        d['skip-first'] = bool(d.get('skip-first'))
-        k = 'page-number'
-        d = get_dictionary(c, k)
-        location = d.get('location')
-        if location and location not in ['header', 'footer']:
-            raise CrossComputeConfigurationError(
-                f'location {location} not supported for {k}')
-        alignment = d.get('alignment')
-        if alignment and alignment not in ['left', 'center', 'right']:
-            raise CrossComputeConfigurationError(
-                f'alignment {alignment} not supported for {k}')
+        variable_id = variable_dictionary.id
+        view_name = variable_dictionary.view_name
+        if view_name == 'link':
+            pass
+        else:
+            k = 'header-footer'
+            d = get_dictionary(c, k)
+            d['skip-first'] = bool(d.get('skip-first'))
+            k = 'page-number'
+            d = get_dictionary(c, k)
+            location = d.get('location')
+            if location and location not in ['header', 'footer']:
+                raise CrossComputeConfigurationError(
+                    f'print variable {variable_id} configuration {k} '
+                    f'location {location} not supported')
+            alignment = d.get('alignment')
+            if alignment and alignment not in ['left', 'center', 'right']:
+                raise CrossComputeConfigurationError(
+                    f'print variable {variable_id} configuration {k} '
+                    f'alignment {alignment} not supported')
     return {'configuration': c}
 
 
