@@ -30,6 +30,7 @@ Here are some available views:
 - table
 - frame
 - json
+- pdf
 - map-mapbox (crosscompute-views-map)
 - map-mapbox-location (crosscompute-views-map)
 - map-deck-screengrid (crosscompute-views-map)

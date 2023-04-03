@@ -13,7 +13,7 @@ from time import time
 
 import tomli
 from invisibleroads_macros_log import format_path
-from invisibleroads_macros_text import format_slug
+from invisibleroads_macros_text import format_name, format_slug
 from nbconvert import PythonExporter
 from nbformat import read as load_notebook, NO_CONVERT
 from ruamel.yaml import YAML
@@ -666,10 +666,12 @@ def validate_variable_identifiers(variable_dictionary):
         raise CrossComputeConfigurationError(
             f'path {variable_path} for variable {variable_id} must be within '
             'the folder')
+    label = variable_dictionary.get('label', format_name(variable_id)).strip()
     return {
         'id': variable_id,
         'view_name': view_name,
-        'path': Path(variable_path)}
+        'path': Path(variable_path),
+        'label': label}
 
 
 def validate_variable_configuration(variable_dictionary):
