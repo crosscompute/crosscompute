@@ -40,8 +40,8 @@ input:
     - id: town_name
       view: string
       path: variables.dictionary
+      label: What is the name of your town?
       configuration:
-        label: What is the name of your town?
         suggestions:
           - value: Springfield
           - value: Branson
@@ -51,13 +51,11 @@ input:
     - id: age
       view: number
       path: variables.dictionary
-      configuration:
-        label: What is your age?
+      label: What is your age?
     - id: secret_code
       view: password
       path: ENVIRONMENT
-      configuration:
-        label: What is your secret code?
+      label: What is your secret code?
     - id: support_email
       view: email
       path: ENVIRONMENT
@@ -88,6 +86,13 @@ input:
           - value: writing
           - value: mathematics
           - value: swimming
+    - id: profile_photo
+      view: file
+      path: profile_photo.image
+      configuration:
+        mime-types:
+          - image/png
+          - image/jpeg
     - id: region
       view: map-mapbox-location
       path: variables.dictionary
@@ -136,7 +141,7 @@ output:
       path: variables.dictionary
     - id: cards
       view: json
-      path: variables.dictionary
+      path: cards.json
     - id: region
       view: map-mapbox
       path: region.geojson

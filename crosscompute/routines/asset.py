@@ -73,3 +73,6 @@ JSON_JS_OUTPUT = asset_storage.load_string_text('json-output.js')
 PDF_CSS = asset_storage.load_raw_text('pdf.css')
 PDF_JS_HEADER = asset_storage.load_raw_text('pdf-header.js')
 PDF_JS_OUTPUT = asset_storage.load_string_text('pdf-output.js')
+
+
+FILE_HTML_INPUT = asset_storage.load_string_text('file-input.html')

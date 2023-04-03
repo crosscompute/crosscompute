@@ -31,6 +31,7 @@ from .asset import (
     CHECKBOX_JS_HEADER,
     CHECKBOX_JS_INPUT,
     CHECKBOX_JS_OUTPUT,
+    FILE_HTML_INPUT,
     FRAME_JS_HEADER,
     FRAME_JS_OUTPUT,
     IMAGE_JS_HEADER,
@@ -166,8 +167,7 @@ class StringView(VariableView):
     view_name = 'string'
     input_type = 'text'
     function_by_name = {
-        'title': str.title,
-    }
+        'title': str.title}
 
     def get_value(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
@@ -527,8 +527,19 @@ class FileView(VariableView):
     view_name = 'file'
 
     def render_input(self, b: Batch, x: Element):
+        element_id = x.id
+        view_name = self.view_name
+        variable_id = self.variable_id
+        variable_definition = self.variable_definition
+        c = b.get_variable_configuration(variable_definition)
+        mime_types = c.get('mime-types', [])
         js_texts = []
-        main_text = []
+        main_text = FILE_HTML_INPUT.substitute({
+            'element_id': element_id,
+            'mode_name': x.mode_name,
+            'view_name': view_name,
+            'variable_id': variable_id,
+            'accept_what': ','.join(mime_types)})
         return {
             'css_uris': [], 'css_texts': [], 'js_uris': [],
             'js_texts': js_texts, 'main_text': main_text}

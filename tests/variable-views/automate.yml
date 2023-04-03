@@ -7,8 +7,8 @@ input:
     - id: town
       view: string
       path: variables.dictionary
+      label: What is the name of your town?
       configuration:
-        label: What is the name of your town?
         suggestions:
           - value: Springfield
           - value: Branson
@@ -18,13 +18,11 @@ input:
     - id: age
       view: number
       path: variables.dictionary
-      configuration:
-        label: What is your age?
+      label: What is your age?
     - id: secret_code
       view: password
       path: ENVIRONMENT
-      configuration:
-        label: What is your secret code?
+      label: What is your secret code?
     - id: support_email
       view: email
       path: ENVIRONMENT
@@ -55,12 +53,19 @@ input:
           - value: writing
           - value: mathematics
           - value: swimming
+    - id: profile_photo
+      view: file
+      path: profile_photo.image
+      configuration:
+        mime-types:
+          - image/png
+          - image/jpeg
     - id: region
       view: map-mapbox-location
       path: variables.dictionary
   templates:
-    - path: form-part1.md
-    - path: form-part2.md
+    - path: input1.md
+    - path: input2.md
 output:
   variables:
     - id: document
@@ -91,6 +96,12 @@ output:
     - id: counts
       view: table
       path: counts.json
+    - id: demo
+      view: frame
+      path: variables.dictionary
+    - id: cards
+      view: json
+      path: cards.json
     - id: region
       view: map-mapbox
       path: region.geojson
@@ -106,8 +117,8 @@ output:
       configuration:
         style: mapbox://styles/mapbox/dark-v10
   templates:
-    - path: report-part1.md
-    - path: report-part2.md
+    - path: output1.md
+    - path: output2.md
 batches:
   - folder: batches/standard
   - folder: batches/no-output
