@@ -315,7 +315,7 @@ display:
     # path specifies the location of a css file
     - path: style.css
     # uri specifies the uri of a css file
-    - uri: https://fonts.googleapis.com/css?family=Tangerine
+    - uri: https://cdn.jsdelivr.net/npm/pygments-css@1.0.0/default.css
 
   # templates override the core templates used to render the site
   templates:
