@@ -534,11 +534,14 @@ class PdfView(VariableView):
         variable_id = self.variable_id
         element_id = x.id
         data_uri = b.get_data_uri(variable_definition, x)
+        c = b.get_variable_configuration(variable_definition)
         main_text = (
             f'<iframe id="{element_id}" '
             f'class="_{x.mode_name} _{self.view_name} {variable_id}" '
             f'src="{data_uri}" frameborder="0">'
             '</iframe>')
+        if x.design_name not in ['none']:
+            main_text = add_label_html(main_text, c, variable_id, element_id)
         js_texts = [
             PDF_JS_HEADER,
             PDF_JS_OUTPUT.substitute({

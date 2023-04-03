@@ -5,9 +5,9 @@ from crosscompute.exceptions import (
     CrossComputeConfigurationError,
     CrossComputeError)
 from crosscompute.routines.configuration import (
+    process_header_footer_options,
+    process_page_number_options,
     validate_automation_identifiers,
-    validate_header_footer_options,
-    validate_page_number_options,
     validate_protocol,
     validate_templates,
     validate_variables)
@@ -93,29 +93,27 @@ def test_validate_templates(tmp_path):
     assert len(d['template_definitions_by_step_name']['input']) == 1
 
 
-def test_validate_header_footer_options():
-    c = DummyConfiguration()
-    c.configuration = {'header-footer': {}}
-    validate_header_footer_options(c)
-    assert c.configuration.get('header-footer')['skip-first'] is False
-    c.configuration = {'header-footer': {'skip-first': 'true'}}
-    validate_header_footer_options(c)
-    assert c.configuration['header-footer']['skip-first'] is True
+def test_process_header_footer_options():
+    d = {'header-footer': {}}
+    process_header_footer_options('x', d)
+    assert not d.get('header-footer').get('skip-first')
+    d = {'header-footer': {'skip-first': 'true'}}
+    process_header_footer_options('x', d)
+    assert d['header-footer'].get('skip-first')
 
 
-def test_validate_page_number_options():
-    c = DummyConfiguration()
-    c.configuration = {}
-    validate_page_number_options(c)
+def test_process_page_number_options():
+    d = {}
+    process_page_number_options('x', d)
 
-    c.configuration = {'page-number': {'location': 'x'}}
+    d = {'page-number': {'location': 'x'}}
     with raises(CrossComputeConfigurationError):
-        validate_page_number_options(c)
+        process_page_number_options('x', d)
 
-    c.configuration = {'page-number': {'alignment': 'x'}}
+    d = {'page-number': {'alignment': 'x'}}
     with raises(CrossComputeConfigurationError):
-        validate_page_number_options(c)
+        process_page_number_options('x', d)
 
-    c.configuration = {'page-number': {
+    d = {'page-number': {
         'location': 'footer', 'alignment': 'right'}}
-    validate_page_number_options(c)
+    process_page_number_options('x', d)

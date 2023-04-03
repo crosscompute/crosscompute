@@ -15,9 +15,8 @@ from crosscompute.routines.automation import (
 from crosscompute.routines.log import (
     configure_argument_parser_for_logging,
     configure_logging_from)
-from crosscompute.routines.variable import (
-    format_text,
-    get_data_by_id)
+from crosscompute.routines.work import (
+    format_batch_name)
 from crosscompute.scripts.configure import (
     configure_argument_parser_for_configuring)
 from crosscompute.scripts.run import (
@@ -64,27 +63,24 @@ def print_with(automation, args):
             minimum_port=MINIMUM_PORT, maximum_port=MAXIMUM_PORT)
     except OSError as e:
         raise CrossComputeError(e)
-    timestamp = get_timestamp(template=LONGSTAMP_TEMPLATE)
     packs = []
+    timestamp = get_timestamp(template=LONGSTAMP_TEMPLATE)
     for automation_definition in automation.definitions:
-        ds = automation_definition.get_variable_definitions('print')
-        if not ds:
+        print_definitions = automation_definition.get_variable_definitions(
+            'print')
+        if not print_definitions:
             continue
         run_automation(
             automation_definition, args.environment, with_rebuild=True)
-        for variable_definition in ds:
-            variable_configuration = variable_definition.configuration
-            packs.append((variable_configuration, get_batch_dictionaries(
-                automation_definition, variable_definition, timestamp)))
+        for print_definition in print_definitions:
+            packs.append((print_definition, _get_batch_dictionaries(
+                automation_definition, print_definition, timestamp)))
     args.port, args.with_browser, args.with_restart = port, False, False
     server_process = StoppableProcess(
         name='serve', target=serve_with, args=(automation, args))
     server_process.start()
     try:
-        for variable_configuration, batch_dictionaries in packs:
-            Printer = printer_by_name[variable_definition.view_name]
-            printer = Printer(f'http://127.0.0.1:{port}{args.root_uri}')
-            printer.render(batch_dictionaries, variable_configuration)
+        _render_prints(f'http://127.0.0.1:{port}{args.root_uri}', packs)
     except KeyboardInterrupt:
         pass
     except Exception as e:
@@ -93,27 +89,34 @@ def print_with(automation, args):
         server_process.stop()
 
 
-def get_batch_dictionaries(
-        automation_definition, variable_definition, timestamp):
+def _get_batch_dictionaries(
+        automation_definition, print_definition, timestamp):
     batch_dictionaries = []
     automation_folder = automation_definition.folder
     automation_uri = automation_definition.uri
-    variable_id = variable_definition.id
-    view_name = variable_definition.view_name
-    variable_configuration = variable_definition.configuration
-    name = variable_configuration.get('name', '').strip()
+    variable_id = print_definition.id
     folder = automation_folder / 'prints' / f'{variable_id}-{timestamp}'
     extra_data_by_id = {'timestamp': {'value': timestamp}}
     for batch_definition in automation_definition.batch_definitions:
-        batch_name = batch_definition.name
         batch_uri = batch_definition.uri
-        name_template = name or f'{batch_name}.{view_name}'
-        data_by_id = get_data_by_id(
-            automation_definition, batch_definition) | extra_data_by_id
-        path = format_text(folder / name_template, data_by_id)
+        path = folder / format_batch_name(
+            automation_definition, batch_definition, print_definition,
+            extra_data_by_id)
         batch_dictionaries.append({
-            'path': path, 'uri': automation_uri + batch_uri})
+            'path': str(path),
+            'uri': automation_uri + batch_uri})
     return batch_dictionaries
+
+
+def _render_prints(server_uri, packs):
+    for print_definition, batch_dictionaries in packs:
+        view_name = print_definition.view_name
+        if view_name not in printer_by_name:
+            continue
+        print_configuration = print_definition.configuration
+        Printer = printer_by_name[view_name]
+        printer = Printer(server_uri)
+        printer.render(batch_dictionaries, print_configuration)
 
 
 L = getLogger(__name__)

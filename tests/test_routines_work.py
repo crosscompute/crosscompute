@@ -3,7 +3,8 @@ from pytest import raises
 from crosscompute.exceptions import (
     CrossComputeConfigurationError,
     CrossComputeExecutionError)
-from crosscompute.routines.automation import _run_command
+from crosscompute.routines.work import (
+    _run_command)
 
 
 def test_run_command(tmp_path):

@@ -407,26 +407,19 @@ def _print_batch(automation_definition, batch_definition, server_port):
     automation_folder = automation_definition.folder
     batch_uri = batch_definition.uri
     batch_folder = batch_definition.folder
-    batch_name = batch_definition.name
     folder = make_folder(automation_folder / batch_folder / 'print')
     print_definitions = automation_definition.get_variable_definitions('print')
-    link_definitions = []
-    name_by_path = {}
-    for variable_definition in print_definitions:
-        view_name = variable_definition.view_name
+    extra_data_by_id = {'timestamp': {'value': get_timestamp(
+        template=LONGSTAMP_TEMPLATE)}}
+    link_definitions, name_by_path = [], {}
+    for print_definition in print_definitions:
+        view_name = print_definition.view_name
         if view_name in printer_by_name:
-            variable_path = variable_definition.path
-            variable_configuration = variable_definition.configuration
-
-            extra_data_by_id = {'timestamp': {'value': get_timestamp(
-                template=LONGSTAMP_TEMPLATE)}}
-            data_by_id = get_data_by_id(
-                automation_definition, batch_definition) | extra_data_by_id
-            name_template = variable_configuration.get(
-                'name', '').strip() or f'{batch_name}.{view_name}'
-            name_by_path[variable_path] = format_text(
-                folder / name_template, data_by_id)
-
+            variable_path = print_definition.path
+            variable_configuration = print_definition.configuration
+            name_by_path[variable_path] = format_batch_name(
+                automation_definition, batch_definition, print_definition,
+                extra_data_by_id)
             batch_dictionary = {
                 'path': str(folder / variable_path),
                 'uri': automation_uri + batch_uri}
@@ -434,18 +427,21 @@ def _print_batch(automation_definition, batch_definition, server_port):
             printer = Printer(f'http://127.0.0.1:{server_port}{root_uri}')
             printer.render([batch_dictionary], variable_configuration)
         elif view_name == 'link':
-            link_definitions.append(variable_definition)
-    for variable_definition in link_definitions:
-        if 'path' not in variable_configuration:
-            continue
-        d = {}
-        variable_path = variable_definition.path
-        if 'link-text' not in variable_configuration:
-            d['link-text'] = name_by_path[variable_path]
-        if 'file-name' not in variable_configuration:
-            d['file-name'] = name_by_path[variable_path]
-        with (folder / variable_configuration['path']).open('wt') as f:
-            json.dump(d, f)
+            link_definitions.append(print_definition)
+    _save_link_configurations(folder, name_by_path, link_definitions)
+
+
+def format_batch_name(
+        automation_definition, batch_definition, print_definition,
+        extra_data_by_id):
+    view_name = print_definition.view_name
+    variable_configuration = print_definition.configuration
+    batch_name = batch_definition.name
+    name_template = variable_configuration.get(
+        'name', '').strip() or f'{batch_name}.{view_name}'
+    data_by_id = get_data_by_id(
+        automation_definition, batch_definition) | extra_data_by_id
+    return format_text(name_template, data_by_id)
 
 
 def prepare_batch(automation_definition, batch_definition):
@@ -725,6 +721,21 @@ def _run_podman_command(options, terms):
     command_terms = ['podman'] + terms
     L.debug(command_terms)
     return subprocess.run(command_terms, **options)
+
+
+def _save_link_configurations(folder, name_by_path, link_definitions):
+    for variable_definition in link_definitions:
+        variable_configuration = variable_definition.configuration
+        if 'path' not in variable_configuration:
+            continue
+        d = {}
+        variable_path = variable_definition.path
+        if 'link-text' not in variable_configuration:
+            d['link-text'] = name_by_path[variable_path]
+        if 'file-name' not in variable_configuration:
+            d['file-name'] = name_by_path[variable_path]
+        with (folder / variable_configuration['path']).open('wt') as f:
+            json.dump(d, f)
 
 
 CONTAINER_IGNORE_TEXT = '''\

@@ -682,21 +682,8 @@ def validate_variable_configuration(variable_dictionary):
         if view_name == 'link':
             pass
         else:
-            k = 'header-footer'
-            d = get_dictionary(c, k)
-            d['skip-first'] = bool(d.get('skip-first'))
-            k = 'page-number'
-            d = get_dictionary(c, k)
-            location = d.get('location')
-            if location and location not in ['header', 'footer']:
-                raise CrossComputeConfigurationError(
-                    f'print variable {variable_id} configuration {k} '
-                    f'location {location} not supported')
-            alignment = d.get('alignment')
-            if alignment and alignment not in ['left', 'center', 'right']:
-                raise CrossComputeConfigurationError(
-                    f'print variable {variable_id} configuration {k} '
-                    f'alignment {alignment} not supported')
+            process_header_footer_options(variable_id, c)
+            process_page_number_options(variable_id, c)
     return {'configuration': c}
 
 
@@ -1080,6 +1067,27 @@ def get_batch_definitions(
 
 def make_automation_name(automation_index):
     return AUTOMATION_NAME.replace('X', str(automation_index))
+
+
+def process_header_footer_options(variable_id, print_configuration):
+    k = 'header-footer'
+    d = get_dictionary(print_configuration, k)
+    d['skip-first'] = bool(d.get('skip-first'))
+
+
+def process_page_number_options(variable_id, print_configuration):
+    k = 'page-number'
+    d = get_dictionary(print_configuration, k)
+    location = d.get('location')
+    if location and location not in ['header', 'footer']:
+        raise CrossComputeConfigurationError(
+            f'print variable {variable_id} configuration {k} '
+            f'location {location} not supported')
+    alignment = d.get('alignment')
+    if alignment and alignment not in ['left', 'center', 'right']:
+        raise CrossComputeConfigurationError(
+            f'print variable {variable_id} configuration {k} '
+            f'alignment {alignment} not supported')
 
 
 def get_folder_plus_path(d):
