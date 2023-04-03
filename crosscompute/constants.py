@@ -95,6 +95,10 @@ PROXY_URI = getenv('CROSSCOMPUTE_PROXY_URI', '')
 
 
 DEBUG_VARIABLE_DICTIONARIES = [{
+    'id': 'source_time',
+    'view': 'number',
+    'path': 'variables.dictionary',
+}, {
     'id': 'execution_time_in_seconds',
     'view': 'number',
     'path': 'variables.dictionary',
