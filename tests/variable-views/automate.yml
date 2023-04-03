@@ -58,8 +58,7 @@ input:
       path: profile_photo.image
       configuration:
         mime-types:
-          - image/png
-          - image/jpeg
+          - image/*
     - id: region
       view: map-mapbox-location
       path: variables.dictionary
