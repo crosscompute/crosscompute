@@ -755,9 +755,11 @@ def validate_dataset_reference(dataset_dictionary):
 
 def validate_script_identifiers(script_dictionary):
     folder = script_dictionary.get('folder', '.').strip()
+    method_count = 0
 
     if 'command' in script_dictionary:
         command = script_dictionary['command'].strip()
+        method_count += 1
     else:
         command = None
 
@@ -767,16 +769,17 @@ def validate_script_identifiers(script_dictionary):
         if suffix not in ['.ipynb', '.py']:
             raise CrossComputeConfigurationError(
                 f'{suffix} not supported for script path')
+        method_count += 1
     else:
         path = None
 
-    if command and path:
+    if 'function' in script_dictionary:
+        method_count += 1
+
+    if method_count > 1:
         raise CrossComputeConfigurationError(
-            'set script command or script path but not both')
-    return {
-        'folder': Path(folder),
-        'command': command,
-        'path': path}
+            'set script command or path or function')
+    return {'folder': Path(folder), 'command': command, 'path': path}
 
 
 def validate_package_identifiers(package_dictionary):

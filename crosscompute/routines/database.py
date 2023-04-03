@@ -6,6 +6,7 @@ from time import time
 from invisibleroads_macros_disk import is_path_in_folder
 
 from ..constants import (
+    Info,
     BATCH_ROUTE,
     STEP_CODE_BY_NAME,
     STEP_ROUTE)
@@ -32,7 +33,7 @@ class DiskDatabase():
             except KeyError:
                 continue
             for info in infos:
-                if info['code'] == 'v':
+                if info['code'] == Info.VARIABLE:
                     variable_id = info['id']
                     if info['id'] in variable_ids:
                         continue
@@ -78,7 +79,6 @@ class DiskMemory():
 
 
 def learn(configuration):
-    'Set c:code, f:script, v:variable, t:template, s:style'
     memory = DiskMemory()
     add_code_infos(memory, configuration)
     add_script_infos(memory, configuration)
@@ -89,7 +89,7 @@ def learn(configuration):
 
 
 def add_code_infos(memory, configuration):
-    info = {'code': 'c'}
+    info = {'code': Info.CONFIGURATION}
     # Get automation configuration paths
     memory.add(configuration.path, info)
     for import_configuration in configuration.import_configurations:
@@ -107,7 +107,7 @@ def add_code_infos(memory, configuration):
 
 
 def add_script_infos(memory, configuration):
-    info = {'code': 'f'}
+    info = {'code': Info.FUNCTION}
     for automation_definition in configuration.automation_definitions:
         automation_folder = automation_definition.folder
         for dataset_definition in automation_definition.dataset_definitions:
@@ -120,12 +120,19 @@ def add_script_infos(memory, configuration):
             path = script_definition.path
             if path:
                 memory.add(automation_folder / path, info)
-            command = script_definition.command
-            if command:
-                for term in shlex.split(command):
+            command_string = script_definition.command
+            if command_string:
+                for term in shlex.split(command_string):
                     file_path = automation_folder / term
                     if file_path.exists():
                         memory.add(file_path, info)
+            function_string = script_definition.get('function')
+            if function_string:
+                module_name = function_string.split('.')[0]
+                file_name = module_name + '.py'
+                file_path = automation_folder / file_name
+                if file_path.exists():
+                    memory.add(file_path, info)
 
 
 def add_variable_infos(memory, configuration):
@@ -142,7 +149,7 @@ def add_variable_infos(memory, configuration):
 
 def add_variable_infos_from_folder(
         memory, automation_definition, absolute_batch_folder, batch_uri):
-    info = {'code': 'v'}
+    info = {'code': Info.VARIABLE}
     automation_uri = automation_definition.uri
     uri = automation_uri + batch_uri
     d = automation_definition.variable_definitions_by_step_name
@@ -167,7 +174,7 @@ def add_variable_infos_from_folder(
 
 
 def add_template_infos(memory, configuration):
-    info = {'code': 't'}
+    info = {'code': Info.TEMPLATE}
     for automation_definition in configuration.automation_definitions:
         automation_folder = automation_definition.folder
         automation_uri = automation_definition.uri
@@ -187,7 +194,7 @@ def add_template_infos(memory, configuration):
 
 
 def add_style_infos(memory, configuration):
-    info = {'code': 's'}
+    info = {'code': Info.STYLE}
     automation_definitions = configuration.automation_definitions
     for automation_definition in automation_definitions:
         automation_folder = automation_definition.folder

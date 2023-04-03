@@ -22,6 +22,7 @@ from jinja2 import Template
 
 from ..constants import (
     Error,
+    Info,
     Task,
     AUTOMATION_ROUTE,
     BATCH_ROUTE,
@@ -360,16 +361,16 @@ def _get_task_mode(automation_definition, batch_definition, file_changes):
             continue
         for info in infos:
             code = info['code']
-            if code == 'v' and info['step'] == 'i':
+            if code == Info.VARIABLE and info['step'] == 'i':
                 if batch_clock.is_in('run', t):
                     continue
-            elif code == 'f':
+            elif code == Info.FUNCTION:
                 return Task.RUN_PRINT
         if t < print_time:
             continue
         for info in infos:
             code = info['code']
-            if code in ['s', 't']:
+            if code in [Info.STYLE, Info.TEMPLATE]:
                 return Task.PRINT_ONLY
     if automation_definition.is_interval_ready(batch_definition):
         return Task.RUN_PRINT

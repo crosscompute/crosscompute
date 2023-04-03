@@ -1,6 +1,7 @@
 from time import time
 
 from ..constants import (
+    Info,
     MAXIMUM_MUTATION_AGE_IN_SECONDS)
 from ..settings import (
     template_globals)
@@ -22,21 +23,20 @@ def get_mutation(file_changes, reference_uri, old_time):
             continue
         for info in infos:
             code = info['code']
-            if code == 'c':
+            if code == Info.CONFIGURATION:
                 configurations.append({})
-            elif code == 'v' and info['step'] != 'i':
+            elif code == Info.VARIABLE and info['step'] != 'i':
                 if reference_uri.startswith(info['uri']):
                     # TODO: Send value if authorized
                     variables.append({'id': info['id']})
-            elif code == 't':
+            elif code == Info.TEMPLATE:
                 if 'step' in info and info['step'] != step_code:
                     continue
                 if reference_uri.startswith(info['uri']):
                     templates.append({})
-            elif code == 's':
+            elif code == Info.STYLE:
                 styles.append({})
     return {
         'configurations': configurations, 'variables': variables,
-        'templates': templates, 'styles': styles,
-        'mutation_time': new_time,
+        'templates': templates, 'styles': styles, 'mutation_time': new_time,
         'server_time': template_globals['server_time']}

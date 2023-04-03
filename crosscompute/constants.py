@@ -4,13 +4,6 @@ from os import getenv
 from pathlib import Path
 
 
-class Error(IntEnum):
-
-    CONFIGURATION_NOT_FOUND = -100
-    COMMAND_NOT_RUNNABLE = -10
-    COMMAND_INTERRUPTED = -1
-
-
 class Status(IntEnum):
 
     NEW = 0
@@ -18,10 +11,26 @@ class Status(IntEnum):
     DONE = 100
 
 
-class Task(IntEnum):
+class Error(IntEnum):
 
-    PRINT_ONLY = 10
-    RUN_PRINT = 100
+    CONFIGURATION_NOT_FOUND = -100
+    COMMAND_NOT_RUNNABLE = -10
+    COMMAND_INTERRUPTED = -1
+
+
+class Info:
+
+    CONFIGURATION = 'c'
+    FUNCTION = 'f'
+    VARIABLE = 'v'
+    TEMPLATE = 't'
+    STYLE = 's'
+
+
+class Task:
+
+    RUN_PRINT = 'r'
+    PRINT_ONLY = 'p'
 
 
 PACKAGE_FOLDER = Path(__file__).parent

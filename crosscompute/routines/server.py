@@ -11,7 +11,7 @@ from invisibleroads_macros_web.starlette import ExtraResponseHeadersMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from watchfiles import watch
 
-from ..constants import HOST, PORT, TEMPLATE_PATH_BY_ID
+from ..constants import Info, HOST, PORT, TEMPLATE_PATH_BY_ID
 from ..exceptions import CrossComputeError
 from ..routers import automation, root, stream, token
 from ..settings import (
@@ -79,7 +79,7 @@ class DiskServer(Server):
                 L.debug(changed_infos)
                 should_restart_server = False
                 for info in changed_infos:
-                    if info['code'] == 'c':
+                    if info['code'] == Info.CONFIGURATION:
                         should_restart_server = True
                 if self._with_restart and should_restart_server:
                     try:
