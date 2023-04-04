@@ -113,7 +113,7 @@ class DiskServer(Server):
                 self._uris,
                 self._changes,
                 self._environment,
-                self._port),
+                f'http://127.0.0.1:{self._port}{self._root_uri}'),
             kwargs={'with_rebuild': True})
         worker_process.start()
         disk_database = DiskDatabase(

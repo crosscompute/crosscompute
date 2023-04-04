@@ -17,3 +17,13 @@ def initialize_printer_by_name():
     for entry_point in entry_points().select(group='crosscompute.printers'):
         printer_by_name[entry_point.name] = import_attribute(entry_point.value)
     return printer_by_name
+
+
+def print_automation(automation_definition):
+    # prepare batch dictionaries
+    pass
+
+
+def print_batch(automation_definition, batch_definition):
+    # prepare batch dictionaries
+    pass

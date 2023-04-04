@@ -39,8 +39,7 @@ from ..exceptions import (
     CrossComputeError)
 from ..macros.iterable import find_item, group_by
 from ..settings import (
-    printer_by_name,
-    template_globals)
+    printer_by_name)
 from .configuration import (
     get_folder_plus_path)
 from .uri import (
@@ -162,20 +161,7 @@ class PodmanEngine(AbstractEngine):
         finally:
             _set_podman_folder_owner(absolute_batch_folder, 0)
             _run_podman_command({}, ['kill', container_id])
-        if return_code in [126, 127]:
-            x = 'denied permission' if return_code == 126 else 'not found'
-            error = CrossComputeConfigurationError(
-                'command %s in container; check script definitions' % x)
-            error.code = Error.COMMAND_NOT_RUNNABLE
-            raise error
-        elif return_code != 0:
-            error_text = (
-                automation_folder / batch_folder / 'debug' / 'stderr.txt'
-            ).read_text()
-            error = CrossComputeExecutionError(error_text.rstrip())
-            error.code = return_code
-            raise error
-        return return_code
+        return _process_podman_return_code(return_code, absolute_batch_folder)
 
 
 def run_automation(automation_definition, user_environment, with_rebuild=True):
@@ -235,7 +221,7 @@ def update_datasets(automation_definition):
 
 def process_loop(
         automation_definitions, automation_tasks, live_uris, file_changes,
-        user_environment, server_port, with_rebuild):
+        user_environment, server_uri, with_rebuild):
     with ThreadPoolExecutor() as executor:
         for a in automation_definitions:
             for b in a.batch_definitions:
@@ -251,7 +237,7 @@ def process_loop(
             except IndexError:
                 continue
             thread = Thread(
-                target=_process_task, args=automation_task + (server_port,),
+                target=_process_task, args=automation_task + (server_uri,),
                 daemon=True)
             thread.start()
     except KeyboardInterrupt:
@@ -261,6 +247,71 @@ def process_loop(
 def prepare_automation(automation_definition, with_rebuild=True):
     engine = get_script_engine(automation_definition.engine_name, with_rebuild)
     engine.prepare(automation_definition)
+
+
+def print_batches(automation_definition, batch_definitions, server_uri):
+    automation_uri = automation_definition.uri
+    automation_folder = automation_definition.folder
+    for batch_definition in batch_definitions:
+        batch_uri = batch_definition.uri
+        batch_folder = batch_definition.folder
+        print_folder = make_folder(automation_folder / batch_folder / 'print')
+        print_definitions = automation_definition.get_variable_definitions(
+            'print')
+        extra_data_by_id = {'timestamp': {'value': get_timestamp(
+            template=LONGSTAMP_TEMPLATE)}}
+        link_definitions, name_by_path = [], {}
+        for print_definition in print_definitions:
+            view_name = print_definition.view_name
+            if view_name in printer_by_name:
+                variable_path = print_definition.path
+                print_configuration = print_definition.configuration
+                name_by_path[variable_path] = format_batch_name(
+                    automation_definition, batch_definition, print_definition,
+                    extra_data_by_id)
+                batch_dictionary = {
+                    'path': str(print_folder / variable_path),
+                    'uri': automation_uri + batch_uri}
+                Printer = printer_by_name[view_name]
+                printer = Printer(server_uri)
+                printer.render([batch_dictionary], print_configuration)
+            elif view_name == 'link':
+                link_definitions.append(print_definition)
+        _save_link_configurations(print_folder, name_by_path, link_definitions)
+
+
+def format_batch_name(
+        automation_definition, batch_definition, print_definition,
+        extra_data_by_id):
+    view_name = print_definition.view_name
+    variable_configuration = print_definition.configuration
+    batch_name = batch_definition.name
+    name_template = variable_configuration.get(
+        'name', '').strip() or f'{batch_name}.{view_name}'
+    data_by_id = get_data_by_id(
+        automation_definition, batch_definition) | extra_data_by_id
+    return format_text(name_template, data_by_id)
+
+
+def prepare_batch(automation_definition, batch_definition):
+    variable_definitions = automation_definition.get_variable_definitions(
+        'input')
+    variable_definitions_by_path = group_by(variable_definitions, 'path')
+    data_by_id = batch_definition.data_by_id
+    batch_folder = batch_definition.folder
+    batch_environment = _prepare_batch_environment(
+        automation_definition,
+        variable_definitions_by_path.pop('ENVIRONMENT', []),
+        data_by_id)
+    step_folder_by_name = _make_step_folder_by_name(
+        automation_definition.folder, batch_folder)
+    if not data_by_id:
+        return batch_folder, batch_environment
+    input_folder = step_folder_by_name['input_folder']
+    for path, variable_definitions in variable_definitions_by_path.items():
+        input_path = input_folder / path
+        save_variable_data(input_path, data_by_id, variable_definitions)
+    return batch_folder, batch_environment
 
 
 def _run_automation_single(automation_definition, run_batch, user_environment):
@@ -385,7 +436,7 @@ def _get_task_mode(automation_definition, batch_definition, file_changes):
 
 def _process_task(
         automation_definition, batch_definition, user_environment, task_mode,
-        server_port):
+        server_uri):
     batch_clock = batch_definition.clock
     try:
         if task_mode == Task.RUN_PRINT:
@@ -393,7 +444,7 @@ def _process_task(
                 _run_batch(
                     automation_definition, batch_definition, user_environment)
         with batch_clock.time('print'):
-            _print_batch(automation_definition, batch_definition, server_port)
+            _print_batch(automation_definition, batch_definition, server_uri)
     except CrossComputeError as e:
         e.automation_definition = automation_definition
         L.error(e)
@@ -409,68 +460,8 @@ def _run_batch(automation_definition, batch_definition, user_environment):
         automation_definition, batch_definition, user_environment)
 
 
-def _print_batch(automation_definition, batch_definition, server_port):
-    root_uri = template_globals['root_uri']
-    automation_uri = automation_definition.uri
-    automation_folder = automation_definition.folder
-    batch_uri = batch_definition.uri
-    batch_folder = batch_definition.folder
-    folder = make_folder(automation_folder / batch_folder / 'print')
-    print_definitions = automation_definition.get_variable_definitions('print')
-    extra_data_by_id = {'timestamp': {'value': get_timestamp(
-        template=LONGSTAMP_TEMPLATE)}}
-    link_definitions, name_by_path = [], {}
-    for print_definition in print_definitions:
-        view_name = print_definition.view_name
-        if view_name in printer_by_name:
-            variable_path = print_definition.path
-            print_configuration = print_definition.configuration
-            name_by_path[variable_path] = format_batch_name(
-                automation_definition, batch_definition, print_definition,
-                extra_data_by_id)
-            batch_dictionary = {
-                'path': str(folder / variable_path),
-                'uri': automation_uri + batch_uri}
-            Printer = printer_by_name[view_name]
-            printer = Printer(f'http://127.0.0.1:{server_port}{root_uri}')
-            printer.render([batch_dictionary], print_configuration)
-        elif view_name == 'link':
-            link_definitions.append(print_definition)
-    _save_link_configurations(folder, name_by_path, link_definitions)
-
-
-def format_batch_name(
-        automation_definition, batch_definition, print_definition,
-        extra_data_by_id):
-    view_name = print_definition.view_name
-    variable_configuration = print_definition.configuration
-    batch_name = batch_definition.name
-    name_template = variable_configuration.get(
-        'name', '').strip() or f'{batch_name}.{view_name}'
-    data_by_id = get_data_by_id(
-        automation_definition, batch_definition) | extra_data_by_id
-    return format_text(name_template, data_by_id)
-
-
-def prepare_batch(automation_definition, batch_definition):
-    variable_definitions = automation_definition.get_variable_definitions(
-        'input')
-    variable_definitions_by_path = group_by(variable_definitions, 'path')
-    data_by_id = batch_definition.data_by_id
-    batch_folder = batch_definition.folder
-    batch_environment = _prepare_batch_environment(
-        automation_definition,
-        variable_definitions_by_path.pop('ENVIRONMENT', []),
-        data_by_id)
-    step_folder_by_name = _make_step_folder_by_name(
-        automation_definition.folder, batch_folder)
-    if not data_by_id:
-        return batch_folder, batch_environment
-    input_folder = step_folder_by_name['input_folder']
-    for path, variable_definitions in variable_definitions_by_path.items():
-        input_path = input_folder / path
-        save_variable_data(input_path, data_by_id, variable_definitions)
-    return batch_folder, batch_environment
+def _print_batch(automation_definition, batch_definition, server_uri):
+    print_batches(automation_definition, [batch_definition], server_uri)
 
 
 def _prepare_batch_environment(
@@ -729,6 +720,23 @@ def _run_podman_command(options, terms):
     command_terms = ['podman'] + terms
     L.debug(command_terms)
     return subprocess.run(command_terms, **options)
+
+
+def _process_podman_return_code(return_code, absolute_batch_folder):
+    if return_code in [126, 127]:
+        x = 'denied permission' if return_code == 126 else 'not found'
+        error = CrossComputeConfigurationError(
+            'command %s in container; check script definitions' % x)
+        error.code = Error.COMMAND_NOT_RUNNABLE
+        raise error
+    elif return_code != 0:
+        error_text = (
+            absolute_batch_folder / 'debug' / 'stderr.txt'
+        ).read_text()
+        error = CrossComputeExecutionError(error_text.rstrip())
+        error.code = return_code
+        raise error
+    return return_code
 
 
 def _save_link_configurations(folder, name_by_path, link_definitions):
