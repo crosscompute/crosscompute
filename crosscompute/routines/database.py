@@ -70,7 +70,7 @@ class DiskMemory():
 
     def add(self, path, info):
         path = Path(path).resolve()
-        if path.is_file():
+        if not path.exists() or path.is_file():
             d = self._infos_by_path
         elif path.is_dir() and info['code'] == Info.DATASET:
             d = self._infos_by_folder
@@ -125,23 +125,25 @@ def add_script_infos(memory, configuration):
     info = {'code': Info.SCRIPT}
     for automation_definition in configuration.automation_definitions:
         automation_folder = automation_definition.folder
-        for script_definition in automation_definition.script_definitions:
-            path = script_definition.path
-            if path:
-                memory.add(automation_folder / path, info)
-            command_string = script_definition.command
-            if command_string:
-                for term in shlex.split(command_string):
+        for i, script_definition in enumerate(
+                automation_definition.script_definitions):
+            script_info = info | {'index': i}
+            if 'command' in script_definition:
+                for term in shlex.split(script_definition.command):
                     file_path = automation_folder / term
                     if file_path.exists():
-                        memory.add(file_path, info)
-            function_string = script_definition.get('function')
-            if function_string:
-                module_name = function_string.split('.')[0]
+                        memory.add(file_path, script_info)
+                continue
+            if 'path' in script_definition:
+                file_path = automation_folder / script_definition.path
+                memory.add(file_path, script_info)
+                continue
+            if 'function' in script_definition:
+                module_name = script_definition['function'].split('.')[0]
                 file_name = module_name + '.py'
                 file_path = automation_folder / file_name
                 if file_path.exists():
-                    memory.add(file_path, info)
+                    memory.add(file_path, script_info)
 
 
 def add_dataset_infos(memory, configuration):

@@ -228,10 +228,8 @@ class ScriptDefinition(Definition):
                 except Exception as e:
                     raise CrossComputeConfigurationError(e)
         elif 'function' in self:
-            script_path = '.run.py'
-            new_path = folder / script_path
             function_string = self['function']
-            with new_path.open('wt') as f:
+            with (folder / '.run.py').open('wt') as f:
                 f.write(RUN_PY.substitute({
                     'module_name': function_string.split('.')[0],
                     'function_string': function_string}))

@@ -360,18 +360,24 @@ def _get_task_mode(automation_definition, batch_definition, file_changes):
         if t < run_time:
             continue
         for info in infos:
-            code = info['code']
-            if code == Info.VARIABLE and info['step'] == 'i':
-                if batch_clock.is_in('run', t):
-                    continue
-                return Task.RUN_PRINT
-            elif code in [Info.DATASET, Info.SCRIPT]:
-                return Task.RUN_PRINT
+            match info['code']:
+                case Info.VARIABLE:
+                    if info['step'] != 'i' or batch_clock.is_in('run', t):
+                        continue
+                    return Task.RUN_PRINT
+                case Info.SCRIPT:
+                    try:
+                        automation_definition.script_definitions[
+                            info['index']].command = None
+                    except AttributeError:
+                        pass
+                    return Task.RUN_PRINT
+                case Info.DATASET:
+                    return Task.RUN_PRINT
         if t < print_time:
             continue
         for info in infos:
-            code = info['code']
-            if code in [Info.STYLE, Info.TEMPLATE]:
+            if info['code'] in [Info.STYLE, Info.TEMPLATE]:
                 return Task.PRINT_ONLY
     if automation_definition.is_interval_ready(batch_definition):
         return Task.RUN_PRINT
