@@ -117,6 +117,8 @@ def _render_prints(server_uri, packs):
         Printer = printer_by_name[view_name]
         printer = Printer(server_uri)
         printer.render(batch_dictionaries, print_configuration)
+        # TODO: add symbolic link in batch folder
+        # TODO: generate download configs
 
 
 L = getLogger(__name__)

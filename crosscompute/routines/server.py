@@ -116,7 +116,8 @@ class DiskServer(Server):
                 self._port),
             kwargs={'with_rebuild': True})
         worker_process.start()
-        disk_database = DiskDatabase(configuration, self._changes)
+        disk_database = DiskDatabase(
+            configuration, self._changes, self._with_restart)
         return server_process, worker_process, disk_database
 
     def refresh(self, configuration):

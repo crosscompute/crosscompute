@@ -21,7 +21,8 @@ class Error(IntEnum):
 class Info:
 
     CONFIGURATION = 'c'
-    FUNCTION = 'f'
+    SCRIPT = 'f'
+    DATASET = 'd'
     VARIABLE = 'v'
     TEMPLATE = 't'
     STYLE = 's'

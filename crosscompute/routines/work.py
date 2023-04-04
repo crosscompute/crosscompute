@@ -364,7 +364,8 @@ def _get_task_mode(automation_definition, batch_definition, file_changes):
             if code == Info.VARIABLE and info['step'] == 'i':
                 if batch_clock.is_in('run', t):
                     continue
-            elif code == Info.FUNCTION:
+                return Task.RUN_PRINT
+            elif code in [Info.DATASET, Info.SCRIPT]:
                 return Task.RUN_PRINT
         if t < print_time:
             continue
@@ -417,7 +418,7 @@ def _print_batch(automation_definition, batch_definition, server_port):
         view_name = print_definition.view_name
         if view_name in printer_by_name:
             variable_path = print_definition.path
-            variable_configuration = print_definition.configuration
+            print_configuration = print_definition.configuration
             name_by_path[variable_path] = format_batch_name(
                 automation_definition, batch_definition, print_definition,
                 extra_data_by_id)
@@ -426,7 +427,7 @@ def _print_batch(automation_definition, batch_definition, server_port):
                 'uri': automation_uri + batch_uri}
             Printer = printer_by_name[view_name]
             printer = Printer(f'http://127.0.0.1:{server_port}{root_uri}')
-            printer.render([batch_dictionary], variable_configuration)
+            printer.render([batch_dictionary], print_configuration)
         elif view_name == 'link':
             link_definitions.append(print_definition)
     _save_link_configurations(folder, name_by_path, link_definitions)

@@ -16,10 +16,10 @@ from .configuration import (
 
 class DiskDatabase():
 
-    def __init__(self, configuration, changes):
+    def __init__(self, configuration, changes, with_restart):
         self._configuration = configuration
         self._changes = changes
-        self._memory = learn(configuration)
+        self._memory = learn(configuration, with_restart)
 
     def grok(self, paths):
         changed_infos = []
@@ -65,26 +65,41 @@ class DiskDatabase():
 class DiskMemory():
 
     def __init__(self):
-        self._d = {}
+        self._infos_by_path = {}
+        self._infos_by_folder = {}
 
     def add(self, path, info):
         path = Path(path).resolve()
-        if path not in self._d:
-            self._d[path] = []
-        self._d[path].append(info)
+        if path.is_file():
+            d = self._infos_by_path
+        elif path.is_dir() and info['code'] == Info.DATASET:
+            d = self._infos_by_folder
+        else:
+            L.warning(f'{path} must be a file')
+            return
+        if path not in d:
+            d[path] = []
+        d[path].append(info)
 
     def get(self, path):
         path = Path(path).resolve()
-        return self._d[path]
+        if path in self._infos_by_path:
+            return self._infos_by_path[path]
+        for folder, infos in self._infos_by_folder.items():
+            if folder in path.parents:
+                return infos
+        raise KeyError
 
 
-def learn(configuration):
+def learn(configuration, with_restart):
     memory = DiskMemory()
-    add_code_infos(memory, configuration)
-    add_script_infos(memory, configuration)
     add_variable_infos(memory, configuration)
-    add_template_infos(memory, configuration)
-    add_style_infos(memory, configuration)
+    if with_restart:
+        add_code_infos(memory, configuration)
+        add_script_infos(memory, configuration)
+        add_dataset_infos(memory, configuration)
+        add_template_infos(memory, configuration)
+        add_style_infos(memory, configuration)
     return memory
 
 
@@ -107,15 +122,9 @@ def add_code_infos(memory, configuration):
 
 
 def add_script_infos(memory, configuration):
-    info = {'code': Info.FUNCTION}
+    info = {'code': Info.SCRIPT}
     for automation_definition in configuration.automation_definitions:
         automation_folder = automation_definition.folder
-        for dataset_definition in automation_definition.dataset_definitions:
-            reference_configuration = dataset_definition.reference
-            reference_path = get_folder_plus_path(reference_configuration)
-            if reference_path:
-                file_path = automation_folder / reference_path
-                memory.add(file_path, info)
         for script_definition in automation_definition.script_definitions:
             path = script_definition.path
             if path:
@@ -133,6 +142,18 @@ def add_script_infos(memory, configuration):
                 file_path = automation_folder / file_name
                 if file_path.exists():
                     memory.add(file_path, info)
+
+
+def add_dataset_infos(memory, configuration):
+    info = {'code': Info.DATASET}
+    for automation_definition in configuration.automation_definitions:
+        automation_folder = automation_definition.folder
+        for dataset_definition in automation_definition.dataset_definitions:
+            reference_configuration = dataset_definition.reference
+            reference_path = get_folder_plus_path(reference_configuration)
+            if reference_path:
+                file_path = automation_folder / reference_path
+                memory.add(file_path, info)
 
 
 def add_variable_infos(memory, configuration):
