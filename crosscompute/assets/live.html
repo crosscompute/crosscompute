@@ -37,11 +37,16 @@ async function runEach(xs) {
 {% if with_restart or is_done == 0 %}
 {% if with_restart %}
 async function refreshPage() {
-  const r = await fetch(location.href, { method: 'head' });
-  if (r.ok) {
-    location.reload();
-  } else {
-    location.href = '{{ root_uri or '/' }}';
+  const { status } = await fetch(location.href, { method: 'head' });
+  switch (status) {
+    case 200:
+      location.reload();
+      break;
+    case 404:
+      location.href = '{{ root_uri or '/' }}';
+      break;
+    default:
+      setTimeout(refreshPage, 1000);
   }
 }
 function refreshStyle() {
