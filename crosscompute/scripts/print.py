@@ -53,6 +53,7 @@ def print_with(automation, args):
     args.port = _get_port_or_raise_exception()
     _run(automation, args)
     _print(automation, args)
+    _link(automation, args)
 
 
 def _get_port_or_raise_exception():
@@ -73,6 +74,16 @@ def _run(automation, args):
 
 
 def _print(automation, args):
+    group packs by view name
+        path is in pritn folder vs path is in batch folder
+    for each view name, packs
+        start printer
+        render packs with batch dictionaries and print configurations
+    make links
+        if path in print folder, then
+            make link in batch folder
+        generate config in batch folder
+
     # get batch dictionaries
 
         for automation_definition in automation_definitions:

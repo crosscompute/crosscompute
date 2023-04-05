@@ -272,11 +272,6 @@ def print_batches(automation_definition, batch_definitions, server_uri):
                 batch_dictionary = {
                     'path': str(print_folder / variable_path),
                     'uri': automation_uri + batch_uri}
-                Printer = printer_by_name[view_name]
-                printer = Printer(server_uri)
-                printer.render([batch_dictionary], print_configuration)
-            elif view_name == 'link':
-                link_definitions.append(print_definition)
         _save_link_configurations(print_folder, name_by_path, link_definitions)
 
 
