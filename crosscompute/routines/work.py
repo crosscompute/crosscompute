@@ -1,4 +1,3 @@
-import json
 import shlex
 import subprocess
 from collections import defaultdict
@@ -16,7 +15,6 @@ from urllib.request import urlretrieve as download_uri
 
 import requests
 from invisibleroads_macros_disk import make_folder
-from invisibleroads_macros_log import get_timestamp, LONGSTAMP_TEMPLATE
 from invisibleroads_macros_web.port import find_open_port
 from jinja2 import Template
 
@@ -38,16 +36,14 @@ from ..exceptions import (
     CrossComputeExecutionError,
     CrossComputeError)
 from ..macros.iterable import find_item, group_by
-from ..settings import (
-    printer_by_name)
 from .configuration import (
     get_folder_plus_path)
+from .printer import (
+    print_batch)
 from .uri import (
     get_automation_slug,
     get_batch_slug)
 from .variable import (
-    format_text,
-    get_data_by_id,
     get_variable_data_by_id,
     get_variable_value_by_id,
     process_variable_data,
@@ -184,6 +180,14 @@ def run_automation(automation_definition, user_environment, with_rebuild=True):
     return ds
 
 
+def run_batch(automation_definition, batch_definition, user_environment):
+    engine = get_script_engine(
+        automation_definition.engine_name, with_rebuild=False)
+    update_datasets(automation_definition)
+    engine.run_batch(
+        automation_definition, batch_definition, user_environment)
+
+
 def get_script_engine(engine_name, with_rebuild=True):
     try:
         ScriptEngine = {
@@ -247,45 +251,6 @@ def process_loop(
 def prepare_automation(automation_definition, with_rebuild=True):
     engine = get_script_engine(automation_definition.engine_name, with_rebuild)
     engine.prepare(automation_definition)
-
-
-def print_batches(automation_definition, batch_definitions, server_uri):
-    automation_uri = automation_definition.uri
-    automation_folder = automation_definition.folder
-    for batch_definition in batch_definitions:
-        batch_uri = batch_definition.uri
-        batch_folder = batch_definition.folder
-        print_folder = make_folder(automation_folder / batch_folder / 'print')
-        print_definitions = automation_definition.get_variable_definitions(
-            'print')
-        extra_data_by_id = {'timestamp': {'value': get_timestamp(
-            template=LONGSTAMP_TEMPLATE)}}
-        link_definitions, name_by_path = [], {}
-        for print_definition in print_definitions:
-            view_name = print_definition.view_name
-            if view_name in printer_by_name:
-                variable_path = print_definition.path
-                print_configuration = print_definition.configuration
-                name_by_path[variable_path] = format_batch_name(
-                    automation_definition, batch_definition, print_definition,
-                    extra_data_by_id)
-                batch_dictionary = {
-                    'path': str(print_folder / variable_path),
-                    'uri': automation_uri + batch_uri}
-        _save_link_configurations(print_folder, name_by_path, link_definitions)
-
-
-def format_batch_name(
-        automation_definition, batch_definition, print_definition,
-        extra_data_by_id):
-    view_name = print_definition.view_name
-    variable_configuration = print_definition.configuration
-    batch_name = batch_definition.name
-    name_template = variable_configuration.get(
-        'name', '').strip() or f'{batch_name}.{view_name}'
-    data_by_id = get_data_by_id(
-        automation_definition, batch_definition) | extra_data_by_id
-    return format_text(name_template, data_by_id)
 
 
 def prepare_batch(automation_definition, batch_definition):
@@ -436,27 +401,17 @@ def _process_task(
     try:
         if task_mode == Task.RUN_PRINT:
             with batch_clock.time('run'):
-                _run_batch(
+                run_batch(
                     automation_definition, batch_definition, user_environment)
         with batch_clock.time('print'):
-            _print_batch(automation_definition, batch_definition, server_uri)
+            print_batch(
+                automation_definition, batch_definition, server_uri,
+                is_draft=True)
     except CrossComputeError as e:
         e.automation_definition = automation_definition
         L.error(e)
     except KeyboardInterrupt:
         pass
-
-
-def _run_batch(automation_definition, batch_definition, user_environment):
-    engine = get_script_engine(
-        automation_definition.engine_name, with_rebuild=False)
-    update_datasets(automation_definition)
-    engine.run_batch(
-        automation_definition, batch_definition, user_environment)
-
-
-def _print_batch(automation_definition, batch_definition, server_uri):
-    print_batches(automation_definition, [batch_definition], server_uri)
 
 
 def _prepare_batch_environment(
@@ -732,21 +687,6 @@ def _process_podman_return_code(return_code, absolute_batch_folder):
         error.code = return_code
         raise error
     return return_code
-
-
-def _save_link_configurations(folder, name_by_path, link_definitions):
-    for variable_definition in link_definitions:
-        variable_configuration = variable_definition.configuration
-        if 'path' not in variable_configuration:
-            continue
-        d = {}
-        variable_path = variable_definition.path
-        if 'link-text' not in variable_configuration:
-            d['link-text'] = name_by_path[variable_path]
-        if 'file-name' not in variable_configuration:
-            d['file-name'] = name_by_path[variable_path]
-        with (folder / variable_configuration['path']).open('wt') as f:
-            json.dump(d, f)
 
 
 CONTAINER_IGNORE_TEXT = '''\

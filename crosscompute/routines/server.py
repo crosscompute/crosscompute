@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from invisibleroads_macros_web.starlette import ExtraResponseHeadersMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from watchfiles import watch
+from watchfiles import Change, watch
 
 from ..constants import Info, HOST, PORT, TEMPLATE_PATH_BY_ID
 from ..exceptions import CrossComputeError
@@ -74,9 +74,8 @@ class DiskServer(Server):
             for changed_packs in watch(
                     configuration.folder, step=disk_poll_in_milliseconds,
                     debounce=disk_debounce_in_milliseconds):
-                changed_paths = [_[1] for _ in changed_packs]
-                changed_infos = d_database.grok(changed_paths)
-                L.debug(changed_infos)
+                changed_infos = d_database.grok([
+                    _[1] for _ in changed_packs if _[0] != Change.deleted])
                 should_restart_server = False
                 for info in changed_infos:
                     if info['code'] == Info.CONFIGURATION:

@@ -41,6 +41,7 @@ class DiskDatabase():
                 changed_infos.append(info)
         if changed_infos:
             self._changes[time()] = changed_infos
+        L.debug(changed_infos)
         return changed_infos
 
     def get(self, path):
