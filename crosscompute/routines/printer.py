@@ -55,9 +55,13 @@ class BatchPrinter:
             packs_by_view_name = {view_name: [pack]}
 
     def run(self):
+        is_draft = self.is_draft
+        if is_draft:
+            for draft_path in self._pack_by_path:
+                remove_path(draft_path)
         for view_name, packs in self._packs_by_view_name.items():
             Printer = printer_by_name[view_name]
-            printer = Printer(self.server_uri, self.is_draft)
+            printer = Printer(self.server_uri, is_draft)
             for batch_dictionaries, print_configurations in packs:
                 printer.render(batch_dictionaries, print_configurations)
         self._save_link_configurations()
@@ -100,11 +104,9 @@ class BatchPrinter:
             for draft_path, (
                 print_folder, print_name,
             ) in pack_by_path.items():
-                remove_path(draft_path)
                 symlink(print_folder / print_name, draft_path)
         for (
-            draft_folder,
-            variable_definition,
+            draft_folder, variable_definition,
         ) in self._link_packs:
             variable_configuration = variable_definition.configuration
             if 'path' not in variable_configuration:

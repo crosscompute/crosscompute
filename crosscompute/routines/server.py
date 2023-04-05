@@ -72,10 +72,15 @@ class DiskServer(Server):
         s_process, w_process, d_database = self.start(configuration)
         try:
             for changed_packs in watch(
-                    configuration.folder, step=disk_poll_in_milliseconds,
-                    debounce=disk_debounce_in_milliseconds):
+                    configuration.folder,
+                    debounce=disk_debounce_in_milliseconds,
+                    step=disk_poll_in_milliseconds):
+                print('aaa')
+                print(changed_packs)
                 changed_infos = d_database.grok([
                     _[1] for _ in changed_packs if _[0] != Change.deleted])
+                print(changed_infos)
+                print('aaa')
                 should_restart_server = False
                 for info in changed_infos:
                     if info['code'] == Info.CONFIGURATION:
