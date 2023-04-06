@@ -1141,7 +1141,7 @@ import $module_name
 folder_by_name = {}
 for x in 'input_folder', 'output_folder', 'log_folder', 'debug_folder':
     folder_by_name[x] = Path(getenv('CROSSCOMPUTE_' + x.upper()))
-function_signature = inspect.signature($function_string)
+function_signature = signature($function_string)
 d = {}
 for x in function_signature.parameters:
     if x not in folder_by_name:
