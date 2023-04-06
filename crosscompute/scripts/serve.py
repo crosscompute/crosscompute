@@ -9,8 +9,6 @@ from invisibleroads_macros_web.port import (
     is_port_in_use)
 
 from crosscompute.constants import (
-    DISK_DEBOUNCE_IN_MILLISECONDS,
-    DISK_POLL_IN_MILLISECONDS,
     HOST,
     MAXIMUM_PORT,
     MINIMUM_PORT,
@@ -78,14 +76,6 @@ def configure_argument_parser_for_serving(a):
         '--origins', metavar='X', nargs='+', dest='allowed_origins',
         default=[],
         help='specify allowed origins')
-    a.add_argument(
-        '--disk-poll', metavar='X', type=int,
-        default=DISK_POLL_IN_MILLISECONDS,
-        help='interval in milliseconds to check disk for changes')
-    a.add_argument(
-        '--disk-debounce', metavar='X', type=int,
-        default=DISK_DEBOUNCE_IN_MILLISECONDS,
-        help='interval in milliseconds to wait until changes stop')
 
 
 def configure_serving_from(args):
@@ -105,17 +95,13 @@ def serve_with(automation, args):
         with_prefix=args.with_prefix,
         with_hidden=args.with_hidden,
         root_uri=args.root_uri,
-        allowed_origins=args.allowed_origins,
-        disk_poll_in_milliseconds=args.disk_poll,
-        disk_debounce_in_milliseconds=args.disk_debounce)
+        allowed_origins=args.allowed_origins)
 
 
 def serve(
         automation, environment, host=HOST, port=PORT, with_browser=True,
         with_restart=True, with_prefix=True, with_hidden=True, root_uri='',
-        allowed_origins=None,
-        disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
-        disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS):
+        allowed_origins=None):
     try:
         if with_browser and 'DISPLAY' in environ:
             L.info('opening browser; set --no-browser to disable')
@@ -128,9 +114,7 @@ def serve(
             with_prefix=with_prefix,
             with_hidden=with_hidden,
             root_uri=root_uri,
-            allowed_origins=allowed_origins,
-            disk_poll_in_milliseconds=disk_poll_in_milliseconds,
-            disk_debounce_in_milliseconds=disk_debounce_in_milliseconds)
+            allowed_origins=allowed_origins)
     except CrossComputeError as e:
         L.error(e)
     except KeyboardInterrupt:

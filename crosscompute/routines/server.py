@@ -9,16 +9,33 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from invisibleroads_macros_web.starlette import ExtraResponseHeadersMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from watchfiles import Change, watch
+from watchfiles import watch
 
-from ..constants import Info, HOST, PORT, TEMPLATE_PATH_BY_ID
-from ..exceptions import CrossComputeError
-from ..routers import automation, root, stream, token
+from ..constants import (
+    Info,
+    DISK_DEBOUNCE_IN_MILLISECONDS,
+    DISK_STEP_IN_MILLISECONDS,
+    HOST,
+    PORT,
+    TEMPLATE_PATH_BY_ID)
+from ..exceptions import (
+    CrossComputeError)
+from ..routers import (
+    automation,
+    root,
+    stream,
+    token)
 from ..settings import (
-    StoppableProcess, site, template_environment, template_globals,
+    StoppableProcess,
+    site,
+    template_environment,
+    template_globals,
     template_path_by_id)
-from .database import DiskDatabase
-from .interface import Server
+from .database import (
+    DiskDatabase,
+    PositiveFileFilter)
+from .interface import (
+    Server)
 
 
 class DiskServer(Server):
@@ -66,21 +83,16 @@ class DiskServer(Server):
         except Exception as e:
             L.exception(e)
 
-    def watch(
-            self, configuration, disk_poll_in_milliseconds,
-            disk_debounce_in_milliseconds, reload):
+    def watch(self, configuration, reload):
         s_process, w_process, d_database = self.start(configuration)
         try:
             for changed_packs in watch(
                     configuration.folder,
-                    debounce=disk_debounce_in_milliseconds,
-                    step=disk_poll_in_milliseconds):
-                print('aaa')
-                print(changed_packs)
-                changed_infos = d_database.grok([
-                    _[1] for _ in changed_packs if _[0] != Change.deleted])
-                print(changed_infos)
-                print('aaa')
+                    watch_filter=PositiveFileFilter(),
+                    debounce=DISK_DEBOUNCE_IN_MILLISECONDS,
+                    step=DISK_STEP_IN_MILLISECONDS):
+                changed_paths = [_[1] for _ in changed_packs]
+                changed_infos = d_database.grok(changed_paths)
                 should_restart_server = False
                 for info in changed_infos:
                     if info['code'] == Info.CONFIGURATION:

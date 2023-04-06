@@ -35,8 +35,11 @@ class BatchPrinter:
         print_configurations_by_view_name = defaultdict(list)
         print_definitions = automation_definition.get_variable_definitions(
             'print')
+        this_view_name = self.view_name
         for print_definition in print_definitions:
             view_name = print_definition.view_name
+            if this_view_name and this_view_name != view_name:
+                continue
             if view_name not in printer_by_name:
                 continue
             print_configuration = print_definition.configuration
@@ -48,17 +51,13 @@ class BatchPrinter:
         ) in print_configurations_by_view_name.items():
             packs_by_view_name[view_name].append((
                 batch_dictionaries, print_configurations))
-        view_name = self.view_name
-        if view_name and view_name not in packs_by_view_name:
-            print_configurations = [{}]
-            pack = batch_dictionaries, print_configurations
-            packs_by_view_name = {view_name: [pack]}
 
     def run(self):
         is_draft = self.is_draft
         if is_draft:
             for draft_path in self._pack_by_path:
-                remove_path(draft_path)
+                if draft_path.is_symlink():
+                    remove_path(draft_path)
         for view_name, packs in self._packs_by_view_name.items():
             Printer = printer_by_name[view_name]
             printer = Printer(self.server_uri, is_draft)
@@ -104,7 +103,7 @@ class BatchPrinter:
             for draft_path, (
                 print_folder, print_name,
             ) in pack_by_path.items():
-                symlink(print_folder / print_name, draft_path)
+                symlink(print_folder / print_name, remove_path(draft_path))
         for (
             draft_folder, variable_definition,
         ) in self._link_packs:

@@ -12,7 +12,6 @@ class FileCache(LRUDict):
     def __getitem__(self, path):
         if path in self:
             file_time, file_data = super().__getitem__(path)
-            # !!! no such file
             if getmtime(path) == file_time:
                 return file_data
         file_data = self._load_file_data(path)

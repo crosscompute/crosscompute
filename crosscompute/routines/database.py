@@ -1,9 +1,11 @@
 import shlex
 from logging import getLogger
+from os.path import isfile
 from pathlib import Path
 from time import time
 
 from invisibleroads_macros_disk import is_path_in_folder
+from watchfiles import Change, DefaultFilter
 
 from ..constants import (
     Info,
@@ -25,9 +27,6 @@ class DiskDatabase():
         changed_infos = []
         variable_ids = []
         for path in paths:
-            path = Path(path).resolve()
-            if path.is_dir():
-                continue
             try:
                 infos = self.get(path)
             except KeyError:
@@ -45,6 +44,7 @@ class DiskDatabase():
         return changed_infos
 
     def get(self, path):
+        path = Path(path).absolute()
         configuration = self._configuration
         for automation_definition in configuration.automation_definitions:
             automation_folder = automation_definition.folder
@@ -70,7 +70,7 @@ class DiskMemory():
         self._infos_by_folder = {}
 
     def add(self, path, info):
-        path = Path(path).resolve()
+        path = Path(path).absolute()
         if not path.exists() or path.is_file():
             d = self._infos_by_path
         elif path.is_dir() and info['code'] == Info.DATASET:
@@ -83,13 +83,21 @@ class DiskMemory():
         d[path].append(info)
 
     def get(self, path):
-        path = Path(path).resolve()
+        path = Path(path).absolute()
         if path in self._infos_by_path:
             return self._infos_by_path[path]
         for folder, infos in self._infos_by_folder.items():
             if folder in path.parents:
                 return infos
         raise KeyError
+
+
+class PositiveFileFilter(DefaultFilter):
+
+    def __call__(self, change, path):
+        is_positive = change != Change.deleted
+        is_file = isfile(path)
+        return is_positive and is_file and super().__call__(change, path)
 
 
 def learn(configuration, with_restart):

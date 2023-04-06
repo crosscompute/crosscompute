@@ -5,11 +5,13 @@ from concurrent.futures import (
 from logging import getLogger
 from pathlib import Path
 
+from invisibleroads_macros_web.port import find_open_port
+
 from ..constants import (
     AUTOMATION_PATH,
-    DISK_DEBOUNCE_IN_MILLISECONDS,
-    DISK_POLL_IN_MILLISECONDS,
     HOST,
+    MAXIMUM_PORT,
+    MINIMUM_PORT,
     PORT,
     TOKEN_LENGTH)
 from ..exceptions import (
@@ -19,9 +21,15 @@ from ..exceptions import (
     CrossComputeDataError,
     CrossComputeError)
 from ..macros.security import DictionarySafe
-from ..settings import multiprocessing_context
+from ..settings import (
+    StoppableProcess,
+    multiprocessing_context)
 from .configuration import load_configuration
 from .interface import Automation
+from .printer import (
+    BatchPrinter,
+    initialize_printer_by_name,
+    printer_by_name)
 from .server import DiskServer
 from .work import (
     prepare_automation,
@@ -49,19 +57,19 @@ class DiskAutomation(Automation):
                 future.result()
         return instance
 
-    def run(self, environment, with_rebuild=True):
-        for automation_definition in self.definitions:
+    def run(self, environment, is_in=None, with_rebuild=True):
+        definitions = self.definitions
+        if is_in:
+            definitions = [_ for _ in definitions if is_in(_)]
+        for automation_definition in definitions:
             prepare_automation(automation_definition, with_rebuild)
-        for automation_definition in self.definitions:
-            run_automation(
-                automation_definition, environment, with_rebuild)
+        for automation_definition in definitions:
+            run_automation(automation_definition, environment, with_rebuild)
 
     def serve(
             self, environment, host=HOST, port=PORT, with_restart=True,
             with_prefix=True, with_hidden=True, root_uri='',
-            allowed_origins=None,
-            disk_poll_in_milliseconds=DISK_POLL_IN_MILLISECONDS,
-            disk_debounce_in_milliseconds=DISK_DEBOUNCE_IN_MILLISECONDS):
+            allowed_origins=None):
         with multiprocessing_context.Manager() as manager:
             safe = DictionarySafe(manager.dict(), TOKEN_LENGTH)
             uris = manager.list()
@@ -72,11 +80,33 @@ class DiskAutomation(Automation):
                 uris, tasks, changes,
                 host, port, root_uri, allowed_origins,
                 with_restart, with_prefix, with_hidden,
-            ).watch(
-                self.configuration,
-                disk_poll_in_milliseconds,
-                disk_debounce_in_milliseconds,
-                self._reload)
+            ).watch(self.configuration, self._reload)
+
+    def print(self, environment, view_name=None):
+        port = find_open_port(
+            minimum_port=MINIMUM_PORT, maximum_port=MAXIMUM_PORT)
+        self.run(
+            environment,
+            is_in=lambda _: _.get_variable_definitions('print'))
+        server_process = StoppableProcess(
+            name='serve',
+            target=self.serve,
+            args=(environment,),
+            kwargs={'port': port, 'with_restart': False})
+        server_process.start()
+        Printer = printer_by_name[view_name] if view_name else BatchPrinter
+        try:
+            batch_printer = Printer(f'http://127.0.0.1:{port}', is_draft=False)
+            for automation_definition in self.definitions:
+                batch_definitions = automation_definition.batch_definitions
+                batch_printer.add(automation_definition, batch_definitions)
+            batch_printer.run()
+        except KeyboardInterrupt:
+            pass
+        except Exception as e:
+            L.exception(e)
+        finally:
+            server_process.stop()
 
     def _reload(self):
         path = self.path

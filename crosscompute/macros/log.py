@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 from time import time
 
-from ..constants import DISK_POLL_IN_MILLISECONDS
+from ..constants import DISK_STEP_IN_MILLISECONDS
 
 
 class Clock:
@@ -30,11 +30,7 @@ class Clock:
         if not time_b:
             return True
         if t:
-            print(
-                time_a, t, time_b,
-                time_a < t and t < time_b + DISK_POLL_IN_MILLISECONDS)
-            # !!!
-            return time_a < t and t < time_b + DISK_POLL_IN_MILLISECONDS
+            return time_a < t and t < time_b + DISK_STEP_IN_MILLISECONDS
         return False
 
     def get_start_time(self, name):

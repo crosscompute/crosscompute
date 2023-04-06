@@ -716,7 +716,11 @@ def process_variable_data(path, variable_definition):
 
 
 def load_variable_data(path, variable_id):
-    file_data = FILE_DATA_CACHE[path]
+    try:
+        file_data = FILE_DATA_CACHE[path]
+    except OSError:
+        raise CrossComputeDataError(
+            f'variable {variable_id} not found at {format_path(path)}')
     if path.suffix == '.dictionary':
         file_value = file_data['value']
         try:
