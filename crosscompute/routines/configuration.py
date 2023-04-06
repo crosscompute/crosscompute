@@ -1131,7 +1131,7 @@ def assert_unique_values(xs, message):
 
 
 RUN_PY = Template('''\
-import inspect
+from inspect import signature
 from os import getenv
 from pathlib import Path
 
@@ -1141,8 +1141,11 @@ import $module_name
 folder_by_name = {}
 for x in 'input_folder', 'output_folder', 'log_folder', 'debug_folder':
     folder_by_name[x] = Path(getenv('CROSSCOMPUTE_' + x.upper()))
+function_signature = inspect.signature($function_string)
 d = {}
-for x in inspect.getargspec($function_string).args:
+for x in function_signature.parameters:
+    if x not in folder_by_name:
+        continue
     d[x] = folder_by_name[x]
 $function_string(**d)''')
 
