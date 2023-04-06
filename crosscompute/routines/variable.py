@@ -50,9 +50,9 @@ from .asset import (
     RADIO_JS_INPUT,
     RADIO_JS_OUTPUT,
     STRING_HTML_INPUT,
-    STRING_JS_HEADER,
-    STRING_JS_INPUT,
+    STRING_JS_INPUT_HEADER,
     STRING_JS_OUTPUT,
+    STRING_JS_OUTPUT_HEADER,
     TABLE_JS_HEADER,
     TABLE_JS_OUTPUT,
     TEXT_HTML_INPUT,
@@ -196,7 +196,7 @@ class StringView(VariableView):
             'input_type': self.input_type,
             'suggestions': c.get('suggestions', [])})
         js_texts = [
-            STRING_JS_INPUT.substitute({'view_name': view_name})]
+            STRING_JS_INPUT_HEADER.substitute({'view_name': view_name})]
         return {
             'css_uris': [], 'css_texts': [], 'js_uris': [],
             'main_text': main_text, 'js_texts': js_texts}
@@ -217,7 +217,7 @@ class StringView(VariableView):
             f'class="_{x.mode_name} _{self.view_name} {self.variable_id}">'
             f'{value}</span>')
         js_texts = [
-            STRING_JS_HEADER,
+            STRING_JS_OUTPUT_HEADER,
             STRING_JS_OUTPUT.substitute({
                 'variable_id': variable_id,
                 'element_id': element_id,
@@ -273,8 +273,8 @@ class TextView(VariableView):
             'attribute_string': '' if value else ' disabled',
             'value': value})
         js_texts = [
-            STRING_JS_HEADER,
-            STRING_JS_INPUT.substitute({'view_name': view_name})]
+            STRING_JS_OUTPUT_HEADER,
+            STRING_JS_INPUT_HEADER.substitute({'view_name': view_name})]
         if not value:
             js_texts.extend([
                 TEXT_JS_HEADER,
@@ -295,7 +295,7 @@ class TextView(VariableView):
             f'class="_{x.mode_name} _{self.view_name} {self.variable_id}">'
             '</span>')
         js_texts = [
-            STRING_JS_HEADER,
+            STRING_JS_OUTPUT_HEADER,
             TEXT_JS_HEADER,
             TEXT_JS_OUTPUT.substitute({
                 'variable_id': variable_id,
@@ -321,7 +321,7 @@ class MarkdownView(TextView):
             f'class="_{x.mode_name} _{self.view_name} {self.variable_id}">'
             '</span>')
         js_texts = [
-            STRING_JS_HEADER,
+            STRING_JS_OUTPUT_HEADER,
             MARKDOWN_JS_HEADER,
             MARKDOWN_JS_OUTPUT.substitute({
                 'variable_id': variable_id,
@@ -793,8 +793,7 @@ def get_variable_data_by_id(
 
 def get_variable_value_by_id(data_by_id):
     return {
-        variable_id: data['value'] for variable_id, data in data_by_id.items()
-    }
+        variable_id: data['value'] for variable_id, data in data_by_id.items()}
 
 
 def format_text(text, data_by_id):

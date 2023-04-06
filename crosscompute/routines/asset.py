@@ -28,8 +28,10 @@ LINK_JS_OUTPUT = asset_storage.load_string_text('link-output.js')
 
 
 STRING_HTML_INPUT = asset_storage.load_jinja_text('string-input.html')
-STRING_JS_INPUT = asset_storage.load_string_text('string-input.js')
-STRING_JS_HEADER = asset_storage.load_raw_text('string-header.js')
+STRING_JS_INPUT_HEADER = asset_storage.load_string_text(
+    'string-input-header.js')
+STRING_JS_OUTPUT_HEADER = asset_storage.load_raw_text(
+    'string-output-header.js')
 STRING_JS_OUTPUT = asset_storage.load_string_text('string-output.js')
 
 
@@ -76,3 +78,4 @@ PDF_JS_OUTPUT = asset_storage.load_string_text('pdf-output.js')
 
 
 FILE_HTML_INPUT = asset_storage.load_string_text('file-input.html')
+FILE_JS_INPUT = asset_storage.load_string_text('file-input.js')
