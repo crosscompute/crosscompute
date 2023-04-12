@@ -1,8 +1,15 @@
 header {
-  margin-bottom: 16px;
+  margin-bottom: 2em;
+}
+footer {
+  margin-top: 2em;
+}
+._batches {
+  list-style: none;
+  padding-left: 0;
 }
 @media print {
-  header {
+  header, footer {
     display: none;
   }
 }
