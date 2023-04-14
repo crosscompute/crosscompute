@@ -580,23 +580,26 @@ def save_variable_data(target_path, data_by_id, variable_definitions):
         elif 'path' in variable_data:
             shutil.copy(variable_data['path'], target_path)
         elif 'uri' in variable_data:
-            download_uri(variable_data['uri'], target_path)
-        elif 'files' in variable_data:
-            link_files(target_path, variable_data['files'])
+            variable_uri = variable_data['uri']
+            if variable_uri.startswith(
+                'http://'
+            ) or variable_uri.startswith('https://'):
+                download_uri(variable_data['uri'], target_path)
+            elif variable_uri.startswith('/f/'):
+                link_files(target_path, variable_uri)
         variable_definition = find_item(
             variable_definitions, 'id', variable_id)
         variable_view = VariableView.get_from(variable_definition)
         variable_view.process(target_path)
 
 
-def link_files(path_template, file_dictionaries):
+def link_files(path_template, variable_uri):
+    folder = FILES_FOLDER / variable_uri.replace('/f/', '')
+    with open(folder / 'files.json', 'rt') as f:
+        file_dictionaries = json.load(f)
     for file_index, file_dictionary in enumerate(file_dictionaries):
-        file_id = file_dictionary['id']
-        file_folder = FILES_FOLDER / file_id
-        file_path = file_folder / 'file'
-        with open(file_folder / 'file.json', 'rt') as f:
-            d = json.load(f)
-            file_extension = d['extension']
+        file_path = folder / str(file_index)
+        file_extension = file_dictionary['extension']
         target_path = str(path_template).format(
             index=file_index, extension=file_extension)
         symlink(file_path, target_path)

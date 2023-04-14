@@ -16,23 +16,23 @@ router = APIRouter()
 
 @router.post(FILES_ROUTE, tags=['file'])
 async def add_files_json(files: list[UploadFile]):
-    ds = []
-    for async_file in files:
-        file_folder = Path(make_random_folder(FILES_FOLDER))
-        file_name = async_file.filename
-        file_path = file_folder / 'file'
+    file_dictionaries = []
+    folder = Path(make_random_folder(FILES_FOLDER))
+    for file_index, async_file in enumerate(files):
+        name = async_file.filename
+        path = folder / str(file_index)
         content_type = async_file.content_type
-        with open(file_path, 'wb') as f:
+        with open(path, 'wb') as f:
             f.write(await async_file.read())
-        with open(file_folder / 'file.json', 'wt') as f:
-            json.dump({
-                'name': file_name,
-                'type': content_type,
-                'extension': guess_extension(content_type),
-            }, f)
-        L.info(f'saved {file_name} in {file_path}')
-        ds.append({'id': file_folder.name})
-    return {'files': ds}
+        file_dictionaries.append({
+            'name': name,
+            'type': content_type,
+            'size': path.stat().st_size,
+            'extension': guess_extension(content_type)})
+        L.info(f'saved {name} in {path}')
+    with open(folder / 'files.json', 'wt') as f:
+        json.dump(file_dictionaries, f)
+    return {'uri': f'/f/{folder.name}'}
 
 
 L = getLogger(__name__)
