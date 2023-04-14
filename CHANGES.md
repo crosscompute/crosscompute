@@ -2,7 +2,7 @@
 - Start from scratch
 - Restore self-contained server
 - Add views: link, string, number, password, email, text, markdown, image
-- Add views: radio, checkbox, table, frame
+- Add views: radio, checkbox, table, frame, json, pdf, file
 - Move map views into crosscompute-views-map
 - Parallelize built-in workers
 - Respect GET parameters for views based on string or text
@@ -19,6 +19,8 @@
 - Support `_print` parameter for printing
 - Support `_embed` parameter for embedding
 - Migrate from pyramid to fastapi
+- Replace polling with server side events for mutation tracking
+- Support live print preview
 
 # 0.8
 - Start from scratch
