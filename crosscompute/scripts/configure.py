@@ -55,7 +55,6 @@ def configure(path_or_folder):
             pass
     configuration, configuration_path = input_configuration(
         configuration, path_or_folder)
-    print(dict(configuration))
     save_configuration(configuration_path, configuration)
     return configuration_path
 
