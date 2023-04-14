@@ -27,38 +27,38 @@ from ..macros.package import import_attribute
 from ..settings import (
     view_by_name)
 from .asset import (
-    CHECKBOX_HTML_INPUT,
-    CHECKBOX_JS_HEADER,
-    CHECKBOX_JS_INPUT,
-    CHECKBOX_JS_OUTPUT,
-    FILE_HTML_INPUT,
-    FRAME_JS_HEADER,
-    FRAME_JS_OUTPUT,
-    IMAGE_JS_HEADER,
-    IMAGE_JS_OUTPUT,
-    JSON_JS_HEADER,
-    JSON_JS_OUTPUT,
-    LINK_JS_HEADER,
-    LINK_JS_OUTPUT,
-    MARKDOWN_JS_HEADER,
-    MARKDOWN_JS_OUTPUT,
+    CHECKBOX_INPUT_HEADER_JS,
+    CHECKBOX_INPUT_HTML,
+    CHECKBOX_OUTPUT_HEADER_JS,
+    CHECKBOX_OUTPUT_JS,
+    FILE_INPUT_HTML,
+    FRAME_OUTPUT_HEADER_JS,
+    FRAME_OUTPUT_JS,
+    IMAGE_OUTPUT_HEADER_JS,
+    IMAGE_OUTPUT_JS,
+    JSON_OUTPUT_HEADER_JS,
+    JSON_OUTPUT_JS,
+    LINK_OUTPUT_HEADER_JS,
+    LINK_OUTPUT_JS,
+    MARKDOWN_OUTPUT_HEADER_JS,
+    MARKDOWN_OUTPUT_JS,
     PDF_CSS,
-    PDF_JS_HEADER,
-    PDF_JS_OUTPUT,
-    RADIO_HTML_INPUT,
-    RADIO_JS_HEADER,
-    RADIO_JS_INPUT,
-    RADIO_JS_OUTPUT,
-    STRING_HTML_INPUT,
-    STRING_JS_INPUT_HEADER,
-    STRING_JS_OUTPUT,
-    STRING_JS_OUTPUT_HEADER,
-    TABLE_JS_HEADER,
-    TABLE_JS_OUTPUT,
-    TEXT_HTML_INPUT,
-    TEXT_JS_HEADER,
-    TEXT_JS_INPUT,
-    TEXT_JS_OUTPUT)
+    PDF_OUTPUT_HEADER_JS,
+    PDF_OUTPUT_JS,
+    RADIO_INPUT_HTML,
+    RADIO_INPUT_HEADER_JS,
+    RADIO_OUTPUT_HEADER_JS,
+    RADIO_OUTPUT_JS,
+    STRING_INPUT_HEADER_JS,
+    STRING_INPUT_HTML,
+    STRING_OUTPUT_HEADER_JS,
+    STRING_OUTPUT_JS,
+    TABLE_OUTPUT_HEADER_JS,
+    TABLE_OUTPUT_JS,
+    TEXT_INPUT_HTML,
+    TEXT_INPUT_JS,
+    TEXT_OUTPUT_HEADER_JS,
+    TEXT_OUTPUT_JS)
 from .interface import Batch
 
 
@@ -152,8 +152,8 @@ class LinkView(VariableView):
             f'download="{escape_quotes_html(file_name)}">'
             f'{link_text}</a>')
         js_texts = [
-            LINK_JS_HEADER,
-            LINK_JS_OUTPUT.substitute({
+            LINK_OUTPUT_HEADER_JS,
+            LINK_OUTPUT_JS.substitute({
                 'variable_id': variable_id,
                 'element_id': element_id,
                 'link_text': escape_quotes_js(link_text)})]
@@ -187,7 +187,7 @@ class StringView(VariableView):
         element_id = x.id
         value = self.get_value(b, x)
         c = b.get_variable_configuration(variable_definition)
-        main_text = STRING_HTML_INPUT.render({
+        main_text = STRING_INPUT_HTML.render({
             'element_id': element_id,
             'mode_name': x.mode_name,
             'view_name': view_name,
@@ -196,7 +196,7 @@ class StringView(VariableView):
             'input_type': self.input_type,
             'suggestions': c.get('suggestions', [])})
         js_texts = [
-            STRING_JS_INPUT_HEADER.substitute({'view_name': view_name})]
+            STRING_INPUT_HEADER_JS.substitute({'view_name': view_name})]
         return {
             'css_uris': [], 'css_texts': [], 'js_uris': [],
             'main_text': main_text, 'js_texts': js_texts}
@@ -217,8 +217,8 @@ class StringView(VariableView):
             f'class="_{x.mode_name} _{self.view_name} {self.variable_id}">'
             f'{value}</span>')
         js_texts = [
-            STRING_JS_OUTPUT_HEADER,
-            STRING_JS_OUTPUT.substitute({
+            STRING_OUTPUT_HEADER_JS,
+            STRING_OUTPUT_JS.substitute({
                 'variable_id': variable_id,
                 'element_id': element_id,
                 'data_uri': data_uri})]
@@ -265,7 +265,7 @@ class TextView(VariableView):
         variable_id = self.variable_id
         view_name = self.view_name
         element_id = x.id
-        main_text = TEXT_HTML_INPUT.substitute({
+        main_text = TEXT_INPUT_HTML.substitute({
             'element_id': element_id,
             'mode_name': x.mode_name,
             'view_name': view_name,
@@ -273,12 +273,12 @@ class TextView(VariableView):
             'attribute_string': '' if value else ' disabled',
             'value': value})
         js_texts = [
-            STRING_JS_OUTPUT_HEADER,
-            STRING_JS_INPUT_HEADER.substitute({'view_name': view_name})]
+            STRING_OUTPUT_HEADER_JS,
+            STRING_INPUT_HEADER_JS.substitute({'view_name': view_name})]
         if not value:
             js_texts.extend([
-                TEXT_JS_HEADER,
-                TEXT_JS_INPUT.substitute({
+                TEXT_OUTPUT_HEADER_JS,
+                TEXT_INPUT_JS.substitute({
                     'element_id': element_id,
                     'data_uri': b.get_data_uri(variable_definition, x)})])
         return {
@@ -295,9 +295,9 @@ class TextView(VariableView):
             f'class="_{x.mode_name} _{self.view_name} {self.variable_id}">'
             '</span>')
         js_texts = [
-            STRING_JS_OUTPUT_HEADER,
-            TEXT_JS_HEADER,
-            TEXT_JS_OUTPUT.substitute({
+            STRING_OUTPUT_HEADER_JS,
+            TEXT_OUTPUT_HEADER_JS,
+            TEXT_OUTPUT_JS.substitute({
                 'variable_id': variable_id,
                 'element_id': element_id,
                 'data_uri': data_uri})]
@@ -321,9 +321,9 @@ class MarkdownView(TextView):
             f'class="_{x.mode_name} _{self.view_name} {self.variable_id}">'
             '</span>')
         js_texts = [
-            STRING_JS_OUTPUT_HEADER,
-            MARKDOWN_JS_HEADER,
-            MARKDOWN_JS_OUTPUT.substitute({
+            STRING_OUTPUT_HEADER_JS,
+            MARKDOWN_OUTPUT_HEADER_JS,
+            MARKDOWN_OUTPUT_JS.substitute({
                 'variable_id': variable_id,
                 'element_id': element_id,
                 'data_uri': data_uri})]
@@ -347,8 +347,8 @@ class ImageView(VariableView):
             f'src="{data_uri}" alt="">')
         # TODO: Show spinner on error
         js_texts = [
-            IMAGE_JS_HEADER,
-            IMAGE_JS_OUTPUT.substitute({
+            IMAGE_OUTPUT_HEADER_JS,
+            IMAGE_OUTPUT_JS.substitute({
                 'variable_id': variable_id,
                 'element_id': element_id,
                 'data_uri': data_uri})]
@@ -369,7 +369,7 @@ class RadioView(VariableView):
         c = b.get_variable_configuration(variable_definition)
         data = b.load_data_from(x.request_params, variable_definition)
         value = data.get('value', '')
-        main_text = RADIO_HTML_INPUT.render({
+        main_text = RADIO_INPUT_HTML.render({
             'element_id': element_id,
             'mode_name': x.mode_name,
             'view_name': view_name,
@@ -377,12 +377,12 @@ class RadioView(VariableView):
             'options': get_configuration_options(c, [value]),
             'value': value})
         js_texts = [
-            RADIO_JS_INPUT.substitute({'view_name': view_name})]
+            RADIO_INPUT_HEADER_JS.substitute({'view_name': view_name})]
         if variable_definition.step_name != 'input':
             data_uri = b.get_data_uri(variable_definition, x)
             js_texts.extend([
-                RADIO_JS_HEADER,
-                RADIO_JS_OUTPUT.substitute({
+                RADIO_OUTPUT_HEADER_JS,
+                RADIO_OUTPUT_JS.substitute({
                     'variable_id': variable_id, 'element_id': element_id,
                     'data_uri': data_uri})])
         return {
@@ -402,7 +402,7 @@ class CheckboxView(VariableView):
         c = b.get_variable_configuration(variable_definition)
         data = b.load_data_from(x.request_params, variable_definition)
         values = data.get('value', '').splitlines()
-        main_text = CHECKBOX_HTML_INPUT.render({
+        main_text = CHECKBOX_INPUT_HTML.render({
             'element_id': element_id,
             'mode_name': x.mode_name,
             'view_name': view_name,
@@ -410,12 +410,12 @@ class CheckboxView(VariableView):
             'options': get_configuration_options(c, values),
             'values': values})
         js_texts = [
-            CHECKBOX_JS_INPUT.substitute({'view_name': view_name})]
+            CHECKBOX_INPUT_HEADER_JS.substitute({'view_name': view_name})]
         if variable_definition.step_name != 'input':
             data_uri = b.get_data_uri(variable_definition, x)
             js_texts.extend([
-                CHECKBOX_JS_HEADER,
-                CHECKBOX_JS_OUTPUT.substitute({
+                CHECKBOX_OUTPUT_HEADER_JS,
+                CHECKBOX_OUTPUT_JS.substitute({
                     'variable_id': variable_id,
                     'element_id': element_id,
                     'data_uri': data_uri})])
@@ -438,8 +438,8 @@ class TableView(VariableView):
             f'class="_{x.mode_name} _{self.view_name} {variable_id}">'
             '<thead/><tbody/></table>')
         js_texts = [
-            TABLE_JS_HEADER,
-            TABLE_JS_OUTPUT.substitute({
+            TABLE_OUTPUT_HEADER_JS,
+            TABLE_OUTPUT_JS.substitute({
                 'variable_id': variable_id,
                 'element_id': element_id,
                 'data_uri': data_uri})]
@@ -468,8 +468,8 @@ class FrameView(VariableView):
             f'src="{escape_quotes_html(value)}" frameborder="0">'
             '</iframe>')
         js_texts = [
-            FRAME_JS_HEADER,
-            FRAME_JS_OUTPUT.substitute({
+            FRAME_OUTPUT_HEADER_JS,
+            FRAME_OUTPUT_JS.substitute({
                 'variable_id': variable_id,
                 'element_id': element_id,
                 'data_uri': data_uri})]
@@ -487,8 +487,8 @@ class JsonView(VariableView):
         variable_id = self.variable_id
         data_uri = b.get_data_uri(variable_definition, x)
         js_texts = [
-            JSON_JS_HEADER,
-            JSON_JS_OUTPUT.substitute({
+            JSON_OUTPUT_HEADER_JS,
+            JSON_OUTPUT_JS.substitute({
                 'variable_id': variable_id,
                 'data_uri': data_uri})]
         return {
@@ -507,8 +507,8 @@ class PdfView(VariableView):
         element_id = x.id
         data_uri = b.get_data_uri(variable_definition, x)
         js_texts = [
-            PDF_JS_HEADER,
-            PDF_JS_OUTPUT.substitute({
+            PDF_OUTPUT_HEADER_JS,
+            PDF_OUTPUT_JS.substitute({
                 'variable_id': variable_id,
                 'element_id': element_id,
                 'data_uri': data_uri})]
@@ -534,7 +534,7 @@ class FileView(VariableView):
         c = b.get_variable_configuration(variable_definition)
         mime_types = c.get('mime-types', [])
         js_texts = []
-        main_text = FILE_HTML_INPUT.substitute({
+        main_text = FILE_INPUT_HTML.substitute({
             'element_id': element_id,
             'mode_name': x.mode_name,
             'view_name': view_name,
