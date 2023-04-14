@@ -542,8 +542,7 @@ class FileView(VariableView):
         js_texts = [
             FILE_INPUT_HEADER_JS.substitute({
                 'view_name': view_name,
-                'files_uri': root_uri + FILES_ROUTE,
-            })]
+                'files_uri': root_uri + FILES_ROUTE})]
         main_text = FILE_INPUT_HTML.substitute({
             'element_id': element_id,
             'mode_name': x.mode_name,

@@ -22,4 +22,4 @@ for (var l of document.getElementsByClassName('_$view_name')) {
 GET_DATA_BY_VIEW_NAME['$view_name'] = x => {
   const { json } = x.dataset;
   return json ? JSON.parse(json) : {};
-}
+};
