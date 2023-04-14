@@ -142,6 +142,9 @@ output:
     - id: cards
       view: json
       path: cards.json
+    - id: report
+      view: pdf
+      path: example.pdf
     - id: region
       view: map-mapbox
       path: region.geojson

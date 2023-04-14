@@ -310,6 +310,8 @@ def save_raw_configuration(configuration_path, configuration):
 def save_raw_configuration_yaml(configuration_path, configuration):
     # TODO: Add --- at top
     yaml = YAML()
+    yaml.explicit_start = True
+    yaml.indent(mapping=2, sequence=4, offset=2)
     try:
         with open(configuration_path, 'wt') as configuration_file:
             yaml.dump(configuration, configuration_file)

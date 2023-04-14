@@ -48,7 +48,7 @@ def run_with(automation, args):
 
 def run(automation, environment, with_rebuild=True):
     try:
-        automation.run(environment, with_rebuild)
+        automation.run(environment, with_rebuild=with_rebuild)
     except CrossComputeError as e:
         L.error(e)
     except KeyboardInterrupt:

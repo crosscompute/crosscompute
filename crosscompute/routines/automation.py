@@ -28,7 +28,6 @@ from .configuration import load_configuration
 from .interface import Automation
 from .printer import (
     BatchPrinter,
-    initialize_printer_by_name,
     printer_by_name)
 from .server import DiskServer
 from .work import (
