@@ -21,6 +21,9 @@
 {{ super() -}}
 {% include 'step-main.html' %}
 {% endif %}
+{% endblock %}
+
+{% block footer_html %}
 {% if not for_embed %}
 <ul class="_batches">
 {% for batch_definition in batch_definitions %}

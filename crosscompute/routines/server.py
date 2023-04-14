@@ -22,6 +22,7 @@ from ..exceptions import (
     CrossComputeError)
 from ..routers import (
     automation,
+    file,
     root,
     stream,
     token)
@@ -168,6 +169,7 @@ def get_app(root_uri, with_prefix):
     app.add_exception_handler(StarletteHTTPException, handle_http_exception)
     app.include_router(root.router, prefix=prefix)
     app.include_router(automation.router, prefix=prefix)
+    app.include_router(file.router, prefix=prefix)
     app.include_router(token.router, prefix=prefix)
     app.include_router(stream.router, prefix=prefix)
     return app
