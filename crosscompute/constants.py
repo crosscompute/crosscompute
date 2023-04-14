@@ -43,6 +43,8 @@ TEMPLATE_PATH_BY_ID = {
     'automation': str(ASSETS_FOLDER / 'automation.html'),
     'batch': str(ASSETS_FOLDER / 'batch.html'),
     'step': str(ASSETS_FOLDER / 'step.html')}
+CACHE_FOLDER = Path('~/.crosscompute').expanduser()
+FILES_FOLDER = CACHE_FOLDER / 'files'
 
 
 ID_LENGTH = 32
@@ -64,6 +66,7 @@ AUTOMATION_ROUTE = '/a/{automation_slug}'
 BATCH_ROUTE = '/b/{batch_slug}'
 STEP_ROUTE = '/{step_code}'
 VARIABLE_ROUTE = '/{variable_id}'
+FILES_ROUTE = '/files.json'
 STREAM_ROUTE = '/streams'
 STYLE_ROUTE = '/styles/{style_name}.css'
 MUTATION_ROUTE = '/mutations{uri}.json'

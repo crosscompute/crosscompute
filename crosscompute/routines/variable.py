@@ -4,6 +4,7 @@ import json
 import shutil
 from dataclasses import dataclass
 from logging import getLogger
+from os import symlink
 from urllib.request import urlretrieve as download_uri
 
 from importlib_metadata import entry_points
@@ -15,6 +16,8 @@ from invisibleroads_macros_web.escape import (
 
 from ..constants import (
     CACHED_FILE_SIZE_LIMIT_IN_BYTES,
+    FILES_FOLDER,
+    FILES_ROUTE,
     MAXIMUM_FILE_CACHE_LENGTH,
     VARIABLE_ID_TEMPLATE_PATTERN)
 from ..exceptions import (
@@ -25,12 +28,14 @@ from ..macros.disk import FileCache
 from ..macros.iterable import find_item
 from ..macros.package import import_attribute
 from ..settings import (
+    template_globals,
     view_by_name)
 from .asset import (
     CHECKBOX_INPUT_HEADER_JS,
     CHECKBOX_INPUT_HTML,
     CHECKBOX_OUTPUT_HEADER_JS,
     CHECKBOX_OUTPUT_JS,
+    FILE_INPUT_HEADER_JS,
     FILE_INPUT_HTML,
     FRAME_OUTPUT_HEADER_JS,
     FRAME_OUTPUT_JS,
@@ -533,7 +538,12 @@ class FileView(VariableView):
         variable_definition = self.variable_definition
         c = b.get_variable_configuration(variable_definition)
         mime_types = c.get('mime-types', [])
-        js_texts = []
+        root_uri = template_globals['root_uri']
+        js_texts = [
+            FILE_INPUT_HEADER_JS.substitute({
+                'view_name': view_name,
+                'files_uri': root_uri + FILES_ROUTE,
+            })]
         main_text = FILE_INPUT_HTML.substitute({
             'element_id': element_id,
             'mode_name': x.mode_name,
@@ -571,10 +581,28 @@ def save_variable_data(target_path, data_by_id, variable_definitions):
             shutil.copy(variable_data['path'], target_path)
         elif 'uri' in variable_data:
             download_uri(variable_data['uri'], target_path)
+        elif 'files' in variable_data:
+            link_files(target_path, variable_data['files'])
         variable_definition = find_item(
             variable_definitions, 'id', variable_id)
         variable_view = VariableView.get_from(variable_definition)
         variable_view.process(target_path)
+
+
+def link_files(path_template, file_dictionaries):
+    for file_index, file_dictionary in enumerate(file_dictionaries):
+        file_id = file_dictionary['id']
+        file_folder = FILES_FOLDER / file_id
+        file_path = file_folder / 'file'
+        with open(file_folder / 'file.json', 'rt') as f:
+            d = json.load(f)
+            file_extension = d['extension']
+        target_path = str(path_template).format(
+            index=file_index, extension=file_extension)
+        symlink(file_path, target_path)
+        L.debug(f'linked {file_path} to {target_path}')
+        if target_path == path_template:
+            break
 
 
 def get_data_by_id(automation_definition, batch_definition):
