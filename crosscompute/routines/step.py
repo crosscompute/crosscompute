@@ -137,11 +137,14 @@ def get_css_text(design_name, for_embed, for_print, m):
 def get_main_text(automation_definition, step_name, render_html):
     def format_template(text, i=0, x=''):
         x_string = f' data-expression="{x}"' if x else ''
+        l_string = ' _live' if i == 0 else  ''
         html = TemplateFilter(render_html).process(text)
         html = get_html_from_markdown(html)
         if step_name == 'input' and 'class="_continue"' not in text:
             html += '<button class="_continue" type="button">Continue</button>'
-        return f'<div id="_t{i}" class="_template"{x_string}>{html}</div>'
+        return (
+            f'<div id="_t{i}" class="_template{l_string}"{x_string}>'
+            f'{html}</div>')
     a = automation_definition
     template_definitions = a.template_definitions_by_step_name[step_name]
     if not template_definitions:
