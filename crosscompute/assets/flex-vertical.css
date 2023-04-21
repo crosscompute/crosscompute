@@ -6,11 +6,11 @@
     display: none;
     gap: 16px;
   }
-  ._template._live {
+  ._template._live, ._view {
     display: flex;
   }
-  ._view {
-    display: flex;
+  ._template > * {
+    margin: 0;
   }
   ._view img {
     align-self: start;

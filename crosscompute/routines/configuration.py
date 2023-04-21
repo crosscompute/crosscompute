@@ -477,6 +477,9 @@ def validate_templates(configuration):
         template_definitions = [TemplateDefinition(
             _, automation_folder=automation_folder, step_name=step_name,
         ) for _ in get_dictionaries(step_configuration, 'templates')]
+        assert_unique_values([
+            _.path for _ in template_definitions
+        ], f'duplicate template path {{x}} in {step_name}')
         template_definitions_by_step_name[step_name] = template_definitions
     return {
         'template_definitions_by_step_name': template_definitions_by_step_name}
