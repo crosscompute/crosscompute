@@ -50,7 +50,7 @@ class DiskDatabase():
             automation_folder = automation_definition.folder
             runs_folder = automation_folder / 'runs'
             if is_path_in_folder(path, runs_folder):
-                run_id = path.relative_to(runs_folder).parts[0]
+                run_id = path.resolve().relative_to(runs_folder).parts[0]
                 batch_uri = BATCH_ROUTE.format(batch_slug=run_id)
                 memory = DiskMemory()
                 add_variable_infos_from_folder(

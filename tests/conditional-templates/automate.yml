@@ -4,22 +4,28 @@ name: Conditional Templates
 version: 0.0.1
 input:
   variables:
-    - id: a
+    - id: age
       view: number
       path: variables.dictionary
-    - id: b
+    - id: hour
       view: number
       path: variables.dictionary
   templates:
-    - path: input0.md
-    - path: input1.md
-      expression: a > 0
+    - path: input.md
+    - path: input-child.md
+      expression: age < 18
+    - path: input-adult.md
+      expression: age >= 18
+    - path: input-morning-child.md
+      expression: age < 18 && hour <= 12
+    - path: input-morning-adult.md
+      expression: age >= 18 && hour <= 12
+    - path: input-afternoon-child.md
+      expression: age < 18 && hour > 12
+    - path: input-afternoon-adult.md
+      expression: age >= 18 && hour > 12
 output:
-  variables:
-    - id: c
-      view: number
-      path: variables.dictionary
+  templates:
+    - path: output.md
 batches:
   - folder: batches/standard
-scripts:
-  - command: python3 run.py {input_folder} {output_folder}

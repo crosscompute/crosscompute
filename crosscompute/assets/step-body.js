@@ -20,6 +20,7 @@ function showNext() {
   }
   if (newElement) {
     newElement.classList.add('_live');
+    newElement.querySelectorAll('._input').forEach(_ => _.classList.add('_live'));
   } else {
     runAutomation();
   }
@@ -47,7 +48,7 @@ function redirect(uri, d) {
 }
 function getDataById() {
   const d = {};
-  for (const x of document.getElementsByClassName('_input')) {
+  for (const x of document.getElementsByClassName('_input _live')) {
     const { view: viewName, variable: variableId } = x.dataset;
     d[variableId] = GET_DATA_BY_VIEW_NAME[viewName](x);
   }
