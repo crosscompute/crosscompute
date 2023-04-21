@@ -54,10 +54,11 @@ function getDataById() {
   return d;
 }
 const getTemplateElement = i => document.getElementById('_t' + i), GET_DATA_BY_VIEW_NAME = {};
-let oldTemplateIndex, newTemplateIndex = 0;
+let oldTemplateIndex, newTemplateIndex = -1;
 Array.from(document.getElementsByClassName('_continue')).forEach(function (l) {
   l.onclick = showNext;
 });
+showNext();
 {% if step_name != 'input' %}
 function registerFunction(variableId, f) {
   register(functions, variableId, f);
