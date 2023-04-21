@@ -101,6 +101,9 @@ input:
   templates:
     # path specifies the markdown file for your template (required)
     - path: input.md
+    # expression determines whether your template shows next
+    - path: input2.md
+      expression: age >= 18
 
 # output is how your scripts set data for the user
 output:

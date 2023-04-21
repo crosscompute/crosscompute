@@ -18,7 +18,7 @@ from .batch import DiskBatch
 from .variable import Element, VariableView
 
 
-class VariableParser(HTMLParser):
+class TemplateFilter(HTMLParser):
 
     def __init__(self, render_html, *args, **kwargs):
         self.render_html = render_html
@@ -48,7 +48,7 @@ class VariableParser(HTMLParser):
             data = VARIABLE_ID_TEMPLATE_PATTERN.sub(render_html, data)
         self.template_parts.append(data)
 
-    def parse_text(self, text):
+    def process(self, text):
         self.template_parts = []
         self.feed(text)
         return ''.join(self.template_parts)
@@ -74,20 +74,18 @@ def get_step_response_dictionary(
     design_name = automation_definition.get_design_name(step_name)
     for_embed = '_embed' in request_params
     for_print = '_print' in request_params
-    render_element_html = partial(
+    render_html = partial(
         render_variable_html, variable_definitions=variable_definitions,
         batch=batch, m=m, i=count(), root_uri=template_globals['root_uri'],
         request_params=request_params, step_name=step_name,
         design_name=design_name, for_print=for_print)
-    template_text = automation_definition.get_template_text(step_name)
-    main_text = get_html_from_markdown(VariableParser(
-        render_element_html).parse_text(template_text))
+    main_text = get_main_text(automation_definition, step_name, render_html)
     mutation_reference_uri = get_automation_batch_step_uri(
         automation_definition, batch_definition, step_name)
     return {
         'css_uris': get_unique_order(m['css_uris']),
         'css_text': get_css_text(design_name, for_embed, for_print, m),
-        'main_text': main_text, 'main_class': get_main_class(design_name),
+        'main_text': main_text,
         'js_uris': get_unique_order(m['js_uris']),
         'js_text': '\n'.join(get_unique_order(m['js_texts'])),
         'for_embed': for_embed, 'for_print': for_print,
@@ -136,13 +134,29 @@ def get_css_text(design_name, for_embed, for_print, m):
     return '\n'.join(css_texts + get_unique_order(m['css_texts']))
 
 
-def get_main_class(design_name):
-    match design_name:
-        case 'flex-vertical':
-            main_class = '_vertical'
-        case _:
-            main_class = ''
-    return main_class
+def get_main_text(automation_definition, step_name, render_html):
+    def format_template(text, i=0, x=''):
+        x_string = f' data-expression="{x}"' if x else ''
+        html = TemplateFilter(render_html).process(text)
+        html = get_html_from_markdown(html)
+        if step_name == 'input' and 'class="_continue"' not in text:
+            html += '<button class="_continue" type="button">Continue</button>'
+        return f'<div id="_t{i}" class="_template"{x_string}>{html}</div>'
+    a = automation_definition
+    template_definitions = a.template_definitions_by_step_name[step_name]
+    if not template_definitions:
+        variable_definitions = a.get_variable_definitions(step_name)
+        variable_ids = (_.id for _ in variable_definitions)
+        text = '\n'.join('{%s}' % _ for _ in variable_ids)
+        return format_template(text)
+    parts = []
+    automation_folder = a.folder
+    for i, template_definition in enumerate(template_definitions):
+        path = automation_folder / template_definition.path
+        with path.open('rt') as f:
+            text = f.read().strip()
+        parts.append(format_template(text, i, template_definition.expression))
+    return '\n'.join(parts)
 
 
 L = getLogger(__name__)

@@ -24,11 +24,7 @@
 {{ header_text | safe -}}
 {% endblock %}
 </header>
-{% if main_class %}
-<main class="{{ main_class }}">
-{% else %}
 <main>
-{% endif %}
 {% block main_html %}
 {{ main_text | safe -}}
 {% endblock %}

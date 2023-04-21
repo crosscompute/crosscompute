@@ -22,11 +22,6 @@
 {% endif %}
 {% endblock %}
 
-{% block main_html %}
-{{ super() -}}
-{% include 'step-main.html' %}
-{% endblock %}
-
 {% block body_js %}
 {% include 'step-body.js' %}
 {{ super() -}}

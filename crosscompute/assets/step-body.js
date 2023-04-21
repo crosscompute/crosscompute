@@ -1,3 +1,40 @@
+function showNext() {
+  oldTemplateIndex = newTemplateIndex;
+  let newElement, isThis = false;
+  while (!isThis) {
+    newElement = getTemplateElement(++newTemplateIndex);
+    const x = newElement?.dataset.expression;
+    if (x) {
+      const lines = [];
+      for (const [k, v] of Object.entries(getDataById())) {
+        lines.push(`const ${k} = ${JSON.stringify(v.value)};`);
+      }
+      isThis = Function(lines.join('\n') + `return ${x};`)();
+    } else {
+      isThis = true;
+    }
+  }
+  const oldElement = getTemplateElement(oldTemplateIndex);
+  if (oldElement) {
+    oldElement.classList.remove('_live');
+  }
+  if (newElement) {
+    newElement.classList.add('_live');
+  } else {
+    runAutomation();
+  }
+}
+async function runAutomation() {
+  const uri = '{{ root_uri }}{{ automation_definition.uri }}';
+  let d;
+  try {
+    d = await post(uri + '.json', getDataById());
+  } catch (e) {
+    console.error(e);
+    return;
+  }
+  redirect(uri, d);
+}
 async function post(uri, d) {
   const r = await fetch(uri, {
     method: 'POST',
@@ -16,24 +53,17 @@ function getDataById() {
   }
   return d;
 }
-const GET_DATA_BY_VIEW_NAME = {};
-{% if step_name == 'input' %}
-document.getElementById('_run').onclick = async function () {
-  const uri = '{{ root_uri }}{{ automation_definition.uri }}';
-  let d;
-  try {
-    d = await post(uri + '.json', getDataById());
-  } catch (e) {
-    console.error(e);
-    return;
-  }
-  redirect(uri, d);
-};
-{% else %}
-const functions = {};
+const getTemplateElement = i => document.getElementById('_t' + i), GET_DATA_BY_VIEW_NAME = {};
+let oldTemplateIndex, newTemplateIndex = -1;
+Array.from(document.getElementsByClassName('_continue')).forEach(function (l) {
+  l.onclick = showNext;
+});
+showNext();
+{% if step_name != 'input' %}
 function registerFunction(variableId, f) {
   register(functions, variableId, f);
 }
+const functions = {};
 {% if step_name == 'log' %}
 registerFunction('return_code', function() {
   location = location.href.slice(0, -1) + 'o';

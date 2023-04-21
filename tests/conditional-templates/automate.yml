@@ -1,0 +1,25 @@
+---
+crosscompute: 0.9.4
+name: Conditional Templates
+version: 0.0.1
+input:
+  variables:
+    - id: a
+      view: number
+      path: variables.dictionary
+    - id: b
+      view: number
+      path: variables.dictionary
+  templates:
+    - path: input0.md
+    - path: input1.md
+      expression: a > 0
+output:
+  variables:
+    - id: c
+      view: number
+      path: variables.dictionary
+batches:
+  - folder: batches/standard
+scripts:
+  - command: python3 run.py {input_folder} {output_folder}
