@@ -46,14 +46,6 @@ class DiskAutomation(Automation):
             instance._initialize_from_folder(path_or_folder)
         else:
             instance._initialize_from_path(path_or_folder)
-        with ThreadPoolExecutor() as executor:
-            futures = []
-            for automation_definition in instance.definitions:
-                futures.extend(executor.submit(
-                    _.get_command_string
-                ) for _ in automation_definition.script_definitions)
-            for future in as_completed(futures):
-                future.result()
         return instance
 
     def run(self, environment, is_in=None, with_rebuild=True):

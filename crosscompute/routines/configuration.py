@@ -218,7 +218,9 @@ class ScriptDefinition(Definition):
                     with new_path.open('wt') as script_file:
                         script_file.write(script_text)
                 except Exception as e:
-                    raise CrossComputeConfigurationError(e)
+                    e = CrossComputeConfigurationError(e)
+                    e.path = new_path
+                    L.error(e)
         elif 'function' in self:
             script_path = '.run.py'
             function_string = self['function']
@@ -583,7 +585,8 @@ def validate_display_templates(configuration):
             display_dictionary, 'templates'):
         template_definition = TemplateDefinition(
             raw_template_definition, automation_folder=automation_folder)
-        template_id = template_definition.id
+        template_id = raw_template_definition.get(
+            'id', template_definition.path.stem)
         template_path_by_id[template_id] = template_definition.path
     return {'template_path_by_id': template_path_by_id}
 

@@ -228,6 +228,7 @@ def process_loop(
         user_environment, server_uri, with_rebuild):
     with ThreadPoolExecutor() as executor:
         for a in automation_definitions:
+            executor.submit(a.get_command_string)
             for b in a.batch_definitions:
                 executor.submit(prepare_automation, a, b)
                 executor.submit(prepare_batch, a, b)
