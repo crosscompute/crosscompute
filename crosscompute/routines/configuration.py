@@ -126,15 +126,6 @@ class AutomationDefinition(Definition):
                 design_name = 'none'
         return design_name
 
-    def get_button_text(self, button_id):
-        button_text = BUTTON_TEXT_BY_ID[button_id]
-        button_definition_by_id = self.button_definition_by_id
-        if button_id in button_definition_by_id:
-            button_definition = button_definition_by_id[button_id]
-            button_configuration = button_definition.configuration
-            button_text = button_configuration.get('button-text', button_text)
-        return button_text
-
     def is_interval_ready(self, batch_definition):
         interval_timedelta = self.interval_timedelta
         if interval_timedelta:
@@ -603,8 +594,15 @@ def validate_display_buttons(configuration):
     display_dictionary = get_dictionary(configuration, 'display')
     button_definitions = [ButtonDefinition(_) for _ in get_dictionaries(
         display_dictionary, 'buttons')]
-    button_definition_by_id = {_.id: _ for _ in button_definitions}
-    return {'button_definition_by_id': button_definition_by_id}
+    button_text_by_id = {}
+    for button_definition in button_definitions:
+        button_id = button_definition.id
+        button_text = button_definition.configuration.get(
+            'button-text', '').strip()
+        if not button_text:
+            continue
+        button_text_by_id[button_id] = button_text
+    return {'button_text_by_id': button_text_by_id}
 
 
 def validate_authorization(configuration):

@@ -12,7 +12,7 @@ from ..constants import (
     VARIABLE_ID_TEMPLATE_PATTERN,
     VARIABLE_ID_WHITELIST_PATTERN)
 from ..macros.iterable import find_item, get_unique_order
-from ..settings import template_globals
+from ..settings import button_text_by_id, template_globals
 from .asset import asset_storage
 from .batch import DiskBatch
 from .variable import Element, VariableView
@@ -101,7 +101,9 @@ def render_variable_html(
     if matching_inner_text == 'ROOT_URI':
         return root_uri
     elif matching_inner_text == 'BUTTON_PANEL':
-        return BUTTON_PANEL_HTML.render({'template_index': template_index})
+        return BUTTON_PANEL_HTML.render({
+            'template_index': template_index,
+            'button_text_by_id': button_text_by_id})
     terms = matching_inner_text.split('|')
     variable_id = terms[0].strip()
     try:
@@ -131,8 +133,8 @@ def get_css_text(design_name, for_embed, for_print, m):
         css_texts.append(PRINTED_CSS)
     else:
         css_texts.append(DEFAULT_CSS)
-    if design_name == 'flex-vertical':
-        css_texts.append(FLEX_VERTICAL_CSS)
+    if design_name == 'flex':
+        css_texts.append(FLEX_CSS)
     return '\n'.join(css_texts + get_unique_order(m['css_texts']))
 
 
@@ -146,7 +148,9 @@ def get_main_text(automation_definition, step_name, render_html):
         h = get_html_from_markdown(TemplateFilter(
             render_html, template_index=i).process(text))
         if with_button_panel and 'class="_continue"' not in h:
-            h += BUTTON_PANEL_HTML.render({'template_index': i})
+            h += BUTTON_PANEL_HTML.render({
+                'template_index': i,
+                'button_text_by_id': button_text_by_id})
         return (
             f'<div id="_t{i}" class="_template"{x_}>{h}</div>')
 
@@ -171,5 +175,5 @@ L = getLogger(__name__)
 EMBEDDED_CSS = asset_storage.load_raw_text('embedded.css')
 PRINTED_CSS = asset_storage.load_raw_text('printed.css')
 DEFAULT_CSS = asset_storage.load_raw_text('default.css')
-FLEX_VERTICAL_CSS = asset_storage.load_raw_text('flex-vertical.css')
+FLEX_CSS = asset_storage.load_raw_text('flex.css')
 BUTTON_PANEL_HTML = asset_storage.load_jinja_text('button-panel.html')

@@ -1,8 +1,12 @@
 @layer flex-vertical {
   button {
     padding: 8px 0;
-    flex-grow: 1;
     border: 0;
+    font-size: large;
+    flex-grow: 1;
+  }
+  button:hover {
+    cursor: pointer;
   }
   ._panel {
     display: flex;
