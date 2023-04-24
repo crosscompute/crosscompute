@@ -20,8 +20,8 @@ from .variable import Element, VariableView
 
 class TemplateFilter(HTMLParser):
 
-    def __init__(self, render_html, *args, **kwargs):
-        self.render_html = render_html
+    def __init__(self, render_html, template_index, *args, **kwargs):
+        self.render_html = partial(render_html, template_index=template_index)
         self.in_script = False
         self.template_parts = []
         super().__init__(*args, **kwargs)
@@ -76,9 +76,9 @@ def get_step_response_dictionary(
     for_print = '_print' in request_params
     render_html = partial(
         render_variable_html, variable_definitions=variable_definitions,
-        batch=batch, m=m, i=count(), root_uri=template_globals['root_uri'],
-        request_params=request_params, step_name=step_name,
-        design_name=design_name, for_print=for_print)
+        batch=batch, m=m, variable_index=count(),
+        root_uri=template_globals['root_uri'], request_params=request_params,
+        step_name=step_name, design_name=design_name, for_print=for_print)
     main_text = get_main_text(automation_definition, step_name, render_html)
     mutation_reference_uri = get_automation_batch_step_uri(
         automation_definition, batch_definition, step_name)
@@ -95,11 +95,13 @@ def get_step_response_dictionary(
 
 
 def render_variable_html(
-        match, variable_definitions, batch, m, i, root_uri, request_params,
-        step_name, design_name, for_print):
+        match, variable_definitions, batch, m, variable_index, template_index,
+        root_uri, request_params, step_name, design_name, for_print):
     matching_inner_text = match.group(1)
     if matching_inner_text == 'ROOT_URI':
         return root_uri
+    elif matching_inner_text == 'BUTTON_PANEL':
+        return BUTTON_PANEL_HTML.render({'template_index': template_index})
     terms = matching_inner_text.split('|')
     variable_id = terms[0].strip()
     try:
@@ -113,8 +115,8 @@ def render_variable_html(
     view = VariableView.get_from(variable_definition)
     mode_name = variable_definition.get('mode', step_name)
     element = Element(
-        f'v{next(i)}', request_params, mode_name, design_name, for_print,
-        terms[1:])
+        f'v{next(variable_index)}', request_params, mode_name, design_name,
+        for_print, terms[1:])
     page_dictionary = view.render(batch, element)
     for k, v in m.items():
         v.extend(_.strip() for _ in page_dictionary[k])
@@ -135,15 +137,19 @@ def get_css_text(design_name, for_embed, for_print, m):
 
 
 def get_main_text(automation_definition, step_name, render_html):
-    def format_template(text, i=0, x=''):
-        x_string = f' data-expression="{x}"' if x else ''
-        html = TemplateFilter(render_html).process(text)
-        html = get_html_from_markdown(html)
-        if step_name == 'input' and 'class="_continue"' not in text:
-            html += '<button class="_continue" type="button">Continue</button>'
-        return f'<div id="_t{i}" class="_template"{x_string}>{html}</div>'
     a = automation_definition
     template_definitions = a.template_definitions_by_step_name[step_name]
+    with_button_panel = step_name == 'input' or len(template_definitions) > 1
+
+    def format_template(text, i=0, x=''):
+        x_ = f' data-expression="{x}"' if x else ''
+        h = get_html_from_markdown(TemplateFilter(
+            render_html, template_index=i).process(text))
+        if with_button_panel and 'class="_continue"' not in h:
+            h += BUTTON_PANEL_HTML.render({'template_index': i})
+        return (
+            f'<div id="_t{i}" class="_template"{x_}>{h}</div>')
+
     if not template_definitions:
         variable_definitions = a.get_variable_definitions(step_name)
         variable_ids = (_.id for _ in variable_definitions)
@@ -166,3 +172,4 @@ EMBEDDED_CSS = asset_storage.load_raw_text('embedded.css')
 PRINTED_CSS = asset_storage.load_raw_text('printed.css')
 DEFAULT_CSS = asset_storage.load_raw_text('default.css')
 FLEX_VERTICAL_CSS = asset_storage.load_raw_text('flex-vertical.css')
+BUTTON_PANEL_HTML = asset_storage.load_jinja_text('button-panel.html')

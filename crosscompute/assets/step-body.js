@@ -1,6 +1,8 @@
-function showNext() {
-  oldTemplateIndex = newTemplateIndex;
+async function showNext() {
   let newElement, isThis = false;
+  if (newTemplateIndex >= 0) {
+    templateIndices.push(newTemplateIndex);
+  }
   while (!isThis) {
     newElement = getTemplateElement(++newTemplateIndex);
     const x = newElement?.dataset.expression;
@@ -14,16 +16,38 @@ function showNext() {
       isThis = true;
     }
   }
-  const oldElement = getTemplateElement(oldTemplateIndex);
-  if (oldElement) {
-    oldElement.classList.remove('_live');
-  }
   if (newElement) {
-    newElement.classList.add('_live');
-    newElement.querySelectorAll('._input').forEach(_ => _.classList.add('_live'));
+    hideAndShow(getTemplateElement(templateIndices[templateIndices.length - 1]), newElement);
+    newElement.querySelectorAll('._input').forEach(_ => show(_));
   } else {
     runAutomation();
   }
+}
+async function showPrevious() {
+  const oldTemplateIndex = newTemplateIndex;
+  newTemplateIndex = templateIndices.pop();
+  const newElement = getTemplateElement(newTemplateIndex);
+  if (newElement) {
+    const oldElement = getTemplateElement(oldTemplateIndex);
+    hideAndShow(oldElement, newElement);
+    oldElement.querySelectorAll('._input').forEach(_ => hide(_));
+  }
+}
+async function hideAndShow(oldElement, newElement) {
+  if (oldElement) {
+    hide(oldElement);
+  }
+  show(newElement);
+  const backButton = newElement.querySelector('._back');
+  if (backButton) {
+    backButton.style.visibility = templateIndices.length == 0 ? 'hidden' : 'visible';
+  }
+}
+async function hide(l) {
+  l.classList.remove('_live');
+}
+async function show(l) {
+  l.classList.add('_live');
 }
 async function runAutomation() {
   const uri = '{{ root_uri }}{{ automation_definition.uri }}';
@@ -54,9 +78,12 @@ function getDataById() {
   }
   return d;
 }
-const getTemplateElement = i => document.getElementById('_t' + i), GET_DATA_BY_VIEW_NAME = {};
-let oldTemplateIndex, newTemplateIndex = -1;
-Array.from(document.getElementsByClassName('_continue')).forEach(function (l) {
+const getTemplateElement = i => document.getElementById('_t' + i), templateIndices = [], GET_DATA_BY_VIEW_NAME = {};
+let newTemplateIndex = -1;
+document.querySelectorAll('._back').forEach(function (l) {
+  l.onclick = showPrevious;
+});
+document.querySelectorAll('._continue').forEach(function (l) {
   l.onclick = showNext;
 });
 showNext();

@@ -1,4 +1,19 @@
 @layer flex-vertical {
+  button {
+    padding: 8px 0;
+    flex-grow: 1;
+    border: 0;
+  }
+  ._panel {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+  }
+  ._continue {
+    background: #17A2F5;
+    color: white;
+    font-weight: bold;
+  }
   ._template, ._view {
     flex-direction: column;
   }
@@ -15,8 +30,5 @@
   ._view img {
     align-self: start;
     max-width: 100%;
-  }
-  ._continue {
-    padding: 8px 0;
   }
 }
