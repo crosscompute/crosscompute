@@ -151,8 +151,7 @@ def get_main_text(automation_definition, step_name, render_html):
             h += BUTTON_PANEL_HTML.render({
                 'template_index': i,
                 'button_text_by_id': button_text_by_id})
-        return (
-            f'<div id="_t{i}" class="_template"{x_}>{h}</div>')
+        return f'<div id="_t{i}" class="_template"{x_}>{h}</div>'
 
     if not template_definitions:
         variable_definitions = a.get_variable_definitions(step_name)

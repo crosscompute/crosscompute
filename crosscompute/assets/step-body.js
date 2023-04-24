@@ -19,7 +19,7 @@ async function showNext() {
   if (newElement) {
     hideAndShow(getTemplateElement(templateIndices[templateIndices.length - 1]), newElement);
     newElement.querySelectorAll('._input').forEach(_ => show(_));
-  } else {
+  } else if (newTemplateIndex > 0) {
     runAutomation();
   }
 }
@@ -81,10 +81,14 @@ function getDataById() {
 const getTemplateElement = i => document.getElementById('_t' + i), templateIndices = [], GET_DATA_BY_VIEW_NAME = {};
 let newTemplateIndex = -1;
 document.querySelectorAll('._back').forEach(function (l) {
-  l.onclick = showPrevious;
+  if (!l.onclick) {
+    l.onclick = showPrevious;
+  }
 });
 document.querySelectorAll('._continue').forEach(function (l) {
-  l.onclick = showNext;
+  if (!l.onclick) {
+    l.onclick = showNext;
+  }
 });
 showNext();
 {% if step_name != 'input' %}
