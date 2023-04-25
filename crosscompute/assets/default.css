@@ -1,15 +1,17 @@
-header {
-  margin-bottom: 2em;
-}
-footer {
-  margin-top: 2em;
-}
-._batches {
-  list-style: none;
-  padding-left: 0;
-}
-@media print {
-  header, footer {
-    display: none;
+@layer default {
+  header {
+    margin-bottom: 2em;
+  }
+  footer {
+    margin-top: 2em;
+  }
+  ._batches {
+    list-style: none;
+    padding-left: 0;
+  }
+  @media print {
+    header, footer {
+      display: none;
+    }
   }
 }

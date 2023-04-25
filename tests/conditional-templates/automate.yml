@@ -1,0 +1,31 @@
+---
+crosscompute: 0.9.4
+name: Conditional Templates
+version: 0.0.1
+input:
+  variables:
+    - id: age
+      view: number
+      path: variables.dictionary
+    - id: hour
+      view: number
+      path: variables.dictionary
+  templates:
+    - path: input.md
+    - path: input-child.md
+      expression: age < 18
+    - path: input-adult.md
+      expression: age >= 18
+    - path: input-morning-child.md
+      expression: age < 18 && hour <= 12
+    - path: input-morning-adult.md
+      expression: age >= 18 && hour <= 12
+    - path: input-afternoon-child.md
+      expression: age < 18 && hour > 12
+    - path: input-afternoon-adult.md
+      expression: age >= 18 && hour > 12
+output:
+  templates:
+    - path: output.md
+batches:
+  - folder: batches/standard

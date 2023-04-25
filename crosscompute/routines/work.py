@@ -1,3 +1,4 @@
+# TODO: Consider giving scripts access to CROSSCOMPUTE_ROOT_URI
 import shlex
 import subprocess
 from collections import defaultdict
@@ -228,6 +229,8 @@ def process_loop(
         user_environment, server_uri, with_rebuild):
     with ThreadPoolExecutor() as executor:
         for a in automation_definitions:
+            for s in a.script_definitions:
+                executor.submit(s.get_command_string)
             for b in a.batch_definitions:
                 executor.submit(prepare_automation, a, b)
                 executor.submit(prepare_batch, a, b)
@@ -611,6 +614,7 @@ def _get_image_name(automation_definition):
 @contextmanager
 def _proxy_podman_ports(
         automation_definition, batch_folder, custom_environment, port_packs):
+    # TODO: Check if this works in jupyterlab extension
     origin_uri = custom_environment.get('CROSSCOMPUTE_ORIGIN_URI', '')
     relative_uris = []
     if PROXY_URI:

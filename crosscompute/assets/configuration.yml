@@ -101,6 +101,9 @@ input:
   templates:
     # path specifies the markdown file for your template (required)
     - path: input.md
+    # expression determines whether your template shows next
+    - path: input2.md
+      expression: age >= 18
 
 # output is how your scripts set data for the user
 output:
@@ -361,13 +364,16 @@ display:
         # design none removes all variable labels and css
         design: none
 
-  # buttons override the design of specific buttons
-  buttons:
-    # id specifies the name of the button to override;
-    # configuration sets the design of the button
-    - id: run
-      configuration:
-        button-text: Apply
+# buttons override the design of specific buttons
+buttons:
+  # id specifies the name of the button to override;
+  # configuration sets the design of the button
+  - id: continue
+    configuration:
+      button-text: Continuar
+  - id: back
+    configuration:
+      button-text: Volver
 
 # authorization restricts access to your automation
 authorization:

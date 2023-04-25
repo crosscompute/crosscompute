@@ -114,14 +114,6 @@ class AutomationDefinition(Definition):
                     STEP_NAME))
         return variable_definitions
 
-    def get_template_text(self, step_name):
-        automation_folder = self.folder
-        variable_definitions = self.get_variable_definitions(step_name)
-        template_definitions = self.template_definitions_by_step_name[
-            step_name]
-        return get_template_text(
-            template_definitions, automation_folder, variable_definitions)
-
     def get_design_name(self, page_id):
         design_name = DESIGN_NAMES_BY_PAGE_ID[page_id][0]
         if page_id in self.page_definition_by_id:
@@ -133,15 +125,6 @@ class AutomationDefinition(Definition):
             if not variable_definitions:
                 design_name = 'none'
         return design_name
-
-    def get_button_text(self, button_id):
-        button_text = BUTTON_TEXT_BY_ID[button_id]
-        button_definition_by_id = self.button_definition_by_id
-        if button_id in button_definition_by_id:
-            button_definition = button_definition_by_id[button_id]
-            button_configuration = button_definition.configuration
-            button_text = button_configuration.get('button-text', button_text)
-        return button_text
 
     def is_interval_ready(self, batch_definition):
         interval_timedelta = self.interval_timedelta
@@ -226,7 +209,9 @@ class ScriptDefinition(Definition):
                     with new_path.open('wt') as script_file:
                         script_file.write(script_text)
                 except Exception as e:
-                    raise CrossComputeConfigurationError(e)
+                    e = CrossComputeConfigurationError(e)
+                    e.path = new_path
+                    L.error(e)
         elif 'function' in self:
             script_path = '.run.py'
             function_string = self['function']
@@ -486,8 +471,8 @@ def validate_templates(configuration):
             _, automation_folder=automation_folder, step_name=step_name,
         ) for _ in get_dictionaries(step_configuration, 'templates')]
         assert_unique_values([
-            _.id for _ in template_definitions],
-            f'duplicate template id {{x}} in {step_name}')
+            _.path for _ in template_definitions
+        ], f'duplicate template path {{x}} in {step_name}')
         template_definitions_by_step_name[step_name] = template_definitions
     return {
         'template_definitions_by_step_name': template_definitions_by_step_name}
@@ -591,7 +576,8 @@ def validate_display_templates(configuration):
             display_dictionary, 'templates'):
         template_definition = TemplateDefinition(
             raw_template_definition, automation_folder=automation_folder)
-        template_id = template_definition.id
+        template_id = raw_template_definition.get(
+            'id', template_definition.path.stem)
         template_path_by_id[template_id] = template_definition.path
     return {'template_path_by_id': template_path_by_id}
 
@@ -608,8 +594,15 @@ def validate_display_buttons(configuration):
     display_dictionary = get_dictionary(configuration, 'display')
     button_definitions = [ButtonDefinition(_) for _ in get_dictionaries(
         display_dictionary, 'buttons')]
-    button_definition_by_id = {_.id: _ for _ in button_definitions}
-    return {'button_definition_by_id': button_definition_by_id}
+    button_text_by_id = {}
+    for button_definition in button_definitions:
+        button_id = button_definition.id
+        button_text = button_definition.configuration.get(
+            'button-text', '').strip()
+        if not button_text:
+            continue
+        button_text_by_id[button_id] = button_text
+    return {'button_text_by_id': button_text_by_id}
 
 
 def validate_authorization(configuration):
@@ -640,8 +633,8 @@ def validate_template_identifiers(template_dictionary):
         raise CrossComputeConfigurationError(
             f'could not find template {template_path}')
     return {
-        'id': template_dictionary.get('id', template_path.stem),
-        'path': template_path}
+        'path': template_path,
+        'expression': template_dictionary.get('expression', '')}
 
 
 def validate_variable_identifiers(variable_dictionary):
@@ -935,22 +928,6 @@ def get_configuration_format(path):
             f'{file_extension} format not supported for automation '
             'configuration').lstrip())
     return configuration_format
-
-
-def get_template_text(
-        template_definitions, automation_folder, variable_definitions):
-    template_texts = []
-    for template_definition in template_definitions:
-        path = automation_folder / template_definition.path
-        with open(path, 'rt') as f:
-            template_text = f.read().strip()
-        if not template_text:
-            continue
-        template_texts.append(template_text)
-    if not template_texts:
-        variable_ids = [_.id for _ in variable_definitions]
-        template_texts = ['\n'.join('{%s}' % _ for _ in variable_ids)]
-    return '\n'.join(template_texts)
 
 
 def get_engine_name(environment_dictionary):

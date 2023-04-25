@@ -1,3 +1,5 @@
-header {
-  display: none;
+@layer printed {
+  header {
+    display: none;
+  }
 }

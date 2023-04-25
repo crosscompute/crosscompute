@@ -1,0 +1,38 @@
+@layer flex-vertical {
+  button {
+    padding: 8px 0;
+    border: 0;
+    font-size: large;
+    flex-grow: 1;
+  }
+  button:hover {
+    cursor: pointer;
+  }
+  ._panel {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+  }
+  ._continue {
+    background: #17A2F5;
+    color: white;
+    font-weight: bold;
+  }
+  ._template, ._view {
+    flex-direction: column;
+  }
+  ._template {
+    display: none;
+    gap: 16px;
+  }
+  ._template._live, ._view {
+    display: flex;
+  }
+  ._template > * {
+    margin: 0;
+  }
+  ._view img {
+    align-self: start;
+    max-width: 100%;
+  }
+}

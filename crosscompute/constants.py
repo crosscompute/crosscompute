@@ -79,13 +79,14 @@ PRINTER_NAMES = 'pdf',
 PACKAGE_MANAGER_NAMES = 'apt', 'dnf', 'npm', 'pip'
 DESIGN_NAMES_BY_PAGE_ID = {
     'automation': ['input', 'output', 'none'],
-    'input': ['flex-vertical', 'none'],
-    'output': ['flex-vertical', 'none'],
-    'log': ['flex-vertical', 'none'],
-    'debug': ['flex-vertical', 'none'],
-    'print': ['flex-vertical', 'none'],
-}
-BUTTON_TEXT_BY_ID = {'run': 'Run'}
+    'input': ['flex', 'none'],
+    'output': ['flex', 'none'],
+    'log': ['flex', 'none'],
+    'debug': ['flex', 'none'],
+    'print': ['flex', 'none']}
+BUTTON_TEXT_BY_ID = {
+    'back': 'Back',
+    'continue': 'Continue'}
 
 
 INTERVAL_UNIT_NAMES = 'seconds', 'minutes', 'hours', 'days', 'weeks'
