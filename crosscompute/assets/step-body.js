@@ -1,3 +1,10 @@
+{% if template_count == 1 %}
+document.querySelectorAll('._continue').forEach(function (l) {
+  if (!l.onclick) {
+    l.onclick = runAutomation;
+  }
+});
+{% else %}
 async function showNext() {
   let newElement, isThis = false;
   if (newTemplateIndex >= 0) {
@@ -49,6 +56,20 @@ async function hide(l) {
 async function show(l) {
   l.classList.add('_live');
 }
+const getTemplateElement = i => document.getElementById('_t' + i), templateIndices = [];
+let newTemplateIndex = -1;
+document.querySelectorAll('._back').forEach(function (l) {
+  if (!l.onclick) {
+    l.onclick = showPrevious;
+  }
+});
+document.querySelectorAll('._continue').forEach(function (l) {
+  if (!l.onclick) {
+    l.onclick = showNext;
+  }
+});
+showNext();
+{% endif %}
 async function runAutomation() {
   const uri = '{{ root_uri }}{{ automation_definition.uri }}';
   let d;
@@ -72,25 +93,13 @@ function redirect(uri, d) {
 }
 function getDataById() {
   const d = {};
-  for (const x of document.getElementsByClassName('_input _live')) {
+  for (const x of document.getElementsByClassName('{{ "_input" if template_count == 1 else "_input _live" }}')) {
     const { view: viewName, variable: variableId } = x.dataset;
     d[variableId] = GET_DATA_BY_VIEW_NAME[viewName](x);
   }
   return d;
 }
-const getTemplateElement = i => document.getElementById('_t' + i), templateIndices = [], GET_DATA_BY_VIEW_NAME = {};
-let newTemplateIndex = -1;
-document.querySelectorAll('._back').forEach(function (l) {
-  if (!l.onclick) {
-    l.onclick = showPrevious;
-  }
-});
-document.querySelectorAll('._continue').forEach(function (l) {
-  if (!l.onclick) {
-    l.onclick = showNext;
-  }
-});
-showNext();
+const GET_DATA_BY_VIEW_NAME = {};
 {% if step_name != 'input' %}
 function registerFunction(variableId, f) {
   register(functions, variableId, f);

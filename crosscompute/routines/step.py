@@ -79,13 +79,14 @@ def get_step_response_dictionary(
         batch=batch, m=m, variable_index=count(),
         root_uri=template_globals['root_uri'], request_params=request_params,
         step_name=step_name, design_name=design_name, for_print=for_print)
-    main_text = get_main_text(automation_definition, step_name, render_html)
+    main_text, template_count = get_main_pack(
+        automation_definition, step_name, render_html)
     mutation_reference_uri = get_automation_batch_step_uri(
         automation_definition, batch_definition, step_name)
     return {
         'css_uris': get_unique_order(m['css_uris']),
         'css_text': get_css_text(design_name, for_embed, for_print, m),
-        'main_text': main_text,
+        'main_text': main_text, 'template_count': template_count,
         'js_uris': get_unique_order(m['js_uris']),
         'js_text': '\n'.join(get_unique_order(m['js_texts'])),
         'for_embed': for_embed, 'for_print': for_print,
@@ -138,26 +139,27 @@ def get_css_text(design_name, for_embed, for_print, m):
     return '\n'.join(css_texts + get_unique_order(m['css_texts']))
 
 
-def get_main_text(automation_definition, step_name, render_html):
+def get_main_pack(automation_definition, step_name, render_html):
     a = automation_definition
     template_definitions = a.template_definitions_by_step_name[step_name]
     with_button_panel = step_name == 'input' or len(template_definitions) > 1
 
     def format_template(text, i=0, x=''):
+        l_ = ' _live' if not i and not x else ''
         x_ = f' data-expression="{x}"' if x else ''
         g = TemplateFilter(render_html, template_index=i).process(text)
         h = get_html_from_markdown(g)
         if with_button_panel and 'class="_continue"' not in h:
-            h += BUTTON_PANEL_HTML.render({
+            h += '\n' + BUTTON_PANEL_HTML.render({
                 'template_index': i,
                 'button_text_by_id': button_text_by_id})
-        return f'<div id="_t{i}" class="_template"{x_}>{h}</div>'
+        return f'<div id="_t{i}" class="_template{l_}"{x_}>\n{h}\n</div>'
 
     if not template_definitions:
         variable_definitions = a.get_variable_definitions(step_name)
         variable_ids = (_.id for _ in variable_definitions)
         text = '\n'.join('{%s}' % _ for _ in variable_ids)
-        return format_template(text)
+        return format_template(text), 1
     parts = []
     automation_folder = a.folder
     for i, template_definition in enumerate(template_definitions):
@@ -165,7 +167,7 @@ def get_main_text(automation_definition, step_name, render_html):
         with path.open('rt') as f:
             text = f.read().strip()
         parts.append(format_template(text, i, template_definition.expression))
-    return '\n'.join(parts)
+    return '\n'.join(parts), len(template_definitions)
 
 
 L = getLogger(__name__)
