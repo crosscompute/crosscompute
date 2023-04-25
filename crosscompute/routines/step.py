@@ -145,8 +145,8 @@ def get_main_text(automation_definition, step_name, render_html):
 
     def format_template(text, i=0, x=''):
         x_ = f' data-expression="{x}"' if x else ''
-        h = get_html_from_markdown(TemplateFilter(
-            render_html, template_index=i).process(text))
+        g = TemplateFilter(render_html, template_index=i).process(text)
+        h = get_html_from_markdown(g)
         if with_button_panel and 'class="_continue"' not in h:
             h += BUTTON_PANEL_HTML.render({
                 'template_index': i,
