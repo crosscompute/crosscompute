@@ -228,11 +228,10 @@ def update_datasets(automation_definition):
 def process_loop(
         automation_definitions, automation_tasks, live_uris, file_changes,
         user_environment, server_uri, with_rebuild):
-    with ThreadPoolExecutor() as executor:
-        for a in automation_definitions:
-            executor.submit(prepare_automation, a, with_rebuild)
-            for b in a.batch_definitions:
-                executor.submit(prepare_batch, a, b)
+    for a in automation_definitions:
+        prepare_automation(a, with_rebuild)
+        for b in a.batch_definitions:
+            prepare_batch(a, b)
     try:
         while True:
             sleep(1)
