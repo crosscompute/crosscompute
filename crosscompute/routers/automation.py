@@ -63,7 +63,7 @@ async def see_automation(
             design_name, request.query_params)
     request_uri = request.url
     return TemplateResponse(template_path_by_id['automation'], {
-        'request': request, 'title_text': automation_definition.name,
+        'request': request, 'title_text': automation_definition.title,
         'description': automation_definition.description,
         'host_uri': request_uri.scheme + '://' + request_uri.netloc,
         'name': automation_definition.name, 'uri': automation_uri,

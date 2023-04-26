@@ -1,10 +1,21 @@
 {% extends live_template_path %}
 
+{% block head_css %}
+main {
+  max-width: 800px;
+  margin: auto;
+}
+dd {
+  margin-bottom: 1em;
+}
+{% endblock %}
+
 {% block main_html -%}
 <h1>{{ title_text }}</h1>
-<ul>
-{%- for automation_definition in automation_definitions %}
-<li><a href="{{ root_uri }}{{ automation_definition.uri }}">{{ automation_definition.name }}</a></li>
+<dl>
+{%- for a in automation_definitions %}
+<dt><a href="{{ root_uri }}{{ a.uri }}">{{ a.title }}</a></dt>
+<dd>{{ a.description }}</dd>
 {%- endfor %}
-</ul>
+</dl>
 {%- endblock %}

@@ -120,10 +120,6 @@ class AutomationDefinition(Definition):
             page_definition = self.page_definition_by_id[page_id]
             design_name = page_definition.configuration.get(
                 'design', design_name)
-        elif page_id in STEP_NAMES:
-            variable_definitions = self.get_variable_definitions(page_id)
-            if not variable_definitions:
-                design_name = 'none'
         return design_name
 
     def is_interval_ready(self, batch_definition):
@@ -379,15 +375,17 @@ def validate_protocol(configuration):
 def validate_automation_identifiers(configuration):
     index = configuration.index
     name = configuration.get('name', make_automation_name(index))
-    description = configuration.get('description', '')
-    version = configuration.get('version', AUTOMATION_VERSION)
     slug = configuration.get('slug', format_slug(name))
+    title = configuration.get('title', name)
+    description = configuration.get('description', name)
+    version = configuration.get('version', AUTOMATION_VERSION)
     uri = AUTOMATION_ROUTE.format(automation_slug=slug)
     return {
         'name': name,
+        'slug': slug,
+        'title': title,
         'description': description,
         'version': version,
-        'slug': slug,
         'uri': uri}
 
 
