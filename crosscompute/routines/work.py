@@ -92,7 +92,8 @@ class AbstractEngine():
             'return_code': return_code}})
 
     def prepare(self, automation_definition):
-        pass
+        for s in automation_definition.script_definitions:
+            s.get_command_string()
 
 
 class UnsafeEngine(AbstractEngine):
@@ -128,8 +129,8 @@ class PodmanEngine(AbstractEngine):
         (automation_folder / '.containerignore').write_text(
             CONTAINER_IGNORE_TEXT)
         command_texts = [
-            _.get_command_string().format(**CONTAINER_STEP_FOLDER_BY_NAME)
-            for _ in automation_definition.script_definitions]
+            s.get_command_string().format(**CONTAINER_STEP_FOLDER_BY_NAME)
+            for s in automation_definition.script_definitions]
         (automation_folder / CONTAINER_SCRIPT_NAME).write_text(
             '\n'.join([_ + CONTAINER_PIPE_TEXT for _ in command_texts]))
         if subprocess.run([
@@ -227,13 +228,10 @@ def update_datasets(automation_definition):
 def process_loop(
         automation_definitions, automation_tasks, live_uris, file_changes,
         user_environment, server_uri, with_rebuild):
-    with ThreadPoolExecutor() as executor:
-        for a in automation_definitions:
-            for s in a.script_definitions:
-                executor.submit(s.get_command_string)
-            for b in a.batch_definitions:
-                executor.submit(prepare_automation, a, b)
-                executor.submit(prepare_batch, a, b)
+    for a in automation_definitions:
+        prepare_automation(a, with_rebuild)
+        for b in a.batch_definitions:
+            prepare_batch(a, b)
     try:
         while True:
             sleep(1)

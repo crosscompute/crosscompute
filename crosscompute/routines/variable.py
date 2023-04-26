@@ -118,7 +118,7 @@ class VariableView():
                 tag_name = 'div'
             main_text = add_label_html(
                 main_text, self.variable_definition, x.id)
-            page_dictionary['main_text'] = '<%s class="_view">%s</%s>' % (
+            page_dictionary['main_text'] = '<%s class="_view">\n%s\n</%s>' % (
                 tag_name, main_text, tag_name)
         return page_dictionary
 

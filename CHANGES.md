@@ -21,6 +21,7 @@
 - Migrate from pyramid to fastapi
 - Replace polling with server side events for mutation tracking
 - Support live print preview
+- Support conditional templates
 
 # 0.8
 - Start from scratch
