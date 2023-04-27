@@ -1,0 +1,22 @@
+---
+crosscompute: 0.9.4
+name: Dataset References
+version: 0.0.1
+output:
+  variables:
+    - id: word_count
+      view: number
+      path: variables.dictionary
+batches:
+  - folder: batches/standard
+datasets:
+  - path: datasets/document.txt
+    reference:
+      path: datasets/document-2023.txt
+scripts:
+  - path: run.py
+display:
+  pages:
+    - id: automation
+      configuration:
+        design: output
