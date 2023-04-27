@@ -44,22 +44,24 @@ class DiskDatabase():
         return changed_infos
 
     def get(self, path):
-        path = Path(path).absolute()
+        path = Path(path)
+        absolute_path = path.absolute()
+        resolved_path = path.resolve()
         configuration = self._configuration
         for automation_definition in configuration.automation_definitions:
             automation_folder = automation_definition.folder
             runs_folder = automation_folder / 'runs'
-            if is_path_in_folder(path, runs_folder):
-                run_id = path.resolve().relative_to(runs_folder).parts[0]
+            if is_path_in_folder(resolved_path, runs_folder):
+                run_id = resolved_path.relative_to(runs_folder).parts[0]
                 batch_uri = BATCH_ROUTE.format(batch_slug=run_id)
                 memory = DiskMemory()
                 add_variable_infos_from_folder(
                     memory, automation_definition, runs_folder / run_id,
                     batch_uri)
-                infos = memory.get(path)
+                infos = memory.get(resolved_path)
                 break
         else:
-            infos = self._memory.get(path)
+            infos = self._memory.get(absolute_path)
         return infos
 
 
