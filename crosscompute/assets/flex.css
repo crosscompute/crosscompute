@@ -1,6 +1,6 @@
 @layer flex-vertical {
   main {
-    max-width: 800px;
+    max-width: 640px;
     margin: auto;
   }
   button {
