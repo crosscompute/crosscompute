@@ -9,7 +9,7 @@ output_folder = Path(getenv(
 datasets_folder = Path('datasets')
 document_path = datasets_folder / 'document.txt'
 with document_path.open('rt') as f:
-    text = re.sub(r'[^a-zA-Z ]', '', f.read())
+    text = re.sub(r'[^a-zA-Z \n]', '', f.read())
 word_count = len(text.split())
 with (output_folder / 'variables.dictionary').open('wt') as f:
     json.dump({
