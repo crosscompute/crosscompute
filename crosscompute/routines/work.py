@@ -426,8 +426,7 @@ def _prepare_batch_environment(
         try:
             batch_environment[variable_id] = environ[variable_id]
         except KeyError:
-            raise CrossComputeConfigurationError(
-                f'{variable_id} is missing in the environment')
+            L.error(f'{variable_id} is missing in the environment')
     variable_data_by_id = get_variable_data_by_id(
         variable_definitions, data_by_id, with_exceptions=False)
     variable_value_by_id = get_variable_value_by_id(variable_data_by_id)
