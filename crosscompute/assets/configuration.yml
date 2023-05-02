@@ -1,8 +1,8 @@
 ---
-# Reference: https://github.com/crosscompute/crosscompute-examples
-# Gallery: https://crosscompute.net
+# Examples: https://github.com/crosscompute/crosscompute-examples
 # Documentation: https://docs.crosscompute.com
 # Forum: https://forum.crosscompute.com
+# Gallery: https://crosscompute.net
 
 # crosscompute version determines how this file is interpreted (required)
 crosscompute: 0.0.0
