@@ -209,6 +209,12 @@ print:
           location: footer
           alignment: right
         name: '{y2 | slug}-{y3}.pdf'
+    - id: report-uri
+      view: link
+      path: report.pdf
+      label: Report URI
+      configuration:
+        path: report-uri.json
 
 # batches are pre-defined runs with specific values set for each input variable
 batches:
