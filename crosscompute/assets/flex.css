@@ -13,7 +13,6 @@
     cursor: pointer;
   }
   ._panel {
-    display: flex;
     flex-direction: row;
     gap: 16px;
   }
@@ -38,5 +37,15 @@
   ._view img {
     align-self: start;
     max-width: 100%;
+  }
+  @media screen {
+    ._panel {
+      display: flex;
+    }
+  }
+  @media print {
+    ._panel {
+      display: none;
+    }
   }
 }
