@@ -1,7 +1,7 @@
 # TODO: Consider giving scripts access to CROSSCOMPUTE_ROOT_URI
 import shlex
 import subprocess
-from collections import defaultdict
+from abc import ABC, abstractmethod
 from concurrent.futures import (
     ProcessPoolExecutor, ThreadPoolExecutor, as_completed)
 from contextlib import contextmanager
@@ -52,10 +52,18 @@ from .variable import (
     update_variable_data)
 
 
-class AbstractEngine():
+class AbstractEngine(ABC):
 
     def __init__(self, with_rebuild=True):
         self.with_rebuild = with_rebuild
+
+    @abstractmethod
+    def prepare(self, automation_definition):
+        pass
+
+    @abstractmethod
+    def run(self, automation_definition, batch_folder, custom_environment):
+        pass
 
     def run_batch(
             self, automation_definition, batch_definition, user_environment):
@@ -91,12 +99,23 @@ class AbstractEngine():
             'execution_time_in_seconds': time() - reference_time,
             'return_code': return_code}})
 
-    def prepare(self, automation_definition):
-        for s in automation_definition.script_definitions:
-            s.get_command_string()
-
 
 class UnsafeEngine(AbstractEngine):
+
+    def prepare(self, automation_definition):
+        # TODO: Consider having a separate venv for each automation
+        d = automation_definition.package_ids_by_manager_name
+        try:
+            for manager_name, package_ids in d.items():
+                match manager_name:
+                    case 'pip':
+                        subprocess.run(
+                            ['pip', 'install'] + list(package_ids),
+                            check=True)
+        except subprocess.CalledProcessError:
+            raise CrossComputeExecutionError()
+        for s in automation_definition.script_definitions:
+            s.get_command_string()
 
     def run(self, automation_definition, batch_folder, custom_environment):
         step_folder_by_name = _get_step_folder_by_name(
@@ -529,27 +548,24 @@ def _process_batch(
 
 def _prepare_container_file_text(automation_definition):
     path_folders = set()
-    package_ids_by_manager_name = defaultdict(set)
-    for package_definition in automation_definition.package_definitions:
-        manager_name = package_definition.manager_name
-        package_ids_by_manager_name[manager_name].add(package_definition.id)
+    d = automation_definition.package_ids_by_manager_name
     root_package_commands, user_package_commands = [], []
-    if 'apt' in package_ids_by_manager_name:
-        s = ' '.join(sorted(package_ids_by_manager_name['apt']))
+    if 'apt' in d:
+        s = ' '.join(sorted(d['apt']))
         root_package_commands.append(
             f'apt update && apt -y install {s} && apt clean')
-    if 'dnf' in package_ids_by_manager_name:
-        s = ' '.join(sorted(package_ids_by_manager_name['dnf']))
+    if 'dnf' in d:
+        s = ' '.join(sorted(d['dnf']))
         root_package_commands.append(
             f'dnf -y install {s} && dnf clean all')
-    if 'npm' in package_ids_by_manager_name:
-        s = ' '.join(sorted(package_ids_by_manager_name['npm']))
+    if 'npm' in d:
+        s = ' '.join(sorted(d['npm']))
         user_package_commands.append(
             f'npm install {s} --prefix ~/.local -g && '
             f'npm cache clean --force')
         path_folders.add('/home/user/.local/bin')
-    if 'pip' in package_ids_by_manager_name:
-        s = ' '.join(sorted(package_ids_by_manager_name['pip']))
+    if 'pip' in d:
+        s = ' '.join(sorted(d['pip']))
         user_package_commands.append(
             f'pip install {s} --user && '
             f'pip cache purge && rm -rf ~/.cache')

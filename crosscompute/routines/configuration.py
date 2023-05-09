@@ -1,7 +1,7 @@
 # TODO: Save to ini, toml
 import json
 import shutil
-from collections import Counter
+from collections import Counter, defaultdict
 from configparser import ConfigParser
 from datetime import datetime, timedelta
 from logging import getLogger
@@ -498,6 +498,8 @@ def validate_batches(configuration):
 
 def validate_environment(configuration):
     d = get_dictionary(configuration, 'environment')
+    package_ids_by_manager_name = get_package_ids_by_manager_name(
+        get_dictionaries(d, 'packages'))
     port_definitions = get_port_definitions(
         d, configuration.get_variable_definitions('log')
         + configuration.get_variable_definitions('debug'))
@@ -512,8 +514,7 @@ def validate_environment(configuration):
     return {
         'engine_name': get_engine_name(d),
         'parent_image_name': d.get('image', 'python').strip(),
-        'package_definitions': [PackageDefinition(_) for _ in get_dictionaries(
-            d, 'packages')],
+        'package_ids_by_manager_name': package_ids_by_manager_name,
         'port_definitions': port_definitions,
         'environment_variable_ids': environment_variable_ids,
         'batch_concurrency_name': batch_concurrency_name,
@@ -940,6 +941,15 @@ def get_engine_name(environment_dictionary):
         raise CrossComputeConfigurationError(
             f'"{engine_name}" engine is not supported')
     return engine_name
+
+
+def get_package_ids_by_manager_name(package_dictionaries):
+    package_ids_by_manager_name = defaultdict(set)
+    package_definitions = [PackageDefinition(_) for _ in package_dictionaries]
+    for package_definition in package_definitions:
+        manager_name = package_definition.manager_name
+        package_ids_by_manager_name[manager_name].add(package_definition.id)
+    return package_ids_by_manager_name
 
 
 def get_port_definitions(environment_dictionary, variable_definitions):
