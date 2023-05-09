@@ -107,11 +107,8 @@ class UnsafeEngine(AbstractEngine):
         d = automation_definition.package_ids_by_manager_name
         try:
             for manager_name, package_ids in d.items():
-                match manager_name:
-                    case 'pip':
-                        subprocess.run(
-                            ['pip', 'install'] + list(package_ids),
-                            check=True)
+                subprocess.run([
+                    manager_name, 'install'] + list(package_ids), check=True)
         except subprocess.CalledProcessError:
             raise CrossComputeExecutionError()
         for s in automation_definition.script_definitions:
