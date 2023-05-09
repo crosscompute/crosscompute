@@ -13,7 +13,6 @@ from watchfiles import watch
 
 from ..constants import (
     Info,
-    BUTTON_TEXT_BY_ID,
     DISK_DEBOUNCE_IN_MILLISECONDS,
     DISK_STEP_IN_MILLISECONDS,
     HOST,
@@ -29,7 +28,6 @@ from ..routers import (
     token)
 from ..settings import (
     StoppableProcess,
-    button_text_by_id,
     site,
     template_environment,
     template_globals,
@@ -163,8 +161,6 @@ class DiskServer(Server):
             'root_uri': self._root_uri,
             'with_restart': self._with_restart})
         template_environment.auto_reload = self._with_restart
-        button_text_by_id.update(BUTTON_TEXT_BY_ID)
-        button_text_by_id.update(configuration.button_text_by_id)
 
 
 def get_app(root_uri, with_prefix):

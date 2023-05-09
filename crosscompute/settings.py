@@ -44,4 +44,3 @@ TemplateResponse = TemplateResponseFactory(
     template_environment).TemplateResponse
 printer_by_name = {}
 view_by_name = {}
-button_text_by_id = {}

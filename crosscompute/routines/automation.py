@@ -1,7 +1,5 @@
 # TODO: Return unvalidated configuration when there is an exception
 # TODO: Watch multiple folders if not all under parent folder
-from concurrent.futures import (
-    ThreadPoolExecutor, as_completed)
 from logging import getLogger
 from pathlib import Path
 

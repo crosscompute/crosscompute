@@ -6,13 +6,14 @@ from logging import getLogger
 from invisibleroads_macros_web.markdown import get_html_from_markdown
 
 from ..constants import (
+    BUTTON_TEXT_BY_ID,
     MUTATION_ROUTE,
     STEP_CODE_BY_NAME,
     STEP_ROUTE,
     VARIABLE_ID_TEMPLATE_PATTERN,
     VARIABLE_ID_WHITELIST_PATTERN)
 from ..macros.iterable import find_item, get_unique_order
-from ..settings import button_text_by_id, template_globals
+from ..settings import template_globals
 from .asset import asset_storage
 from .batch import DiskBatch
 from .variable import Element, VariableView
@@ -78,6 +79,7 @@ def get_step_response_dictionary(
         render_variable_html, variable_definitions=variable_definitions,
         batch=batch, m=m, variable_index=count(),
         root_uri=template_globals['root_uri'], request_params=request_params,
+        button_text_by_id=automation_definition.button_text_by_id,
         step_name=step_name, design_name=design_name, for_print=for_print)
     main_text, template_count = get_main_pack(
         automation_definition, step_name, render_html)
@@ -97,14 +99,13 @@ def get_step_response_dictionary(
 
 def render_variable_html(
         match, variable_definitions, batch, m, variable_index, template_index,
-        root_uri, request_params, step_name, design_name, for_print):
+        root_uri, request_params, button_text_by_id, step_name, design_name,
+        for_print):
     matching_inner_text = match.group(1)
     if matching_inner_text == 'ROOT_URI':
         return root_uri
     elif matching_inner_text == 'BUTTON_PANEL':
-        return BUTTON_PANEL_HTML.render({
-            'template_index': template_index,
-            'button_text_by_id': button_text_by_id})
+        return get_button_panel_html(template_index, button_text_by_id)
     terms = matching_inner_text.split('|')
     variable_id = terms[0].strip()
     try:
@@ -143,6 +144,7 @@ def get_main_pack(automation_definition, step_name, render_html):
     a = automation_definition
     template_definitions = a.template_definitions_by_step_name[step_name]
     with_button_panel = step_name == 'input' or len(template_definitions) > 1
+    button_text_by_id = a.button_text_by_id
 
     def format_template(text, i=0, x=''):
         l_ = ' _live' if not i and not x else ''
@@ -150,9 +152,7 @@ def get_main_pack(automation_definition, step_name, render_html):
         g = TemplateFilter(render_html, template_index=i).process(text)
         h = get_html_from_markdown(g)
         if with_button_panel and 'class="_continue"' not in h:
-            h += '\n' + BUTTON_PANEL_HTML.render({
-                'template_index': i,
-                'button_text_by_id': button_text_by_id})
+            h += '\n' + get_button_panel_html(i, button_text_by_id)
         return f'<div id="_t{i}" class="_template{l_}"{x_}>\n{h}\n</div>'
 
     if not template_definitions:
@@ -168,6 +168,12 @@ def get_main_pack(automation_definition, step_name, render_html):
             text = f.read().strip()
         parts.append(format_template(text, i, template_definition.expression))
     return '\n'.join(parts), len(template_definitions)
+
+
+def get_button_panel_html(template_index, button_text_by_id):
+    return BUTTON_PANEL_HTML.render({
+        'template_index': template_index,
+        'button_text_by_id': BUTTON_TEXT_BY_ID | button_text_by_id})
 
 
 L = getLogger(__name__)
