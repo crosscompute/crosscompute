@@ -109,8 +109,9 @@ class UnsafeEngine(AbstractEngine):
             for manager_name, package_ids in d.items():
                 subprocess.run([
                     manager_name, 'install'] + list(package_ids), check=True)
-        except subprocess.CalledProcessError:
-            raise CrossComputeExecutionError()
+        except (OSError, subprocess.CalledProcessError) as e:
+            raise CrossComputeExecutionError(
+                'could not install packages: %s' % e)
         for s in automation_definition.script_definitions:
             s.get_command_string()
 
