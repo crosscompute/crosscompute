@@ -104,11 +104,14 @@ class UnsafeEngine(AbstractEngine):
 
     def prepare(self, automation_definition):
         # TODO: Consider having a separate venv for each automation
+        automation_folder = automation_definition.folder
         d = automation_definition.package_ids_by_manager_name
         try:
             for manager_name, package_ids in d.items():
-                subprocess.run([
-                    manager_name, 'install'] + list(package_ids), check=True)
+                subprocess.run(
+                    [manager_name, 'install'] + list(package_ids),
+                    cwd=automation_folder,
+                    check=True)
         except (OSError, subprocess.CalledProcessError) as e:
             raise CrossComputeExecutionError(
                 'could not install packages: %s' % e)
