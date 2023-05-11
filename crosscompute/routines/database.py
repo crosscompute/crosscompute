@@ -25,19 +25,12 @@ class DiskDatabase():
 
     def grok(self, paths):
         changed_infos = []
-        variable_ids = []
         for path in paths:
             try:
                 infos = self.get(path)
             except KeyError:
                 continue
-            for info in infos:
-                if info['code'] == Info.VARIABLE:
-                    variable_id = info['id']
-                    if info['id'] in variable_ids:
-                        continue
-                    variable_ids.append(variable_id)
-                changed_infos.append(info)
+            changed_infos.extend(infos)
         if changed_infos:
             self._changes[time()] = changed_infos
         L.debug(changed_infos)
