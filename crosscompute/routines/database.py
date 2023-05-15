@@ -79,8 +79,18 @@ class DiskMemory():
 
     def get(self, path):
         path = Path(path).absolute()
-        if path in self._infos_by_path:
-            return self._infos_by_path[path]
+        infos_by_path = self._infos_by_path
+        if path in infos_by_path:
+            infos = infos_by_path[path]
+            # if the path ends with .dictionary
+            # if the view is link
+            # if the view is string, number
+            # if the view is radio, checkbox
+            # if the view is frame
+            # for each info copy,
+            #   load value
+            #   load configuration
+            return infos
         for folder, infos in self._infos_by_folder.items():
             if folder in path.parents:
                 return infos

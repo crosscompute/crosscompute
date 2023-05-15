@@ -12,25 +12,25 @@ function register(xs, k, v) {
     ys.push(v);
   }
 }
-function registerCallback(variableId, f) {
-  register(callbacks, variableId, f);
+function registerCallback(i, f) {
+  register(callbacks, i, f);
 }
 </script>
 {% endblock %}
 
 {% block body_js %}
 {% if step_name != 'input' %}
-async function refreshVariable(variableId) {
-  await runEach(functions[variableId]);
-  await runEach(callbacks[variableId]);
+async function refreshVariable({id: i, value: v, configuration: c}) {
+  await runEach(functions[i], v, c);
+  await runEach(callbacks[i], v, c);
 {% if not with_restart and not has_interval %}
-  if (variableId == 'return_code') {
+  if (i == 'return_code') {
     mutationStream.close();
   }
 {% endif %}
 }
-async function runEach(xs) {
-  await Promise.all((xs || []).map(_ => _()));
+async function runEach(fs, v, c) {
+  await Promise.all((fs || []).map(_ => _(v, c)));
 }
 {% endif %}
 {{ super() -}}
@@ -86,7 +86,7 @@ function setupMutationStream() {
     }
 {% endif %}
 {% if step_name != 'input' %}
-    await Promise.all(d.variables.map(_ => refreshVariable(_.id)));
+    await Promise.all(d.variables.map(refreshVariable));
 {% endif %}
     mutationTime = d.mutation_time;
   };
