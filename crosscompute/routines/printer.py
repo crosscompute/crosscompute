@@ -53,17 +53,12 @@ class BatchPrinter:
                 batch_dictionaries, print_configurations))
 
     def run(self):
-        is_draft = self.is_draft
-        if is_draft:
-            for draft_path in self._pack_by_path:
-                if draft_path.is_symlink():
-                    remove_path(draft_path)
+        self._save_link_configurations()
         for view_name, packs in self._packs_by_view_name.items():
             Printer = printer_by_name[view_name]
-            printer = Printer(self.server_uri, is_draft)
+            printer = Printer(self.server_uri, self.is_draft)
             for batch_dictionaries, print_configurations in packs:
                 printer.render(batch_dictionaries, print_configurations)
-        self._save_link_configurations()
         self.reset()
 
     def _get_batch_dictionaries(
@@ -99,7 +94,11 @@ class BatchPrinter:
 
     def _save_link_configurations(self):
         pack_by_path = self._pack_by_path
-        if not self.is_draft:
+        if self.is_draft:
+            for draft_path in pack_by_path:
+                if draft_path.is_symlink():
+                    remove_path(draft_path)
+        else:
             for draft_path, (
                 print_folder, print_name,
             ) in pack_by_path.items():
