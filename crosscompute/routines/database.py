@@ -1,4 +1,5 @@
 import shlex
+from copy import deepcopy
 from logging import getLogger
 from os.path import isfile
 from pathlib import Path
@@ -14,6 +15,8 @@ from ..constants import (
     STEP_ROUTE)
 from .configuration import (
     get_folder_plus_path)
+from .variable import (
+    load_variable_data)
 
 
 class DiskDatabase():
@@ -81,15 +84,19 @@ class DiskMemory():
         path = Path(path).absolute()
         infos_by_path = self._infos_by_path
         if path in infos_by_path:
-            infos = infos_by_path[path]
-            # if the path ends with .dictionary
-            # if the view is link
-            # if the view is string, number
-            # if the view is radio, checkbox
-            # if the view is frame
-            # for each info copy,
-            #   load value
-            #   load configuration
+            infos = deepcopy(infos_by_path[path])
+            for info in infos:
+                if info['code'] != Info.VARIABLE:
+                    continue
+                if info.get('is_configuration'):
+                    # !!!
+                    info['configuration'] = FILE_JSON_CACHE[path]
+                elif info['view'] in [
+                    'link', 'string', 'number', 'radio', 'checkbox', 'frame',
+                ]:
+                    # !!!
+                    info['value'] = load_variable_data(
+                        path, info['id'])['value']
             return infos
         for folder, infos in self._infos_by_folder.items():
             if folder in path.parents:
@@ -109,7 +116,7 @@ def learn(configuration, with_restart):
     memory = DiskMemory()
     add_variable_infos(memory, configuration)
     if with_restart:
-        add_code_infos(memory, configuration)
+        add_configuration_infos(memory, configuration)
         add_script_infos(memory, configuration)
         add_dataset_infos(memory, configuration)
         add_template_infos(memory, configuration)
@@ -117,7 +124,7 @@ def learn(configuration, with_restart):
     return memory
 
 
-def add_code_infos(memory, configuration):
+def add_configuration_infos(memory, configuration):
     info = {'code': Info.CONFIGURATION}
     # Get automation configuration paths
     memory.add(configuration.path, info)
@@ -196,6 +203,7 @@ def add_variable_infos_from_folder(
         folder = absolute_batch_folder / step_name
         for variable_definition in variable_definitions:
             variable_id = variable_definition.id
+            variable_view = variable_definition.view_name
             if variable_id != 'return_code':
                 info_uri = uri + step_uri
             else:
@@ -205,9 +213,9 @@ def add_variable_infos_from_folder(
             variable_configuration = variable_definition.configuration
             if 'path' in variable_configuration:
                 path = folder / variable_configuration['path']
-                memory.add(path, variable_info)
+                memory.add(path, variable_info | {'is_configuration': 1})
             path = folder / variable_definition.path
-            memory.add(path, variable_info)
+            memory.add(path, variable_info | {'view': variable_view})
 
 
 def add_template_infos(memory, configuration):
@@ -242,4 +250,8 @@ def add_style_infos(memory, configuration):
             memory.add(path, info)
 
 
+# !!!
+FILE_JSON_CACHE = FileCache(
+    load_file_data=load_json,
+    maximum_length=MAXIMUM_FILE_CACHE_LENGTH)
 L = getLogger(__name__)

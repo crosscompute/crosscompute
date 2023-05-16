@@ -101,8 +101,8 @@ function getDataById() {
 }
 const GET_DATA_BY_VIEW_NAME = {};
 {% if step_name != 'input' %}
-function registerFunction(variableId, f) {
-  register(functions, variableId, f);
+function registerFunction(i, f) {
+  register(functions, i, f);
 }
 const functions = {};
 {% if step_name == 'log' %}

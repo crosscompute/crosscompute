@@ -32,8 +32,8 @@ async def see_mutation_stream(
             while True:
                 await asyncio.sleep(1)
                 d = get_mutation(file_changes, reference_uri, reference_time)
-                if d['configurations'] or d['variables'] or d[
-                        'templates'] or d['styles']:
+                if d.get('configurations') or d.get('variables') or d.get(
+                        'templates') or d.get('styles'):
                     reference_time = d['mutation_time']
                     yield {'data': json.dumps(d)}
         except asyncio.CancelledError:

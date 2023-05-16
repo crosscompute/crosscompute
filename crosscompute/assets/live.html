@@ -20,7 +20,7 @@ function registerCallback(i, f) {
 
 {% block body_js %}
 {% if step_name != 'input' %}
-async function refreshVariable({id: i, value: v, configuration: c}) {
+async function refreshVariable({i, v, c}) {
   await runEach(functions[i], v, c);
   await runEach(callbacks[i], v, c);
 {% if not with_restart and not has_interval %}
@@ -77,16 +77,16 @@ function setupMutationStream() {
 {% if with_restart %}
     if (
       d.server_time != {{ server_time }} ||
-      d.configurations.length ||
-      d.templates.length
+      d.configurations ||
+      d.templates
     ) {
       refreshPage();
-    } else if (d.styles.length) {
+    } else if (d.styles) {
       refreshStyle();
     }
 {% endif %}
 {% if step_name != 'input' %}
-    await Promise.all(d.variables.map(refreshVariable));
+    await Promise.all((d.variables || []).map(refreshVariable));
 {% endif %}
     mutationTime = d.mutation_time;
   };

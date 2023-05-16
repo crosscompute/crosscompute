@@ -335,7 +335,8 @@ def load_raw_configuration_ini(configuration_path, with_comments=False):
     except (OSError, UnicodeDecodeError) as e:
         raise CrossComputeConfigurationError(e)
     if not paths:
-        raise CrossComputeConfigurationError(f'{configuration_path} not found')
+        raise CrossComputeConfigurationError(
+            f'configuration path "{configuration_path}" was not found')
     return dict(configuration)
 
 
@@ -360,10 +361,12 @@ def load_raw_configuration_yaml(configuration_path, with_comments=False):
 
 def validate_protocol(configuration):
     if 'crosscompute' not in configuration:
-        raise CrossComputeError('crosscompute expected')
+        raise CrossComputeError(
+            'crosscompute was not found in the configuration')
     protocol_version = configuration['crosscompute'].strip()
     if not protocol_version:
-        raise CrossComputeConfigurationError('crosscompute version required')
+        raise CrossComputeConfigurationError(
+            'crosscompute version is required')
     elif not is_equivalent_version(
             protocol_version, __version__, version_depth=3):
         raise CrossComputeConfigurationError(
@@ -404,8 +407,7 @@ def validate_imports(configuration):
                 raise CrossComputeConfigurationError(e)
             import_configuration['path'] = path
         else:
-            raise CrossComputeConfigurationError(
-                'path required for each import')
+            raise CrossComputeConfigurationError('import path is required')
         import_configurations.extend(
             automation_configuration.import_configurations)
         automation_configurations.extend(
@@ -413,9 +415,9 @@ def validate_imports(configuration):
     automation_definitions = [
         _ for _ in automation_configurations if 'output' in _]
     assert_unique_values([
-        _.name for _ in automation_definitions], 'duplicate name {x}')
+        _.name for _ in automation_definitions], 'automation name "{x}"')
     assert_unique_values([
-        _.slug for _ in automation_definitions], 'duplicate slug {x}')
+        _.slug for _ in automation_definitions], 'automation slug "{x}"')
     return {
         'import_configurations': import_configurations,
         'automation_definitions': automation_definitions}
@@ -436,7 +438,7 @@ def validate_variables(configuration):
             _, step_name=step_name) for _ in variable_dictionaries]
         assert_unique_values([
             _.id for _ in variable_definitions
-        ], f'duplicate variable id {{x}} in {step_name}')
+        ], f'variable id {{x}} in {step_name}')
         variable_definitions_by_step_name[step_name] = variable_definitions
         view_names.update(_.view_name for _ in variable_definitions)
     L.debug('view_names = %s', list(view_names))
@@ -451,7 +453,8 @@ def validate_variable_views(configuration):
         try:
             View = view_by_name[view_name]
         except KeyError:
-            raise CrossComputeConfigurationError(f'{view_name} not installed')
+            raise CrossComputeConfigurationError(
+                f'view "{view_name}" is not installed')
         environment_variable_ids = get_environment_variable_ids(
             View.environment_variable_definitions)
         if environment_variable_ids:
@@ -470,7 +473,7 @@ def validate_templates(configuration):
         ) for _ in get_dictionaries(step_configuration, 'templates')]
         assert_unique_values([
             _.path for _ in template_definitions
-        ], f'duplicate template path {{x}} in {step_name}')
+        ], f'template path {{x}} in {step_name}')
         template_definitions_by_step_name[step_name] = template_definitions
     return {
         'template_definitions_by_step_name': template_definitions_by_step_name}
@@ -486,13 +489,13 @@ def validate_batches(configuration):
             raw_batch_definition, automation_folder, variable_definitions))
     if 'output' in configuration and not batch_definitions:
         raise CrossComputeConfigurationError(
-            'no batches configured; please define at least one batch')
+            'no batches are configured; you must define at least one batch')
     assert_unique_values([
-        _.folder for _ in batch_definitions], 'duplicate batch folder {x}')
+        _.folder for _ in batch_definitions], 'batch folder "{x}"')
     assert_unique_values([
-        _.name for _ in batch_definitions], 'duplicate batch name {x}')
+        _.name for _ in batch_definitions], 'batch name "{x}"')
     assert_unique_values([
-        _.uri for _ in batch_definitions], 'duplicate batch uri {x}')
+        _.uri for _ in batch_definitions], 'batch uri "{x}"')
     return {'batch_definitions': batch_definitions}
 
 
@@ -508,7 +511,7 @@ def validate_environment(configuration):
     batch_concurrency_name = d.get('batch', 'thread').lower()
     if batch_concurrency_name not in ('process', 'thread', 'single'):
         raise CrossComputeConfigurationError(
-            f'"{batch_concurrency_name}" batch concurrency is not supported')
+            f'batch concurrency "{batch_concurrency_name}" is not supported')
     interval_timedelta, is_interval_strict = get_interval_pack(d.get(
         'interval', '').strip())
     return {
@@ -553,7 +556,7 @@ def validate_display_styles(configuration):
             path = automation_folder / style_path
             if not path.exists():
                 raise CrossComputeConfigurationError(
-                    f'{path} not found for style')
+                    f'style path "{path}" was not found')
             style_name = format_slug(
                 f'{splitext(style_path)[0]}-{reference_time}')
             style_uri = STYLE_ROUTE.format(style_name=style_name)
@@ -625,12 +628,13 @@ def validate_template_identifiers(template_dictionary):
     try:
         template_path = template_dictionary['path']
     except KeyError as e:
-        raise CrossComputeConfigurationError(f'{e} required for each template')
+        raise CrossComputeConfigurationError(
+            f'{e} is required for each template')
     automation_folder = template_dictionary.automation_folder
     template_path = Path(template_path)
     if not (automation_folder / template_path).exists():
         raise CrossComputeConfigurationError(
-            f'could not find template {template_path}')
+            f'template path "{template_path}" was not found')
     return {
         'path': template_path,
         'expression': template_dictionary.get('expression', '')}
@@ -642,7 +646,8 @@ def validate_variable_identifiers(variable_dictionary):
         view_name = variable_dictionary['view']
         variable_path = variable_dictionary['path']
     except KeyError as e:
-        raise CrossComputeConfigurationError(f'{e} required for each variable')
+        raise CrossComputeConfigurationError(
+            f'{e} is required for each variable')
     if not VARIABLE_ID_PATTERN.match(variable_id):
         raise CrossComputeConfigurationError(
             f'{variable_id} is not a valid variable id; please use only '
@@ -652,14 +657,14 @@ def validate_variable_identifiers(variable_dictionary):
             pass
         elif view_name not in PRINTER_NAMES:
             raise CrossComputeConfigurationError(
-                f'{view_name} is not a supported printer')
+                f'printer "{view_name}" is not supported')
         elif view_name not in printer_by_name:
             raise CrossComputeConfigurationError(
                 f'pip install crosscompute-printers-{view_name}')
     if relpath(variable_path).startswith('..'):
         raise CrossComputeConfigurationError(
-            f'path {variable_path} for variable {variable_id} must be within '
-            'the folder')
+            f'variable "{variable_id}" path "{variable_path}" must be within '
+            'the automation folder')
     label = variable_dictionary.get('label', format_name(variable_id)).strip()
     return {
         'id': variable_id,
@@ -672,6 +677,11 @@ def validate_variable_configuration(variable_dictionary):
     # TODO: Validate variable view configurations
     c = get_dictionary(
         variable_dictionary, 'configuration')
+    if 'path' in c:
+        p = c['path']
+        if not p.endswith('.json'):
+            raise CrossComputeConfigurationError(
+                f'variable configuration path "{p}" suffix must be ".json"')
     if variable_dictionary.step_name == 'print':
         variable_id = variable_dictionary.id
         view_name = variable_dictionary.view_name
@@ -688,7 +698,8 @@ def validate_batch_identifiers(batch_dictionary):
     try:
         folder = get_scalar_text(batch_dictionary, 'folder')
     except KeyError as e:
-        raise CrossComputeConfigurationError(f'{e} required for each batch')
+        raise CrossComputeConfigurationError(
+            f'{e} is required for each batch')
     name = get_scalar_text(batch_dictionary, 'name', basename(folder))
     slug = get_scalar_text(batch_dictionary, 'slug', name)
     data_by_id = batch_dictionary.data_by_id
@@ -735,17 +746,17 @@ def validate_dataset_reference(dataset_dictionary):
         if not source_path.exists():
             if source_path.is_symlink():
                 raise CrossComputeConfigurationError(
-                    f'invalid symlink for dataset reference {reference_path}')
+                    f'dataset reference link "{reference_path}" is invalid')
             elif source_path.name == 'runs':
                 source_path.mkdir(parents=True)
             else:
                 raise CrossComputeConfigurationError(
-                    f'could not find dataset reference {reference_path}')
+                    f'dataset reference path "{reference_path}" was not found')
         target_path = dataset_dictionary.path
         if target_path.exists() and not target_path.is_symlink():
             raise CrossComputeConfigurationError(
-                'refusing to overwrite existing dataset; please delete '
-                f'{target_path} from the disk as defined')
+                'dataset path conflicts with existing dataset; please delete '
+                f'"{target_path}" from the disk to continue')
     return {'reference': dataset_reference}
 
 
@@ -764,7 +775,7 @@ def validate_script_identifiers(script_dictionary):
         suffix = path.suffix
         if suffix not in ['.ipynb', '.py']:
             raise CrossComputeConfigurationError(
-                f'{suffix} not supported for script path')
+                f'script path suffix "{suffix}" is not supported')
         method_count += 1
     else:
         path = None
@@ -774,7 +785,7 @@ def validate_script_identifiers(script_dictionary):
 
     if method_count > 1:
         raise CrossComputeConfigurationError(
-            'set script command or path or function')
+            'script command or path or function is required')
     return {'folder': Path(folder), 'command': command, 'path': path}
 
 
@@ -783,10 +794,11 @@ def validate_package_identifiers(package_dictionary):
         package_id = package_dictionary['id']
         manager_name = package_dictionary['manager']
     except KeyError as e:
-        raise CrossComputeConfigurationError(f'{e} required for each package')
+        raise CrossComputeConfigurationError(
+            f'{e} is required for each package')
     if manager_name not in PACKAGE_MANAGER_NAMES:
         raise CrossComputeConfigurationError(
-            f'"{manager_name}" manager is not supported')
+            f'manager "{manager_name}" is not supported')
     return {
         'id': package_id,
         'manager_name': manager_name}
@@ -797,12 +809,13 @@ def validate_port_identifiers(port_dictionary):
         port_id = port_dictionary['id']
         port_number = port_dictionary['number']
     except KeyError as e:
-        raise CrossComputeConfigurationError(f'{e} required for each port')
+        raise CrossComputeConfigurationError(
+            f'{e} is required for each port')
     try:
         port_number = int(port_number)
     except ValueError:
         raise CrossComputeConfigurationError(
-            f'{port_number} must be an integer')
+            f'port number "{port_number}" must be an integer')
     return {
         'id': port_id,
         'number': port_number}
@@ -812,8 +825,7 @@ def validate_style_identifiers(style_dictionary):
     uri = style_dictionary.get('uri', '').strip()
     path = style_dictionary.get('path', '').strip()
     if not uri and not path:
-        raise CrossComputeConfigurationError(
-            'uri or path required for each style')
+        raise CrossComputeConfigurationError('style uri or path is required')
     return {'uri': uri, 'path': Path(path)}
 
 
@@ -821,10 +833,11 @@ def validate_page_identifiers(page_dictionary):
     try:
         page_id = page_dictionary['id']
     except KeyError as e:
-        raise CrossComputeConfigurationError(f'{e} required for each page')
+        raise CrossComputeConfigurationError(
+            f'{e} is required for each page')
     if page_id not in DESIGN_NAMES_BY_PAGE_ID:
         raise CrossComputeConfigurationError(
-            f'{page_id} page not supported for page configuration')
+            f'page "{page_id}" is not supported')
     return {'id': page_id}
 
 
@@ -835,7 +848,7 @@ def validate_page_configuration(page_dictionary):
     design_names = DESIGN_NAMES_BY_PAGE_ID[page_id]
     if design_name not in design_names:
         raise CrossComputeConfigurationError(
-            f'"{design_name}" design not supported for {page_id} page')
+            f'design "{design_name}" is not supported for page "{page_id}"')
     return {'configuration': page_configuration}
 
 
@@ -843,10 +856,11 @@ def validate_button_identifiers(button_dictionary):
     try:
         button_id = button_dictionary['id']
     except KeyError as e:
-        raise CrossComputeConfigurationError(f'{e} required for each button')
+        raise CrossComputeConfigurationError(
+            f'{e} is required for each button')
     if button_id not in BUTTON_TEXT_BY_ID:
         raise CrossComputeConfigurationError(
-            f'{button_id} button not supported for button configuration')
+            f'button "{button_id}" is not supported')
     return {'id': button_id}
 
 
@@ -859,14 +873,14 @@ def validate_token_identifiers(token_dictionary):
     try:
         token_path = token_dictionary['path']
     except KeyError as e:
-        raise CrossComputeConfigurationError(f'{e} required for each token')
+        raise CrossComputeConfigurationError(f'{e} is required for each token')
     path = Path(token_dictionary.automation_folder, token_path)
     suffix = path.suffix
     if suffix == '.yml':
         d = load_raw_configuration_yaml(path)
     else:
         raise CrossComputeConfigurationError(
-            f'{suffix} not supported for token paths')
+            f'token path suffix "{suffix}" is not supported')
     identities_by_token = {}
     for token, identities in d.items():
         token = str(token)
@@ -877,7 +891,7 @@ def validate_token_identifiers(token_dictionary):
                 token = environ[variable_id]
             except KeyError:
                 e = CrossComputeConfigurationError(
-                    f'{variable_id} is missing in the environment')
+                    f'environment variable "{variable_id}" is missing')
                 e.path = path
                 raise e
         identities_by_token[token] = identities
@@ -888,7 +902,7 @@ def validate_group_identifiers(group_dictionary):
     try:
         group_configuration = group_dictionary['configuration']
     except KeyError as e:
-        raise CrossComputeConfigurationError(f'{e} required for each group')
+        raise CrossComputeConfigurationError(f'{e} is required for each group')
     group_permissions = [PermissionDefinition(_) for _ in get_dictionaries(
         group_dictionary, 'permissions')]
     return {
@@ -901,14 +915,14 @@ def validate_permission_identifiers(permission_dictionary):
         permission_id = permission_dictionary['id']
     except KeyError as e:
         raise CrossComputeConfigurationError(
-            f'{e} required for each permission')
+            f'{e} is required for each permission')
     if permission_id not in PERMISSION_IDS:
         raise CrossComputeConfigurationError(
-            f'"{permission_id}" permission not supported')
+            f'permission id "{permission_id}" is not supported')
     permission_action = permission_dictionary.get('action', 'accept')
     if permission_action not in PERMISSION_ACTIONS:
         raise CrossComputeConfigurationError(
-            f'"{permission_action}" action not supported')
+            f'permission action "{permission_action}" is not supported')
     return {'id': permission_id, 'action': permission_action}
 
 
@@ -924,8 +938,9 @@ def get_configuration_format(path):
         }[file_extension]
     except KeyError:
         raise CrossComputeConfigurationFormatError((
-            f'{file_extension} format not supported for automation '
-            'configuration').lstrip())
+            f'automation configuration suffix "{file_extension}" '
+            'is not supported'
+        ).lstrip())
     return configuration_format
 
 
@@ -939,7 +954,7 @@ def get_engine_name(environment_dictionary):
             'using engine=unsafe; use engine=podman for untrusted code')
     else:
         raise CrossComputeConfigurationError(
-            f'"{engine_name}" engine is not supported')
+            f'engine "{engine_name}" is not supported')
     return engine_name
 
 
@@ -962,11 +977,11 @@ def get_port_definitions(environment_dictionary, variable_definitions):
                 variable_definitions, 'id', port_id)
         except StopIteration:
             raise CrossComputeConfigurationError(
-                f'{port_id} port must have a matching variable definition')
+                f'port "{port_id}" must have a matching variable definition')
         step_name = variable_definition.step_name
         if step_name not in ['log', 'debug']:
             raise CrossComputeConfigurationError(
-                f'{port_id} port must correspond to a log or debug variable')
+                f'port "{port_id}" must correspond to a log or debug variable')
         port_definition.step_name = step_name
     return port_definitions
 
@@ -978,12 +993,12 @@ def get_environment_variable_ids(environment_variable_definitions):
             variable_id = environment_variable_definition['id']
         except KeyError as e:
             raise CrossComputeConfigurationError(
-                f'{e} required for each environment variable')
+                f'{e} is required for each environment variable')
         try:
             environ[variable_id]
         except KeyError:
             raise CrossComputeConfigurationError(
-                f'{variable_id} is missing in the environment as defined')
+                f'environment variable "{variable_id}" is missing')
         variable_ids.add(variable_id)
     return variable_ids
 
@@ -996,16 +1011,16 @@ def get_interval_pack(interval_text):
         count = int(count)
     except ValueError:
         raise CrossComputeConfigurationError(
-            f'unparseable interval "{interval_text}"; '
-            f'expected something like "30 minutes"')
+            f'interval "{interval_text}" is not parsable; '
+            f'something like "30 minutes" was expected')
     for unit_name in INTERVAL_UNIT_NAMES:
         if name.startswith(unit_name[:-1]):
             break
     else:
-        unit_names_text = ' '.join(INTERVAL_UNIT_NAMES)
+        unit_names_text = ' or '.join(INTERVAL_UNIT_NAMES)
         raise CrossComputeConfigurationError(
-            f'unsupported interval unit "{name}" in "{interval_text}"; '
-            f'expected {unit_names_text}')
+            f'interval "{interval_text}" unit "{name}" is not supported; '
+            f'{unit_names_text} was expected')
     is_strict = True if '!' in name else False
     return timedelta(**{unit_name: count}), is_strict
 
@@ -1016,7 +1031,8 @@ def get_scalar_text(d, key, default=None):
         raise KeyError(key)
     if isinstance(value, dict):
         raise CrossComputeConfigurationError(
-            f'surround {key} with quotes since it begins with a {{')
+            f'"{key}" must be surrounded with quotes '
+            'since it begins with a {')
     return value
 
 
@@ -1042,8 +1058,9 @@ def get_batch_definitions(
             yield_data_by_id = YIELD_DATA_BY_ID_BY_EXTENSION[file_extension]
         except KeyError:
             raise CrossComputeConfigurationError((
-                f'{file_extension} format not supported for batch '
-                'configuration').lstrip())
+                f'batch configuration suffix "{file_extension}" '
+                'is not supported'
+            ).lstrip())
         for configuration_data_by_id in yield_data_by_id(
                 automation_folder / batch_configuration_path,
                 variable_definitions):
@@ -1073,13 +1090,13 @@ def process_page_number_options(variable_id, print_configuration):
     location = d.get('location')
     if location and location not in ['header', 'footer']:
         raise CrossComputeConfigurationError(
-            f'print variable {variable_id} configuration {k} '
-            f'location {location} not supported')
+            f'print variable "{variable_id}" configuration "{k}" '
+            f'location "{location}" is not supported')
     alignment = d.get('alignment')
     if alignment and alignment not in ['left', 'center', 'right']:
         raise CrossComputeConfigurationError(
-            f'print variable {variable_id} configuration {k} '
-            f'alignment {alignment} not supported')
+            f'print variable "{variable_id}" configuration "{k}" '
+            f'alignment "{alignment}" is not supported')
 
 
 def get_folder_plus_path(d):
@@ -1094,28 +1111,32 @@ def get_dictionaries(d, key):
     values = get_list(d, key)
     for value in values:
         if not isinstance(value, dict):
-            raise CrossComputeConfigurationError(f'{key} must be dictionaries')
+            raise CrossComputeConfigurationError(
+                f'"{key}" must be dictionaries')
     return values
 
 
 def get_dictionary(d, key):
     value = d.get(key, {})
     if not isinstance(value, dict):
-        raise CrossComputeConfigurationError(f'{key} must be a dictionary')
+        raise CrossComputeConfigurationError(
+            f'"{key}" must be a dictionary')
     return value
 
 
 def get_list(d, key):
     value = d.get(key, [])
     if not isinstance(value, list):
-        raise CrossComputeConfigurationError(f'{key} must be a list')
+        raise CrossComputeConfigurationError(
+            f'"{key}" must be a list')
     return value
 
 
 def assert_unique_values(xs, message):
     for x, count in Counter(xs).items():
         if count > 1:
-            raise CrossComputeConfigurationError(message.format(x=x))
+            raise CrossComputeConfigurationError(
+                message.format(x=x) + ' is not unique')
 
 
 RUN_PY = Template('''\
