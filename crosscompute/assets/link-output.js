@@ -1,3 +1,3 @@
-registerFunction('$variable_id', async function(v, c) {
-  await refreshLink('$element_id', '$link_text');
+registerFunction('$variable_id', async function({c}) {
+  await refreshLink('$element_id', c);
 });

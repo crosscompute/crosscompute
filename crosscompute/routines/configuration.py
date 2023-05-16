@@ -1,5 +1,4 @@
 # TODO: Save to ini, toml
-import json
 import shutil
 from collections import Counter, defaultdict
 from configparser import ConfigParser
@@ -53,6 +52,7 @@ from .variable import (
     format_text,
     get_data_by_id_from_folder,
     initialize_view_by_name,
+    load_file_json,
     YIELD_DATA_BY_ID_BY_EXTENSION)
 
 
@@ -163,7 +163,7 @@ class BatchDefinition(Definition):
         status = Status.NEW
         path = self.folder / 'debug' / 'variables.dictionary'
         if path.exists():
-            d = json.load(path.open('rt'))
+            d = load_file_json(path)
             return_code = d['return_code']
             status = Status.DONE if return_code == 0 else Status.FAILED
         return status
@@ -294,7 +294,7 @@ def save_raw_configuration_yaml(configuration_path, configuration):
     yaml.explicit_start = True
     yaml.indent(mapping=2, sequence=4, offset=2)
     try:
-        with open(configuration_path, 'wt') as configuration_file:
+        with configuration_path.open('wt') as configuration_file:
             yaml.dump(configuration, configuration_file)
     except (OSError, YAMLError) as e:
         raise CrossComputeConfigurationError(e)
@@ -342,7 +342,7 @@ def load_raw_configuration_ini(configuration_path, with_comments=False):
 
 def load_raw_configuration_toml(configuration_path, with_comments=False):
     try:
-        with open(configuration_path, 'rt') as configuration_file:
+        with configuration_path.open('rt') as configuration_file:
             configuration = tomli.load(configuration_file)
     except (OSError, UnicodeDecodeError) as e:
         raise CrossComputeConfigurationError(e)
@@ -352,7 +352,7 @@ def load_raw_configuration_toml(configuration_path, with_comments=False):
 def load_raw_configuration_yaml(configuration_path, with_comments=False):
     yaml = YAML(typ='rt' if with_comments else 'safe')
     try:
-        with open(configuration_path, 'rt') as configuration_file:
+        with configuration_path.open('rt') as configuration_file:
             configuration = yaml.load(configuration_file)
     except (OSError, YAMLError) as e:
         raise CrossComputeConfigurationError(e)

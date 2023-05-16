@@ -1,4 +1,3 @@
-import json
 import shlex
 from copy import deepcopy
 from logging import getLogger
@@ -20,6 +19,7 @@ from ..macros.disk import FileCache
 from .configuration import (
     get_folder_plus_path)
 from .variable import (
+    load_file_json,
     load_variable_data)
 
 
@@ -90,7 +90,7 @@ class DiskMemory():
         if path in infos_by_path:
             infos = deepcopy(infos_by_path[path])
             for info in infos:
-                if info['code'] != Info.VARIABLE:
+                if info['code'] != Info.VARIABLE or info['step'] == 'i':
                     continue
                 if info.get('is_configuration'):
                     try:
@@ -98,7 +98,8 @@ class DiskMemory():
                     except OSError:
                         pass
                 elif info['view'] in [
-                    'string', 'number', 'radio', 'checkbox', 'frame',
+                    'string', 'number', 'password', 'email', 'text',
+                    'markdown', 'radio', 'checkbox', 'frame',
                 ]:
                     try:
                         info['value'] = load_variable_data(
@@ -258,13 +259,7 @@ def add_style_infos(memory, configuration):
             memory.add(path, info)
 
 
-def load_json(path):
-    with path.open('rt') as f:
-        d = json.load(f)
-    return d
-
-
 FILE_JSON_CACHE = FileCache(
-    load_file_data=load_json,
+    load_file_data=load_file_json,
     maximum_length=MAXIMUM_FILE_CACHE_LENGTH)
 L = getLogger(__name__)

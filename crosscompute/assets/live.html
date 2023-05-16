@@ -21,8 +21,9 @@ function registerCallback(i, f) {
 {% block body_js %}
 {% if step_name != 'input' %}
 async function refreshVariable({i, v, c}) {
-  await runEach(functions[i], v, c);
-  await runEach(callbacks[i], v, c);
+  const d = {v, c};
+  await runEach(functions[i], d);
+  await runEach(callbacks[i], d);
 {% if not with_restart and not has_interval %}
   if (i == 'return_code') {
     mutationStream.close();

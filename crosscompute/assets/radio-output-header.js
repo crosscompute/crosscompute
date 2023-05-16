@@ -1,15 +1,8 @@
-async function refreshRadio(elementId, dataUri) {
-  let d;
-  try {
-    const r = await fetch(dataUri + '.json');
-    d = await r.json();
-  } catch {
-    return;
-  }
-  const l = document.getElementById(elementId), i = l.dataset.variable, hs = [], { options } = d.configuration, value = d.value;
+async function refreshRadio(elementId, dataUri, dataValue, dataConfiguration) {
+  const x = dataValue || '', options = dataConfiguration?.['options'] || [], l = document.getElementById(elementId), i = l.dataset.variable, hs = [];
   for (let j = 0; j < options.length; j++) {
-    const o = options[j], v = o.value, n = o.name || v, x = v == value ? ' checked' : '';
-    hs.push(`<div><input type="radio" id="${i}-${j}" name="${i}" value="${v}"${x}> <label for="${i}-${j}">${n}</label></div>`);
+    const o = options[j], v = o.value, n = o.name || v, w = v == x ? ' checked' : '';
+    hs.push(`<div><input type="radio" id="${i}-${j}" name="${i}" value="${v}"${w}> <label for="${i}-${j}">${n}</label></div>`);
   }
   l.innerHTML = hs.join('\n');
 }

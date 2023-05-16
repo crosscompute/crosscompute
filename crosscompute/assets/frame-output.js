@@ -1,3 +1,3 @@
-registerFunction('$variable_id', async function() {
-  await refreshFrame('$element_id', '$data_uri');
+registerFunction('$variable_id', async function({v}) {
+  await refreshFrame('$element_id', v);
 });

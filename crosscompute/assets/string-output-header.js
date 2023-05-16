@@ -1,6 +1,6 @@
 async function refreshString(elementId, elementAttribute, dataUri, dataValue, formatText) {
   let x = dataValue;
-  if (dataValue === undefined) {
+  if (x === undefined) {
     try {
       const r = await fetch(dataUri), { status } = r;
       if (status != 200) return;

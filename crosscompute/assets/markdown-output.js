@@ -1,4 +1,4 @@
-registerFunction('$variable_id', async function() {
-  await refreshMarkdown('$element_id', '$data_uri');
+registerFunction('$variable_id', async function({v}) {
+  await refreshMarkdown('$element_id', '$data_uri', v);
 });
 refreshVariable('$variable_id');

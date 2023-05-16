@@ -127,7 +127,7 @@ class UnsafeEngine(AbstractEngine):
         debug_folder = step_folder_by_name['debug_folder']
         o_path = debug_folder / 'stdout.txt'
         e_path = debug_folder / 'stderr.txt'
-        with open(o_path, 'wt') as o_file, open(e_path, 'w+t') as e_file:
+        with o_path.open('wt') as o_file, e_path.open('w+t') as e_file:
             for script_definition in script_definitions:
                 return_code = _run_script(
                     script_definition, step_folder_by_name,

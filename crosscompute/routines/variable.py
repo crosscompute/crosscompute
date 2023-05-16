@@ -11,8 +11,7 @@ from importlib_metadata import entry_points
 from invisibleroads_macros_log import format_path
 from invisibleroads_macros_text import format_slug
 from invisibleroads_macros_web.escape import (
-    escape_quotes_html,
-    escape_quotes_js)
+    escape_quotes_html)
 
 from ..constants import (
     CACHED_FILE_SIZE_LIMIT_IN_BYTES,
@@ -154,14 +153,14 @@ class LinkView(VariableView):
         main_text = (
             f'<a id="{element_id}" href="{data_uri}" '
             f'class="_{x.mode_name} _{self.view_name} {variable_id}" '
-            f'download="{escape_quotes_html(file_name)}">'
+            f'download="{escape_quotes_html(file_name)}" '
+            f'data-text="{escape_quotes_html(link_text)}">'
             f'{link_text}</a>')
         js_texts = [
             LINK_OUTPUT_HEADER_JS,
             LINK_OUTPUT_JS.substitute({
                 'variable_id': variable_id,
-                'element_id': element_id,
-                'link_text': escape_quotes_js(link_text)})]
+                'element_id': element_id})]
         return {
             'css_uris': [], 'css_texts': [], 'js_uris': [],
             'js_texts': js_texts, 'main_text': main_text}
@@ -594,8 +593,7 @@ def save_variable_data(target_path, data_by_id, variable_definitions):
 
 def link_files(path_template, variable_uri):
     folder = FILES_FOLDER / variable_uri.replace('/f/', '')
-    with (folder / 'files.json').open('rt') as f:
-        file_dictionaries = json.load(f)
+    file_dictionaries = load_file_json(folder / 'files.json')
     for file_index, file_dictionary in enumerate(file_dictionaries):
         file_path = folder / str(file_index)
         file_extension = file_dictionary['extension']
@@ -770,14 +768,14 @@ def load_file_data(path):
     suffix = path.suffix
     if suffix == '.dictionary':
         return load_dictionary_data(path)
-    if suffix == '.txt':
+    if suffix in ['.md', '.txt']:
         return load_text_data(path)
     return {'path': path}
 
 
 def load_dictionary_data(path):
     try:
-        value = json.load(path.open('rt'))
+        value = load_file_json(path)
     except (json.JSONDecodeError, OSError) as e:
         raise CrossComputeDataError(
             f'could not load {format_path(path)}: {e}')
@@ -800,6 +798,12 @@ def load_text_data(path):
 
 def load_file_text(path):
     return path.read_text().rstrip()
+
+
+def load_file_json(path):
+    with path.open('rt') as f:
+        d = json.load(f)
+    return d
 
 
 def get_variable_data_by_id(

@@ -14,6 +14,7 @@ from ..settings import (
 from .interface import Batch
 from .variable import (
     get_data_from,
+    load_file_json,
     load_variable_data)
 
 
@@ -38,8 +39,7 @@ class DiskBatch(Batch):
         if not is_customized and not path.exists():
             return variable_configuration
         try:
-            with path.open('rt') as f:
-                d = json.load(f)
+            d = load_file_json(path)
             variable_configuration.update(d)
         except OSError:
             L.error('path not found %s', format_path(path))
@@ -86,8 +86,7 @@ class DiskBatch(Batch):
             return True
         path = self.folder / 'debug' / 'variables.dictionary'
         try:
-            with path.open('rt') as f:
-                d = json.load(f)
+            d = load_file_json(path)
             is_done = 'return_code' in d
         except (OSError, ValueError):
             return False
