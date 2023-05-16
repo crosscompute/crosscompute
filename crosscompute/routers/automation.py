@@ -29,6 +29,8 @@ from ..routines.configuration import (
     VariableDefinition)
 from ..routines.step import (
     get_step_response_dictionary)
+from ..routines.uri import (
+    get_host_uri)
 from ..routines.variable import (
     load_file_text,
     remove_variable_data)
@@ -55,20 +57,19 @@ async def see_automation(
     design_name = automation_definition.get_design_name('automation')
     if design_name == 'none':
         d = {
-            'css_uris': automation_definition.css_uris, 'is_done': 1,
+            'css_uris': automation_definition.css_uris,
+            'design_name': design_name, 'is_done': 1,
             'mutation_uri': MUTATION_ROUTE.format(uri=automation_uri)}
     else:
         d = get_step_response_dictionary(
             automation_definition, automation_definition.batch_definitions[0],
             design_name, request.query_params)
-    request_uri = request.url
     return TemplateResponse(template_path_by_id['automation'], {
         'request': request, 'title_text': automation_definition.title,
         'description': automation_definition.description,
-        'host_uri': request_uri.scheme + '://' + request_uri.netloc,
+        'host_uri': get_host_uri(request), 'step_name': design_name,
         'name': automation_definition.name, 'uri': automation_uri,
         'automation_definition': automation_definition,
-        'step_name': design_name,
         'batch_definitions': guard.get_batch_definitions(
             automation_definition),
         'mutation_time': time(),
@@ -134,7 +135,7 @@ async def see_automation_batch_step(
     guard: AuthorizationGuard = Depends(
         AuthorizationGuardFactory('see_batch')),
 ):
-    page_dictionary = get_step_response_dictionary(
+    d = get_step_response_dictionary(
         automation_definition, batch_definition, step_name,
         request.query_params)
     return TemplateResponse(template_path_by_id['step'], {
@@ -144,7 +145,7 @@ async def see_automation_batch_step(
         'batch_definition': batch_definition,
         'step_name': step_name,
         'mutation_time': time(),
-    } | page_dictionary, headers=response.headers)
+    } | d, headers=response.headers)
 
 
 @router.get(

@@ -4,7 +4,7 @@ document.querySelectorAll('._continue').forEach(function (l) {
     l.onclick = runAutomation;
   }
 });
-{% else %}
+{% elif design_name != 'none' %}
 async function showNext() {
   let newElement, isThis = false;
   if (newTemplateIndex >= 0) {

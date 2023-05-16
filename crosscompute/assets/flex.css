@@ -12,6 +12,10 @@
   button:hover {
     cursor: pointer;
   }
+  ._batches {
+    list-style: none;
+    padding-left: 0;
+  }
   ._panel {
     flex-direction: row;
     gap: 16px;

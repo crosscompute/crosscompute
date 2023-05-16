@@ -25,6 +25,11 @@ def get_step_code(uri):
     return match.group(1)
 
 
+def get_host_uri(request):
+    uri = request.url
+    return uri.scheme + '://' + uri.netloc
+
+
 AUTOMATION_PATTERN = re.compile(r'/a/([^/]+)')
 BATCH_PATTERN = re.compile(r'/b/([^/]+)')
 STEP_PATTERN = re.compile(r'/([%s])$' % ''.join(STEP_CODE_BY_NAME.keys()))

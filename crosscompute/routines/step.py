@@ -82,7 +82,7 @@ def get_step_response_dictionary(
         button_text_by_id=automation_definition.button_text_by_id,
         step_name=step_name, design_name=design_name, for_print=for_print)
     main_text, template_count = get_main_pack(
-        automation_definition, step_name, render_html)
+        automation_definition, step_name, render_html, design_name, for_print)
     mutation_reference_uri = get_automation_batch_step_uri(
         automation_definition, batch_definition, step_name)
     return {
@@ -93,7 +93,7 @@ def get_step_response_dictionary(
         'js_text': '\n'.join(get_unique_order(m['js_texts'])),
         'for_embed': for_embed, 'for_print': for_print,
         'has_interval': automation_definition.interval_timedelta is not None,
-        'is_done': batch.is_done(),
+        'design_name': design_name, 'is_done': batch.is_done(),
         'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri)}
 
 
@@ -140,10 +140,12 @@ def get_css_text(design_name, for_embed, for_print, m):
     return '\n'.join(css_texts + get_unique_order(m['css_texts']))
 
 
-def get_main_pack(automation_definition, step_name, render_html):
+def get_main_pack(
+        automation_definition, step_name, render_html, design_name, for_print):
     a = automation_definition
     template_definitions = a.template_definitions_by_step_name[step_name]
-    with_button_panel = step_name == 'input' or len(template_definitions) > 1
+    with_button_panel = design_name != 'none' and not for_print and (
+        step_name == 'input' or len(template_definitions) > 1)
     button_text_by_id = a.button_text_by_id
 
     def format_template(text, i=0, x=''):

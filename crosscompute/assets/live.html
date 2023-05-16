@@ -20,7 +20,7 @@ function registerCallback(i, f) {
 
 {% block body_js %}
 {% if step_name != 'input' %}
-async function refreshVariable({i, v, c}) {
+async function refreshVariable(i, v, c) {
   const d = {v, c};
   await runEach(functions[i], d);
   await runEach(callbacks[i], d);
@@ -87,7 +87,7 @@ function setupMutationStream() {
     }
 {% endif %}
 {% if step_name != 'input' %}
-    await Promise.all((d.variables || []).map(refreshVariable));
+    await Promise.all((d.variables || []).map(({ i, v, c }) => refreshVariable(i, v, c)));
 {% endif %}
     mutationTime = d.mutation_time;
   };
