@@ -30,7 +30,7 @@ def get_mutation(file_changes, reference_uri, old_time):
     if configurations:
         d['configurations'] = configurations
     if variable_by_id:
-        d['variables'] = variable_by_id.values()
+        d['variables'] = list(variable_by_id.values())
     if templates:
         d['templates'] = templates
     if styles:
@@ -53,7 +53,8 @@ def categorize_mutation(
                 d['v'] = info['value']
             if 'configuration' in info:
                 d['c'] = info['configuration']
-            variable_by_id[variable_id] |= d
+            variable_by_id[variable_id] = variable_by_id.get(
+                variable_id, {}) | d
         case Info.TEMPLATE:
             if is_irrelevant_template(info, step_code, reference_uri):
                 return

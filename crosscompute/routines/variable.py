@@ -565,7 +565,7 @@ def save_variable_data(target_path, data_by_id, variable_definitions):
     variable_data_by_id = get_variable_data_by_id(
         variable_definitions, data_by_id)
     if target_path.suffix == '.dictionary':
-        with open(target_path, 'wt') as input_file:
+        with target_path.open('wt') as input_file:
             variable_value_by_id = get_variable_value_by_id(
                 variable_data_by_id)
             json.dump(variable_value_by_id, input_file)
@@ -575,7 +575,7 @@ def save_variable_data(target_path, data_by_id, variable_definitions):
     else:
         variable_id, variable_data = list(variable_data_by_id.items())[0]
         if 'value' in variable_data:
-            open(target_path, 'wt').write(variable_data['value'])
+            target_path.open('wt').write(variable_data['value'])
         elif 'path' in variable_data:
             shutil.copy(variable_data['path'], target_path)
         elif 'uri' in variable_data:
@@ -594,7 +594,7 @@ def save_variable_data(target_path, data_by_id, variable_definitions):
 
 def link_files(path_template, variable_uri):
     folder = FILES_FOLDER / variable_uri.replace('/f/', '')
-    with open(folder / 'files.json', 'rt') as f:
+    with (folder / 'files.json').open('rt') as f:
         file_dictionaries = json.load(f)
     for file_index, file_dictionary in enumerate(file_dictionaries):
         file_path = folder / str(file_index)

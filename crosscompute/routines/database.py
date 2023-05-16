@@ -1,3 +1,4 @@
+import json
 import shlex
 from copy import deepcopy
 from logging import getLogger
@@ -11,8 +12,11 @@ from watchfiles import Change, DefaultFilter
 from ..constants import (
     Info,
     BATCH_ROUTE,
+    MAXIMUM_FILE_CACHE_LENGTH,
     STEP_CODE_BY_NAME,
     STEP_ROUTE)
+from ..exceptions import CrossComputeDataError
+from ..macros.disk import FileCache
 from .configuration import (
     get_folder_plus_path)
 from .variable import (
@@ -89,14 +93,18 @@ class DiskMemory():
                 if info['code'] != Info.VARIABLE:
                     continue
                 if info.get('is_configuration'):
-                    # !!!
-                    info['configuration'] = FILE_JSON_CACHE[path]
+                    try:
+                        info['configuration'] = FILE_JSON_CACHE[path]
+                    except OSError:
+                        pass
                 elif info['view'] in [
-                    'link', 'string', 'number', 'radio', 'checkbox', 'frame',
+                    'string', 'number', 'radio', 'checkbox', 'frame',
                 ]:
-                    # !!!
-                    info['value'] = load_variable_data(
-                        path, info['id'])['value']
+                    try:
+                        info['value'] = load_variable_data(
+                            path, info['id'])['value']
+                    except (CrossComputeDataError, KeyError):
+                        pass
             return infos
         for folder, infos in self._infos_by_folder.items():
             if folder in path.parents:
@@ -250,7 +258,12 @@ def add_style_infos(memory, configuration):
             memory.add(path, info)
 
 
-# !!!
+def load_json(path):
+    with path.open('rt') as f:
+        d = json.load(f)
+    return d
+
+
 FILE_JSON_CACHE = FileCache(
     load_file_data=load_json,
     maximum_length=MAXIMUM_FILE_CACHE_LENGTH)

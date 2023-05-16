@@ -438,7 +438,7 @@ def validate_variables(configuration):
             _, step_name=step_name) for _ in variable_dictionaries]
         assert_unique_values([
             _.id for _ in variable_definitions
-        ], f'variable id {{x}} in {step_name}')
+        ], f'variable id "{{x}}" in {step_name}')
         variable_definitions_by_step_name[step_name] = variable_definitions
         view_names.update(_.view_name for _ in variable_definitions)
     L.debug('view_names = %s', list(view_names))
@@ -473,7 +473,7 @@ def validate_templates(configuration):
         ) for _ in get_dictionaries(step_configuration, 'templates')]
         assert_unique_values([
             _.path for _ in template_definitions
-        ], f'template path {{x}} in {step_name}')
+        ], f'template path "{{x}}" in {step_name}')
         template_definitions_by_step_name[step_name] = template_definitions
     return {
         'template_definitions_by_step_name': template_definitions_by_step_name}
@@ -799,9 +799,7 @@ def validate_package_identifiers(package_dictionary):
     if manager_name not in PACKAGE_MANAGER_NAMES:
         raise CrossComputeConfigurationError(
             f'manager "{manager_name}" is not supported')
-    return {
-        'id': package_id,
-        'manager_name': manager_name}
+    return {'id': package_id, 'manager_name': manager_name}
 
 
 def validate_port_identifiers(port_dictionary):
@@ -860,7 +858,7 @@ def validate_button_identifiers(button_dictionary):
             f'{e} is required for each button')
     if button_id not in BUTTON_TEXT_BY_ID:
         raise CrossComputeConfigurationError(
-            f'button "{button_id}" is not supported')
+            f'button id "{button_id}" is not supported')
     return {'id': button_id}
 
 
@@ -927,7 +925,7 @@ def validate_permission_identifiers(permission_dictionary):
 
 
 def get_configuration_format(path):
-    file_extension = path.suffix
+    suffix = path.suffix
     try:
         configuration_format = {
             '.cfg': 'ini',
@@ -935,10 +933,10 @@ def get_configuration_format(path):
             '.toml': 'toml',
             '.yaml': 'yaml',
             '.yml': 'yaml',
-        }[file_extension]
+        }[suffix]
     except KeyError:
         raise CrossComputeConfigurationFormatError((
-            f'automation configuration suffix "{file_extension}" '
+            f'automation configuration suffix "{suffix}" '
             'is not supported'
         ).lstrip())
     return configuration_format
@@ -1053,12 +1051,12 @@ def get_batch_definitions(
 
     if 'path' in batch_configuration:
         batch_configuration_path = Path(batch_configuration['path'])
-        file_extension = batch_configuration_path.suffix
+        suffix = batch_configuration_path.suffix
         try:
-            yield_data_by_id = YIELD_DATA_BY_ID_BY_EXTENSION[file_extension]
+            yield_data_by_id = YIELD_DATA_BY_ID_BY_EXTENSION[suffix]
         except KeyError:
             raise CrossComputeConfigurationError((
-                f'batch configuration suffix "{file_extension}" '
+                f'batch configuration suffix "{suffix}" '
                 'is not supported'
             ).lstrip())
         for configuration_data_by_id in yield_data_by_id(
