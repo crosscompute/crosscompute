@@ -147,7 +147,7 @@ class LinkView(VariableView):
         variable_id = self.variable_id
         element_id = x.id
         data_uri = b.get_data_uri(variable_definition, x)
-        c = b.get_variable_configuration(variable_definition)
+        c = b.get_data_configuration(variable_definition)
         file_name = c.get('file-name', self.variable_path.name)
         link_text = c.get('link-text', file_name)
         main_text = (
@@ -190,7 +190,7 @@ class StringView(VariableView):
         view_name = self.view_name
         element_id = x.id
         value = self.get_value(b, x)
-        c = b.get_variable_configuration(variable_definition)
+        c = b.get_data_configuration(variable_definition)
         main_text = STRING_INPUT_HTML.render({
             'element_id': element_id,
             'mode_name': x.mode_name,
@@ -370,7 +370,7 @@ class RadioView(VariableView):
         variable_id = self.variable_id
         view_name = self.view_name
         element_id = x.id
-        c = b.get_variable_configuration(variable_definition)
+        c = b.get_data_configuration(variable_definition)
         data = b.load_data_from(x.request_params, variable_definition)
         value = data.get('value', '')
         main_text = RADIO_INPUT_HTML.render({
@@ -403,7 +403,7 @@ class CheckboxView(VariableView):
         view_name = self.view_name
         variable_id = self.variable_id
         variable_definition = self.variable_definition
-        c = b.get_variable_configuration(variable_definition)
+        c = b.get_data_configuration(variable_definition)
         data = b.load_data_from(x.request_params, variable_definition)
         values = data.get('value', '').splitlines()
         main_text = CHECKBOX_INPUT_HTML.render({
@@ -535,7 +535,7 @@ class FileView(VariableView):
         view_name = self.view_name
         variable_id = self.variable_id
         variable_definition = self.variable_definition
-        c = b.get_variable_configuration(variable_definition)
+        c = b.get_data_configuration(variable_definition)
         mime_types = c.get('mime-types', [])
         root_uri = template_globals['root_uri']
         js_texts = [
