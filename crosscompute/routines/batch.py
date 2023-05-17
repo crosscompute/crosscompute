@@ -25,30 +25,6 @@ class DiskBatch(Batch):
         self.batch_definition = batch_definition
         self.folder = automation_definition.folder / batch_definition.folder
 
-    def get_variable_configuration(self, variable_definition):
-        folder = self.folder
-        variable_configuration = variable_definition.configuration.copy()
-        if 'path' in variable_configuration:
-            relative_path = variable_configuration['path']
-            is_customized = True
-        else:
-            relative_path = str(variable_definition.path) + '.configuration'
-            is_customized = False
-        step_name = variable_definition.step_name
-        path = folder / step_name / relative_path
-        if not is_customized and not path.exists():
-            return variable_configuration
-        try:
-            d = load_file_json(path)
-            variable_configuration.update(d)
-        except OSError:
-            L.error('path not found %s', format_path(path))
-        except json.JSONDecodeError:
-            L.error('must be json %s', format_path(path))
-        except TypeError:
-            L.error('must contain a dictionary %s', format_path(path))
-        return variable_configuration
-
     def load_data_from(self, request_params, variable_definition):
         return get_data_from(
             request_params, variable_definition,
@@ -77,6 +53,30 @@ class DiskBatch(Batch):
         variable_uri = VARIABLE_ROUTE.format(
             variable_id=variable_definition.id)
         return root_uri + automation_uri + batch_uri + step_uri + variable_uri
+
+    def get_data_configuration(self, variable_definition):
+        folder = self.folder
+        variable_configuration = variable_definition.configuration.copy()
+        if 'path' in variable_configuration:
+            relative_path = variable_configuration['path']
+            is_customized = True
+        else:
+            relative_path = str(variable_definition.path) + '.configuration'
+            is_customized = False
+        step_name = variable_definition.step_name
+        path = folder / step_name / relative_path
+        if not is_customized and not path.exists():
+            return variable_configuration
+        try:
+            d = load_file_json(path)
+            variable_configuration.update(d)
+        except OSError:
+            L.error('path not found %s', format_path(path))
+        except json.JSONDecodeError:
+            L.error('must be json %s', format_path(path))
+        except TypeError:
+            L.error('must contain a dictionary %s', format_path(path))
+        return variable_configuration
 
     def is_done(self):
         if self.automation_definition.interval_timedelta:

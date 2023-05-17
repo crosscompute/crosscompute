@@ -1,5 +1,9 @@
 from abc import ABC, abstractmethod
 
+from ..constants import (
+    HOST,
+    PORT)
+
 
 class Automation(ABC):
 
@@ -8,24 +12,27 @@ class Automation(ABC):
         return Class()
 
     @abstractmethod
-    def run(self):
+    def run(self, environment, is_in=None, with_rebuild=True):
         pass
 
     @abstractmethod
-    def serve(self):
+    def serve(
+            self, environment, host=HOST, port=PORT, with_restart=True,
+            with_prefix=True, with_hidden=True, root_uri='',
+            allowed_origins=None):
         pass
 
 
 class Batch(ABC):
 
     @abstractmethod
-    def get_data(self, variable_definition):
+    def load_data(self, variable_definition):
         '''
-        Get the data of the variable in one of the following formats:
+        Load the data of the variable in one of the following formats:
         {}
         {'value': 1}
         {'path': '/a/b/c.png'}
-        {'uri': 'upload:xyz'}
+        {'uri': '/f/abc'}
         {'error': 'message'}
         '''
         return {}
@@ -40,17 +47,17 @@ class Batch(ABC):
         'Get the resolved variable configuration'
         return {}
 
+    @abstractmethod
+    def is_done(self):
+        return False
+
 
 class Server(ABC):
 
     @abstractmethod
-    def __init__(self, configuration, work=None, queue=None, settings=None):
+    def serve(self, configuration):
         pass
 
     @abstractmethod
-    def serve(self):
-        pass
-
-    @abstractmethod
-    def watch(self):
+    def watch(self, configuration, reload):
         pass

@@ -168,12 +168,12 @@ async def see_automation_batch_step_variable_json(
         variable_value = load_file_text(variable_data['path'])
     else:
         variable_value = variable_data['value']
-    variable_configuration = batch.get_variable_configuration(
+    data_configuration = batch.get_data_configuration(
         variable_definition).copy()
-    variable_configuration.pop('path', None)
+    data_configuration.pop('path', None)
     return {
         'value': variable_value,
-        'configuration': variable_configuration}
+        'configuration': data_configuration}
 
 
 @router.get(
