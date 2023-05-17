@@ -301,8 +301,8 @@ environment:
   packages:
     # id is the name of the package as defined in the package manager
     # manager is the name of a package manager such as apt, dnf, npm, pip
-    - id: chromium
-      manager: apt
+    - id: matplotlib
+      manager: pip
 
   # ports expose server processes running in your scripts
   ports:

@@ -20,6 +20,7 @@
 - Support `_embed` parameter for embedding
 - Migrate from pyramid to fastapi
 - Replace polling with server side events for mutation tracking
+- Send variable value and configuration in server side events when possible
 - Support live print preview
 - Support conditional templates
 

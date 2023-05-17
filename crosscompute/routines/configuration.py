@@ -289,7 +289,6 @@ def save_raw_configuration(configuration_path, configuration):
 
 
 def save_raw_configuration_yaml(configuration_path, configuration):
-    # TODO: Add --- at top
     yaml = YAML()
     yaml.explicit_start = True
     yaml.indent(mapping=2, sequence=4, offset=2)
@@ -1029,8 +1028,7 @@ def get_scalar_text(d, key, default=None):
         raise KeyError(key)
     if isinstance(value, dict):
         raise CrossComputeConfigurationError(
-            f'"{key}" must be surrounded with quotes '
-            'since it begins with a {')
+            f'"{key}" must be surrounded with quotes when it begins with a {{')
     return value
 
 
@@ -1056,8 +1054,7 @@ def get_batch_definitions(
             yield_data_by_id = YIELD_DATA_BY_ID_BY_EXTENSION[suffix]
         except KeyError:
             raise CrossComputeConfigurationError((
-                f'batch configuration suffix "{suffix}" '
-                'is not supported'
+                f'batch configuration suffix "{suffix}" is not supported'
             ).lstrip())
         for configuration_data_by_id in yield_data_by_id(
                 automation_folder / batch_configuration_path,
@@ -1162,12 +1159,10 @@ PERMISSION_IDS = [
     'see_root',
     'see_automation',
     'see_batch',
-    'run_automation',
-]
+    'run_automation']
 PERMISSION_ACTIONS = [
     'accept',
-    'match',
-]
+    'match']
 
 
 L = getLogger(__name__)

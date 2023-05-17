@@ -19,11 +19,11 @@ dist/
 .DS_Store
 .~lock.*
 # crosscompute
-datasets/
-batches/
-runs/
-debug/
 .*.py
-.run.*
 .containerfile
 .containerignore
+.run.*
+batches/
+datasets/
+debug/
+runs/

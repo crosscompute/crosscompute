@@ -1,5 +1,11 @@
 from logging import (
-    basicConfig, getLogger, CRITICAL, DEBUG, ERROR, INFO, WARNING)
+    basicConfig,
+    getLogger,
+    CRITICAL,
+    DEBUG,
+    ERROR,
+    INFO,
+    WARNING)
 
 
 def configure_argument_parser_for_logging(argument_parser):

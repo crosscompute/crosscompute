@@ -52,9 +52,9 @@ crosscompute
 crosscompute automate.yml
 ```
 
-Here are some tutorials and examples:
+Here are some examples and tutorials:
 
-- [Examples](https://crosscompute.net) [[source](https://github.com/crosscompute/crosscompute-examples)]
+- [Gallery](https://crosscompute.net) [[source](https://github.com/crosscompute/crosscompute-examples)]
 - [Documentation](https://docs.crosscompute.com) [[source](https://github.com/crosscompute/crosscompute-docs)]
 - [Forum](https://forum.crosscompute.com)
 
@@ -108,6 +108,7 @@ pip install crosscompute>=0.9.4
 
 ## Acknowledgments
 
+- [Kashfi Fahim](https://www.linkedin.com/in/kashfifahim)
 - [Olga Ryabtseva](https://www.linkedin.com/in/olga-creutzburg)
 - [Salah Ahmed](https://www.linkedin.com/in/salahspage)
 - [Rodrigo Guarachi](https://www.linkedin.com/in/rmguarachi)
@@ -116,7 +117,6 @@ pip install crosscompute>=0.9.4
 - [Noé Domínguez Porras](https://www.linkedin.com/in/noedominguez)
 - [Marta Moreno](https://www.linkedin.com/in/marta-moreno-07364b82)
 - [Ning Wei](https://www.linkedin.com/in/ning-wei-8152393b)
-- [Kashfi Fahim](https://www.linkedin.com/in/kashfifahim)
 - [Elaine Chan](https://www.linkedin.com/in/chanelaine)
 - [Aida Shoydokova](https://www.linkedin.com/in/ashoydok)
 - [Jennifer Ruda](https://www.linkedin.com/in/jruda)
