@@ -1,3 +1,4 @@
+# TODO: Add guard
 import asyncio
 import json
 
@@ -21,7 +22,6 @@ async def see_mutation_stream(
     reference_uri: str,
     old_time: float = Query(default=0, alias='t'),
 ):
-    # TODO: Consider adding guard
     live_uris = site['uris']
     file_changes = site['changes']
 
