@@ -11,7 +11,6 @@ from ..constants import (
     AUTOMATION_ROUTE,
     BATCH_ROUTE,
     ID_LENGTH,
-    MUTATION_ROUTE,
     STEP_ROUTE,
     VARIABLE_ROUTE)
 from ..dependencies import (
@@ -28,6 +27,7 @@ from ..routines.configuration import (
     BatchDefinition,
     VariableDefinition)
 from ..routines.step import (
+    get_automation_response_dictionary,
     get_step_response_dictionary)
 from ..routines.uri import (
     get_host_uri)
@@ -53,26 +53,14 @@ async def see_automation(
     guard: AuthorizationGuard = Depends(
         AuthorizationGuardFactory('see_automation')),
 ):
-    automation_uri = automation_definition.uri
-    design_name = automation_definition.get_design_name('automation')
-    if design_name == 'none':
-        d = {
-            'css_uris': automation_definition.css_uris,
-            'design_name': design_name, 'is_done': 1,
-            'mutation_uri': MUTATION_ROUTE.format(uri=automation_uri)}
-    else:
-        d = get_step_response_dictionary(
-            automation_definition, automation_definition.batch_definitions[0],
-            design_name, request.query_params)
+    d = get_automation_response_dictionary(
+        automation_definition,
+        request.query_params)
     return TemplateResponse(template_path_by_id['automation'], {
-        'request': request, 'title_text': automation_definition.title,
-        'description': automation_definition.description,
-        'host_uri': get_host_uri(request), 'step_name': design_name,
-        'name': automation_definition.name, 'uri': automation_uri,
-        'automation_definition': automation_definition,
+        'request': request,
+        'host_uri': get_host_uri(request),
         'batch_definitions': guard.get_batch_definitions(
             automation_definition),
-        'mutation_time': time(),
     } | d, headers=response.headers)
 
 
@@ -106,20 +94,6 @@ async def run_automation_json(
     return {
         'batch_slug': batch_definition.name,
         'step_code': step_code}
-
-
-@router.get(
-    AUTOMATION_ROUTE + BATCH_ROUTE,
-    tags=['automation'])
-async def see_automation_batch(
-    request: Request,
-    response: Response,
-    guard: AuthorizationGuard = Depends(
-        AuthorizationGuardFactory('see_batch')),
-):
-    return TemplateResponse(template_path_by_id['batch'], {
-        'request': request,
-    }, headers=response.headers)
 
 
 @router.get(

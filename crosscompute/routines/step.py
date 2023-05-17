@@ -2,6 +2,7 @@ from functools import partial
 from html.parser import HTMLParser
 from itertools import count
 from logging import getLogger
+from time import time
 
 from invisibleroads_macros_web.markdown import get_html_from_markdown
 
@@ -64,6 +65,34 @@ def get_automation_batch_step_uri(
     return automation_uri + batch_uri + step_uri
 
 
+def get_automation_response_dictionary(
+        automation_definition,
+        request_params):
+    automation_uri = automation_definition.uri
+    design_name = automation_definition.get_design_name('automation')
+    if design_name == 'none':
+        d = {
+            'css_uris': automation_definition.css_uris,
+            'for_embed': '_embed' in request_params,
+            'for_print': '_print' in request_params,
+            'design_name': design_name,
+            'is_done': 1,
+            'mutation_uri': MUTATION_ROUTE.format(uri=automation_uri)}
+    else:
+        d = get_step_response_dictionary(
+            automation_definition, automation_definition.batch_definitions[0],
+            design_name, request_params)
+    return {
+        'title_text': automation_definition.title,
+        'description': automation_definition.description,
+        'step_name': design_name,
+        'name': automation_definition.name,
+        'uri': automation_uri,
+        'automation_definition': automation_definition,
+        'mutation_time': time(),
+    } | d
+
+
 def get_step_response_dictionary(
         automation_definition, batch_definition, step_name, request_params):
     variable_definitions = automation_definition.get_variable_definitions(
@@ -87,7 +116,7 @@ def get_step_response_dictionary(
         automation_definition, batch_definition, step_name)
     return {
         'css_uris': get_unique_order(m['css_uris']),
-        'css_text': get_css_text(design_name, for_embed, for_print, m),
+        'css_text': get_css_text(design_name, for_embed, m),
         'main_text': main_text, 'template_count': template_count,
         'js_uris': get_unique_order(m['js_uris']),
         'js_text': '\n'.join(get_unique_order(m['js_texts'])),
@@ -127,12 +156,10 @@ def render_variable_html(
     return page_dictionary['main_text']
 
 
-def get_css_text(design_name, for_embed, for_print, m):
+def get_css_text(design_name, for_embed, m):
     css_texts = []
     if for_embed:
         css_texts.append(EMBEDDED_CSS)
-    elif for_print:
-        css_texts.append(PRINTED_CSS)
     else:
         css_texts.append(DEFAULT_CSS)
     if design_name == 'flex':
@@ -182,7 +209,6 @@ L = getLogger(__name__)
 
 
 EMBEDDED_CSS = asset_storage.load_raw_text('embedded.css')
-PRINTED_CSS = asset_storage.load_raw_text('printed.css')
 DEFAULT_CSS = asset_storage.load_raw_text('default.css')
 FLEX_CSS = asset_storage.load_raw_text('flex.css')
 BUTTON_PANEL_HTML = asset_storage.load_jinja_text('button-panel.html')

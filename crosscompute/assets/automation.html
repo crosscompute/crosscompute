@@ -10,9 +10,13 @@
 {% endblock %}
 
 {% block header_html %}
-{% if not for_embed %}
-<a href="{{ root_uri or '/' }}">Root</a> &gt;
-<a href="{{ root_uri }}{{ uri }}">{{ name }}</a>
+{% if not for_embed and not for_print %}
+<nav class="_breadcrumb" aria-label="breadcrumb">
+<ul>
+<li><a href="{{ root_uri or '/' }}">Root</a></li>
+<li><a href="{{ root_uri }}{{ uri }}" aria-current="page">{{ name }}</a></li>
+</ul>
+</nav>
 {% endif %}
 {% endblock %}
 
@@ -23,7 +27,7 @@
 {% endblock %}
 
 {% block footer_html %}
-{% if not for_embed %}
+{% if not for_embed and not for_print %}
 <ul class="_batches">
 {% for batch_definition in batch_definitions %}
 {% set absolute_batch_uri = root_uri + uri + batch_definition.uri %}
