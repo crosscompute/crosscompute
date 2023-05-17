@@ -78,7 +78,7 @@ class DiskMemory():
         elif path.is_dir() and info['code'] == Info.DATASET:
             d = self._infos_by_folder
         else:
-            L.warning(f'{path} must be a file')
+            L.warning('path "%s" must be a file', path)
             return
         if path not in d:
             d[path] = []

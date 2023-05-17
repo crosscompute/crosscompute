@@ -1,4 +1,3 @@
-from logging import getLogger
 from pathlib import Path
 from time import time
 
@@ -174,6 +173,3 @@ async def see_automation_batch_step_variable(
         r = Response(str(
             variable_data['value']), headers=response.headers)
     return r
-
-
-L = getLogger(__name__)

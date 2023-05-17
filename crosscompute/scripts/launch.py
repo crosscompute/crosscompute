@@ -114,7 +114,8 @@ def _get_automation_from(args):
     try:
         automation = DiskAutomation.load(path_or_folder or '.')
     except CrossComputeConfigurationNotFoundError:
-        L.info('existing configuration not found; configuring new automation')
+        L.info(
+            'existing configuration was not found; configuring new automation')
         print()
         path = configure_with(args)
         automation = DiskAutomation.load(path)

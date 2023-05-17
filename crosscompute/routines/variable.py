@@ -93,7 +93,7 @@ class VariableView():
         try:
             View = view_by_name[view_name]
         except KeyError:
-            L.error('%s view not installed', view_name)
+            L.error('view "%s" is not installed', view_name)
             View = Class
         return View(variable_definition)
 
@@ -211,7 +211,8 @@ class StringView(VariableView):
             value = apply_functions(
                 value, x.function_names, self.function_by_name)
         except KeyError as e:
-            L.error('%s function not supported for %s', e, self.view_name)
+            L.error(
+                'function "%s" not supported for view "%s"', e, self.view_name)
         variable_definition = self.variable_definition
         variable_id = self.variable_id
         element_id = x.id

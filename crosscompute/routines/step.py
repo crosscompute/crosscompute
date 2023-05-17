@@ -145,7 +145,7 @@ def render_variable_html(
             variable_definitions, 'id', variable_id)
     except StopIteration:
         L.warning(
-            '%s variable in template but not in configuration', variable_id)
+            '%s variable in template but is not in configuration', variable_id)
         matching_outer_text = match.group(0)
         return matching_outer_text
     view = VariableView.get_from(variable_definition)
@@ -196,8 +196,12 @@ def get_main_pack(
     automation_folder = a.folder
     for i, template_definition in enumerate(template_definitions):
         path = automation_folder / template_definition.path
-        with path.open('rt') as f:
-            text = f.read().strip()
+        try:
+            with path.open('rt') as f:
+                text = f.read().strip()
+        except IOError:
+            L.error('template path "%s" was not found', path)
+            continue
         parts.append(format_template(text, i, template_definition.expression))
     return '\n'.join(parts), len(template_definitions)
 

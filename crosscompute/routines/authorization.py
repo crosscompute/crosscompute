@@ -1,5 +1,4 @@
 import json
-from logging import getLogger
 from types import FunctionType
 
 from ..macros.iterable import find_item
@@ -105,6 +104,3 @@ def has_match(value1, value2):
             if v1 == v2:
                 return True
     return False
-
-
-L = getLogger(__name__)

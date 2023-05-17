@@ -93,7 +93,7 @@ def save_configuration(configuration_path, configuration):
         question = 'save? yes or [no]: '
         participle = 'saved'
     if not input(question).lower() == 'yes':
-        L.warning('%s not %s', formatted_configuration_path, participle)
+        L.warning('%s was not %s', formatted_configuration_path, participle)
         raise SystemExit
     try:
         save_raw_configuration(configuration_path, configuration)

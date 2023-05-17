@@ -71,11 +71,11 @@ class DiskBatch(Batch):
             d = load_file_json(path)
             variable_configuration.update(d)
         except OSError:
-            L.error('path not found %s', format_path(path))
+            L.error('path "%s" was not found', format_path(path))
         except json.JSONDecodeError:
-            L.error('must be json %s', format_path(path))
+            L.error('path "%s" must contain json', format_path(path))
         except TypeError:
-            L.error('must contain a dictionary %s', format_path(path))
+            L.error('path "%s" must contain a dictionary', format_path(path))
         return variable_configuration
 
     def is_done(self):
