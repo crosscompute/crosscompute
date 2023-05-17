@@ -248,10 +248,10 @@ def update_datasets(automation_definition):
 def process_loop(
         automation_definitions, automation_tasks, live_uris, file_changes,
         user_environment, server_uri, with_rebuild):
-    for a in automation_definitions:
-        prepare_automation(a, with_rebuild)
-        for b in a.batch_definitions:
-            prepare_batch(a, b)
+    thread = Thread(
+        target=prepare_loop, args=(automation_definitions, with_rebuild),
+        daemon=True)
+    thread.start()
     try:
         while True:
             sleep(1)
@@ -267,6 +267,14 @@ def process_loop(
             thread.start()
     except KeyboardInterrupt:
         pass
+
+
+def prepare_loop(automation_definitions, with_rebuild):
+    for a in automation_definitions:
+        for b in a.batch_definitions:
+            prepare_batch(a, b)
+    for a in automation_definitions:
+        prepare_automation(a, with_rebuild)
 
 
 def prepare_automation(automation_definition, with_rebuild=True):
