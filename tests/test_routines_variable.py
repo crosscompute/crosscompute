@@ -54,8 +54,8 @@ def test_load_file_data(tmp_path):
     path.write_text('whee')
     assert load_file_data(path)['value'] == 'whee'
 
-    path = tmp_path / 'x.md'
-    path.write_text('whee')
+    path = tmp_path / 'x.json'
+    json.dump({}, path.open('wt'))
     assert load_file_data(path)['path'] == path
 
 
