@@ -160,14 +160,14 @@ def render_variable_html(
 
 
 def get_css_text(design_name, for_embed, css_texts):
-    css_texts = []
+    texts = []
     if for_embed:
-        css_texts.append(EMBEDDED_CSS)
+        texts.append(EMBEDDED_CSS)
     else:
-        css_texts.append(DEFAULT_CSS)
+        texts.append(DEFAULT_CSS)
     if design_name == 'flex':
-        css_texts.append(FLEX_CSS)
-    return '\n'.join(css_texts + get_unique_order(css_texts))
+        texts.append(FLEX_CSS)
+    return '\n'.join(texts + get_unique_order(css_texts))
 
 
 def get_main_pack(
