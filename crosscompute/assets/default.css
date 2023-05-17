@@ -5,8 +5,23 @@
   footer {
     margin-top: 2em;
   }
+  ._batches {
+    list-style: none;
+    padding-left: 0;
+  }
+  ._breadcrumb ul {
+    display: flex;
+    flex-wrap: wrap;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  ._breadcrumb li:not(:last-child)::after {
+    margin: 0 .25rem;
+    content: ">";
+  }
   @media print {
-    header, footer {
+    ._batches, ._breadcrumb {
       display: none;
     }
   }
