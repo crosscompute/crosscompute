@@ -71,10 +71,13 @@ def get_automation_response_dictionary(
     automation_uri = automation_definition.uri
     design_name = automation_definition.get_design_name('automation')
     if design_name == 'none':
+        for_embed = '_embed' in request_params
+        for_print = '_print' in request_params
         d = {
             'css_uris': automation_definition.css_uris,
-            'for_embed': '_embed' in request_params,
-            'for_print': '_print' in request_params,
+            'css_text': get_css_text(design_name, for_embed, []),
+            'for_embed': for_embed,
+            'for_print': for_print,
             'design_name': design_name,
             'is_done': 1,
             'mutation_uri': MUTATION_ROUTE.format(uri=automation_uri)}
@@ -116,7 +119,7 @@ def get_step_response_dictionary(
         automation_definition, batch_definition, step_name)
     return {
         'css_uris': get_unique_order(m['css_uris']),
-        'css_text': get_css_text(design_name, for_embed, m),
+        'css_text': get_css_text(design_name, for_embed, m['css_texts']),
         'main_text': main_text, 'template_count': template_count,
         'js_uris': get_unique_order(m['js_uris']),
         'js_text': '\n'.join(get_unique_order(m['js_texts'])),
@@ -156,7 +159,7 @@ def render_variable_html(
     return page_dictionary['main_text']
 
 
-def get_css_text(design_name, for_embed, m):
+def get_css_text(design_name, for_embed, css_texts):
     css_texts = []
     if for_embed:
         css_texts.append(EMBEDDED_CSS)
@@ -164,7 +167,7 @@ def get_css_text(design_name, for_embed, m):
         css_texts.append(DEFAULT_CSS)
     if design_name == 'flex':
         css_texts.append(FLEX_CSS)
-    return '\n'.join(css_texts + get_unique_order(m['css_texts']))
+    return '\n'.join(css_texts + get_unique_order(css_texts))
 
 
 def get_main_pack(
