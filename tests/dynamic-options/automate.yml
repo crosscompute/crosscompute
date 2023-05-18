@@ -1,0 +1,42 @@
+---
+crosscompute: 0.9.4
+name: Test Dynamic Options
+version: 0.3.0
+output:
+  variables:
+    - id: status
+      view: string
+      path: variables.dictionary
+    - id: count
+      view: number
+      path: variables.dictionary
+    - id: description
+      view: text
+      path: variables.dictionary
+    - id: page
+      view: markdown
+      path: variables.dictionary
+    - id: choices
+      view: radio
+      path: variables.dictionary
+      mode: input
+      configuration:
+        path: choices.json
+    - id: options
+      view: checkbox
+      path: variables.dictionary
+      mode: input
+      configuration:
+        path: options.json
+    - id: window
+      view: frame
+      path: variables.dictionary
+    - id: document
+      view: link
+      path: document.txt
+      configuration:
+        path: document.json
+batches:
+  - folder: batches/standard
+scripts:
+  - command: python3 run.py {output_folder}

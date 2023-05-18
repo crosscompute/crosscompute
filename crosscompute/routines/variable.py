@@ -379,7 +379,8 @@ class RadioView(VariableView):
             'mode_name': x.mode_name,
             'view_name': view_name,
             'variable_id': variable_id,
-            'options': get_configuration_options(c, [value]),
+            'options': get_configuration_options(
+                c, [value] if value != '' else []),
             'value': value})
         js_texts = [
             RADIO_INPUT_HEADER_JS.substitute({'view_name': view_name})]
@@ -406,7 +407,7 @@ class CheckboxView(VariableView):
         variable_definition = self.variable_definition
         c = b.get_data_configuration(variable_definition)
         data = b.load_data_from(x.request_params, variable_definition)
-        values = data.get('value', '').splitlines()
+        values = data.get('value', '').strip().splitlines()
         main_text = CHECKBOX_INPUT_HTML.render({
             'element_id': element_id,
             'mode_name': x.mode_name,

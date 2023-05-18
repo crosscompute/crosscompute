@@ -181,8 +181,8 @@ def get_main_pack(
     def format_template(text, i=0, x=''):
         l_ = ' _live' if not i and not x else ''
         x_ = f' data-expression="{x}"' if x else ''
-        g = TemplateFilter(render_html, template_index=i).process(text)
-        h = get_html_from_markdown(g)
+        g = get_html_from_markdown(text)
+        h = TemplateFilter(render_html, template_index=i).process(g)
         if with_button_panel and 'class="_continue"' not in h:
             h += '\n' + get_button_panel_html(i, button_text_by_id)
         return f'<div id="_t{i}" class="_template{l_}"{x_}>\n{h}\n</div>'
@@ -190,7 +190,7 @@ def get_main_pack(
     if not template_definitions:
         variable_definitions = a.get_variable_definitions(step_name)
         variable_ids = (_.id for _ in variable_definitions)
-        text = '\n'.join('{%s}' % _ for _ in variable_ids)
+        text = ' '.join('{%s}' % _ for _ in variable_ids)
         return format_template(text), 1
     parts = []
     automation_folder = a.folder
