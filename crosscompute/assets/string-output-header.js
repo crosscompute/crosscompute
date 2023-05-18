@@ -13,6 +13,6 @@ async function refreshString(elementId, elementAttribute, dataUri, dataValue, fo
     x = formatText(x);
   }
   const l = document.getElementById(elementId);
-  l[elementAttribute] = x;
+  l[elementAttribute] = typeof x === 'object' ? JSON.stringify(x) : x;
   return l;
 }
