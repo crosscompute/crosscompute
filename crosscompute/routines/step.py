@@ -145,7 +145,9 @@ def render_variable_html(
             variable_definitions, 'id', variable_id)
     except StopIteration:
         L.warning(
-            '%s variable in template but is not in configuration', variable_id)
+            'variable "%s" is in the template but is missing from the '
+            'configuration',
+            variable_id)
         matching_outer_text = match.group(0)
         return matching_outer_text
     view = VariableView.get_from(variable_definition)
@@ -181,8 +183,10 @@ def get_main_pack(
     def format_template(text, i=0, x=''):
         l_ = ' _live' if not i and not x else ''
         x_ = f' data-expression="{x}"' if x else ''
-        g = get_html_from_markdown(text)
-        h = TemplateFilter(render_html, template_index=i).process(g)
+        h = get_html_from_markdown(text)
+        h = TemplateFilter(render_html, template_index=i).process(h)
+        h = h.replace('<p><div', '<div')
+        h = h.replace('</div></p>', '</div>')
         if with_button_panel and 'class="_continue"' not in h:
             h += '\n' + get_button_panel_html(i, button_text_by_id)
         return f'<div id="_t{i}" class="_template{l_}"{x_}>\n{h}\n</div>'
