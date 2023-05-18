@@ -24,5 +24,8 @@
     ._batches, ._breadcrumb {
       display: none;
     }
+    .footnoteBackLink {
+      display: none;
+    }
   }
 }
