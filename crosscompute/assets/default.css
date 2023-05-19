@@ -20,6 +20,10 @@
     margin: 0 .25rem;
     content: ">";
   }
+  ._attribution img {
+    height: 1.5em;
+    transform: translate(0, 5px);
+  }
   @media print {
     ._batches, ._breadcrumb {
       display: none;

@@ -86,9 +86,12 @@ def get_automation_response_dictionary(
             automation_definition, automation_definition.batch_definitions[0],
             step_name, root_uri, layout_settings, request_params)
     return {
-        'step_name': step_name,
+        'copyright_name': automation_definition.copyright_name,
+        'copyright_uri': automation_definition.copyright_uri,
+        'attribution_text': automation_definition.attribution_text,
         'name': automation_definition.name,
         'uri': automation_uri,
+        'step_name': step_name,
     } | d
 
 
@@ -232,7 +235,7 @@ def make_template_text(automation_definition, step_name):
     variable_definitions = automation_definition.get_variable_definitions(
         step_name)
     variable_ids = (_.id for _ in variable_definitions)
-    return '\n'.join('{%s}' % _ for _ in variable_ids)
+    return ' '.join('{%s}' % _ for _ in variable_ids)
 
 
 def format_template_html(

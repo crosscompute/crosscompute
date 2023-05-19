@@ -13,6 +13,9 @@ from time import time
 import tomli
 from invisibleroads_macros_log import format_path
 from invisibleroads_macros_text import format_name, format_slug
+from invisibleroads_macros_web.markdown import (
+    get_html_from_markdown,
+    remove_single_paragraph)
 from nbconvert import PythonExporter
 from nbformat import read as load_notebook, NO_CONVERT
 from ruamel.yaml import YAML
@@ -21,11 +24,15 @@ from ruamel.yaml.error import YAMLError
 from .. import __version__
 from ..constants import (
     Status,
+    ATTRIBUTION_TEXT,
     AUTOMATION_NAME,
     AUTOMATION_ROUTE,
     AUTOMATION_VERSION,
     BATCH_ROUTE,
     BUTTON_TEXT_BY_ID,
+    COPYRIGHT_NAME,
+    COPYRIGHT_URI,
+    COPYRIGHT_YEAR,
     DEBUG_VARIABLE_DICTIONARIES,
     DESIGN_NAMES_BY_PAGE_ID,
     INTERVAL_UNIT_NAMES,
@@ -375,20 +382,27 @@ def validate_protocol(configuration):
 
 
 def validate_automation_identifiers(configuration):
-    index = configuration.index
-    name = configuration.get('name', make_automation_name(index))
+    name = configuration.get('name', make_automation_name(configuration.index))
     slug = configuration.get('slug', format_slug(name))
-    title = configuration.get('title', name)
-    description = configuration.get('description', name)
-    version = configuration.get('version', AUTOMATION_VERSION)
-    uri = AUTOMATION_ROUTE.format(automation_slug=slug)
+    copyright_name = configuration.get('copyright_name', COPYRIGHT_NAME)
+    copyright_uri = configuration.get('copyright_uri', COPYRIGHT_URI)
+    copyright_year = configuration.get('copyright_year', COPYRIGHT_YEAR)
+    attribution_text = remove_single_paragraph(get_html_from_markdown(
+        configuration.get('attribution_text', ATTRIBUTION_TEXT).format(
+            name=name,
+            copyright_name=copyright_name,
+            copyright_uri=copyright_uri,
+            copyright_year=copyright_year), extras=[]))
     return {
         'name': name,
         'slug': slug,
-        'title': title,
-        'description': description,
-        'version': version,
-        'uri': uri}
+        'title': configuration.get('title', name),
+        'description': configuration.get('description', name),
+        'version': configuration.get('version', AUTOMATION_VERSION),
+        'uri': AUTOMATION_ROUTE.format(automation_slug=slug),
+        'copyright_name': copyright_name,
+        'copyright_uri': copyright_uri,
+        'attribution_text': attribution_text}
 
 
 def validate_imports(configuration):

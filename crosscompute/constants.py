@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 from enum import IntEnum
 from os import getenv
 from pathlib import Path
@@ -54,6 +55,14 @@ TOKEN_LENGTH = 32
 AUTOMATION_NAME = 'Automation X'
 AUTOMATION_VERSION = '0.0.0'
 AUTOMATION_PATH = Path('automate.yml')
+COPYRIGHT_NAME = 'CrossCompute'
+COPYRIGHT_URI = 'https://crosscompute.com'
+COPYRIGHT_YEAR = datetime.now().year
+ATTRIBUTION_TEXT = '''
+![CrossCompute](/assets/logo.svg) © {copyright_year}. Made with the
+[CrossCompute Software Development Kit](https://docs.crosscompute.com).
+'''.strip()
+LOGO_PATH = ASSETS_FOLDER / 'LogoBrand-Horizontal-20230501.svg'
 
 
 HOST = '127.0.0.1'
@@ -68,7 +77,7 @@ STEP_ROUTE = '/{step_code}'
 VARIABLE_ROUTE = '/{variable_id}'
 FILES_ROUTE = '/files.json'
 STREAM_ROUTE = '/streams'
-STYLE_ROUTE = '/styles/{style_name}.css'
+STYLE_ROUTE = '/assets/{style_name}.css'
 MUTATION_ROUTE = '/mutations{uri}.json'
 PORT_ROUTE = '/ports{uri}'
 

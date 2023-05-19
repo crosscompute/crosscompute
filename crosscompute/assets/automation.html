@@ -13,7 +13,8 @@
 {% if not for_embed and not for_print %}
 <nav class="_breadcrumb" aria-label="breadcrumb">
 <ul>
-<li><a href="{{ root_uri or '/' }}">Root</a></li>
+<li><a href="{{ copyright_uri }}">{{ copyright_name }}</a></li>
+<li><a href="{{ root_uri or '/' }}">Automations</a></li>
 <li><a href="{{ root_uri }}{{ uri }}" aria-current="page">{{ name }}</a></li>
 </ul>
 </nav>
@@ -41,6 +42,9 @@
 </li>
 {% endfor %}
 </ul>
+{% endif %}
+{% if not for_embed and attribution_text %}
+<p class="_attribution">{{ attribution_text | safe }}</p>
 {% endif %}
 {% endblock %}
 

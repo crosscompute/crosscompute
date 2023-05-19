@@ -7,6 +7,7 @@ from ..constants import (
     ASSETS_FOLDER,
     AUTOMATION_ROUTE,
     BATCH_ROUTE,
+    LOGO_PATH,
     MUTATION_ROUTE,
     STEP_ROUTE,
     STYLE_ROUTE)
@@ -77,6 +78,11 @@ async def see_root(
 async def see_icon(response: Response):
     return FileResponse(
         ASSETS_FOLDER / 'favicon.ico', headers=response.headers)
+
+
+@router.get('/assets/logo.svg', tags=['root'])
+async def see_logo(response: Response):
+    return FileResponse(LOGO_PATH, headers=response.headers)
 
 
 @router.get(STYLE_ROUTE, tags=['root'])
