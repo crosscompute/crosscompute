@@ -33,17 +33,12 @@ class TemplateFilter(HTMLParser):
     def handle_starttag(self, tag, attrs):
         if tag == 'script':
             self.in_script = True
-        attribute_strings = []
-        for k, v in attrs:
-            if v is None:
-                attribute_string = k
-            else:
-                v = VARIABLE_ID_WHITELIST_PATTERN.sub(self.render_text, v)
-                attribute_string = f'{k}="{v}"'
-            attribute_strings.append(attribute_string)
-        attributes_string = ' ' + ' '.join(
-            attribute_strings) if attribute_strings else ''
+        attributes_string = self.get_attributes_string(attrs)
         self.template_parts.append(f'<{tag}{attributes_string}>')
+
+    def handle_startendtag(self, tag, attrs):
+        attributes_string = self.get_attributes_string(attrs)
+        self.template_parts.append(f'<{tag}{attributes_string}/>')
 
     def handle_endtag(self, tag):
         if tag == 'script':
@@ -62,6 +57,17 @@ class TemplateFilter(HTMLParser):
         self.template_parts = []
         self.feed(text)
         return ''.join(self.template_parts)
+
+    def get_attributes_string(self, attrs):
+        attribute_strings = []
+        for k, v in attrs:
+            if v is None:
+                attribute_string = k
+            else:
+                v = VARIABLE_ID_WHITELIST_PATTERN.sub(self.render_text, v)
+                attribute_string = f'{k}="{v}"'
+            attribute_strings.append(attribute_string)
+        return ' ' + ' '.join(attribute_strings) if attribute_strings else ''
 
 
 def get_automation_batch_step_uri(
