@@ -23,6 +23,7 @@
 - Send variable value and configuration in server side events when possible
 - Support live print preview
 - Support conditional templates
+- Support copyright attribution
 
 # 0.8
 - Start from scratch
