@@ -27,6 +27,7 @@ from ..routines.configuration import (
     VariableDefinition)
 from ..routines.step import (
     get_automation_response_dictionary,
+    get_layout_settings,
     get_step_response_dictionary)
 from ..routines.uri import (
     get_host_uri)
@@ -36,6 +37,7 @@ from ..routines.variable import (
 from ..settings import (
     TemplateResponse,
     site,
+    template_globals,
     template_path_by_id)
 
 
@@ -52,14 +54,50 @@ async def see_automation(
     guard: AuthorizationGuard = Depends(
         AuthorizationGuardFactory('see_automation')),
 ):
+    request_params = request.query_params
+    layout_settings = get_layout_settings(
+        automation_definition, 'automation', request_params)
     d = get_automation_response_dictionary(
-        automation_definition,
-        request.query_params)
+        automation_definition, template_globals['root_uri'],
+        layout_settings, request_params)
     return TemplateResponse(template_path_by_id['automation'], {
         'request': request,
-        'host_uri': get_host_uri(request),
+        'title_text': automation_definition.title,
+        'description': automation_definition.description,
+        'automation_definition': automation_definition,
         'batch_definitions': guard.get_batch_definitions(
             automation_definition),
+        'host_uri': get_host_uri(request),
+        'mutation_time': time(),
+    } | d, headers=response.headers)
+
+
+@router.get(
+    AUTOMATION_ROUTE + BATCH_ROUTE + STEP_ROUTE,
+    tags=['automation'])
+async def see_automation_batch_step(
+    request: Request,
+    response: Response,
+    automation_definition: AutomationDefinition = Depends(
+        get_automation_definition),
+    batch_definition: BatchDefinition = Depends(get_batch_definition),
+    step_name: str = Depends(get_step_name),
+    guard: AuthorizationGuard = Depends(
+        AuthorizationGuardFactory('see_batch')),
+):
+    request_params = request.query_params
+    layout_settings = get_layout_settings(
+        automation_definition, step_name, request_params)
+    d = get_step_response_dictionary(
+        automation_definition, batch_definition, step_name,
+        template_globals['root_uri'], layout_settings, request_params)
+    return TemplateResponse(template_path_by_id['step'], {
+        'request': request,
+        'title_text': batch_definition.name,
+        'automation_definition': automation_definition,
+        'batch_definition': batch_definition,
+        'step_name': step_name,
+        'mutation_time': time(),
     } | d, headers=response.headers)
 
 
@@ -93,32 +131,6 @@ async def run_automation_json(
     return {
         'batch_slug': batch_definition.name,
         'step_code': step_code}
-
-
-@router.get(
-    AUTOMATION_ROUTE + BATCH_ROUTE + STEP_ROUTE,
-    tags=['automation'])
-async def see_automation_batch_step(
-    request: Request,
-    response: Response,
-    automation_definition: AutomationDefinition = Depends(
-        get_automation_definition),
-    batch_definition: BatchDefinition = Depends(get_batch_definition),
-    step_name: str = Depends(get_step_name),
-    guard: AuthorizationGuard = Depends(
-        AuthorizationGuardFactory('see_batch')),
-):
-    d = get_step_response_dictionary(
-        automation_definition, batch_definition, step_name,
-        request.query_params)
-    return TemplateResponse(template_path_by_id['step'], {
-        'request': request,
-        'title_text': batch_definition.name,
-        'automation_definition': automation_definition,
-        'batch_definition': batch_definition,
-        'step_name': step_name,
-        'mutation_time': time(),
-    } | d, headers=response.headers)
 
 
 @router.get(

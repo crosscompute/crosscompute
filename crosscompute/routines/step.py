@@ -2,9 +2,9 @@ from functools import partial
 from html.parser import HTMLParser
 from itertools import count
 from logging import getLogger
-from time import time
 
-from invisibleroads_macros_web.markdown import get_html_from_markdown
+from invisibleroads_macros_web.markdown import (
+    get_html_from_markdown)
 
 from ..constants import (
     BUTTON_TEXT_BY_ID,
@@ -14,15 +14,16 @@ from ..constants import (
     VARIABLE_ID_TEMPLATE_PATTERN,
     VARIABLE_ID_WHITELIST_PATTERN)
 from ..macros.iterable import find_item, get_unique_order
-from ..settings import template_globals
 from .asset import asset_storage
 from .batch import DiskBatch
+from .configuration import AutomationDefinition
 from .variable import Element, VariableView
 
 
 class TemplateFilter(HTMLParser):
 
-    def __init__(self, render_html, template_index, *args, **kwargs):
+    def __init__(self, root_uri, render_html, template_index, *args, **kwargs):
+        self.render_text = partial(render_text, root_uri=root_uri)
         self.render_html = partial(render_html, template_index=template_index)
         self.in_script = False
         self.template_parts = []
@@ -31,7 +32,10 @@ class TemplateFilter(HTMLParser):
     def handle_starttag(self, tag, attrs):
         if tag == 'script':
             self.in_script = True
-        attribute_strings = [f'{k}="{v}"' for k, v in attrs]
+        attribute_strings = []
+        for k, v in attrs:
+            v = VARIABLE_ID_WHITELIST_PATTERN.sub(self.render_text, v)
+            attribute_strings.append(f'{k}="{v}"')
         attributes_string = ' ' + ' '.join(
             attribute_strings) if attribute_strings else ''
         self.template_parts.append(f'<{tag}{attributes_string}>')
@@ -43,11 +47,10 @@ class TemplateFilter(HTMLParser):
 
     def handle_data(self, data):
         in_script = self.in_script
-        render_html = self.render_html
         if in_script:
-            data = VARIABLE_ID_WHITELIST_PATTERN.sub(render_html, data)
+            data = VARIABLE_ID_WHITELIST_PATTERN.sub(self.render_text, data)
         else:
-            data = VARIABLE_ID_TEMPLATE_PATTERN.sub(render_html, data)
+            data = VARIABLE_ID_TEMPLATE_PATTERN.sub(self.render_html, data)
         self.template_parts.append(data)
 
     def process(self, text):
@@ -66,73 +69,69 @@ def get_automation_batch_step_uri(
 
 
 def get_automation_response_dictionary(
-        automation_definition,
-        request_params):
+        automation_definition, root_uri, layout_settings, request_params):
     automation_uri = automation_definition.uri
-    design_name = automation_definition.get_design_name('automation')
+    design_name = layout_settings['design_name']
     if design_name == 'none':
-        for_embed = '_embed' in request_params
-        for_print = '_print' in request_params
         d = {
             'css_uris': automation_definition.css_uris,
-            'css_text': get_css_text(design_name, for_embed, []),
-            'for_embed': for_embed,
-            'for_print': for_print,
-            'design_name': design_name,
+            'css_text': get_css_text([], layout_settings),
             'is_done': 1,
             'mutation_uri': MUTATION_ROUTE.format(uri=automation_uri)}
     else:
         d = get_step_response_dictionary(
             automation_definition, automation_definition.batch_definitions[0],
-            design_name, request_params)
+            design_name, root_uri, layout_settings, request_params)
     return {
-        'title_text': automation_definition.title,
-        'description': automation_definition.description,
         'step_name': design_name,
         'name': automation_definition.name,
         'uri': automation_uri,
-        'automation_definition': automation_definition,
-        'mutation_time': time(),
     } | d
 
 
 def get_step_response_dictionary(
-        automation_definition, batch_definition, step_name, request_params):
+        automation_definition, batch_definition, step_name, root_uri,
+        layout_settings, request_params):
     variable_definitions = automation_definition.get_variable_definitions(
         step_name, with_all=True)
     batch = DiskBatch(automation_definition, batch_definition)
     m = {
         'css_uris': automation_definition.css_uris.copy(), 'css_texts': [],
         'js_uris': [], 'js_texts': []}
-    design_name = automation_definition.get_design_name(step_name)
-    for_embed = '_embed' in request_params
-    for_print = '_print' in request_params
     render_html = partial(
-        render_variable_html, variable_definitions=variable_definitions,
-        batch=batch, m=m, variable_index=count(),
-        root_uri=template_globals['root_uri'], request_params=request_params,
+        render_variable_html, batch=batch, step_name=step_name,
+        variable_definitions=variable_definitions, variable_index=count(),
         button_text_by_id=automation_definition.button_text_by_id,
-        step_name=step_name, design_name=design_name, for_print=for_print)
+        root_uri=root_uri, layout_settings=layout_settings,
+        request_params=request_params, m=m)
     main_text, template_count = get_main_pack(
-        automation_definition, step_name, render_html, design_name, for_print)
+        automation_definition, step_name, root_uri, render_html,
+        layout_settings)
     mutation_reference_uri = get_automation_batch_step_uri(
         automation_definition, batch_definition, step_name)
-    return {
+    return layout_settings | {
         'css_uris': get_unique_order(m['css_uris']),
-        'css_text': get_css_text(design_name, for_embed, m['css_texts']),
-        'main_text': main_text, 'template_count': template_count,
+        'css_text': get_css_text(m['css_texts'], layout_settings),
         'js_uris': get_unique_order(m['js_uris']),
         'js_text': '\n'.join(get_unique_order(m['js_texts'])),
-        'for_embed': for_embed, 'for_print': for_print,
+        'main_text': main_text, 'template_count': template_count,
+        'is_done': batch.is_done(),
         'has_interval': automation_definition.interval_timedelta is not None,
-        'design_name': design_name, 'is_done': batch.is_done(),
         'mutation_uri': MUTATION_ROUTE.format(uri=mutation_reference_uri)}
 
 
+def render_text(match, root_uri):
+    matching_inner_text = match.group(1)
+    if matching_inner_text == 'ROOT_URI':
+        return root_uri
+    matching_outer_text = match.group(0)
+    return matching_outer_text
+
+
 def render_variable_html(
-        match, variable_definitions, batch, m, variable_index, template_index,
-        root_uri, request_params, button_text_by_id, step_name, design_name,
-        for_print):
+        match, batch, step_name, variable_definitions, variable_index,
+        template_index, button_text_by_id, root_uri, layout_settings,
+        request_params, m):
     matching_inner_text = match.group(1)
     if matching_inner_text == 'ROOT_URI':
         return root_uri
@@ -153,52 +152,44 @@ def render_variable_html(
     view = VariableView.get_from(variable_definition)
     mode_name = variable_definition.get('mode', step_name)
     element = Element(
-        f'v{next(variable_index)}', request_params, mode_name, design_name,
-        for_print, terms[1:])
+        f'v{next(variable_index)}', mode_name, request_params,
+        layout_settings, terms[1:])
     page_dictionary = view.render(batch, element)
     for k, v in m.items():
         v.extend(_.strip() for _ in page_dictionary[k])
     return page_dictionary['main_text']
 
 
-def get_css_text(design_name, for_embed, css_texts):
+def get_css_text(css_texts, layout_settings):
     texts = []
-    if for_embed:
+    if layout_settings['for_embed']:
         texts.append(EMBEDDED_CSS)
     else:
         texts.append(DEFAULT_CSS)
-    if design_name == 'flex':
+    if layout_settings['design_name'] == 'flex':
         texts.append(FLEX_CSS)
     return '\n'.join(texts + get_unique_order(css_texts))
 
 
 def get_main_pack(
-        automation_definition, step_name, render_html, design_name, for_print):
-    a = automation_definition
+        a: AutomationDefinition, step_name, root_uri, render_html,
+        layout_settings):
     template_definitions = a.template_definitions_by_step_name[step_name]
-    with_button_panel = design_name != 'none' and not for_print and (
-        step_name == 'input' or len(template_definitions) > 1)
-    button_text_by_id = a.button_text_by_id
-
-    def format_template(text, i=0, x=''):
-        l_ = ' _live' if not i and not x else ''
-        x_ = f' data-expression="{x}"' if x else ''
-        h = get_html_from_markdown(text)
-        h = TemplateFilter(render_html, template_index=i).process(h)
-        h = h.replace('<p><div', '<div')
-        h = h.replace('</div></p>', '</div>')
-        if with_button_panel and 'class="_continue"' not in h:
-            h += '\n' + get_button_panel_html(i, button_text_by_id)
-        return f'<div id="_t{i}" class="_template{l_}"{x_}>\n{h}\n</div>'
-
-    if not template_definitions:
-        variable_definitions = a.get_variable_definitions(step_name)
-        variable_ids = (_.id for _ in variable_definitions)
-        text = ' '.join('{%s}' % _ for _ in variable_ids)
-        return format_template(text), 1
+    template_count = len(template_definitions)
+    format_html = partial(
+        format_template_html,
+        root_uri=root_uri,
+        render_html=render_html,
+        with_button_panel=get_with_button_panel(
+            layout_settings, step_name, template_count),
+        button_text_by_id=a.button_text_by_id)
+    if not template_count:
+        template_text = make_template_text(a, step_name)
+        return format_html(
+            template_text, template_index=0, template_expression=''), 1
     parts = []
     automation_folder = a.folder
-    for i, template_definition in enumerate(template_definitions):
+    for template_index, template_definition in enumerate(template_definitions):
         path = automation_folder / template_definition.path
         try:
             with path.open('rt') as f:
@@ -206,14 +197,57 @@ def get_main_pack(
         except IOError:
             L.error('template path "%s" was not found', path)
             continue
-        parts.append(format_template(text, i, template_definition.expression))
-    return '\n'.join(parts), len(template_definitions)
+        parts.append(format_html(
+            text, template_index, template_definition.expression))
+    return '\n'.join(parts), template_count
 
 
 def get_button_panel_html(template_index, button_text_by_id):
     return BUTTON_PANEL_HTML.render({
         'template_index': template_index,
         'button_text_by_id': BUTTON_TEXT_BY_ID | button_text_by_id})
+
+
+def get_layout_settings(automation_definition, page_id, request_params):
+    return {
+        'design_name': automation_definition.get_design_name(page_id),
+        'for_embed': '_embed' in request_params,
+        'for_print': '_print' in request_params}
+
+
+def get_with_button_panel(layout_settings, step_name, template_count):
+    if layout_settings['design_name'] == 'none':
+        return False
+    if layout_settings['for_print']:
+        return False
+    if step_name != 'input' and template_count <= 1:
+        return False
+    return True
+
+
+def make_template_text(automation_definition, step_name):
+    variable_definitions = automation_definition.get_variable_definitions(
+        step_name)
+    variable_ids = (_.id for _ in variable_definitions)
+    return '\n'.join('{%s}' % _ for _ in variable_ids)
+
+
+def format_template_html(
+        text, template_index, template_expression, root_uri, render_html,
+        with_button_panel, button_text_by_id):
+    l_ = ' _live' if not template_index and not template_expression else ''
+    x_ = (
+        f' data-expression="{template_expression}"'
+        if template_expression else '')
+    h = get_html_from_markdown(text)
+    h = TemplateFilter(
+        root_uri, render_html, template_index=template_index).process(h)
+    h = h.replace('<p><div', '<div').replace('</div></p>', '</div>')
+    if with_button_panel and 'class="_continue"' not in h:
+        h += '\n' + get_button_panel_html(template_index, button_text_by_id)
+    return (
+        f'<div id="_t{template_index}" class="_template{l_}"{x_}>'
+        f'\n{h}\n</div>')
 
 
 L = getLogger(__name__)

@@ -70,10 +70,9 @@ from .interface import Batch
 class Element():
 
     id: str
-    request_params: str
     mode_name: str
-    design_name: str
-    for_print: bool
+    request_params: str
+    layout_settings: dict
     function_names: list[str]
 
 
@@ -110,7 +109,7 @@ class VariableView():
             render = self.render_output
         page_dictionary = render(b, x)
         main_text = page_dictionary['main_text']
-        if x.design_name != 'none':
+        if x.layout_settings['design_name'] != 'none':
             if main_text.endswith('</a>') or main_text.endswith('</span>'):
                 tag_name = 'span'
             else:
@@ -145,9 +144,9 @@ class LinkView(VariableView):
     def render_output(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
         variable_id = self.variable_id
-        element_id = x.id
         data_uri = b.get_data_uri(variable_definition, x)
         c = b.get_data_configuration(variable_definition)
+        element_id = x.id
         file_name = c.get('file-name', self.variable_path.name)
         link_text = c.get('link-text', file_name)
         main_text = (
@@ -188,9 +187,9 @@ class StringView(VariableView):
         variable_definition = self.variable_definition
         variable_id = self.variable_id
         view_name = self.view_name
-        element_id = x.id
         value = self.get_value(b, x)
         c = b.get_data_configuration(variable_definition)
+        element_id = x.id
         main_text = STRING_INPUT_HTML.render({
             'element_id': element_id,
             'mode_name': x.mode_name,
@@ -215,11 +214,11 @@ class StringView(VariableView):
                 'function "%s" not supported for view "%s"', e, self.view_name)
         variable_definition = self.variable_definition
         variable_id = self.variable_id
-        element_id = x.id
         data_uri = b.get_data_uri(variable_definition, x)
+        element_id = x.id
         main_text = (
-            f'<span id="{x.id}" '
-            f'class="_{x.mode_name} _{self.view_name} {self.variable_id}">'
+            f'<span id="{element_id}" '
+            f'class="_{x.mode_name} _{self.view_name} {variable_id}">'
             f'{value}</span>')
         js_texts = [
             STRING_OUTPUT_HEADER_JS,
@@ -265,11 +264,12 @@ class TextView(VariableView):
 
     def render_input(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
-        data = get_data_from(x.request_params, variable_definition)
-        value = data.get('value', '')
         variable_id = self.variable_id
         view_name = self.view_name
+        data_uri = b.get_data_uri(variable_definition, x)
+        data = get_data_from(x.request_params, variable_definition)
         element_id = x.id
+        value = data.get('value', '')
         main_text = TEXT_INPUT_HTML.substitute({
             'element_id': element_id,
             'mode_name': x.mode_name,
@@ -285,7 +285,7 @@ class TextView(VariableView):
                 TEXT_OUTPUT_HEADER_JS,
                 TEXT_INPUT_JS.substitute({
                     'element_id': element_id,
-                    'data_uri': b.get_data_uri(variable_definition, x)})])
+                    'data_uri': data_uri})])
         return {
             'css_uris': [], 'css_texts': [], 'js_uris': [],
             'main_text': main_text, 'js_texts': js_texts}
@@ -293,11 +293,11 @@ class TextView(VariableView):
     def render_output(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
         variable_id = self.variable_id
-        element_id = x.id
         data_uri = b.get_data_uri(variable_definition, x)
+        element_id = x.id
         main_text = (
-            f'<span id="{x.id}" '
-            f'class="_{x.mode_name} _{self.view_name} {self.variable_id}">'
+            f'<span id="{element_id}" '
+            f'class="_{x.mode_name} _{self.view_name} {variable_id}">'
             '</span>')
         js_texts = [
             STRING_OUTPUT_HEADER_JS,
@@ -319,11 +319,11 @@ class MarkdownView(TextView):
     def render_output(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
         variable_id = self.variable_id
-        element_id = x.id
         data_uri = b.get_data_uri(variable_definition, x)
+        element_id = x.id
         main_text = (
-            f'<span id="{x.id}" '
-            f'class="_{x.mode_name} _{self.view_name} {self.variable_id}">'
+            f'<span id="{element_id}" '
+            f'class="_{x.mode_name} _{self.view_name} {variable_id}">'
             '</span>')
         js_texts = [
             STRING_OUTPUT_HEADER_JS,
@@ -344,10 +344,10 @@ class ImageView(VariableView):
     def render_output(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
         variable_id = self.variable_id
-        element_id = x.id
         data_uri = b.get_data_uri(variable_definition, x)
+        element_id = x.id
         main_text = (
-            f'<img id="{x.id}" '
+            f'<img id="{element_id}" '
             f'class="_{x.mode_name} _{self.view_name} {variable_id}" '
             f'src="{data_uri}" alt="">')
         # TODO: Show spinner on error
@@ -370,9 +370,9 @@ class RadioView(VariableView):
         variable_definition = self.variable_definition
         variable_id = self.variable_id
         view_name = self.view_name
-        element_id = x.id
         c = b.get_data_configuration(variable_definition)
         data = b.load_data_from(x.request_params, variable_definition)
+        element_id = x.id
         value = data.get('value', '')
         main_text = RADIO_INPUT_HTML.render({
             'element_id': element_id,
@@ -401,12 +401,12 @@ class CheckboxView(VariableView):
     view_name = 'checkbox'
 
     def render_input(self, b: Batch, x: Element):
-        element_id = x.id
         view_name = self.view_name
         variable_id = self.variable_id
         variable_definition = self.variable_definition
         c = b.get_data_configuration(variable_definition)
         data = b.load_data_from(x.request_params, variable_definition)
+        element_id = x.id
         values = data.get('value', '').strip().splitlines()
         main_text = CHECKBOX_INPUT_HTML.render({
             'element_id': element_id,
@@ -437,8 +437,8 @@ class TableView(VariableView):
     def render_output(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
         variable_id = self.variable_id
-        element_id = x.id
         data_uri = b.get_data_uri(variable_definition, x)
+        element_id = x.id
         main_text = (
             f'<table id="{element_id}" '
             f'class="_{x.mode_name} _{self.view_name} {variable_id}">'
@@ -461,9 +461,9 @@ class FrameView(VariableView):
     def render_output(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
         variable_id = self.variable_id
-        element_id = x.id
         data_uri = b.get_data_uri(variable_definition, x)
         data = b.load_data(variable_definition)
+        element_id = x.id
         if 'value' in data:
             value = data['value']
         else:
@@ -510,8 +510,8 @@ class PdfView(VariableView):
     def render_output(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
         variable_id = self.variable_id
-        element_id = x.id
         data_uri = b.get_data_uri(variable_definition, x)
+        element_id = x.id
         js_texts = [
             PDF_OUTPUT_HEADER_JS,
             PDF_OUTPUT_JS.substitute({
@@ -533,11 +533,11 @@ class FileView(VariableView):
     view_name = 'file'
 
     def render_input(self, b: Batch, x: Element):
-        element_id = x.id
         view_name = self.view_name
         variable_id = self.variable_id
         variable_definition = self.variable_definition
         c = b.get_data_configuration(variable_definition)
+        element_id = x.id
         mime_types = c.get('mime-types', [])
         root_uri = template_globals['root_uri']
         js_texts = [
