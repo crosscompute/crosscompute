@@ -65,9 +65,9 @@ async def see_root(
     return TemplateResponse(template_path_by_id['root'], {
         'request': request,
         'title_text': site['name'],
-        'css_uris': configuration.css_uris,
         'automation_definitions': guard.get_automation_definitions(
             configuration),
+        'css_uris': configuration.css_uris,
         'mutation_uri': MUTATION_ROUTE.format(uri=''),
         'mutation_time': time(),
     }, headers=response.headers)

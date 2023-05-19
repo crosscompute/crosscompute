@@ -54,12 +54,9 @@ async def see_automation(
     guard: AuthorizationGuard = Depends(
         AuthorizationGuardFactory('see_automation')),
 ):
-    request_params = request.query_params
-    layout_settings = get_layout_settings(
-        automation_definition, 'automation', request_params)
     d = get_automation_response_dictionary(
         automation_definition, template_globals['root_uri'],
-        layout_settings, request_params)
+        request.query_params)
     return TemplateResponse(template_path_by_id['automation'], {
         'request': request,
         'title_text': automation_definition.title,

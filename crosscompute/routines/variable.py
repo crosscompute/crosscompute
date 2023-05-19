@@ -202,7 +202,7 @@ class StringView(VariableView):
             STRING_INPUT_HEADER_JS.substitute({'view_name': view_name})]
         return {
             'css_uris': [], 'css_texts': [], 'js_uris': [],
-            'main_text': main_text, 'js_texts': js_texts}
+            'js_texts': js_texts, 'main_text': main_text}
 
     def render_output(self, b: Batch, x: Element):
         value = self.get_value(b, x)
@@ -288,7 +288,7 @@ class TextView(VariableView):
                     'data_uri': data_uri})])
         return {
             'css_uris': [], 'css_texts': [], 'js_uris': [],
-            'main_text': main_text, 'js_texts': js_texts}
+            'js_texts': js_texts, 'main_text': main_text}
 
     def render_output(self, b: Batch, x: Element):
         variable_definition = self.variable_definition

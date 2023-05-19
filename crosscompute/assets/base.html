@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ title_text }}</title>
-{% for css_uri in css_uris %}
+{% for css_uri in get_unique_order(css_uris) %}
 <link href="{{ css_uri if '//' in css_uri else root_uri + css_uri }}" rel="stylesheet">
 {% endfor %}
 {% if root_uri %}
@@ -13,7 +13,7 @@
 {% endif %}
 <style>
 {% block head_css %}
-{{ css_text | safe -}}
+{{ '\n'.join(get_unique_order(css_texts)) | safe -}}
 {% endblock %}
 </style>
 {% endblock %}
@@ -34,12 +34,12 @@
 {{ footer_text | safe -}}
 {% endblock %}
 </footer>
-{% for js_uri in js_uris %}
+{% for js_uri in get_unique_order(js_uris) %}
 <script src="{{ js_uri }}"></script>
 {% endfor %}
 <script>
 {% block body_js %}
-{{ js_text | safe -}}
+{{ '\n'.join(get_unique_order(js_texts)) | safe -}}
 {% endblock %}
 </script>
 </body>

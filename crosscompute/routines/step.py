@@ -13,7 +13,7 @@ from ..constants import (
     STEP_ROUTE,
     VARIABLE_ID_TEMPLATE_PATTERN,
     VARIABLE_ID_WHITELIST_PATTERN)
-from ..macros.iterable import find_item, get_unique_order
+from ..macros.iterable import find_item
 from .asset import asset_storage
 from .batch import DiskBatch
 from .configuration import AutomationDefinition
@@ -69,21 +69,23 @@ def get_automation_batch_step_uri(
 
 
 def get_automation_response_dictionary(
-        automation_definition, root_uri, layout_settings, request_params):
+        automation_definition, root_uri, request_params):
     automation_uri = automation_definition.uri
-    design_name = layout_settings['design_name']
-    if design_name == 'none':
+    step_name = automation_definition.get_design_name('automation')
+    layout_settings = get_layout_settings(
+        automation_definition, step_name, request_params)
+    if step_name == 'none':
         d = {
             'css_uris': automation_definition.css_uris,
-            'css_text': get_css_text([], layout_settings),
+            'css_texts': get_css_texts(layout_settings),
             'is_done': 1,
             'mutation_uri': MUTATION_ROUTE.format(uri=automation_uri)}
     else:
         d = get_step_response_dictionary(
             automation_definition, automation_definition.batch_definitions[0],
-            design_name, root_uri, layout_settings, request_params)
+            step_name, root_uri, layout_settings, request_params)
     return {
-        'step_name': design_name,
+        'step_name': step_name,
         'name': automation_definition.name,
         'uri': automation_uri,
     } | d
@@ -110,10 +112,10 @@ def get_step_response_dictionary(
     mutation_reference_uri = get_automation_batch_step_uri(
         automation_definition, batch_definition, step_name)
     return layout_settings | {
-        'css_uris': get_unique_order(m['css_uris']),
-        'css_text': get_css_text(m['css_texts'], layout_settings),
-        'js_uris': get_unique_order(m['js_uris']),
-        'js_text': '\n'.join(get_unique_order(m['js_texts'])),
+        'css_uris': m['css_uris'],
+        'css_texts': get_css_texts(layout_settings) + m['css_texts'],
+        'js_uris': m['js_uris'],
+        'js_texts': m['js_texts'],
         'main_text': main_text, 'template_count': template_count,
         'is_done': batch.is_done(),
         'has_interval': automation_definition.interval_timedelta is not None,
@@ -160,15 +162,15 @@ def render_variable_html(
     return page_dictionary['main_text']
 
 
-def get_css_text(css_texts, layout_settings):
-    texts = []
+def get_css_texts(layout_settings):
+    css_texts = []
     if layout_settings['for_embed']:
-        texts.append(EMBEDDED_CSS)
+        css_texts.append(EMBEDDED_CSS)
     else:
-        texts.append(DEFAULT_CSS)
+        css_texts.append(DEFAULT_CSS)
     if layout_settings['design_name'] == 'flex':
-        texts.append(FLEX_CSS)
-    return '\n'.join(texts + get_unique_order(css_texts))
+        css_texts.append(FLEX_CSS)
+    return css_texts
 
 
 def get_main_pack(

@@ -10,6 +10,7 @@ from invisibleroads_macros_web.starlette import (
 
 from .constants import (
     TEMPLATE_PATH_BY_ID)
+from .macros.iterable import get_unique_order
 
 
 multiprocessing_context = mp.get_context('fork')
@@ -34,6 +35,7 @@ template_environment = RelativeTemplateEnvironment(
     trim_blocks=True,
     lstrip_blocks=True)
 template_globals = template_environment.globals = {
+    'get_unique_order': get_unique_order,
     'base_template_path': template_path_by_id['base'],
     'live_template_path': template_path_by_id['live'],
     'google_analytics_id': '',
