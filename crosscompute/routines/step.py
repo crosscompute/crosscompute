@@ -73,15 +73,16 @@ def get_automation_response_dictionary(
         automation_definition, root_uri, request_params):
     automation_uri = automation_definition.uri
     step_name = automation_definition.get_design_name('automation')
-    layout_settings = get_layout_settings(
-        automation_definition, step_name, request_params)
     if step_name == 'none':
+        layout_settings = get_layout_settings(step_name, request_params)
         d = {
             'css_uris': automation_definition.css_uris,
             'css_texts': get_css_texts(layout_settings),
             'is_done': 1,
             'mutation_uri': MUTATION_ROUTE.format(uri=automation_uri)}
     else:
+        layout_settings = get_layout_settings(
+            automation_definition.get_design_name(step_name), request_params)
         d = get_step_response_dictionary(
             automation_definition, automation_definition.batch_definitions[0],
             step_name, root_uri, layout_settings, request_params)
@@ -166,17 +167,6 @@ def render_variable_html(
     return page_dictionary['main_text']
 
 
-def get_css_texts(layout_settings):
-    css_texts = []
-    if layout_settings['for_embed']:
-        css_texts.append(EMBEDDED_CSS)
-    else:
-        css_texts.append(DEFAULT_CSS)
-    if layout_settings['design_name'] == 'flex':
-        css_texts.append(FLEX_CSS)
-    return css_texts
-
-
 def get_main_pack(
         a: AutomationDefinition, step_name, root_uri, render_html,
         layout_settings):
@@ -214,11 +204,22 @@ def get_button_panel_html(template_index, button_text_by_id):
         'button_text_by_id': BUTTON_TEXT_BY_ID | button_text_by_id})
 
 
-def get_layout_settings(automation_definition, page_id, request_params):
+def get_layout_settings(design_name, request_params):
     return {
-        'design_name': automation_definition.get_design_name(page_id),
+        'design_name': design_name,
         'for_embed': '_embed' in request_params,
         'for_print': '_print' in request_params}
+
+
+def get_css_texts(layout_settings):
+    css_texts = []
+    if layout_settings['for_embed']:
+        css_texts.append(EMBEDDED_CSS)
+    else:
+        css_texts.append(DEFAULT_CSS)
+    if layout_settings['design_name'] == 'flex':
+        css_texts.append(FLEX_CSS)
+    return css_texts
 
 
 def get_with_button_panel(layout_settings, step_name, template_count):

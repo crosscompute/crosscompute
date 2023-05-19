@@ -84,7 +84,7 @@ async def see_automation_batch_step(
 ):
     request_params = request.query_params
     layout_settings = get_layout_settings(
-        automation_definition, step_name, request_params)
+        automation_definition.get_design_name(step_name), request_params)
     d = get_step_response_dictionary(
         automation_definition, batch_definition, step_name,
         template_globals['root_uri'], layout_settings, request_params)
