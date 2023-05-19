@@ -306,7 +306,9 @@ environment:
   # image is the container used to run your scripts when using podman engine
   image: python
 
-  # packages are installed in the container when using podman engine
+  # packages are dependencies required by your scripts
+  # engine=unsafe will install the packages directly on your machine
+  # engine=podman will install the packages in the container image
   packages:
     # id is the name of the package as defined in the package manager
     # manager is the name of a package manager such as apt, dnf, npm, pip

@@ -35,8 +35,12 @@ class TemplateFilter(HTMLParser):
             self.in_script = True
         attribute_strings = []
         for k, v in attrs:
-            v = VARIABLE_ID_WHITELIST_PATTERN.sub(self.render_text, v)
-            attribute_strings.append(f'{k}="{v}"')
+            if v is None:
+                attribute_string = k
+            else:
+                v = VARIABLE_ID_WHITELIST_PATTERN.sub(self.render_text, v)
+                attribute_string = f'{k}="{v}"'
+            attribute_strings.append(attribute_string)
         attributes_string = ' ' + ' '.join(
             attribute_strings) if attribute_strings else ''
         self.template_parts.append(f'<{tag}{attributes_string}>')
