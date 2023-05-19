@@ -4,7 +4,8 @@ from itertools import count
 from logging import getLogger
 
 from invisibleroads_macros_web.markdown import (
-    get_html_from_markdown)
+    get_html_from_markdown,
+    remove_parent_paragraphs)
 
 from ..constants import (
     BUTTON_TEXT_BY_ID,
@@ -244,7 +245,7 @@ def format_template_html(
     h = get_html_from_markdown(text)
     h = TemplateFilter(
         root_uri, render_html, template_index=template_index).process(h)
-    h = h.replace('<p><div', '<div').replace('</div></p>', '</div>')
+    h = remove_parent_paragraphs(h)
     if with_button_panel and 'class="_continue"' not in h:
         h += '\n' + get_button_panel_html(template_index, button_text_by_id)
     return (
