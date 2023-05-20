@@ -33,11 +33,11 @@ class TemplateFilter(HTMLParser):
     def handle_starttag(self, tag, attrs):
         if tag == 'script':
             self.in_script = True
-        attributes_string = self.get_attributes_string(attrs)
+        attributes_string = self.get_attributes_string(tag, attrs)
         self.template_parts.append(f'<{tag}{attributes_string}>')
 
     def handle_startendtag(self, tag, attrs):
-        attributes_string = self.get_attributes_string(attrs)
+        attributes_string = self.get_attributes_string(tag, attrs)
         self.template_parts.append(f'<{tag}{attributes_string}/>')
 
     def handle_endtag(self, tag):
@@ -58,7 +58,10 @@ class TemplateFilter(HTMLParser):
         self.feed(text)
         return ''.join(self.template_parts)
 
-    def get_attributes_string(self, attrs):
+    def get_attributes_string(self, tag, attrs):
+        keys = [_[0] for _ in attrs]
+        if tag == 'img' and 'loading' not in keys:
+            attrs.append(('loading', 'lazy'))
         attribute_strings = []
         for k, v in attrs:
             if v is None:

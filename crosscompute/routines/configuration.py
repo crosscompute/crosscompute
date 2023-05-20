@@ -394,8 +394,7 @@ def validate_automation_identifiers(configuration):
             copyright_uri=copyright_uri,
             copyright_year=copyright_year,
         ), extras=[
-            'target-blank-links',
-        ]))
+            'target-blank-links']))
     return {
         'name': name,
         'slug': slug,

@@ -7,36 +7,32 @@
 # crosscompute version determines how this file is interpreted (required)
 crosscompute: 0.0.0
 
+# name summarizes what your automation does
+name: Automation X
+# slug customizes the automation uri
+slug: automation-x
+# title sets the page title
+title: Automation X - Improve health, safety, quality of life
+# description explains why your automation is useful
+description: Improve health, safety, quality of life in our communities
+# version should increment after you make changes to your automation
+version: 0.0.0
+
 # copyright declares who owns the rights to this work
 copyright_name: CrossCompute
 copyright_uri: https://crosscompute.com
 copyright_year: 2023
 attribution_text: >-
-  [![CrossCompute](/assets/logo.svg)]({copyright_uri}) © {copyright_year}.
-  Made with the
-  [CrossCompute Software Development Kit](https://docs.crosscompute.com).
-
-# name summarizes what your automation does
-name: Automation X
-
-# slug customizes the automation uri
-slug: automation-x
-
-# title sets the page title
-title: Automation X - Improve health, safety, quality of life
-
-# description explains why your automation is useful
-description: Improve health, safety, quality of life in our communities
-
-# version should increment after you make changes to your automation
-version: 0.0.0
+  [<img src="/assets/logo.svg" alt="{copyright_name}" loading="lazy">](
+  {copyright_uri}) © {copyright_year}. Made with the [CrossCompute Software
+  Development Kit](https://docs.crosscompute.com).
 
 # imports let you embed other automations in this automation
 imports:
   # id references this import in your templates when embedding;
   # path specifies the location of the automation file to import (required)
-  - id: automation-a
-    path: automation-a/automate.yml
+  - id: abc
+    path: abc/automate.yml
 
 # input is how your scripts get data from the user
 input:
