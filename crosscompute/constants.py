@@ -60,8 +60,8 @@ COPYRIGHT_URI = 'https://crosscompute.com'
 COPYRIGHT_YEAR = datetime.now().year
 ATTRIBUTION_TEXT = '''
 [<img src="/assets/logo.svg" alt="{copyright_name}" loading="lazy">](
-{copyright_uri}) © {copyright_year}. Made with the [CrossCompute Software
-Development Kit](https://docs.crosscompute.com).
+{copyright_uri}) © {copyright_year}. Made with the [CrossCompute Analytics
+Software Development Kit](https://docs.crosscompute.com).
 '''.strip()
 LOGO_PATH = ASSETS_FOLDER / 'LogoBrand-Horizontal-20230501.svg'
 
