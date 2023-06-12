@@ -48,11 +48,11 @@ from ..exceptions import (
     CrossComputeConfigurationNotImplementedError,
     CrossComputeError)
 from ..macros.iterable import find_item
-from ..macros.log import Clock
 from ..macros.package import is_equivalent_version
 from ..settings import (
     printer_by_name,
     view_by_name)
+from .log import Clock
 from .printer import (
     initialize_printer_by_name)
 from .variable import (

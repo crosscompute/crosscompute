@@ -5,11 +5,11 @@ from crosscompute import __version__
 from crosscompute.exceptions import (
     CrossComputeConfigurationNotFoundError,
     CrossComputeError)
-from crosscompute.routines.automation import (
-    DiskAutomation)
-from crosscompute.routines.log import (
+from crosscompute.macros.log import (
     configure_argument_parser_for_logging,
     configure_logging_from)
+from crosscompute.routines.automation import (
+    DiskAutomation)
 from crosscompute.scripts.configure import (
     configure_argument_parser_for_configuring,
     configure_with)
@@ -100,7 +100,7 @@ def _get_args(arguments):
         print(__version__)
         raise SystemExit
     try:
-        configure_logging_from(args)
+        configure_logging_from(args, package_names=['watchfiles'])
         configure_serving_from(args)
         configure_running_from(args)
     except CrossComputeError as e:

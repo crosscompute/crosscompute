@@ -4,11 +4,11 @@ from os import getenv
 
 from crosscompute.exceptions import (
     CrossComputeError)
-from crosscompute.routines.automation import (
-    DiskAutomation)
-from crosscompute.routines.log import (
+from crosscompute.macros.log import (
     configure_argument_parser_for_logging,
     configure_logging_from)
+from crosscompute.routines.automation import (
+    DiskAutomation)
 from crosscompute.scripts.configure import (
     configure_argument_parser_for_configuring)
 

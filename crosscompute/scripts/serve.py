@@ -15,11 +15,11 @@ from crosscompute.constants import (
     PORT)
 from crosscompute.exceptions import (
     CrossComputeError)
-from crosscompute.routines.automation import (
-    DiskAutomation)
-from crosscompute.routines.log import (
+from crosscompute.macros.log import (
     configure_argument_parser_for_logging,
     configure_logging_from)
+from crosscompute.routines.automation import (
+    DiskAutomation)
 from crosscompute.scripts.configure import (
     configure_argument_parser_for_configuring)
 from crosscompute.scripts.run import (
@@ -35,7 +35,7 @@ def do(arguments=None):
     configure_argument_parser_for_running(a)
     args = a.parse_args(arguments)
     try:
-        configure_logging_from(args)
+        configure_logging_from(args, package_names=['watchfiles'])
         configure_serving_from(args)
         configure_running_from(args)
         automation = DiskAutomation.load(args.path_or_folder)
@@ -57,6 +57,14 @@ def configure_argument_parser_for_serving(a):
             PORT, minimum_port=MINIMUM_PORT, maximum_port=MAXIMUM_PORT),
         help='specify server port')
     a.add_argument(
+        '--root-uri', metavar='X',
+        default='',
+        help='specify root uri for all routes')
+    a.add_argument(
+        '--origins', metavar='X', nargs='+', dest='allowed_origins',
+        default=[],
+        help='specify allowed origins')
+    a.add_argument(
         '--no-browser', dest='with_browser', action='store_false',
         help='do not open browser')
     a.add_argument(
@@ -68,14 +76,6 @@ def configure_argument_parser_for_serving(a):
     a.add_argument(
         '--no-hidden', dest='with_hidden', action='store_false',
         help='do not hide runs')
-    a.add_argument(
-        '--root-uri', metavar='X',
-        default='',
-        help='specify root uri for all routes')
-    a.add_argument(
-        '--origins', metavar='X', nargs='+', dest='allowed_origins',
-        default=[],
-        help='specify allowed origins')
 
 
 def configure_serving_from(args):
@@ -90,18 +90,18 @@ def serve_with(automation, args):
         environment=args.environment,
         host=args.host,
         port=args.port,
+        root_uri=args.root_uri,
+        allowed_origins=args.allowed_origins,
         with_browser=args.with_browser,
         with_restart=args.with_restart,
         with_prefix=args.with_prefix,
-        with_hidden=args.with_hidden,
-        root_uri=args.root_uri,
-        allowed_origins=args.allowed_origins)
+        with_hidden=args.with_hidden)
 
 
 def serve(
-        automation, environment, host=HOST, port=PORT, with_browser=True,
-        with_restart=True, with_prefix=True, with_hidden=True, root_uri='',
-        allowed_origins=None):
+        automation, environment, host=HOST, port=PORT, root_uri='',
+        allowed_origins=None, with_browser=True, with_restart=True,
+        with_prefix=True, with_hidden=True):
     try:
         if with_browser and 'DISPLAY' in environ:
             L.info('opening browser; set --no-browser to disable')
@@ -110,11 +110,11 @@ def serve(
             environment,
             host=host,
             port=port,
+            root_uri=root_uri,
+            allowed_origins=allowed_origins,
             with_restart=with_restart,
             with_prefix=with_prefix,
-            with_hidden=with_hidden,
-            root_uri=root_uri,
-            allowed_origins=allowed_origins)
+            with_hidden=with_hidden)
     except CrossComputeError as e:
         L.error(e)
     except KeyboardInterrupt:

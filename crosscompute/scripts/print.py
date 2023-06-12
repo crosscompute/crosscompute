@@ -3,11 +3,11 @@ from logging import getLogger
 
 from crosscompute.exceptions import (
     CrossComputeError)
-from crosscompute.routines.automation import (
-    DiskAutomation)
-from crosscompute.routines.log import (
+from crosscompute.macros.log import (
     configure_argument_parser_for_logging,
     configure_logging_from)
+from crosscompute.routines.automation import (
+    DiskAutomation)
 from crosscompute.scripts.configure import (
     configure_argument_parser_for_configuring)
 from crosscompute.scripts.run import (
@@ -22,7 +22,7 @@ def do(arguments=None):
     configure_argument_parser_for_running(a)
     args = a.parse_args(arguments)
     try:
-        configure_logging_from(args)
+        configure_logging_from(args, package_names=['watchfiles'])
         configure_running_from(args)
         automation = DiskAutomation.load(args.path_or_folder)
         print_with(automation, args)

@@ -56,9 +56,9 @@ class DiskAutomation(Automation):
             run_automation(automation_definition, environment, with_rebuild)
 
     def serve(
-            self, environment, host=HOST, port=PORT, with_restart=True,
-            with_prefix=True, with_hidden=True, root_uri='',
-            allowed_origins=None):
+            self, environment, host=HOST, port=PORT, root_uri='',
+            allowed_origins=None, with_restart=True, with_prefix=True,
+            with_hidden=True):
         with multiprocessing_context.Manager() as manager:
             safe = DictionarySafe(manager.dict(), TOKEN_LENGTH)
             uris = manager.list()

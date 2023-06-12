@@ -1,48 +1,32 @@
-from contextlib import contextmanager
-from time import time
-
-from ..constants import DISK_STEP_IN_MILLISECONDS
-
-
-class Clock:
-
-    def __init__(self):
-        self.time_by_key = {}
-
-    @contextmanager
-    def time(self, name):
-        d = self.time_by_key
-        key_a = _get_start_key(name)
-        key_b = _get_end_key(name)
-        d[key_a] = time()
-        try:
-            del d[key_b]
-        except KeyError:
-            pass
-        yield
-        d[key_b] = time()
-
-    def is_in(self, name, t=None):
-        time_a = self.get_start_time(name)
-        time_b = self.get_end_time(name)
-        if not time_a:
-            return False
-        if not time_b:
-            return True
-        if t:
-            return time_a < t and t < time_b + DISK_STEP_IN_MILLISECONDS
-        return False
-
-    def get_start_time(self, name):
-        return self.time_by_key.get(_get_start_key(name), 0)
-
-    def get_end_time(self, name):
-        return self.time_by_key.get(_get_end_key(name), 0)
+from logging import (
+    basicConfig,
+    getLogger,
+    DEBUG,
+    INFO,
+    WARNING)
 
 
-def _get_start_key(name):
-    return name + '<'
+def configure_argument_parser_for_logging(argument_parser):
+    argument_parser.add_argument(
+        '--debug', dest='with_debug', action='store_true', default=False,
+        help='show debugging messages')
 
 
-def _get_end_key(name):
-    return '>' + name
+def configure_logging_from(args, package_names=None):
+    with_debug = args.with_debug
+    configure_logging(with_debug, '%Y%m%d-%H%M%S')
+    if not with_debug:
+        for package_name in package_names:
+            getLogger(package_name).setLevel(WARNING)
+
+
+def configure_logging(with_debug, timestamp):
+    if with_debug:
+        logging_level = DEBUG
+        logging_format = (
+            '%(asctime)s %(levelname)s %(module)s.%(funcName)s:%(lineno)s '
+            '%(message)s')
+    else:
+        logging_level = INFO
+        logging_format = '%(asctime)s %(levelname)s %(message)s'
+    basicConfig(format=logging_format, datefmt=timestamp, level=logging_level)

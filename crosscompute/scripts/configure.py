@@ -12,12 +12,12 @@ from crosscompute.constants import (
     AUTOMATION_VERSION)
 from crosscompute.exceptions import (
     CrossComputeError)
+from crosscompute.macros.log import (
+    configure_argument_parser_for_logging,
+    configure_logging_from)
 from crosscompute.routines.configuration import (
     load_raw_configuration,
     save_raw_configuration)
-from crosscompute.routines.log import (
-    configure_argument_parser_for_logging,
-    configure_logging_from)
 
 
 def do(arguments=None):
