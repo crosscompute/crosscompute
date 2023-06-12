@@ -130,3 +130,6 @@ DEBUG_VARIABLE_DICTIONARIES = [{
     'id': 'return_code',
     'view': 'number',
     'path': 'variables.dictionary'}]
+
+
+LOGGING_TIMESTAMP = '%Y%m%d-%H%M%S'
