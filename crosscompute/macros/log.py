@@ -2,8 +2,7 @@ from logging import (
     basicConfig,
     getLogger,
     DEBUG,
-    INFO,
-    WARNING)
+    INFO)
 
 
 def configure_argument_parser_for_logging(argument_parser):
@@ -12,12 +11,13 @@ def configure_argument_parser_for_logging(argument_parser):
         help='show debugging messages')
 
 
-def configure_logging_from(args, package_names=None):
+def configure_logging_from(args, logging_level_by_package_name=None):
     with_debug = args.with_debug
     configure_logging(with_debug, '%Y%m%d-%H%M%S')
-    if not with_debug:
-        for package_name in package_names:
-            getLogger(package_name).setLevel(WARNING)
+    if with_debug:
+        return
+    for package_name, logging_level in logging_level_by_package_name.items():
+        getLogger(package_name).setLevel(logging_level)
 
 
 def configure_logging(with_debug, timestamp):

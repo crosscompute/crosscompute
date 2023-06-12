@@ -1,6 +1,7 @@
 import re
 from datetime import datetime
 from enum import IntEnum
+from logging import WARNING
 from os import getenv
 from pathlib import Path
 
@@ -133,3 +134,5 @@ DEBUG_VARIABLE_DICTIONARIES = [{
 
 
 LOGGING_TIMESTAMP = '%Y%m%d-%H%M%S'
+LOGGING_LEVEL_BY_PACKAGE_NAME = {
+    'watchfiles': WARNING}

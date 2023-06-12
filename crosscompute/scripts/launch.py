@@ -2,6 +2,8 @@ from argparse import ArgumentParser
 from logging import getLogger
 
 from crosscompute import __version__
+from crosscompute.constants import (
+    LOGGING_LEVEL_BY_PACKAGE_NAME)
 from crosscompute.exceptions import (
     CrossComputeConfigurationNotFoundError,
     CrossComputeError)
@@ -100,7 +102,7 @@ def _get_args(arguments):
         print(__version__)
         raise SystemExit
     try:
-        configure_logging_from(args, package_names=['watchfiles'])
+        configure_logging_from(args, LOGGING_LEVEL_BY_PACKAGE_NAME)
         configure_serving_from(args)
         configure_running_from(args)
     except CrossComputeError as e:

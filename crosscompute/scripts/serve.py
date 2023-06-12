@@ -10,6 +10,7 @@ from invisibleroads_macros_web.port import (
 
 from crosscompute.constants import (
     HOST,
+    LOGGING_LEVEL_BY_PACKAGE_NAME,
     MAXIMUM_PORT,
     MINIMUM_PORT,
     PORT)
@@ -35,7 +36,7 @@ def do(arguments=None):
     configure_argument_parser_for_running(a)
     args = a.parse_args(arguments)
     try:
-        configure_logging_from(args, package_names=['watchfiles'])
+        configure_logging_from(args, LOGGING_LEVEL_BY_PACKAGE_NAME)
         configure_serving_from(args)
         configure_running_from(args)
         automation = DiskAutomation.load(args.path_or_folder)
