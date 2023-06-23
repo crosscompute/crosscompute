@@ -576,6 +576,7 @@ def save_variable_data(target_path, data_by_id, variable_definitions):
     else:
         variable_id, variable_data = list(variable_data_by_id.items())[0]
         if 'value' in variable_data:
+            # !!!
             target_path.open('wt').write(variable_data['value'])
         elif 'path' in variable_data:
             shutil.copy(variable_data['path'], target_path)
