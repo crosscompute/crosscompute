@@ -179,6 +179,7 @@ async def see_automation_batch_step_variable(
         r = FileResponse(
             variable_data['path'], headers=response.headers)
     else:
+        # TODO: !!! consider when to use default json response
         r = Response(str(
             variable_data['value']), headers=response.headers)
     return r
