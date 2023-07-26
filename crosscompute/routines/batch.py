@@ -55,28 +55,27 @@ class DiskBatch(Batch):
         return root_uri + automation_uri + batch_uri + step_uri + variable_uri
 
     def get_data_configuration(self, variable_definition):
-        folder = self.folder
         variable_configuration = variable_definition.configuration.copy()
-        if 'path' in variable_configuration:
-            relative_path = variable_configuration['path']
-            is_customized = True
-        else:
-            relative_path = str(variable_definition.path) + '.configuration'
-            is_customized = False
-        step_name = variable_definition.step_name
-        path = folder / step_name / relative_path
-        if not is_customized and not path.exists():
+        path = self.get_data_configuration_path(variable_definition)
+        if not path.exists():
             return variable_configuration
         try:
             d = load_file_json(path)
             variable_configuration.update(d)
-        except OSError:
-            L.error('path "%s" was not found', format_path(path))
         except json.JSONDecodeError:
             L.error('path "%s" must contain json', format_path(path))
         except TypeError:
             L.error('path "%s" must contain a dictionary', format_path(path))
         return variable_configuration
+
+    def get_data_configuration_path(self, variable_definition):
+        variable_configuration = variable_definition.configuration
+        if 'path' in variable_configuration:
+            relative_path = variable_configuration['path']
+        else:
+            relative_path = str(variable_definition.path) + '.configuration'
+        step_name = variable_definition.step_name
+        return self.folder / step_name / relative_path
 
     def is_done(self):
         if self.automation_definition.interval_timedelta:
