@@ -562,20 +562,22 @@ def initialize_view_by_name():
     return view_by_name
 
 
-def save_variable_data(target_path, data_by_id, variable_definitions):
+def save_variable_data(target_path, batch_definition, variable_definitions):
     target_path.parent.mkdir(parents=True, exist_ok=True)
     variable_data_by_id = get_variable_data_by_id(
-        variable_definitions, data_by_id)
+        variable_definitions, batch_definition.data_by_id)
     if target_path.suffix == '.dictionary':
         with target_path.open('wt') as input_file:
-            variable_value_by_id = get_variable_value_by_id(
-                variable_data_by_id)
-            json.dump(variable_value_by_id, input_file)
+            json.dump(get_variable_value_by_id(
+                variable_data_by_id), input_file)
     elif len(variable_data_by_id) > 1:
         raise CrossComputeConfigurationError(
             'use file extension .dictionary for multiple variables')
     else:
         variable_id, variable_data = list(variable_data_by_id.items())[0]
+        variable_definition = find_item(
+            variable_definitions, 'id', variable_id)
+        # TODO: Separate
         if 'value' in variable_data:
             # TODO: !!!
             target_path.open('wt').write(variable_data['value'])
@@ -583,14 +585,15 @@ def save_variable_data(target_path, data_by_id, variable_definitions):
             shutil.copy(variable_data['path'], target_path)
         elif 'uri' in variable_data:
             variable_uri = variable_data['uri']
-            if variable_uri.startswith(
-                'http://'
-            ) or variable_uri.startswith('https://'):
-                download_uri(variable_data['uri'], target_path)
+            is_http = variable_uri.startswith('http://')
+            is_https = variable_uri.startswith('https://')
+            if is_http or is_https:
+                download_uri(variable_uri, target_path)
             elif variable_uri.startswith('/f/'):
                 link_files(target_path, variable_uri)
-        variable_definition = find_item(
-            variable_definitions, 'id', variable_id)
+            update_variable_data(
+                batch_definition.get_data_configuration_path(
+                    variable_definition), {'uri': variable_uri})
         variable_view = VariableView.get_from(variable_definition)
         variable_view.process(target_path)
 
@@ -702,21 +705,17 @@ def parse_data_by_id(data_by_id, variable_definitions):
 def update_variable_data(path, data_by_id):
     path.parent.mkdir(parents=True, exist_ok=True)
     try:
-        if path.suffix == '.dictionary':
-            if path.exists():
-                with path.open('r+t') as f:
-                    d = json.load(f)
-                    d.update(data_by_id)
-                    f.seek(0)
-                    json.dump(d, f)
-                    f.truncate()
-            else:
-                with path.open('wt') as f:
-                    d = data_by_id
-                    json.dump(d, f)
+        if path.exists():
+            with path.open('r+t') as f:
+                d = json.load(f)
+                d.update(data_by_id)
+                f.seek(0)
+                json.dump(d, f)
+                f.truncate()
         else:
             with path.open('wt') as f:
-                f.write(data_by_id.values()[0])
+                d = data_by_id
+                json.dump(d, f)
     except (json.JSONDecodeError, OSError) as e:
         raise CrossComputeDataError(e)
 

@@ -299,7 +299,7 @@ def prepare_batch(automation_definition, batch_definition):
     input_folder = step_folder_by_name['input_folder']
     for path, variable_definitions in variable_definitions_by_path.items():
         input_path = input_folder / path
-        save_variable_data(input_path, data_by_id, variable_definitions)
+        save_variable_data(input_path, batch_definition, variable_definitions)
     return batch_folder, batch_environment
 
 
