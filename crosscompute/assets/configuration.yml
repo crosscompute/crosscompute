@@ -19,13 +19,14 @@ description: Improve health, safety, quality of life in our communities
 version: 0.0.0
 
 # copyright declares who owns the rights to this work
-copyright_name: CrossCompute
-copyright_uri: https://crosscompute.com
-copyright_year: 2023
-attribution_text: >-
-  [<img src="/assets/logo.svg" alt="{copyright_name}" loading="lazy">](
-  {copyright_uri}) © {copyright_year}. Made with the [CrossCompute Analytics
-  Software Development Kit](https://docs.crosscompute.com).
+copyright:
+  text: >-
+    [<img src="/assets/logo.svg" alt="{name}" loading="lazy">](
+    {uri}) © {year}. Made with the [CrossCompute Analytics
+    Software Development Kit](https://docs.crosscompute.com).
+  name: CrossCompute
+  uri: https://crosscompute.com
+  year: 2023
 
 # imports let you embed other automations in this automation
 imports:
