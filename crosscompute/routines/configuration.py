@@ -990,12 +990,8 @@ def get_port_definitions(environment_dictionary, variable_definitions):
                 variable_definitions, 'id', port_id)
         except StopIteration:
             raise CrossComputeConfigurationError(
-                f'port "{port_id}" must have a matching variable definition')
-        step_name = variable_definition.step_name
-        if step_name not in ['log', 'debug']:
-            raise CrossComputeConfigurationError(
                 f'port "{port_id}" must correspond to a log or debug variable')
-        port_definition.step_name = step_name
+        port_definition.step_name = variable_definition.step_name
     return port_definitions
 
 

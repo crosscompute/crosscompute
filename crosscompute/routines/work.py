@@ -633,10 +633,10 @@ def _get_image_name(automation_definition):
     return f'{automation_slug}:{automation_version}'
 
 
+# TODO: Check if this works in jupyterlab extension
 @contextmanager
 def _proxy_podman_ports(
         automation_definition, batch_folder, custom_environment, port_packs):
-    # TODO: Check if this works in jupyterlab extension
     origin_uri = custom_environment.get('CROSSCOMPUTE_ORIGIN_URI', '')
     relative_uris = []
     if PROXY_URI:
@@ -651,18 +651,16 @@ def _proxy_podman_ports(
     automation_uri = AUTOMATION_ROUTE.format(
         automation_slug=automation_definition.slug)
     batch_uri = BATCH_ROUTE.format(batch_slug=batch_folder.name)
-    absolute_batch_folder = automation_definition.folder / batch_folder
-    port_uri_by_port_id = {}
+    d = {}
     for port_id, host_port, step_name in port_packs:
         step_code = STEP_CODE_BY_NAME[step_name]
-        variable_id = port_id
-        relative_uri = PORT_ROUTE.format(
-            uri=f'{automation_uri}{batch_uri}/{step_code}/{variable_id}')
-        port_uri_by_port_id[port_id] = get_port_uri(
-            f'http://localhost:{host_port}', relative_uri)
+        d[port_id] = get_port_uri(
+            target_uri=f'http://localhost:{host_port}',
+            relative_uri=PORT_ROUTE.format(
+                uri=f'{automation_uri}{batch_uri}/{step_code}/{port_id}'))
+    automation_folder = automation_definition.folder
     update_variable_data(
-        absolute_batch_folder / 'debug' / 'ports.dictionary',
-        port_uri_by_port_id)
+        automation_folder / batch_folder / 'debug' / 'ports.dictionary', d)
     try:
         yield
     except KeyboardInterrupt:
