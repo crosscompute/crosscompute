@@ -68,7 +68,7 @@ function setupMutationStream() {
   mutationStream.onerror = () => {
     mutationStream.close();
     clearTimeout(mutationTimeout);
-    mutationTimeout = setTimeout(setupMutationStream, retrySeconds);
+    mutationTimeout = setTimeout(setupMutationStream, retrySeconds * 1000);
     if (retrySeconds < 60) {
       retrySeconds *= 2;
     }

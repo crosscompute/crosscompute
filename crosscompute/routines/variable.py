@@ -268,6 +268,7 @@ class TextView(VariableView):
         variable_id = self.variable_id
         view_name = self.view_name
         data_uri = b.get_data_uri(variable_definition, x)
+        # TODO: load data from file, but if we get a path, do not use
         data = get_data_from(x.request_params, variable_definition)
         element_id = x.id
         value = data.get('value', '')
@@ -283,7 +284,6 @@ class TextView(VariableView):
             STRING_INPUT_HEADER_JS.substitute({'view_name': view_name})]
         if not value:
             js_texts.extend([
-                TEXT_OUTPUT_HEADER_JS,
                 TEXT_INPUT_JS.substitute({
                     'element_id': element_id,
                     'data_uri': data_uri})])
