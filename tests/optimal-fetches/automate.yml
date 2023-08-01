@@ -50,6 +50,15 @@ input:
 # view: map-nebula
 output:
 # variables:
+#   - id: small_string_in_dictionary
+#     view: string
+#     path: v.dictionary
+#   - id: small_string_in_file
+#     view: string
+#     path: small.txt
+#   - id: large_string_in_file
+#     view: string
+#     path: large.txt
 #   - id: link_in_dictionary
 #     view: link
 #     path: v.dictionary

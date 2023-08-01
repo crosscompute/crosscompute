@@ -55,6 +55,7 @@ from .asset import (
     RADIO_OUTPUT_HEADER_JS,
     RADIO_OUTPUT_JS,
     STRING_INPUT_HEADER_JS,
+    STRING_INPUT_JS,
     STRING_INPUT_HTML,
     STRING_OUTPUT_HEADER_JS,
     STRING_OUTPUT_JS,
@@ -173,22 +174,12 @@ class StringView(VariableView):
     function_by_name = {
         'title': str.title}
 
-    def get_value(self, b: Batch, x: Element):
-        variable_definition = self.variable_definition
-        data = b.load_data_from(x.request_params, variable_definition)
-        if 'value' in data:
-            value = data['value']
-        elif 'path' in data:
-            value = load_file_text(data['path'])
-        else:
-            value = ''
-        return value
-
     def render_input(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
         variable_id = self.variable_id
         view_name = self.view_name
-        value = self.get_value(b, x)
+        data = b.load_data_from(x.request_params, variable_definition)
+        has_data_path = 'path' in data
         c = b.get_data_configuration(variable_definition)
         element_id = x.id
         main_text = STRING_INPUT_HTML.render({
@@ -196,11 +187,19 @@ class StringView(VariableView):
             'mode_name': x.mode_name,
             'view_name': view_name,
             'variable_id': variable_id,
-            'value': escape_quotes_html(value),
+            'value': escape_quotes_html(data[
+                'value']) if 'value' in data else '',
             'input_type': self.input_type,
+            'attribute_string': ' disabled' if has_data_path else '',
             'suggestions': c.get('suggestions', [])})
         js_texts = [
             STRING_INPUT_HEADER_JS.substitute({'view_name': view_name})]
+        if has_data_path:
+            js_texts.extend([
+                STRING_OUTPUT_HEADER_JS,
+                STRING_INPUT_JS.substitute({
+                    'element_id': element_id,
+                    'data_uri': b.get_data_uri(variable_definition, x)})])
         return {
             'css_uris': [], 'css_texts': [], 'js_uris': [],
             'js_texts': js_texts, 'main_text': main_text}
