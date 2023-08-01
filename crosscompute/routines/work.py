@@ -168,7 +168,8 @@ class PodmanEngine(AbstractEngine):
                     automation_definition, batch_folder, custom_environment,
                     port_packs):
                 _copy_datasets_into_podman(container_id, automation_definition)
-                _set_podman_folder_owner(absolute_batch_folder, 1000)
+                _set_podman_folder_owner(
+                    absolute_batch_folder, _get_podman_user_id(container_id))
                 return_code = _run_podman_command({'cwd': automation_folder}, [
                     'exec', '--env-file', CONTAINER_ENV_NAME, container_id,
                     'bash', CONTAINER_SCRIPT_NAME]).returncode
@@ -602,27 +603,26 @@ def _run_podman_image(automation_definition, batch_folder, custom_environment):
         f'{k}={v}' for k, v in script_environment.items()))
     port_definitions = automation_definition.port_definitions
     image_name = _get_image_name(automation_definition)
-    absolute_batch_folder = automation_folder / batch_folder
-    while True:
-        port_packs = []
-        command_terms = []
-        for port_definition in port_definitions:
-            port_id = port_definition.id
-            host_port = find_open_port(
-                minimum_port=MINIMUM_PORT,
-                maximum_port=MAXIMUM_PORT)
-            step_name = port_definition.step_name
-            container_port = port_definition.number
-            port_packs.append((port_id, host_port, step_name))
-            command_terms.extend(['-p', f'{host_port}:{container_port}'])
-        command_terms.extend([
-            '-v', f'{absolute_batch_folder}:/home/user/runs/next:Z'])
-        process = _run_podman_command({
-            'cwd': automation_folder,
-            'capture_output': True,
-        }, ['run'] + command_terms + ['-d', image_name])
-        if process.returncode == 0:
-            break
+    port_packs, command_terms = [], []
+    for port_definition in port_definitions:
+        port_id = port_definition.id
+        host_port = find_open_port(
+            minimum_port=MINIMUM_PORT, maximum_port=MAXIMUM_PORT)
+        step_name = port_definition.step_name
+        container_port = port_definition.number
+        port_packs.append((port_id, host_port, step_name))
+        command_terms.extend(['-p', f'{host_port}:{container_port}'])
+    process = _run_podman_command({
+        'cwd': automation_folder, 'capture_output': True,
+    }, ['run'] + command_terms + [
+        '-v', f'{automation_folder / batch_folder}:/home/user/runs/next:Z',
+        '-d', image_name])
+    if process.returncode != 0:
+        error_text = process.stderr.decode().rstrip()
+        error = CrossComputeExecutionError(
+            f'could not run "{image_name}"; {error_text}')
+        error.code = Error.IMAGE_NOT_RUNNABLE
+        raise error
     container_id = process.stdout.decode().rstrip()
     return container_id, port_packs
 
@@ -630,39 +630,37 @@ def _run_podman_image(automation_definition, batch_folder, custom_environment):
 def _get_image_name(automation_definition):
     automation_slug = automation_definition.slug
     automation_version = automation_definition.version
-    return f'{automation_slug}:{automation_version}'
+    return f'localhost/{automation_slug}:{automation_version}'
 
 
+# TODO: Check if this works in jupyterlab extension
 @contextmanager
 def _proxy_podman_ports(
         automation_definition, batch_folder, custom_environment, port_packs):
-    # TODO: Check if this works in jupyterlab extension
     origin_uri = custom_environment.get('CROSSCOMPUTE_ORIGIN_URI', '')
     relative_uris = []
     if PROXY_URI:
-        def get_port_uri(target_uri, relative_uri):
+        def get_port_uri(target_port, relative_uri):
             requests.post(PROXY_URI + relative_uri, json={
-                'target': target_uri})
+                'target': target_port})
             relative_uris.append(relative_uri)
             return origin_uri + relative_uri
     else:
-        def get_port_uri(target_uri, relative_uri):
-            return target_uri
+        def get_port_uri(target_port, relative_uri):
+            return f'{origin_uri}:{target_port}'
     automation_uri = AUTOMATION_ROUTE.format(
         automation_slug=automation_definition.slug)
     batch_uri = BATCH_ROUTE.format(batch_slug=batch_folder.name)
-    absolute_batch_folder = automation_definition.folder / batch_folder
-    port_uri_by_port_id = {}
+    d = {}
     for port_id, host_port, step_name in port_packs:
         step_code = STEP_CODE_BY_NAME[step_name]
-        variable_id = port_id
-        relative_uri = PORT_ROUTE.format(
-            uri=f'{automation_uri}{batch_uri}/{step_code}/{variable_id}')
-        port_uri_by_port_id[port_id] = get_port_uri(
-            f'http://localhost:{host_port}', relative_uri)
+        d[port_id] = get_port_uri(
+            target_port=host_port,
+            relative_uri=PORT_ROUTE.format(
+                uri=f'{automation_uri}{batch_uri}/{step_code}/{port_id}'))
+    automation_folder = automation_definition.folder
     update_variable_data(
-        absolute_batch_folder / 'debug' / 'ports.dictionary',
-        port_uri_by_port_id)
+        automation_folder / batch_folder / 'debug' / 'ports.dictionary', d)
     try:
         yield
     except KeyboardInterrupt:
@@ -683,6 +681,13 @@ def _copy_datasets_into_podman(container_id, automation_definition):
             'cp', dataset_path, f'{container_id}:{dataset_path}'])
 
 
+def _get_podman_user_id(container_id):
+    process = _run_podman_command({
+        'capture_output': True,
+    }, ['exec', container_id, 'id', '-u'])
+    return process.stdout.decode().strip()
+
+
 def _set_podman_folder_owner(folder, user_id):
     _run_podman_command({}, [
         'unshare', 'chown', f'{user_id}:{user_id}', str(folder), '-R'])
@@ -694,7 +699,7 @@ def _make_podman_folder(container_id, folder):
 
 def _run_podman_command(options, terms):
     command_terms = ['podman'] + terms
-    L.debug(command_terms)
+    L.debug(' '.join(command_terms))
     return subprocess.run(command_terms, **options)
 
 
@@ -734,8 +739,7 @@ RUN \
 {% if root_package_commands %}
 {{ ' && '.join(root_package_commands) }} && \
 {% endif %}
-if command -v useradd > /dev/null; then useradd user; \
-else addgroup -S user && adduser -G user -S user; fi && \
+useradd user && \
 chown user:user /home/user -R
 USER user
 {% if path_folders %}
