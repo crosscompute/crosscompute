@@ -1,3 +1,5 @@
+import asyncio
+from contextlib import asynccontextmanager
 from logging import getLogger, DEBUG
 from os import getenv
 from time import time
@@ -165,7 +167,7 @@ class DiskServer(Server):
 
 def get_app(root_uri, with_prefix):
     prefix = root_uri if with_prefix else ''
-    app = FastAPI(root_path='' if with_prefix else root_uri)
+    app = FastAPI(root_path='' if with_prefix else root_uri, lifespan=lifespan)
     app.add_exception_handler(StarletteHTTPException, handle_http_exception)
     app.include_router(root.router, prefix=prefix)
     app.include_router(automation.router, prefix=prefix)
@@ -173,6 +175,14 @@ def get_app(root_uri, with_prefix):
     app.include_router(token.router, prefix=prefix)
     app.include_router(stream.router, prefix=prefix)
     return app
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        yield
+    except asyncio.exceptions.CancelledError:
+        pass
 
 
 async def handle_http_exception(request, e):

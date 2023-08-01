@@ -16,6 +16,7 @@ class Status(IntEnum):
 class Error(IntEnum):
 
     CONFIGURATION_NOT_FOUND = -100
+    IMAGE_NOT_RUNNABLE = -20
     COMMAND_NOT_RUNNABLE = -10
     COMMAND_INTERRUPTED = -1
 
