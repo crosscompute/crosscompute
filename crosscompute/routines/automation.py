@@ -40,10 +40,13 @@ class DiskAutomation(Automation):
     def load(Class, path_or_folder=None):
         instance = Class()
         path_or_folder = Path(path_or_folder)
-        if path_or_folder.is_dir():
+        if path_or_folder.is_file():
+            instance._initialize_from_path(path_or_folder)
+        elif path_or_folder.is_dir():
             instance._initialize_from_folder(path_or_folder)
         else:
-            instance._initialize_from_path(path_or_folder)
+            raise CrossComputeConfigurationFormatError(
+                f'{path_or_folder} must be a path or folder')
         return instance
 
     def run(self, environment, is_in=None, with_rebuild=True):
