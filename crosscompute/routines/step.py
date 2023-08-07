@@ -95,6 +95,7 @@ def get_automation_response_dictionary(
     else:
         layout_settings = get_layout_settings(
             automation_definition.get_design_name(step_name), request_params)
+        # TODO: Let creator choose which batch to feature by default
         batch = DiskBatch(
             automation_definition, automation_definition.batch_definitions[0])
         d = get_step_response_dictionary(
@@ -182,6 +183,10 @@ def render_variable_html(
 def get_main_pack(
         automation_definition, step_name, root_uri, render_html,
         layout_settings):
+    '''
+    template_definitions = automation_definition.get_template_definitions(
+        step_name)
+    '''
     template_definitions = (
         automation_definition.template_definitions_by_step_name[step_name])
     template_count = len(template_definitions)

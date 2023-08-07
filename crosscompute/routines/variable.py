@@ -838,6 +838,7 @@ def format_text(text, data_by_id):
         return text
 
     def f(match):
+        # TODO: Rename expression_text
         expression_text = match.group(1)
         expression_terms = expression_text.split('|')
         variable_id = expression_terms[0].strip()
