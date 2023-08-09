@@ -1,4 +1,5 @@
 # TODO: Save to ini, toml
+# TODO: Use pydantic
 import shutil
 from collections import Counter, defaultdict
 from configparser import ConfigParser
@@ -658,9 +659,9 @@ def validate_template_identifiers(template_dictionary):
 
 def validate_variable_identifiers(variable_dictionary):
     try:
-        variable_id = variable_dictionary['id']
-        view_name = variable_dictionary['view']
-        variable_path = variable_dictionary['path']
+        variable_id = variable_dictionary['id'].strip()
+        view_name = variable_dictionary['view'].strip()
+        variable_path = variable_dictionary['path'].strip()
     except KeyError as e:
         raise CrossComputeConfigurationError(
             f'{e} is required for each variable')
@@ -669,6 +670,7 @@ def validate_variable_identifiers(variable_dictionary):
             f'{variable_id} is not a valid variable id; please use only '
             'lowercase, uppercase, numbers, hyphens, underscores and spaces')
     if variable_dictionary.step_name == 'print':
+        # TODO: Extract this part
         if view_name in ['link']:
             pass
         elif view_name not in PRINTER_NAMES:
@@ -677,7 +679,10 @@ def validate_variable_identifiers(variable_dictionary):
         elif view_name not in printer_by_name:
             raise CrossComputeConfigurationError(
                 f'pip install crosscompute-printers-{view_name}')
-    if relpath(variable_path).startswith('..'):
+    if not variable_path:
+        raise CrossComputeConfigurationError(
+            f'variable "{variable_id}" path cannot be empty')
+    elif relpath(variable_path).startswith('..'):
         raise CrossComputeConfigurationError(
             f'variable "{variable_id}" path "{variable_path}" must be within '
             'the automation folder')

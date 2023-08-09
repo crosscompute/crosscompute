@@ -1,5 +1,7 @@
 # TODO: Reduce unnecessary fetches
 # TODO: Validate variable view configurations
+# TODO: Rename variable_definition to variable
+# TODO: Remove variable_id from class
 import csv
 import json
 import shutil
@@ -71,8 +73,8 @@ from .interface import Batch
 @dataclass(repr=False, eq=False, order=False, frozen=True)
 class Element():
 
-    id: str
-    mode_name: str
+    id: str  # widgets can have duplicate variable ids
+    mode_name: str  # input variables can appear in output templates
     request_params: str
     layout_settings: dict
     function_names: list[str]
@@ -149,7 +151,7 @@ class LinkView(VariableView):
         data_uri = b.get_data_uri(variable_definition, x)
         c = b.get_data_configuration(variable_definition)
         element_id = x.id
-        file_name = c.get('file-name', self.variable_path.name)
+        file_name = c.get('file-name', self.variable_path.name or variable_id)
         link_text = c.get('link-text', file_name)
         main_text = (
             f'<a id="{element_id}" href="{data_uri}" '
