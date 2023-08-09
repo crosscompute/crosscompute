@@ -74,9 +74,6 @@ DISK_DEBOUNCE_IN_MILLISECONDS = 1600
 DISK_STEP_IN_MILLISECONDS = 50
 
 
-AUTOMATION_ROUTE = '/a/{automation_slug}'
-BATCH_ROUTE = '/b/{batch_slug}'
-STEP_ROUTE = '/{step_code}'
 VARIABLE_ROUTE = '/{variable_id}'
 FILES_ROUTE = '/files.json'
 STREAM_ROUTE = '/streams'
@@ -102,15 +99,12 @@ BUTTON_TEXT_BY_ID = {
 
 
 INTERVAL_UNIT_NAMES = 'seconds', 'minutes', 'hours', 'days', 'weeks'
-STEP_NAMES = 'input', 'output', 'log', 'debug', 'print'
-STEP_NAME_BY_CODE = {_[0]: _ for _ in STEP_NAMES}
 STEP_CODE_BY_NAME = {k: v for v, k in STEP_NAME_BY_CODE.items()}
 MAXIMUM_MUTATION_AGE_IN_SECONDS = 180
 
 
 VARIABLE_ID_PATTERN = re.compile(r'[a-zA-Z0-9-_ ]+$')
 VARIABLE_ID_WHITELIST_PATTERN = re.compile(r'{ *(ROOT_URI) *}')
-VARIABLE_ID_TEMPLATE_PATTERN = re.compile(r'{ *([a-zA-Z0-9-_| ]+?) *}')
 CACHED_FILE_SIZE_LIMIT_IN_BYTES = 1024
 MAXIMUM_FILE_CACHE_LENGTH = 256
 

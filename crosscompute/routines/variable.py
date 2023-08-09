@@ -5,16 +5,12 @@
 import csv
 import json
 import shutil
-from dataclasses import dataclass
 from logging import getLogger
 from os import symlink
 from urllib.request import urlretrieve as download_uri
 
-from importlib_metadata import entry_points
 from invisibleroads_macros_log import format_path
 from invisibleroads_macros_text import format_slug
-from invisibleroads_macros_web.escape import (
-    escape_quotes_html)
 
 from ..constants import (
     CACHED_FILE_SIZE_LIMIT_IN_BYTES,
@@ -28,7 +24,6 @@ from ..exceptions import (
     CrossComputeDataError)
 from ..macros.disk import FileCache
 from ..macros.iterable import find_item
-from ..macros.package import import_attribute
 from ..settings import (
     template_globals,
     view_by_name)
@@ -70,75 +65,15 @@ from .asset import (
 from .interface import Batch
 
 
-@dataclass(repr=False, eq=False, order=False, frozen=True)
-class Element():
+class VariableView:
 
-    id: str  # widgets can have duplicate variable ids
-    mode_name: str  # input variables can appear in output templates
-    request_params: str
-    layout_settings: dict
-    function_names: list[str]
-
-
-class VariableView():
-
-    view_name = 'variable'
     environment_variable_definitions = []
-
-    def __init__(self, variable_definition):
-        self.variable_definition = variable_definition
-        self.variable_id = variable_definition.id
-        self.variable_path = variable_definition.path
-
-    @classmethod
-    def get_from(Class, variable_definition):
-        view_name = variable_definition.view_name
-        try:
-            View = view_by_name[view_name]
-        except KeyError:
-            L.error('view "%s" is not installed', view_name)
-            View = Class
-        return View(variable_definition)
 
     def parse(self, data):
         return data
 
     def process(self, path):
         pass
-
-    def render(self, b: Batch, x: Element):
-        if x.mode_name == 'input':
-            render = self.render_input
-        else:
-            render = self.render_output
-        page_dictionary = render(b, x)
-        main_text = page_dictionary['main_text']
-        if x.layout_settings['design_name'] != 'none':
-            if main_text.endswith('</a>') or main_text.endswith('</span>'):
-                tag_name = 'span'
-            else:
-                tag_name = 'div'
-            main_text = add_label_html(
-                main_text, self.variable_definition, x.id)
-            page_dictionary['main_text'] = '<%s class="_view">\n%s\n</%s>' % (
-                tag_name, main_text, tag_name)
-        return page_dictionary
-
-    def render_input(self, b: Batch, x: Element):
-        return {
-            'css_uris': [],
-            'css_texts': [],
-            'js_uris': [],
-            'js_texts': [],
-            'main_text': ''}
-
-    def render_output(self, b: Batch, x: Element):
-        return {
-            'css_uris': [],
-            'css_texts': [],
-            'js_uris': [],
-            'js_texts': [],
-            'main_text': ''}
 
 
 class LinkView(VariableView):
@@ -171,29 +106,10 @@ class LinkView(VariableView):
 
 class StringView(VariableView):
 
-    view_name = 'string'
-    input_type = 'text'
     function_by_name = {
         'title': str.title}
 
     def render_input(self, b: Batch, x: Element):
-        variable_definition = self.variable_definition
-        variable_id = self.variable_id
-        view_name = self.view_name
-        data = b.load_data_from(x.request_params, variable_definition)
-        has_data_path = 'path' in data
-        c = b.get_data_configuration(variable_definition)
-        element_id = x.id
-        main_text = STRING_INPUT_HTML.render({
-            'element_id': element_id,
-            'mode_name': x.mode_name,
-            'view_name': view_name,
-            'variable_id': variable_id,
-            'value': escape_quotes_html(data[
-                'value']) if 'value' in data else '',
-            'input_type': self.input_type,
-            'attribute_string': ' disabled' if has_data_path else '',
-            'suggestions': c.get('suggestions', [])})
         js_texts = [
             STRING_INPUT_HEADER_JS.substitute({'view_name': view_name})]
         if has_data_path:
@@ -202,9 +118,6 @@ class StringView(VariableView):
                 STRING_INPUT_JS.substitute({
                     'element_id': element_id,
                     'data_uri': b.get_data_uri(variable_definition, x)})])
-        return {
-            'css_uris': [], 'css_texts': [], 'js_uris': [],
-            'js_texts': js_texts, 'main_text': main_text}
 
     def render_output(self, b: Batch, x: Element):
         value = self.get_value(b, x)
@@ -234,9 +147,6 @@ class StringView(VariableView):
 
 
 class NumberView(StringView):
-
-    view_name = 'number'
-    input_type = 'number'
 
     def parse(self, value):
         try:
@@ -557,12 +467,6 @@ class FileView(VariableView):
             'js_texts': js_texts, 'main_text': main_text}
 
 
-def initialize_view_by_name():
-    for entry_point in entry_points().select(group='crosscompute.views'):
-        view_by_name[entry_point.name] = import_attribute(entry_point.value)
-    return view_by_name
-
-
 def save_variable_data(target_path, batch_definition, variable_definitions):
     target_path.parent.mkdir(parents=True, exist_ok=True)
     variable_data_by_id = get_variable_data_by_id(
@@ -673,15 +577,6 @@ def yield_data_by_id_from_txt(path, variable_definitions):
                 yield parse_data_by_id(data_by_id, variable_definitions)
     except OSError as e:
         raise CrossComputeConfigurationError(e)
-
-
-def get_data_from(request_params, variable_definition):
-    variable_id = variable_definition.id
-    if variable_id in request_params:
-        data = {'value': request_params[variable_id]}
-    else:
-        data = {}
-    return data
 
 
 def parse_data_by_id(data_by_id, variable_definitions):
@@ -873,14 +768,6 @@ def apply_functions(value, function_names, function_by_name):
             raise
         value = f(value)
     return value
-
-
-def add_label_html(main_text, variable_definition, element_id):
-    label_text = variable_definition.label
-    if label_text:
-        main_text = '<label for="%s">%s</label> %s' % (
-            element_id, label_text, main_text)
-    return main_text
 
 
 def get_configuration_options(variable_configuration, variable_values):

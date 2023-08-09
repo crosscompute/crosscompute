@@ -3,7 +3,6 @@ from types import FunctionType
 
 from fastapi import Body, Depends, HTTPException, Request, Response
 
-from .constants import STEP_NAME_BY_CODE
 from .exceptions import CrossComputeDataError
 from .macros.iterable import find_item
 from .routines.authorization import AuthorizationGuard
@@ -41,14 +40,6 @@ async def get_batch_definition(
     except StopIteration:
         raise HTTPException(status_code=404)
     return batch_definition
-
-
-async def get_step_name(step_code: str):
-    try:
-        step_name = STEP_NAME_BY_CODE[step_code]
-    except KeyError:
-        raise HTTPException(status_code=404)
-    return step_name
 
 
 async def get_variable_definition(

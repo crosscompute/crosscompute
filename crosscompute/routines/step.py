@@ -223,13 +223,6 @@ def get_button_panel_html(template_index, button_text_by_id):
         'button_text_by_id': BUTTON_TEXT_BY_ID | button_text_by_id})
 
 
-def get_layout_settings(design_name, request_params):
-    return {
-        'design_name': design_name,
-        'for_embed': '_embed' in request_params,
-        'for_print': '_print' in request_params}
-
-
 def get_css_texts(layout_settings):
     css_texts = []
     if layout_settings['for_embed']:

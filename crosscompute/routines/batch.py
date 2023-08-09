@@ -11,7 +11,7 @@ from ..exceptions import (
     CrossComputeDataError)
 from ..settings import (
     template_globals)
-from .interface import Batch
+from .type import Batch
 from .variable import (
     get_data_from,
     load_file_json,
