@@ -1,8 +1,6 @@
-# TODO: Save to ini, toml
 # TODO: Use pydantic
 import shutil
 from collections import Counter, defaultdict
-from configparser import ConfigParser
 from datetime import datetime, timedelta
 from logging import getLogger
 from os import environ
@@ -11,16 +9,13 @@ from pathlib import Path
 from string import Template
 from time import time
 
-import tomli
 from invisibleroads_macros_log import format_path
-from invisibleroads_macros_text import format_name, format_slug
+from invisibleroads_macros_text import format_name
 from invisibleroads_macros_web.markdown import (
     get_html_from_markdown,
     remove_single_paragraph)
 from nbconvert import PythonExporter
 from nbformat import read as load_notebook, NO_CONVERT
-from ruamel.yaml import YAML
-from ruamel.yaml.error import YAMLError
 
 from .. import __version__
 from ..constants import (
@@ -44,7 +39,6 @@ from ..constants import (
     VARIABLE_ID_PATTERN,
     VARIABLE_ID_TEMPLATE_PATTERN)
 from ..exceptions import (
-    CrossComputeConfigurationError,
     CrossComputeConfigurationFormatError,
     CrossComputeConfigurationNotImplementedError,
     CrossComputeError)
@@ -325,47 +319,6 @@ def load_configuration(configuration_path, index=0, group_definitions=[]):
     return configuration
 
 
-def load_raw_configuration(configuration_path, with_comments=False):
-    configuration_format = get_configuration_format(configuration_path)
-    load_raw_configuration = {
-        'ini': load_raw_configuration_ini,
-        'toml': load_raw_configuration_toml,
-        'yaml': load_raw_configuration_yaml,
-    }[configuration_format]
-    return load_raw_configuration(configuration_path, with_comments)
-
-
-def load_raw_configuration_ini(configuration_path, with_comments=False):
-    configuration = ConfigParser()
-    try:
-        paths = configuration.read(configuration_path)
-    except (OSError, UnicodeDecodeError) as e:
-        raise CrossComputeConfigurationError(e)
-    if not paths:
-        raise CrossComputeConfigurationError(
-            f'configuration path "{configuration_path}" was not found')
-    return dict(configuration)
-
-
-def load_raw_configuration_toml(configuration_path, with_comments=False):
-    try:
-        with configuration_path.open('rt') as configuration_file:
-            configuration = tomli.load(configuration_file)
-    except (OSError, UnicodeDecodeError) as e:
-        raise CrossComputeConfigurationError(e)
-    return configuration
-
-
-def load_raw_configuration_yaml(configuration_path, with_comments=False):
-    yaml = YAML(typ='rt' if with_comments else 'safe')
-    try:
-        with configuration_path.open('rt') as configuration_file:
-            configuration = yaml.load(configuration_file)
-    except (OSError, YAMLError) as e:
-        raise CrossComputeConfigurationError(e)
-    return configuration or {}
-
-
 def validate_protocol(configuration):
     if 'crosscompute' not in configuration:
         raise CrossComputeError(
@@ -384,7 +337,6 @@ def validate_protocol(configuration):
 
 def validate_automation_identifiers(configuration):
     name = configuration.get('name', make_automation_name(configuration.index))
-    slug = configuration.get('slug', format_slug(name))
     d = get_dictionary(configuration, 'copyright')
     copyright_name = d.get('name', COPYRIGHT_NAME)
     copyright_uri = d.get('uri', COPYRIGHT_URI)
@@ -943,24 +895,6 @@ def validate_permission_identifiers(permission_dictionary):
         raise CrossComputeConfigurationError(
             f'permission action "{permission_action}" is not supported')
     return {'id': permission_id, 'action': permission_action}
-
-
-def get_configuration_format(path):
-    suffix = path.suffix
-    try:
-        configuration_format = {
-            '.cfg': 'ini',
-            '.ini': 'ini',
-            '.toml': 'toml',
-            '.yaml': 'yaml',
-            '.yml': 'yaml',
-        }[suffix]
-    except KeyError:
-        raise CrossComputeConfigurationFormatError((
-            f'automation configuration suffix "{suffix}" '
-            'is not supported'
-        ).lstrip())
-    return configuration_format
 
 
 def get_engine_name(environment_dictionary):
