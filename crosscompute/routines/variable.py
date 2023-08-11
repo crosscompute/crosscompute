@@ -151,7 +151,10 @@ class LinkView(VariableView):
         data_uri = b.get_data_uri(variable_definition, x)
         c = b.get_data_configuration(variable_definition)
         element_id = x.id
-        file_name = c.get('file-name', self.variable_path.name or variable_id)
+        variable_path = self.variable_path
+        file_name = c.get(
+            'file-name',
+            variable_path.name if variable_path else variable_id)
         link_text = c.get('link-text', file_name)
         main_text = (
             f'<a id="{element_id}" href="{data_uri}" '
