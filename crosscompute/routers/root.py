@@ -74,8 +74,8 @@ async def see_root(
     }, headers=response.headers)
 
 
-@router.get('/serviceworker.js')
-async def see_icon(response: Response):
+@router.get('/a/serviceworker.js')
+async def service_worker(response: Response):
     return FileResponse(
         ASSETS_FOLDER / 'serviceworker.js', headers=response.headers)
 

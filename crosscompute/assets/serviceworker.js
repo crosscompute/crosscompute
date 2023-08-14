@@ -1,79 +1,104 @@
-const SUBMIT_URL = '/submit';
-const CACHE_FORM_KEY = 'form-data';
-const SERVER_URL = 'server-url'
-async function openCacheForCurrentURL() {
-    const formPath = self.location.href;
-    const cacheName = 'cache-' + formPath;
+const dbPromise = indexedDB.open('failed-requests', 1);
 
-    return await caches.open(cacheName);
-}
+dbPromise.onupgradeneeded = event => {
+    const db = event.target.result;
+    db.createObjectStore('requests', { autoIncrement: true });
+};
+
 
 self.addEventListener('install', event => {
-    event.waitUntil(
-        openCacheForCurrentURL().then(cache => {
-            return cache.addAll([
-            ]);
-        }));
+//    event.waitUntil(
+//        openCacheForCurrentURL().then(cache => {
+//            return cache.addAll([
+//            ]);
+//        }));
 });
 
-self.addEventListener('fetch', event => {
+self.addEventListener('fetch', async event => {
+    const SUBMIT_URL = `${event.request.referrer}.json`
     if (event.request.url.includes(SUBMIT_URL)) {
         event.respondWith(
-            fetch(event.request).catch(async (error) => {
+            fetch(event.request.clone()).catch(async (error) => {
                 if (error instanceof TypeError) {
-                    await saveFormDataToCache(event.request)
+                    await storeFailedRequest(event.request);
+
+                    return new Response("Offline mode: Failed to fetch due to no connectivity");
+
+                    // await saveFormDataToCache(event.request)
                 }}));
-    } else {
-        event.respondWith(fetch(event.request));
     }
+//     else {
+//        event.respondWith(fetch(event.request));
+//    }
 });
 
-async function saveFormDataToCache(request) {
-    const formData = await request.clone().formData();
-    const cache = openCacheForCurrentURL();
-    
-    const response = new Response(JSON.stringify(formData));
 
-    await cache.put(CACHE_FORM_KEY, response);
+async function storeFailedRequest(request) {
+    const clonedRequest = request.clone();
+    const streamChunks = [];
+
+    const reader = clonedRequest.body.getReader();
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+            break;
+        }
+        streamChunks.push(value);
+    }
+
+    // Store the captured request body in IndexedDB or another storage mechanism
+
+    const db = dbPromise.result;
+    const tx = db.transaction('requests', 'readwrite');
+    const store = tx.objectStore('requests');
+    store.add({
+        url: request.url,
+        method: request.method,
+        body: streamChunks
+    });
+    return tx.complete;
 }
 
 self.addEventListener('sync', event => {
-    if (event.tag === 'form-sync') {
-        event.waitUntil(sendFormData());
+    if (event.tag === 'data-sync') {
+        event.waitUntil(processFailedRequests());
     }
 });
 
-async function sendFormData() {
-    const formData = await getFormDataFromCache();
-    if (formData) {
-        try {
-            const response = await fetch(SERVER_URL, {
-                method: 'POST',
-                body: formData
-            });
+function processFailedRequests() {
+    let db = dbPromise.result;
+    let tx = db.transaction('requests', 'readwrite');
+    let store = tx.objectStore('requests');
 
-            if (response.ok) {
-                // Data sent successfully, remove from cache
-                await removeFormDataFromCache();
-            }
-        } catch (error) {
-            console.error('Error sending form data:', error);
+    let request = store.getAll()
+
+    request.onsuccess = function() {
+        if (request.result !== undefined) {
+            request.result.forEach((r) => {
+                const body = new Blob(r.body);
+
+                // Now you can use 'body' in your fetch request
+                fetch(r.url, {
+                    method: r.method,
+                    body: body
+                })
+                .then(response => {
+                    // Handle response
+                    console.log(response)
+                })
+                .catch(error => {
+                    console.log(error)
+                });
+                    console.log("Request", r);
+            })
+        } else {
+            console.log("No pending requests");
         }
-    }
-}
+    };
 
-async function getFormDataFromCache() {
-    const cache = await openCacheForCurrentURL();
-    const cachedResponse = await cache.match(CACHE_FORM_KEY);
-    if (cachedResponse) {
-        return await cachedResponse.text();
-    }
-    return null;
-}
+    store.clear();
 
-async function removeFormDataFromCache() {
-    const cache = await openCacheForCurrentURL();
-    await cache.delete(CACHE_FORM_KEY);
+    return tx.complete;
 }
 
 self.addEventListener('push', event => {
