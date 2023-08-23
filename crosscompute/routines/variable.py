@@ -115,7 +115,7 @@ class StringView(VariableView):
     def render_input(self, b: Batch, x: Element):
         js_texts = [
             STRING_INPUT_HEADER_JS.substitute({'view_name': view_name})]
-        if has_data_path:
+        if is_big_data:
             js_texts.extend([
                 STRING_OUTPUT_HEADER_JS,
                 STRING_INPUT_JS.substitute({
@@ -123,30 +123,20 @@ class StringView(VariableView):
                     'data_uri': b.get_data_uri(variable_definition, x)})])
 
     def render_output(self, b: Batch, x: Element):
-        value = self.get_value(b, x)
+        # TODO: apply functions for data_uri
         try:
             value = apply_functions(
                 value, x.function_names, self.function_by_name)
         except KeyError as e:
             L.error(
                 'function "%s" not supported for view "%s"', e, self.view_name)
-        variable_definition = self.variable_definition
-        variable_id = self.variable_id
         data_uri = b.get_data_uri(variable_definition, x)
-        element_id = x.id
-        main_text = (
-            f'<span id="{element_id}" '
-            f'class="_{x.mode_name} _{self.view_name} {variable_id}">'
-            f'{value}</span>')
         js_texts = [
             STRING_OUTPUT_HEADER_JS,
             STRING_OUTPUT_JS.substitute({
                 'variable_id': variable_id,
                 'element_id': element_id,
                 'data_uri': data_uri})]
-        return {
-            'css_uris': [], 'css_texts': [], 'js_uris': [],
-            'js_texts': js_texts, 'main_text': main_text}
 
 
 class NumberView(StringView):
