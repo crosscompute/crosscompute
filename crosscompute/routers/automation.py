@@ -73,7 +73,6 @@ async def see_automation(
     AUTOMATION_ROUTE + BATCH_ROUTE + STEP_ROUTE,
     tags=['automation'])
 async def see_automation_batch_step(
-    request: Request,
     response: Response,
     automation_definition: AutomationDefinition = Depends(
         get_automation_definition),
@@ -82,10 +81,8 @@ async def see_automation_batch_step(
     guard: AuthorizationGuard = Depends(
         AuthorizationGuardFactory('see_batch')),
 ):
-    request_params = request.query_params
     layout_settings = get_layout_settings(
         automation_definition.get_design_name(step_name), request_params)
-    b = DiskBatch(automation_definition, batch_definition)
     d = get_step_response_dictionary(
         b, step_name, template_globals['root_uri'], layout_settings,
         request_params)

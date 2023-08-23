@@ -1,8 +1,4 @@
-@layer flex-vertical {
-  main {
-    max-width: 640px;
-    margin: auto;
-  }
+@layer flex {
   button {
     padding: 8px 0;
     border: 0;
@@ -21,15 +17,8 @@
     color: white;
     font-weight: bold;
   }
-  ._template, ._view {
-    flex-direction: column;
-  }
   ._template {
     display: none;
-    gap: 16px;
-  }
-  ._template._live, ._view {
-    display: flex;
   }
   ._template > * {
     margin: 0;

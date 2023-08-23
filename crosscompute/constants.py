@@ -86,13 +86,6 @@ PRINTER_NAMES = 'pdf',
 
 
 PACKAGE_MANAGER_NAMES = 'apt', 'dnf', 'npm', 'pip'
-DESIGN_NAMES_BY_PAGE_ID = {
-    'automation': ['input', 'output', 'none'],
-    'input': ['flex', 'none'],
-    'output': ['flex', 'none'],
-    'log': ['flex', 'none'],
-    'debug': ['flex', 'none'],
-    'print': ['flex', 'none']}
 BUTTON_TEXT_BY_ID = {
     'back': 'Back',
     'continue': 'Continue'}

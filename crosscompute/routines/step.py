@@ -115,9 +115,9 @@ def get_step_response_dictionary(
     automation_definition = batch.automation_definition
     variable_definitions = automation_definition.get_variable_definitions(
         step_name, with_all=True)
-    m = {
-        'css_uris': automation_definition.css_uris.copy(), 'css_texts': [],
-        'js_uris': [], 'js_texts': []}
+
+    # !!!
+
     render_html = partial(
         render_variable_html, batch=batch, step_name=step_name,
         variable_definitions=variable_definitions, variable_index=count(),
@@ -170,14 +170,6 @@ def render_variable_html(
         matching_outer_text = match.group(0)
         return matching_outer_text
     view = VariableView.get_from(variable_definition)
-    mode_name = variable_definition.get('mode', step_name)
-    element = Element(
-        f'v{next(variable_index)}', mode_name, request_params,
-        layout_settings, terms[1:])
-    page_dictionary = view.render(batch, element)
-    for k, v in m.items():
-        v.extend(_.strip() for _ in page_dictionary[k])
-    return page_dictionary['main_text']
 
 
 def get_main_pack(
@@ -223,17 +215,6 @@ def get_button_panel_html(template_index, button_text_by_id):
         'button_text_by_id': BUTTON_TEXT_BY_ID | button_text_by_id})
 
 
-def get_css_texts(layout_settings):
-    css_texts = []
-    if layout_settings['for_embed']:
-        css_texts.append(EMBEDDED_CSS)
-    else:
-        css_texts.append(DEFAULT_CSS)
-    if layout_settings['design_name'] == 'flex':
-        css_texts.append(FLEX_CSS)
-    return css_texts
-
-
 def get_with_button_panel(layout_settings, step_name, template_count):
     if layout_settings['design_name'] == 'none':
         return False
@@ -254,25 +235,15 @@ def make_template_text(automation_definition, step_name):
 def format_template_html(
         text, template_index, template_expression, root_uri, render_html,
         with_button_panel, button_text_by_id):
-    l_ = ' _live' if not template_index and not template_expression else ''
-    x_ = (
-        f' data-expression="{template_expression}"'
-        if template_expression else '')
     h = get_html_from_markdown(text)
     h = TemplateFilter(
         root_uri, render_html, template_index=template_index).process(h)
     h = remove_parent_paragraphs(h)
     if with_button_panel and 'class="_continue"' not in h:
         h += '\n' + get_button_panel_html(template_index, button_text_by_id)
-    return (
-        f'<div id="_t{template_index}" class="_template{l_}"{x_}>'
-        f'\n{h}\n</div>')
 
 
 L = getLogger(__name__)
 
 
-EMBEDDED_CSS = asset_storage.load_raw_text('embedded.css')
-DEFAULT_CSS = asset_storage.load_raw_text('default.css')
-FLEX_CSS = asset_storage.load_raw_text('flex.css')
 BUTTON_PANEL_HTML = asset_storage.load_jinja_text('button-panel.html')

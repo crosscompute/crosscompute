@@ -58,28 +58,6 @@ from .variable import (
     YIELD_DATA_BY_ID_BY_EXTENSION)
 
 
-class Definition(dict):
-    '''
-    A definition validates and preserves the original dictionary while adding
-    computed attributes.
-    '''
-
-    def __init__(self, d, **kwargs):
-        super().__init__(d)
-        self._initialize(kwargs)
-        self._validate()
-
-    def _initialize(self, kwargs):
-        self._validation_functions = []
-
-    def _validate(self):
-        for f in self._validation_functions:
-            self.__dict__.update(f(self))
-        for k in self.__dict__.copy():
-            if k.startswith('___'):
-                del self.__dict__[k]
-
-
 class AutomationDefinition(Definition):
 
     def _initialize(self, kwargs):
@@ -116,14 +94,6 @@ class AutomationDefinition(Definition):
                     STEP_NAME))
         return variable_definitions
 
-    def get_design_name(self, page_id):
-        design_name = DESIGN_NAMES_BY_PAGE_ID[page_id][0]
-        if page_id in self.page_definition_by_id:
-            page_definition = self.page_definition_by_id[page_id]
-            design_name = page_definition.configuration.get(
-                'design', design_name)
-        return design_name
-
     def is_interval_ready(self, batch_definition):
         interval_timedelta = self.interval_timedelta
         if interval_timedelta:
@@ -137,7 +107,6 @@ class AutomationDefinition(Definition):
 class VariableDefinition(Definition):
 
     def _initialize(self, kwargs):
-        self.step_name = kwargs['step_name']
         self._validation_functions = [
             validate_variable_identifiers,
             validate_variable_configuration]
@@ -611,8 +580,6 @@ def validate_template_identifiers(template_dictionary):
 
 def validate_variable_identifiers(variable_dictionary):
     try:
-        variable_id = variable_dictionary['id'].strip()
-        view_name = variable_dictionary['view'].strip()
         variable_path = variable_dictionary['path'].strip()
     except KeyError as e:
         raise CrossComputeConfigurationError(
