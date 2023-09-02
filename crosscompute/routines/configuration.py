@@ -1,15 +1,11 @@
-# TODO: Use pydantic
 import shutil
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta
-from logging import getLogger
 from os import environ
 from os.path import basename, relpath, splitext
-from pathlib import Path
 from string import Template
 from time import time
 
-from invisibleroads_macros_log import format_path
 from invisibleroads_macros_text import format_name
 from invisibleroads_macros_web.markdown import (
     get_html_from_markdown,
@@ -272,20 +268,11 @@ def save_raw_configuration_yaml(configuration_path, configuration):
 
 
 def load_configuration(configuration_path, index=0, group_definitions=[]):
-    configuration_path = Path(configuration_path).absolute()
-    configuration = load_raw_configuration(configuration_path)
-    try:
         configuration = AutomationDefinition(
             configuration,
             path=configuration_path,
             index=index,
             group_definitions=group_definitions)
-    except CrossComputeConfigurationError as e:
-        if not hasattr(e, 'path'):
-            e.path = configuration_path
-        raise
-    L.debug('%s loaded', format_path(configuration_path))
-    return configuration
 
 
 def validate_protocol(configuration):
@@ -305,7 +292,6 @@ def validate_protocol(configuration):
 
 
 def validate_automation_identifiers(configuration):
-    name = configuration.get('name', make_automation_name(configuration.index))
     d = get_dictionary(configuration, 'copyright')
     copyright_name = d.get('name', COPYRIGHT_NAME)
     copyright_uri = d.get('uri', COPYRIGHT_URI)
@@ -331,7 +317,6 @@ def validate_automation_identifiers(configuration):
 
 
 def validate_imports(configuration):
-    automation_configurations = [configuration]
     folder = configuration.folder
     group_definitions = getattr(configuration, 'group_definitions', [])
     import_configurations = get_dictionaries(configuration, 'imports')
@@ -350,8 +335,6 @@ def validate_imports(configuration):
             automation_configuration.import_configurations)
         automation_configurations.extend(
             automation_configuration.automation_definitions)
-    automation_definitions = [
-        _ for _ in automation_configurations if 'output' in _]
     assert_unique_values([
         _.name for _ in automation_definitions], 'automation name "{x}"')
     assert_unique_values([
@@ -418,8 +401,6 @@ def validate_templates(configuration):
 
 
 def validate_batches(configuration):
-    batch_definitions = []
-    raw_batch_definitions = get_dictionaries(configuration, 'batches')
     automation_folder = configuration.folder
     variable_definitions = configuration.get_variable_definitions('input')
     for raw_batch_definition in raw_batch_definitions:
@@ -1084,4 +1065,3 @@ PERMISSION_ACTIONS = [
     'match']
 
 
-L = getLogger(__name__)
