@@ -8,11 +8,6 @@ class CrossComputeConfigurationNotImplementedError(
     pass
 
 
-class CrossComputeDataError(
-        CrossComputeError):
-    pass
-
-
 class CrossComputeExecutionError(
         CrossComputeError):
     pass

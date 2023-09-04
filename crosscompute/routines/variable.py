@@ -2,7 +2,6 @@
 # TODO: Validate variable view configurations
 # TODO: Rename variable_definition to variable
 # TODO: Remove variable_id from class
-import csv
 import json
 import shutil
 from logging import getLogger
@@ -13,16 +12,13 @@ from invisibleroads_macros_log import format_path
 from invisibleroads_macros_text import format_slug
 
 from ..constants import (
-    CACHED_FILE_SIZE_LIMIT_IN_BYTES,
     FILES_FOLDER,
     FILES_ROUTE,
-    MAXIMUM_FILE_CACHE_LENGTH,
     VARIABLE_ID_TEMPLATE_PATTERN)
 from ..exceptions import (
     CrossComputeConfigurationError,
     CrossComputeConfigurationNotImplementedError,
     CrossComputeDataError)
-from ..macros.disk import FileCache
 from ..macros.iterable import find_item
 from ..settings import (
     template_globals,
@@ -470,7 +466,7 @@ def save_variable_data(target_path, batch_definition, variable_definitions):
                 variable_data_by_id), input_file)
     elif len(variable_data_by_id) > 1:
         raise CrossComputeConfigurationError(
-            'use file extension .dictionary for multiple variables')
+            'use file suffix .dictionary for multiple variables')
     else:
         variable_id, variable_data = list(variable_data_by_id.items())[0]
         variable_definition = find_item(
@@ -523,74 +519,6 @@ def get_data_by_id(automation_definition, batch_definition):
     return input_data_by_id | output_data_by_id
 
 
-def get_data_by_id_from_folder(folder, variable_definitions):
-    data_by_id = {}
-    for variable_definition in variable_definitions:
-        variable_id = variable_definition.id
-        variable_path = variable_definition.path
-        variable_data = load_variable_data(folder / variable_path, variable_id)
-        data_by_id[variable_id] = variable_data
-    return data_by_id
-
-
-def yield_data_by_id_from_csv(path, variable_definitions):
-    try:
-        with path.open('rt') as f:
-            csv_reader = csv.reader(f)
-            keys = [_.strip() for _ in next(csv_reader)]
-            for values in csv_reader:
-                data_by_id = {k: {'value': v} for k, v in zip(keys, values)}
-                data_by_id = parse_data_by_id(data_by_id, variable_definitions)
-                if data_by_id.get('#') == '#':
-                    continue
-                yield data_by_id
-    except OSError as e:
-        raise CrossComputeConfigurationError(e)
-    except StopIteration:
-        pass
-
-
-def yield_data_by_id_from_txt(path, variable_definitions):
-    if len(variable_definitions) > 1:
-        raise CrossComputeConfigurationError(
-            'use .csv to configure multiple variables')
-
-    try:
-        variable_id = variable_definitions[0].id
-    except IndexError:
-        variable_id = None
-
-    try:
-        with path.open('rt') as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith('#'):
-                    continue
-                data_by_id = {variable_id: {'value': line}}
-                yield parse_data_by_id(data_by_id, variable_definitions)
-    except OSError as e:
-        raise CrossComputeConfigurationError(e)
-
-
-def parse_data_by_id(data_by_id, variable_definitions):
-    for variable_definition in variable_definitions:
-        variable_id = variable_definition.id
-        try:
-            variable_data = data_by_id[variable_id]
-        except KeyError:
-            continue
-        if 'value' not in variable_data:
-            continue
-        variable_value = variable_data['value']
-        variable_view = VariableView.get_from(variable_definition)
-        try:
-            variable_value = variable_view.parse(variable_value)
-        except CrossComputeDataError as e:
-            raise CrossComputeDataError(f'{e} for variable {variable_id}')
-        variable_data['value'] = variable_value
-    return data_by_id
-
-
 def update_variable_data(path, data_by_id):
     path.parent.mkdir(parents=True, exist_ok=True)
     try:
@@ -633,69 +561,6 @@ def process_variable_data(path, variable_definition):
     variable_data = load_variable_data(path, variable_id)
     variable_view.process(path)
     return variable_data
-
-
-def load_variable_data(path, variable_id):
-    try:
-        file_data = FILE_DATA_CACHE[path]
-    except OSError:
-        raise CrossComputeDataError(
-            f'variable {variable_id} not found at {format_path(path)}')
-    if path.suffix == '.dictionary':
-        file_value = file_data['value']
-        try:
-            variable_value = file_value[variable_id]
-        except KeyError:
-            raise CrossComputeDataError(
-                f'variable {variable_id} not found in {format_path(path)}')
-        variable_data = {'value': variable_value}
-    else:
-        variable_data = file_data
-    return variable_data
-
-
-def load_file_data(path):
-    if not path.exists():
-        raise CrossComputeDataError(f'could not find {format_path(path)}')
-    suffix = path.suffix
-    if suffix == '.dictionary':
-        return load_dictionary_data(path)
-    if suffix in ['.md', '.txt']:
-        return load_text_data(path)
-    return {'path': path}
-
-
-def load_dictionary_data(path):
-    try:
-        value = load_file_json(path)
-    except (json.JSONDecodeError, OSError) as e:
-        raise CrossComputeDataError(
-            f'could not load {format_path(path)}: {e}')
-    if not isinstance(value, dict):
-        raise CrossComputeDataError(
-            f'expected dictionary in {format_path(path)}')
-    return {'value': value}
-
-
-def load_text_data(path):
-    try:
-        if path.stat().st_size > CACHED_FILE_SIZE_LIMIT_IN_BYTES:
-            return {'path': path}
-        value = load_file_text(path)
-    except OSError as e:
-        raise CrossComputeDataError(
-            f'could not load {format_path(path)}: {e}')
-    return {'value': value}
-
-
-def load_file_text(path):
-    return path.read_text().rstrip()
-
-
-def load_file_json(path):
-    with path.open('rt') as f:
-        d = json.load(f)
-    return d
 
 
 def get_variable_data_by_id(
@@ -775,10 +640,4 @@ def get_configuration_options(variable_configuration, variable_values):
     return options
 
 
-YIELD_DATA_BY_ID_BY_EXTENSION = {
-    '.csv': yield_data_by_id_from_csv,
-    '.txt': yield_data_by_id_from_txt}
-FILE_DATA_CACHE = FileCache(
-    load_file_data=load_file_data,
-    maximum_length=MAXIMUM_FILE_CACHE_LENGTH)
 L = getLogger(__name__)

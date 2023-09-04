@@ -79,8 +79,6 @@ class AutomationDefinition(Definition):
             validate_display_buttons]
 
     def get_variable_definitions(self, step_name, with_all=False):
-        variable_definitions = self.variable_definitions_by_step_name.get(
-            step_name, [])
         if with_all:
             variable_definitions = variable_definitions.copy()
             for STEP_NAME in STEP_NAMES:
@@ -345,14 +343,10 @@ def validate_imports(configuration):
 
 
 def validate_variables(configuration):
-    variable_definitions_by_step_name = {}
     view_names = set()
     if 'print' in configuration:
         initialize_printer_by_name()
     for step_name in STEP_NAMES:
-        step_configuration = get_dictionary(configuration, step_name)
-        variable_dictionaries = get_dictionaries(
-            step_configuration, 'variables')
         if step_name == 'debug':
             variable_dictionaries[:0] = DEBUG_VARIABLE_DICTIONARIES
         variable_definitions = [VariableDefinition(
@@ -364,7 +358,6 @@ def validate_variables(configuration):
         view_names.update(_.view_name for _ in variable_definitions)
     L.debug('view_names = %s', list(view_names))
     return {
-        'variable_definitions_by_step_name': variable_definitions_by_step_name,
         '___view_names': view_names}
 
 
@@ -401,7 +394,6 @@ def validate_templates(configuration):
 
 
 def validate_batches(configuration):
-    automation_folder = configuration.folder
     variable_definitions = configuration.get_variable_definitions('input')
     for raw_batch_definition in raw_batch_definitions:
         batch_definitions.extend(get_batch_definitions(
@@ -415,7 +407,6 @@ def validate_batches(configuration):
         _.name for _ in batch_definitions], 'batch name "{x}"')
     assert_unique_values([
         _.uri for _ in batch_definitions], 'batch uri "{x}"')
-    return {'batch_definitions': batch_definitions}
 
 
 def validate_environment(configuration):
@@ -930,47 +921,6 @@ def get_scalar_text(d, key, default=None):
         raise CrossComputeConfigurationError(
             f'"{key}" must be surrounded with quotes when it begins with a {{')
     return value
-
-
-def get_batch_definitions(
-        raw_batch_definition, automation_folder, variable_definitions):
-    batch_definitions = []
-    raw_batch_definition = BatchDefinition(raw_batch_definition)
-    reference = raw_batch_definition.reference
-    batch_configuration = raw_batch_definition.configuration
-
-    if 'folder' in reference:
-        reference_folder = reference['folder']
-        reference_data_by_id = get_data_by_id_from_folder(
-            automation_folder / reference_folder / 'input',
-            variable_definitions)
-    else:
-        reference_data_by_id = {}
-
-    if 'path' in batch_configuration:
-        batch_configuration_path = Path(batch_configuration['path'])
-        suffix = batch_configuration_path.suffix
-        try:
-            yield_data_by_id = YIELD_DATA_BY_ID_BY_EXTENSION[suffix]
-        except KeyError:
-            raise CrossComputeConfigurationError((
-                f'batch configuration suffix "{suffix}" is not supported'
-            ).lstrip())
-        for configuration_data_by_id in yield_data_by_id(
-                automation_folder / batch_configuration_path,
-                variable_definitions):
-            data_by_id = reference_data_by_id | configuration_data_by_id
-            batch_definitions.append(BatchDefinition(
-                raw_batch_definition, data_by_id=data_by_id))
-    else:
-        batch_definitions.append(BatchDefinition(
-            raw_batch_definition, data_by_id=reference_data_by_id))
-
-    return batch_definitions
-
-
-def make_automation_name(automation_index):
-    return AUTOMATION_NAME.replace('X', str(automation_index))
 
 
 def process_header_footer_options(variable_id, print_configuration):
