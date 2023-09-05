@@ -1,5 +1,4 @@
 import json
-from logging import getLogger
 
 from invisibleroads_macros_log import format_path
 
@@ -31,12 +30,7 @@ class DiskBatch(Batch):
         ) or self.load_data(variable_definition)
 
     def load_data(self, variable_definition):
-        variable_path = variable_definition.path
-        if variable_path == 'ENVIRONMENT':
-            return {}
         variable_id = variable_definition.id
-        step_name = variable_definition.step_name
-        path = self.folder / step_name / variable_path
         try:
             variable_data = load_variable_data(path, variable_id)
         except CrossComputeDataError as e:
@@ -92,6 +86,3 @@ class DiskBatch(Batch):
         if is_done:
             batch_definition.is_done = True
         return is_done
-
-
-L = getLogger(__name__)

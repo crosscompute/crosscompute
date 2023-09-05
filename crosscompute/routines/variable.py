@@ -9,7 +9,6 @@ from os import symlink
 from urllib.request import urlretrieve as download_uri
 
 from invisibleroads_macros_log import format_path
-from invisibleroads_macros_text import format_slug
 
 from ..constants import (
     FILES_FOLDER,
@@ -64,9 +63,6 @@ from .interface import Batch
 class VariableView:
 
     environment_variable_definitions = []
-
-    def parse(self, data):
-        return data
 
     def process(self, path):
         pass
@@ -133,18 +129,6 @@ class StringView(VariableView):
                 'variable_id': variable_id,
                 'element_id': element_id,
                 'data_uri': data_uri})]
-
-
-class NumberView(StringView):
-
-    def parse(self, value):
-        try:
-            value = float(value)
-        except ValueError:
-            raise CrossComputeDataError(f'{value} is not a number')
-        if value.is_integer():
-            value = int(value)
-        return value
 
 
 class PasswordView(StringView):
@@ -585,47 +569,6 @@ def get_variable_data_by_id(
 def get_variable_value_by_id(data_by_id):
     return {
         variable_id: data['value'] for variable_id, data in data_by_id.items()}
-
-
-def format_text(text, data_by_id):
-    text = str(text)
-    if not data_by_id:
-        return text
-
-    def f(match):
-        # TODO: Rename expression_text
-        expression_text = match.group(1)
-        expression_terms = expression_text.split('|')
-        variable_id = expression_terms[0].strip()
-        try:
-            variable_data = data_by_id[variable_id]
-        except KeyError:
-            raise CrossComputeConfigurationError(
-                f'variable {variable_id} missing in batch configuration')
-        value = variable_data.get('value', '')
-        try:
-            value = apply_functions(value, expression_terms[1:], {
-                'slug': format_slug,
-                'title': str.title})
-        except KeyError as e:
-            raise CrossComputeConfigurationNotImplementedError(
-                f'{e} function not supported in "{text}"')
-        return str(value)
-
-    return VARIABLE_ID_TEMPLATE_PATTERN.sub(f, text)
-
-
-def apply_functions(value, function_names, function_by_name):
-    for function_name in function_names:
-        function_name = function_name.strip()
-        if not function_name:
-            continue
-        try:
-            f = function_by_name[function_name]
-        except KeyError:
-            raise
-        value = f(value)
-    return value
 
 
 def get_configuration_options(variable_configuration, variable_values):

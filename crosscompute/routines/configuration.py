@@ -57,9 +57,6 @@ from .variable import (
 class AutomationDefinition(Definition):
 
     def _initialize(self, kwargs):
-        self.path = path = Path(kwargs['path'])
-        self.folder = path.parents[0]
-        self.index = kwargs['index']
         self.group_definitions = kwargs['group_definitions']
         self._validation_functions = [
             validate_protocol,
@@ -118,8 +115,6 @@ class TemplateDefinition(Definition):
 class BatchDefinition(Definition):
 
     def _initialize(self, kwargs):
-        self.data_by_id = kwargs.get('data_by_id')
-        self.is_run = kwargs.get('is_run', False)
         self._validation_functions = [
             validate_batch_identifiers,
             validate_batch_configuration]
@@ -606,42 +601,17 @@ def validate_variable_configuration(variable_dictionary):
 
 
 def validate_batch_identifiers(batch_dictionary):
-    is_run = batch_dictionary.is_run
     try:
-        folder = get_scalar_text(batch_dictionary, 'folder')
     except KeyError as e:
         raise CrossComputeConfigurationError(
             f'{e} is required for each batch')
-    name = get_scalar_text(batch_dictionary, 'name', basename(folder))
-    slug = get_scalar_text(batch_dictionary, 'slug', name)
-    data_by_id = batch_dictionary.data_by_id
-    if data_by_id and not is_run:
-        try:
-            folder = format_text(folder, data_by_id)
-            name = format_text(name, data_by_id)
-            slug = format_text(slug, data_by_id)
-        except CrossComputeConfigurationNotImplementedError:
-            raise
-        except CrossComputeConfigurationError as e:
-            batch_configuration = get_dictionary(
-                batch_dictionary, 'configuration')
-            if 'path' in batch_configuration:
-                e.path = batch_configuration['path']
-            raise
-    d = {'folder': Path(folder), 'name': name, 'slug': slug}
     if data_by_id is not None:
-        if not is_run:
-            d['slug'] = slug = format_slug(slug)
         d['uri'] = BATCH_ROUTE.format(batch_slug=slug)
     return d
 
 
 def validate_batch_configuration(batch_dictionary):
-    batch_reference = get_dictionary(batch_dictionary, 'reference')
-    batch_configuration = get_dictionary(batch_dictionary, 'configuration')
     return {
-        'reference': batch_reference,
-        'configuration': batch_configuration,
         'clock': Clock()}
 
 
@@ -913,16 +883,6 @@ def get_interval_pack(interval_text):
     return timedelta(**{unit_name: count}), is_strict
 
 
-def get_scalar_text(d, key, default=None):
-    value = d.get(key) or default
-    if value is None:
-        raise KeyError(key)
-    if isinstance(value, dict):
-        raise CrossComputeConfigurationError(
-            f'"{key}" must be surrounded with quotes when it begins with a {{')
-    return value
-
-
 def process_header_footer_options(variable_id, print_configuration):
     k = 'header-footer'
     d = get_dictionary(print_configuration, k)
@@ -952,29 +912,9 @@ def get_folder_plus_path(d):
     return Path(folder, path)
 
 
-def get_dictionaries(d, key):
-    values = get_list(d, key)
-    for value in values:
-        if not isinstance(value, dict):
-            raise CrossComputeConfigurationError(
-                f'"{key}" must be dictionaries')
-    return values
-
-
-def get_dictionary(d, key):
-    value = d.get(key, {})
-    if not isinstance(value, dict):
-        raise CrossComputeConfigurationError(
-            f'"{key}" must be a dictionary')
-    return value
-
-
-def get_list(d, key):
-    value = d.get(key, [])
-    if not isinstance(value, list):
-        raise CrossComputeConfigurationError(
-            f'"{key}" must be a list')
-    return value
+f'"{key}" must be dictionaries')
+f'"{key}" must be a dictionary')
+f'"{key}" must be a list')
 
 
 def assert_unique_values(xs, message):
@@ -1013,5 +953,3 @@ PERMISSION_IDS = [
 PERMISSION_ACTIONS = [
     'accept',
     'match']
-
-
