@@ -1,6 +1,5 @@
 import re
 from datetime import datetime
-from enum import IntEnum
 from logging import WARNING
 from os import getenv
 from pathlib import Path
@@ -11,14 +10,6 @@ class Status(IntEnum):
     NEW = 0
     FAILED = -1
     DONE = 100
-
-
-class Error(IntEnum):
-
-    CONFIGURATION_NOT_FOUND = -100
-    IMAGE_NOT_RUNNABLE = -20
-    COMMAND_NOT_RUNNABLE = -10
-    COMMAND_INTERRUPTED = -1
 
 
 class Info:

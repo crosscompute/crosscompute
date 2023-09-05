@@ -1,11 +1,9 @@
 # TODO: Consider giving scripts access to CROSSCOMPUTE_ROOT_URI
-import shlex
 import subprocess
 from abc import ABC, abstractmethod
 from concurrent.futures import (
     ProcessPoolExecutor, ThreadPoolExecutor, as_completed)
 from contextlib import contextmanager
-from logging import getLogger
 from os import environ, getenv, symlink
 from os.path import relpath
 from random import choice
@@ -50,89 +48,6 @@ from .variable import (
     process_variable_data,
     save_variable_data,
     update_variable_data)
-
-
-class AbstractEngine(ABC):
-
-    def __init__(self, with_rebuild=True):
-        self.with_rebuild = with_rebuild
-
-    @abstractmethod
-    def prepare(self, automation_definition):
-        pass
-
-    @abstractmethod
-    def run(self, automation_definition, batch_folder, custom_environment):
-        pass
-
-    def run_batch(
-            self, automation_definition, batch_definition, user_environment):
-        reference_time = time()
-        batch_folder, batch_environment = prepare_batch(
-            automation_definition, batch_definition)
-        if not automation_definition.script_definitions:
-            return
-        batch_identifier = ' '.join([
-            automation_definition.name, automation_definition.version,
-            str(batch_folder)])
-        L.info('%s running', batch_identifier)
-        try:
-            return_code = self.run(
-                automation_definition, batch_folder,
-                batch_environment | user_environment)
-        except CrossComputeConfigurationError as e:
-            e.automation_definition = automation_definition
-            raise
-        except CrossComputeExecutionError as e:
-            e.automation_definition = automation_definition
-            return_code = e.code
-            L.error('%s failed; %s', batch_identifier, e)
-        except KeyboardInterrupt:
-            return_code = Error.COMMAND_INTERRUPTED
-            L.error('%s interrupted')
-        else:
-            L.info('%s done', batch_identifier)
-        return _process_batch(automation_definition, batch_definition, [
-            'output', 'log', 'debug',
-        ], {'debug': {
-            'source_time': reference_time,
-            'execution_time_in_seconds': time() - reference_time,
-            'return_code': return_code}})
-
-
-class UnsafeEngine(AbstractEngine):
-
-    def prepare(self, automation_definition):
-        # TODO: Consider having a separate venv for each automation
-        automation_folder = automation_definition.folder
-        d = automation_definition.package_ids_by_manager_name
-        try:
-            for manager_name, package_ids in d.items():
-                subprocess.run(
-                    [manager_name, 'install'] + list(package_ids),
-                    cwd=automation_folder,
-                    check=True)
-        except (OSError, subprocess.CalledProcessError) as e:
-            raise CrossComputeExecutionError(
-                'could not install packages: %s' % e)
-        for s in automation_definition.script_definitions:
-            s.get_command_string()
-
-    def run(self, automation_definition, batch_folder, custom_environment):
-        step_folder_by_name = _get_step_folder_by_name(
-            automation_definition.folder, batch_folder)
-        script_definitions = automation_definition.script_definitions
-        script_environment = _prepare_script_environment(
-            step_folder_by_name, custom_environment, with_path=True)
-        debug_folder = step_folder_by_name['debug_folder']
-        o_path = debug_folder / 'stdout.txt'
-        e_path = debug_folder / 'stderr.txt'
-        with o_path.open('wt') as o_file, e_path.open('w+t') as e_file:
-            for script_definition in script_definitions:
-                return_code = _run_script(
-                    script_definition, step_folder_by_name,
-                    script_environment, o_file, e_file)
-        return return_code
 
 
 class PodmanEngine(AbstractEngine):
@@ -462,65 +377,12 @@ def _prepare_batch_environment(
     return batch_environment | variable_value_by_id
 
 
-def _prepare_script_environment(
-        step_folder_by_name, custom_environment, with_path=False):
-    script_environment = custom_environment | {
-        'CROSSCOMPUTE_' + k.upper(): v for k, v in step_folder_by_name.items()}
-    if with_path:
-        script_environment['PATH'] = getenv('PATH', '')
-    return script_environment
-
-
 def _make_step_folder_by_name(automation_folder, batch_folder):
     step_folder_by_name = _get_step_folder_by_name(
         automation_folder, batch_folder)
     for folder in step_folder_by_name.values():
         folder.mkdir(parents=True, exist_ok=True)
     return step_folder_by_name
-
-
-def _get_step_folder_by_name(automation_folder, batch_folder):
-    return {
-        _ + '_folder': automation_folder / batch_folder / _
-        for _ in STEP_NAMES}
-
-
-def _run_script(
-        script_definition, step_folder_by_name, script_environment,
-        stdout_file, stderr_file):
-    command_string = script_definition.get_command_string()
-    if not command_string:
-        return
-    command_text = command_string.format(**step_folder_by_name)
-    automation_folder = script_definition.automation_folder
-    script_folder = script_definition.folder
-    command_folder = automation_folder / script_folder
-    return _run_command(
-        command_text, command_folder, script_environment, stdout_file,
-        stderr_file)
-
-
-def _run_command(
-        command_string, command_folder, script_environment, o_file, e_file):
-    try:
-        process = subprocess.run(
-            shlex.split(command_string),
-            check=True,
-            cwd=command_folder,
-            env=script_environment,
-            stdout=o_file,
-            stderr=e_file)
-    except (IndexError, OSError):
-        error = CrossComputeConfigurationError(
-            f'could not run {shlex.quote(command_string)} in {command_folder}')
-        error.code = Error.COMMAND_NOT_RUNNABLE
-        raise error
-    except subprocess.CalledProcessError as e:
-        e_file.seek(0)
-        error = CrossComputeExecutionError(e_file.read().rstrip())
-        error.code = e.returncode
-        raise error
-    return process.returncode
 
 
 def _process_batch(
@@ -761,4 +623,3 @@ CONTAINER_SCRIPT_NAME = '.run.sh'
 CONTAINER_ENV_NAME = '.run.env'
 CONTAINER_STEP_FOLDER_BY_NAME = {
     _ + '_folder': 'runs/next/' + _ for _ in STEP_NAMES}
-L = getLogger(__name__)
