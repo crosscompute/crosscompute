@@ -440,42 +440,6 @@ class FileView(VariableView):
             'js_texts': js_texts, 'main_text': main_text}
 
 
-def save_variable_data(target_path, batch_definition, variable_definitions):
-    target_path.parent.mkdir(parents=True, exist_ok=True)
-    variable_data_by_id = get_variable_data_by_id(
-        variable_definitions, batch_definition.data_by_id)
-    if target_path.suffix == '.dictionary':
-        with target_path.open('wt') as input_file:
-            json.dump(get_variable_value_by_id(
-                variable_data_by_id), input_file)
-    elif len(variable_data_by_id) > 1:
-        raise CrossComputeConfigurationError(
-            'use file suffix .dictionary for multiple variables')
-    else:
-        variable_id, variable_data = list(variable_data_by_id.items())[0]
-        variable_definition = find_item(
-            variable_definitions, 'id', variable_id)
-        # TODO: Separate
-        if 'value' in variable_data:
-            # TODO: !!!
-            target_path.open('wt').write(variable_data['value'])
-        elif 'path' in variable_data:
-            shutil.copy(variable_data['path'], target_path)
-        elif 'uri' in variable_data:
-            variable_uri = variable_data['uri']
-            is_http = variable_uri.startswith('http://')
-            is_https = variable_uri.startswith('https://')
-            if is_http or is_https:
-                download_uri(variable_uri, target_path)
-            elif variable_uri.startswith('/f/'):
-                link_files(target_path, variable_uri)
-            update_variable_data(
-                batch_definition.get_data_configuration_path(
-                    variable_definition), {'uri': variable_uri})
-        variable_view = VariableView.get_from(variable_definition)
-        variable_view.process(target_path)
-
-
 def link_files(path_template, variable_uri):
     folder = FILES_FOLDER / variable_uri.replace('/f/', '')
     file_dictionaries = load_file_json(folder / 'files.json')
@@ -545,25 +509,6 @@ def process_variable_data(path, variable_definition):
     variable_data = load_variable_data(path, variable_id)
     variable_view.process(path)
     return variable_data
-
-
-def get_variable_data_by_id(
-        variable_definitions, data_by_id, with_exceptions=True):
-    variable_data_by_id = {}
-    for variable_definition in variable_definitions:
-        variable_id = variable_definition.id
-        if None in data_by_id:
-            variable_data = data_by_id[None]
-        else:
-            try:
-                variable_data = data_by_id[variable_id]
-            except KeyError:
-                if not with_exceptions:
-                    continue
-                raise CrossComputeConfigurationError(
-                    f'{variable_id} not defined in batch configuration')
-        variable_data_by_id[variable_id] = variable_data
-    return variable_data_by_id
 
 
 def get_variable_value_by_id(data_by_id):

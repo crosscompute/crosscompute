@@ -198,27 +198,6 @@ def prepare_automation(automation_definition, with_rebuild=True):
     engine.prepare(automation_definition)
 
 
-def prepare_batch(automation_definition, batch_definition):
-    variable_definitions = automation_definition.get_variable_definitions(
-        'input')
-    variable_definitions_by_path = group_by(variable_definitions, 'path')
-    data_by_id = batch_definition.data_by_id
-    batch_folder = batch_definition.folder
-    batch_environment = _prepare_batch_environment(
-        automation_definition,
-        variable_definitions_by_path.pop('ENVIRONMENT', []),
-        data_by_id)
-    step_folder_by_name = _make_step_folder_by_name(
-        automation_definition.folder, batch_folder)
-    if not data_by_id:
-        return batch_folder, batch_environment
-    input_folder = step_folder_by_name['input_folder']
-    for path, variable_definitions in variable_definitions_by_path.items():
-        input_path = input_folder / path
-        save_variable_data(input_path, batch_definition, variable_definitions)
-    return batch_folder, batch_environment
-
-
 def _run_automation_single(automation_definition, run_batch, user_environment):
     ds = []
     for batch_definition in automation_definition.batch_definitions:
@@ -357,65 +336,6 @@ def _process_task(
         L.error(e)
     except KeyboardInterrupt:
         pass
-
-
-def _prepare_batch_environment(
-        automation_definition, variable_definitions, data_by_id):
-    batch_environment = {}
-    for variable_id in automation_definition.environment_variable_ids:
-        batch_environment[variable_id] = environ[variable_id]
-    for variable_id in (_.id for _ in variable_definitions):
-        if variable_id in data_by_id:
-            continue
-        try:
-            batch_environment[variable_id] = environ[variable_id]
-        except KeyError:
-            L.error(f'{variable_id} is missing in the environment')
-    variable_data_by_id = get_variable_data_by_id(
-        variable_definitions, data_by_id, with_exceptions=False)
-    variable_value_by_id = get_variable_value_by_id(variable_data_by_id)
-    return batch_environment | variable_value_by_id
-
-
-def _make_step_folder_by_name(automation_folder, batch_folder):
-    step_folder_by_name = _get_step_folder_by_name(
-        automation_folder, batch_folder)
-    for folder in step_folder_by_name.values():
-        folder.mkdir(parents=True, exist_ok=True)
-    return step_folder_by_name
-
-
-def _process_batch(
-        automation_definition, batch_definition, step_names,
-        extra_data_by_id_by_step_name):
-    variable_data_by_id_by_step_name = {}
-    automation_folder = automation_definition.folder
-    batch_folder = batch_definition.folder
-    for step_name in step_names:
-        variable_data_by_id_by_step_name[step_name] = variable_data_by_id = {}
-        extra_data_by_id = extra_data_by_id_by_step_name.get(step_name, {})
-        step_folder = automation_folder / batch_folder / step_name
-        variable_definitions = automation_definition.get_variable_definitions(
-            step_name)
-        for variable_definition in variable_definitions:
-            variable_id = variable_definition.id
-            variable_path = variable_definition.path
-            if variable_id in extra_data_by_id:
-                continue
-            path = step_folder / variable_path
-            try:
-                variable_data = process_variable_data(
-                    path, variable_definition)
-            except CrossComputeDataError as e:
-                e.automation_definition = automation_definition
-                L.error(e)
-                continue
-            variable_data_by_id[variable_id] = variable_data
-        if extra_data_by_id:
-            update_variable_data(
-                step_folder / 'variables.dictionary', extra_data_by_id)
-            variable_data_by_id.update(extra_data_by_id)
-    return variable_data_by_id_by_step_name
 
 
 def _prepare_container_file_text(automation_definition):
