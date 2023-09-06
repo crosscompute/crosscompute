@@ -445,11 +445,11 @@ def link_files(path_template, variable_uri):
     file_dictionaries = load_file_json(folder / 'files.json')
     for file_index, file_dictionary in enumerate(file_dictionaries):
         file_path = folder / str(file_index)
-        file_extension = file_dictionary['extension']
+        file_suffix = file_dictionary['suffix']
         target_path = str(path_template).format(
-            index=file_index, extension=file_extension)
+            index=file_index, extension=file_suffix)
         symlink(file_path, target_path)
-        L.debug(f'linked {file_path} to {target_path}')
+        L.debug('linked %s to %s', file_path, target_path)
         if target_path == path_template:
             break
 
