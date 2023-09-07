@@ -64,9 +64,6 @@ class VariableView:
 
     environment_variable_definitions = []
 
-    def process(self, path):
-        pass
-
 
 class LinkView(VariableView):
 
@@ -440,20 +437,6 @@ class FileView(VariableView):
             'js_texts': js_texts, 'main_text': main_text}
 
 
-def link_files(path_template, variable_uri):
-    folder = FILES_FOLDER / variable_uri.replace('/f/', '')
-    file_dictionaries = load_file_json(folder / 'files.json')
-    for file_index, file_dictionary in enumerate(file_dictionaries):
-        file_path = folder / str(file_index)
-        file_suffix = file_dictionary['suffix']
-        target_path = str(path_template).format(
-            index=file_index, extension=file_suffix)
-        symlink(file_path, target_path)
-        L.debug('linked %s to %s', file_path, target_path)
-        if target_path == path_template:
-            break
-
-
 def get_data_by_id(automation_definition, batch_definition):
     automation_folder = automation_definition.folder
     batch_folder = batch_definition.folder
@@ -465,24 +448,6 @@ def get_data_by_id(automation_definition, batch_definition):
         absolute_batch_folder / 'output',
         automation_definition.get_variable_definitions('output'))
     return input_data_by_id | output_data_by_id
-
-
-def update_variable_data(path, data_by_id):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        if path.exists():
-            with path.open('r+t') as f:
-                d = json.load(f)
-                d.update(data_by_id)
-                f.seek(0)
-                json.dump(d, f)
-                f.truncate()
-        else:
-            with path.open('wt') as f:
-                d = data_by_id
-                json.dump(d, f)
-    except (json.JSONDecodeError, OSError) as e:
-        raise CrossComputeDataError(e)
 
 
 def remove_variable_data(path, variable_ids):
@@ -501,19 +466,6 @@ def remove_variable_data(path, variable_ids):
             path.unlink(missing_ok=True)
     except (json.JSONDecodeError, OSError) as e:
         raise CrossComputeDataError(e)
-
-
-def process_variable_data(path, variable_definition):
-    variable_id = variable_definition.id
-    variable_view = VariableView.get_from(variable_definition)
-    variable_data = load_variable_data(path, variable_id)
-    variable_view.process(path)
-    return variable_data
-
-
-def get_variable_value_by_id(data_by_id):
-    return {
-        variable_id: data['value'] for variable_id, data in data_by_id.items()}
 
 
 def get_configuration_options(variable_configuration, variable_values):

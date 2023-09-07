@@ -298,11 +298,8 @@ def validate_automation_identifiers(configuration):
         ), extras=[
             'target-blank-links']))
     return {
-        'name': name,
-        'slug': slug,
         'title': configuration.get('title', name),
         'description': configuration.get('description', name),
-        'version': configuration.get('version', AUTOMATION_VERSION),
         'uri': AUTOMATION_ROUTE.format(automation_slug=slug),
         'copyright_name': copyright_name,
         'copyright_uri': copyright_uri,
@@ -405,14 +402,11 @@ def validate_batches(configuration):
 
 
 def validate_environment(configuration):
-    d = get_dictionary(configuration, 'environment')
     package_ids_by_manager_name = get_package_ids_by_manager_name(
         get_dictionaries(d, 'packages'))
     port_definitions = get_port_definitions(
         d, configuration.get_variable_definitions('log')
         + configuration.get_variable_definitions('debug'))
-    environment_variable_ids = get_environment_variable_ids(get_dictionaries(
-        d, 'variables'))
     batch_concurrency_name = d.get('batch', 'thread').lower()
     if batch_concurrency_name not in ('process', 'thread', 'single'):
         raise CrossComputeConfigurationError(
@@ -601,13 +595,8 @@ def validate_variable_configuration(variable_dictionary):
 
 
 def validate_batch_identifiers(batch_dictionary):
-    try:
-    except KeyError as e:
-        raise CrossComputeConfigurationError(
-            f'{e} is required for each batch')
     if data_by_id is not None:
         d['uri'] = BATCH_ROUTE.format(batch_slug=slug)
-    return d
 
 
 def validate_batch_configuration(batch_dictionary):
@@ -644,14 +633,6 @@ def validate_dataset_reference(dataset_dictionary):
 
 def validate_script_identifiers(script_dictionary):
     folder = script_dictionary.get('folder', '.').strip()
-    method_count = 0
-
-    if 'command' in script_dictionary:
-        command = script_dictionary['command'].strip()
-        method_count += 1
-    else:
-        command = None
-
     if 'path' in script_dictionary:
         path = Path(script_dictionary['path'].strip())
         suffix = path.suffix
@@ -661,13 +642,6 @@ def validate_script_identifiers(script_dictionary):
         method_count += 1
     else:
         path = None
-
-    if 'function' in script_dictionary:
-        method_count += 1
-
-    if method_count > 1:
-        raise CrossComputeConfigurationError(
-            'script command or path or function is required')
     return {'folder': Path(folder), 'command': command, 'path': path}
 
 
@@ -844,23 +818,6 @@ def get_port_definitions(environment_dictionary, variable_definitions):
     return port_definitions
 
 
-def get_environment_variable_ids(environment_variable_definitions):
-    variable_ids = set()
-    for environment_variable_definition in environment_variable_definitions:
-        try:
-            variable_id = environment_variable_definition['id']
-        except KeyError as e:
-            raise CrossComputeConfigurationError(
-                f'{e} is required for each environment variable')
-        try:
-            environ[variable_id]
-        except KeyError:
-            raise CrossComputeConfigurationError(
-                f'environment variable "{variable_id}" is missing')
-        variable_ids.add(variable_id)
-    return variable_ids
-
-
 def get_interval_pack(interval_text):
     if not interval_text:
         return None, None
@@ -912,9 +869,9 @@ def get_folder_plus_path(d):
     return Path(folder, path)
 
 
-f'"{key}" must be dictionaries')
-f'"{key}" must be a dictionary')
-f'"{key}" must be a list')
+f'"{key}" must be dictionaries'
+f'"{key}" must be a dictionary'
+f'"{key}" must be a list'
 
 
 def assert_unique_values(xs, message):

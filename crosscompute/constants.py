@@ -45,8 +45,6 @@ ID_LENGTH = 32
 TOKEN_LENGTH = 32
 
 
-AUTOMATION_NAME = 'Automation X'
-AUTOMATION_VERSION = '0.0.0'
 AUTOMATION_PATH = Path('automate.yml')
 COPYRIGHT_NAME = 'CrossCompute'
 COPYRIGHT_URI = 'https://crosscompute.com'

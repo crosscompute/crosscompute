@@ -1,14 +1,13 @@
 # TODO: Consider giving scripts access to CROSSCOMPUTE_ROOT_URI
 import subprocess
-from abc import ABC, abstractmethod
 from concurrent.futures import (
     ProcessPoolExecutor, ThreadPoolExecutor, as_completed)
 from contextlib import contextmanager
-from os import environ, getenv, symlink
+from os import symlink
 from os.path import relpath
 from random import choice
 from threading import Thread
-from time import sleep, time
+from time import sleep
 from urllib.error import URLError
 from urllib.request import urlretrieve as download_uri
 
