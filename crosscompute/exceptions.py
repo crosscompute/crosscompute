@@ -1,3 +1,0 @@
-class CrossComputeConfigurationNotFoundError(
-        CrossComputeConfigurationError):
-    pass

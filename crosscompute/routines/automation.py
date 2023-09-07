@@ -94,30 +94,7 @@ class DiskAutomation(Automation):
             self._initialize_from_folder(self.folder)
         return self.configuration
 
-    def _initialize_from_folder(self, folder):
-        paths = list(folder.iterdir())
-        default_automation_path = folder / AUTOMATION_PATH
-        if default_automation_path in paths:
-            paths.remove(default_automation_path)
-            paths.insert(0, default_automation_path)
-        for path in paths:
-            if path.is_dir():
-                continue
-            try:
-                self._initialize_from_path(path)
-            except CrossComputeConfigurationFormatError:
-                continue
-            except (CrossComputeConfigurationError, CrossComputeDataError):
-                raise
-            except CrossComputeError:
-                continue
-            break
-        else:
-            raise CrossComputeConfigurationNotFoundError(
-                'configuration not found')
-
     def _initialize_from_path(self, path):
-        configuration = load_configuration(path)
         self.configuration = configuration
         self.path = path
         self.folder = configuration.folder

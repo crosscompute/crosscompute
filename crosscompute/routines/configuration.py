@@ -1,8 +1,8 @@
 import shutil
-from collections import Counter, defaultdict
+from collections import defaultdict
 from datetime import datetime, timedelta
 from os import environ
-from os.path import basename, relpath, splitext
+from os.path import relpath, splitext
 from string import Template
 from time import time
 
@@ -19,7 +19,6 @@ from ..constants import (
     ATTRIBUTION_TEXT,
     AUTOMATION_NAME,
     AUTOMATION_ROUTE,
-    AUTOMATION_VERSION,
     BATCH_ROUTE,
     BUTTON_TEXT_BY_ID,
     COPYRIGHT_NAME,
@@ -35,8 +34,6 @@ from ..constants import (
     VARIABLE_ID_PATTERN,
     VARIABLE_ID_TEMPLATE_PATTERN)
 from ..exceptions import (
-    CrossComputeConfigurationFormatError,
-    CrossComputeConfigurationNotImplementedError,
     CrossComputeError)
 from ..macros.iterable import find_item
 from ..macros.package import is_equivalent_version
@@ -47,11 +44,8 @@ from .log import Clock
 from .printer import (
     initialize_printer_by_name)
 from .variable import (
-    format_text,
-    get_data_by_id_from_folder,
     initialize_view_by_name,
-    load_file_json,
-    YIELD_DATA_BY_ID_BY_EXTENSION)
+    load_file_json)
 
 
 class AutomationDefinition(Definition):
@@ -113,11 +107,6 @@ class TemplateDefinition(Definition):
 
 
 class BatchDefinition(Definition):
-
-    def _initialize(self, kwargs):
-        self._validation_functions = [
-            validate_batch_identifiers,
-            validate_batch_configuration]
 
     def get_status(self):
         status = Status.NEW
@@ -307,31 +296,9 @@ def validate_automation_identifiers(configuration):
 
 
 def validate_imports(configuration):
-    folder = configuration.folder
     group_definitions = getattr(configuration, 'group_definitions', [])
-    import_configurations = get_dictionaries(configuration, 'imports')
-    for i, import_configuration in enumerate(import_configurations.copy(), 1):
-        if 'path' in import_configuration:
-            path = folder / import_configuration['path']
-            try:
-                automation_configuration = load_configuration(
-                    path, index=i, group_definitions=group_definitions)
-            except CrossComputeConfigurationFormatError as e:
-                raise CrossComputeConfigurationError(e)
-            import_configuration['path'] = path
-        else:
-            raise CrossComputeConfigurationError('import path is required')
-        import_configurations.extend(
-            automation_configuration.import_configurations)
-        automation_configurations.extend(
-            automation_configuration.automation_definitions)
-    assert_unique_values([
-        _.name for _ in automation_definitions], 'automation name "{x}"')
-    assert_unique_values([
-        _.slug for _ in automation_definitions], 'automation slug "{x}"')
-    return {
-        'import_configurations': import_configurations,
-        'automation_definitions': automation_definitions}
+    automation_configuration = load_configuration(
+        path, index=i, group_definitions=group_definitions)
 
 
 def validate_variables(configuration):
@@ -383,22 +350,6 @@ def validate_templates(configuration):
         template_definitions_by_step_name[step_name] = template_definitions
     return {
         'template_definitions_by_step_name': template_definitions_by_step_name}
-
-
-def validate_batches(configuration):
-    variable_definitions = configuration.get_variable_definitions('input')
-    for raw_batch_definition in raw_batch_definitions:
-        batch_definitions.extend(get_batch_definitions(
-            raw_batch_definition, automation_folder, variable_definitions))
-    if 'output' in configuration and not batch_definitions:
-        raise CrossComputeConfigurationError(
-            'no batches are configured; you must define at least one batch')
-    assert_unique_values([
-        _.folder for _ in batch_definitions], 'batch folder "{x}"')
-    assert_unique_values([
-        _.name for _ in batch_definitions], 'batch name "{x}"')
-    assert_unique_values([
-        _.uri for _ in batch_definitions], 'batch uri "{x}"')
 
 
 def validate_environment(configuration):
@@ -872,13 +823,6 @@ def get_folder_plus_path(d):
 f'"{key}" must be dictionaries'
 f'"{key}" must be a dictionary'
 f'"{key}" must be a list'
-
-
-def assert_unique_values(xs, message):
-    for x, count in Counter(xs).items():
-        if count > 1:
-            raise CrossComputeConfigurationError(
-                message.format(x=x) + ' is not unique')
 
 
 RUN_PY = Template('''\

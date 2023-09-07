@@ -128,21 +128,7 @@ class StringView(VariableView):
                 'data_uri': data_uri})]
 
 
-class PasswordView(StringView):
-
-    view_name = 'password'
-    input_type = 'password'
-
-
-class EmailView(StringView):
-
-    view_name = 'email'
-    input_type = 'email'
-
-
 class TextView(VariableView):
-
-    view_name = 'text'
 
     def render_input(self, b: Batch, x: Element):
         variable_definition = self.variable_definition

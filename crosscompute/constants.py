@@ -37,8 +37,6 @@ TEMPLATE_PATH_BY_ID = {
     'automation': str(ASSETS_FOLDER / 'automation.html'),
     'batch': str(ASSETS_FOLDER / 'batch.html'),
     'step': str(ASSETS_FOLDER / 'step.html')}
-CACHE_FOLDER = Path('~/.crosscompute').expanduser()
-FILES_FOLDER = CACHE_FOLDER / 'files'
 
 
 ID_LENGTH = 32
