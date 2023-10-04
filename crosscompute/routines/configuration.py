@@ -3,21 +3,18 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from os import environ
 from os.path import relpath, splitext
-from string import Template
 from time import time
 
 from invisibleroads_macros_text import format_name
 from invisibleroads_macros_web.markdown import (
     get_html_from_markdown,
     remove_single_paragraph)
-from nbconvert import PythonExporter
 from nbformat import read as load_notebook, NO_CONVERT
 
 from .. import __version__
 from ..constants import (
     Status,
     ATTRIBUTION_TEXT,
-    AUTOMATION_NAME,
     AUTOMATION_ROUTE,
     BATCH_ROUTE,
     BUTTON_TEXT_BY_ID,
@@ -125,49 +122,6 @@ class DatasetDefinition(Definition):
         self._validation_functions = [
             validate_dataset_identifiers,
             validate_dataset_reference]
-
-
-class ScriptDefinition(Definition):
-
-    def _initialize(self, kwargs):
-        self.automation_folder = kwargs['automation_folder']
-        self._validation_functions = [
-            validate_script_identifiers]
-
-    def get_command_string(self):
-        command_string = self.command
-        if command_string:
-            return command_string
-        folder = self.automation_folder / self.folder
-        if 'path' in self:
-            script_path = self.path
-            suffix = script_path.suffix
-            if suffix == '.ipynb':
-                old_path = folder / script_path
-                script_path = '.' + str(script_path.with_suffix('.ipynb.py'))
-                new_path = folder / script_path
-                L.info(
-                    'exporting %s to %s in %s', self.path, script_path, folder)
-                try:
-                    script_text = PythonExporter().from_notebook_node(
-                        load_notebook(old_path, NO_CONVERT))[0]
-                    with new_path.open('wt') as script_file:
-                        script_file.write(script_text)
-                except Exception as e:
-                    e = CrossComputeConfigurationError(e)
-                    e.path = new_path
-                    L.error(e)
-        elif 'function' in self:
-            script_path = '.run.py'
-            function_string = self['function']
-            with (folder / script_path).open('wt') as f:
-                f.write(RUN_PY.substitute({
-                    'module_name': function_string.split('.')[0],
-                    'function_string': function_string}))
-        else:
-            return
-        self.command = command_string = f'python3 "{script_path}"'
-        return command_string
 
 
 class PackageDefinition(Definition):
@@ -823,26 +777,6 @@ def get_folder_plus_path(d):
 f'"{key}" must be dictionaries'
 f'"{key}" must be a dictionary'
 f'"{key}" must be a list'
-
-
-RUN_PY = Template('''\
-from inspect import signature
-from os import getenv
-from pathlib import Path
-
-import $module_name
-
-
-folder_by_name = {}
-for x in 'input_folder', 'output_folder', 'log_folder', 'debug_folder':
-    folder_by_name[x] = Path(getenv('CROSSCOMPUTE_' + x.upper()))
-function_signature = signature($function_string)
-d = {}
-for x in function_signature.parameters:
-    if x not in folder_by_name:
-        continue
-    d[x] = folder_by_name[x]
-$function_string(**d)''')
 
 
 PERMISSION_IDS = [
