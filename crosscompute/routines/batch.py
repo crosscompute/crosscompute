@@ -38,16 +38,6 @@ class DiskBatch(Batch):
             return {'error': e}
         return variable_data
 
-    def get_data_uri(self, variable_definition, element):
-        root_uri = template_globals['root_uri']
-        automation_uri = self.automation_definition.uri
-        batch_uri = self.definition.uri
-        step_code = STEP_CODE_BY_NAME[variable_definition.step_name]
-        step_uri = STEP_ROUTE.format(step_code=step_code)
-        variable_uri = VARIABLE_ROUTE.format(
-            variable_id=variable_definition.id)
-        return root_uri + automation_uri + batch_uri + step_uri + variable_uri
-
     def get_data_configuration(self, variable_definition):
         variable_configuration = variable_definition.configuration.copy()
         path = self.get_data_configuration_path(variable_definition)

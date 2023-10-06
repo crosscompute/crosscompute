@@ -61,7 +61,6 @@ DISK_DEBOUNCE_IN_MILLISECONDS = 1600
 DISK_STEP_IN_MILLISECONDS = 50
 
 
-VARIABLE_ROUTE = '/{variable_id}'
 FILES_ROUTE = '/files.json'
 STREAM_ROUTE = '/streams'
 STYLE_ROUTE = '/assets/{style_name}.css'
@@ -79,11 +78,7 @@ BUTTON_TEXT_BY_ID = {
 
 
 INTERVAL_UNIT_NAMES = 'seconds', 'minutes', 'hours', 'days', 'weeks'
-STEP_CODE_BY_NAME = {k: v for v, k in STEP_NAME_BY_CODE.items()}
 MAXIMUM_MUTATION_AGE_IN_SECONDS = 180
-
-
-VARIABLE_ID_WHITELIST_PATTERN = re.compile(r'{ *(ROOT_URI) *}')
 
 
 MINIMUM_PORT = int(getenv('CROSSCOMPUTE_MINIMUM_PORT', 1024))

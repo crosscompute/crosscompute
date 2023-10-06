@@ -1,14 +1,12 @@
 from logging import getLogger
 from types import FunctionType
 
-from fastapi import Body, Depends, HTTPException, Request, Response
+from fastapi import Depends, HTTPException, Request, Response
 
-from .exceptions import CrossComputeDataError
 from .macros.iterable import find_item
 from .routines.authorization import AuthorizationGuard
 from .routines.batch import DiskBatch
 from .routines.configuration import AutomationDefinition, BatchDefinition
-from .routines.variable import parse_data_by_id
 from .settings import site
 
 
@@ -57,20 +55,6 @@ async def get_variable_definition(
     except StopIteration:
         raise HTTPException(status_code=404)
     return variable_definition
-
-
-async def get_data_by_id(
-    automation_definition: AutomationDefinition = Depends(
-        get_automation_definition),
-    data_by_id: dict = Body(),
-):
-    variable_definitions = automation_definition.get_variable_definitions(
-        'input')
-    try:
-        data_by_id = parse_data_by_id(data_by_id, variable_definitions)
-    except CrossComputeDataError as e:
-        raise HTTPException(status_code=400, detail=e.args[0])
-    return data_by_id
 
 
 async def get_authorization_token(request: Request, response: Response):

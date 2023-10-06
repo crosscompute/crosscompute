@@ -124,6 +124,7 @@ async def run_automation_json(
     step_code = 'l' if automation_definition.get_variable_definitions(
         'log') else 'o'
     return {
+        # !!!
         'batch_slug': batch_definition.name,
         'step_code': step_code}
 

@@ -46,11 +46,6 @@ from .asset import (
     RADIO_INPUT_HEADER_JS,
     RADIO_OUTPUT_HEADER_JS,
     RADIO_OUTPUT_JS,
-    STRING_INPUT_HEADER_JS,
-    STRING_INPUT_JS,
-    STRING_INPUT_HTML,
-    STRING_OUTPUT_HEADER_JS,
-    STRING_OUTPUT_JS,
     TABLE_OUTPUT_HEADER_JS,
     TABLE_OUTPUT_JS,
     TEXT_INPUT_HTML,
@@ -100,16 +95,6 @@ class StringView(VariableView):
 
     function_by_name = {
         'title': str.title}
-
-    def render_input(self, b: Batch, x: Element):
-        js_texts = [
-            STRING_INPUT_HEADER_JS.substitute({'view_name': view_name})]
-        if is_big_data:
-            js_texts.extend([
-                STRING_OUTPUT_HEADER_JS,
-                STRING_INPUT_JS.substitute({
-                    'element_id': element_id,
-                    'data_uri': b.get_data_uri(variable_definition, x)})])
 
     def render_output(self, b: Batch, x: Element):
         # TODO: apply functions for data_uri

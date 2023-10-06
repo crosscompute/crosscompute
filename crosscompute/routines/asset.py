@@ -12,14 +12,6 @@ LINK_OUTPUT_JS = asset_storage.load_string_text(
     'link-output.js')
 
 
-STRING_INPUT_HTML = asset_storage.load_jinja_text(
-    'string-input.html')
-STRING_INPUT_HEADER_JS = asset_storage.load_string_text(
-    'string-input-header.js')
-STRING_INPUT_JS = asset_storage.load_string_text(
-    'string-input.js')
-STRING_OUTPUT_HEADER_JS = asset_storage.load_raw_text(
-    'string-output-header.js')
 STRING_OUTPUT_JS = asset_storage.load_string_text(
     'string-output.js')
 
