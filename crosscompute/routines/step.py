@@ -1,7 +1,6 @@
 from functools import partial
 from html.parser import HTMLParser
 from itertools import count
-from logging import getLogger
 
 from invisibleroads_macros_web.markdown import (
     get_html_from_markdown,
@@ -209,22 +208,6 @@ def get_main_pack(
     return '\n'.join(parts), template_count
 
 
-def get_button_panel_html(template_index, button_text_by_id):
-    return BUTTON_PANEL_HTML.render({
-        'template_index': template_index,
-        'button_text_by_id': BUTTON_TEXT_BY_ID | button_text_by_id})
-
-
-def get_with_button_panel(layout_settings, step_name, template_count):
-    if layout_settings['design_name'] == 'none':
-        return False
-    if layout_settings['for_print']:
-        return False
-    if step_name != 'input' and template_count <= 1:
-        return False
-    return True
-
-
 def make_template_text(automation_definition, step_name):
     variable_definitions = automation_definition.get_variable_definitions(
         step_name)
@@ -241,9 +224,3 @@ def format_template_html(
     h = remove_parent_paragraphs(h)
     if with_button_panel and 'class="_continue"' not in h:
         h += '\n' + get_button_panel_html(template_index, button_text_by_id)
-
-
-L = getLogger(__name__)
-
-
-BUTTON_PANEL_HTML = asset_storage.load_jinja_text('button-panel.html')
