@@ -62,7 +62,6 @@ DISK_STEP_IN_MILLISECONDS = 50
 
 
 FILES_ROUTE = '/files.json'
-STREAM_ROUTE = '/streams'
 STYLE_ROUTE = '/assets/{style_name}.css'
 MUTATION_ROUTE = '/mutations{uri}.json'
 PORT_ROUTE = '/ports{uri}'
