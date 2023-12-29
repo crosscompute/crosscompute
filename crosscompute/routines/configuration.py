@@ -431,10 +431,6 @@ def validate_imports(configuration):
             automation_configuration.automation_definitions)
     automation_definitions = [
         _ for _ in automation_configurations if 'output' in _]
-    assert_unique_values([
-        _.name for _ in automation_definitions], 'automation name "{x}"')
-    assert_unique_values([
-        _.slug for _ in automation_definitions], 'automation slug "{x}"')
     return {
         'import_configurations': import_configurations,
         'automation_definitions': automation_definitions}
@@ -1120,28 +1116,11 @@ def get_folder_plus_path(d):
     return Path(folder, path)
 
 
-def get_dictionaries(d, key):
-    values = get_list(d, key)
-    for value in values:
-        if not isinstance(value, dict):
-            raise CrossComputeConfigurationError(
-                f'"{key}" must be dictionaries')
-    return values
-
-
 def get_dictionary(d, key):
     value = d.get(key, {})
     if not isinstance(value, dict):
         raise CrossComputeConfigurationError(
             f'"{key}" must be a dictionary')
-    return value
-
-
-def get_list(d, key):
-    value = d.get(key, [])
-    if not isinstance(value, list):
-        raise CrossComputeConfigurationError(
-            f'"{key}" must be a list')
     return value
 
 
