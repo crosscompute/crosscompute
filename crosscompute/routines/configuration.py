@@ -1036,57 +1036,6 @@ def get_interval_pack(interval_text):
     return timedelta(**{unit_name: count}), is_strict
 
 
-def get_scalar_text(d, key, default=None):
-    value = d.get(key) or default
-    if value is None:
-        raise KeyError(key)
-    if isinstance(value, dict):
-        raise CrossComputeConfigurationError(
-            f'"{key}" must be surrounded with quotes when it begins with a {{')
-    return value
-
-
-def get_batch_definitions(
-        raw_batch_definition, automation_folder, variable_definitions):
-    batch_definitions = []
-    raw_batch_definition = BatchDefinition(raw_batch_definition)
-    reference = raw_batch_definition.reference
-    batch_configuration = raw_batch_definition.configuration
-
-    if 'folder' in reference:
-        reference_folder = reference['folder']
-        reference_data_by_id = get_data_by_id_from_folder(
-            automation_folder / reference_folder / 'input',
-            variable_definitions)
-    else:
-        reference_data_by_id = {}
-
-    if 'path' in batch_configuration:
-        batch_configuration_path = Path(batch_configuration['path'])
-        suffix = batch_configuration_path.suffix
-        try:
-            yield_data_by_id = YIELD_DATA_BY_ID_BY_EXTENSION[suffix]
-        except KeyError:
-            raise CrossComputeConfigurationError((
-                f'batch configuration suffix "{suffix}" is not supported'
-            ).lstrip())
-        for configuration_data_by_id in yield_data_by_id(
-                automation_folder / batch_configuration_path,
-                variable_definitions):
-            data_by_id = reference_data_by_id | configuration_data_by_id
-            batch_definitions.append(BatchDefinition(
-                raw_batch_definition, data_by_id=data_by_id))
-    else:
-        batch_definitions.append(BatchDefinition(
-            raw_batch_definition, data_by_id=reference_data_by_id))
-
-    return batch_definitions
-
-
-def make_automation_name(automation_index):
-    return AUTOMATION_NAME.replace('X', str(automation_index))
-
-
 def process_header_footer_options(variable_id, print_configuration):
     k = 'header-footer'
     d = get_dictionary(print_configuration, k)
@@ -1114,21 +1063,6 @@ def get_folder_plus_path(d):
     if not folder and not path:
         return
     return Path(folder, path)
-
-
-def get_dictionary(d, key):
-    value = d.get(key, {})
-    if not isinstance(value, dict):
-        raise CrossComputeConfigurationError(
-            f'"{key}" must be a dictionary')
-    return value
-
-
-def assert_unique_values(xs, message):
-    for x, count in Counter(xs).items():
-        if count > 1:
-            raise CrossComputeConfigurationError(
-                message.format(x=x) + ' is not unique')
 
 
 RUN_PY = Template('''\

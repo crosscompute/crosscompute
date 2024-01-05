@@ -100,12 +100,6 @@ class VariableView():
             View = Class
         return View(variable_definition)
 
-    def parse(self, data):
-        return data
-
-    def process(self, path):
-        pass
-
     def render(self, b: Batch, x: Element):
         if x.mode_name == 'input':
             render = self.render_input
@@ -567,20 +561,6 @@ def save_variable_data(target_path, batch_definition, variable_definitions):
         variable_view.process(target_path)
 
 
-def link_files(path_template, variable_uri):
-    folder = FILES_FOLDER / variable_uri.replace('/f/', '')
-    file_dictionaries = load_file_json(folder / 'files.json')
-    for file_index, file_dictionary in enumerate(file_dictionaries):
-        file_path = folder / str(file_index)
-        file_extension = file_dictionary['extension']
-        target_path = str(path_template).format(
-            index=file_index, extension=file_extension)
-        symlink(file_path, target_path)
-        L.debug(f'linked {file_path} to {target_path}')
-        if target_path == path_template:
-            break
-
-
 def get_data_by_id(automation_definition, batch_definition):
     automation_folder = automation_definition.folder
     batch_folder = batch_definition.folder
@@ -672,7 +652,6 @@ def parse_data_by_id(data_by_id, variable_definitions):
 
 
 def update_variable_data(path, data_by_id):
-    path.parent.mkdir(parents=True, exist_ok=True)
     try:
         if path.exists():
             with path.open('r+t') as f:
@@ -795,11 +774,6 @@ def get_variable_data_by_id(
                     f'{variable_id} not defined in batch configuration')
         variable_data_by_id[variable_id] = variable_data
     return variable_data_by_id
-
-
-def get_variable_value_by_id(data_by_id):
-    return {
-        variable_id: data['value'] for variable_id, data in data_by_id.items()}
 
 
 def format_text(text, data_by_id):
