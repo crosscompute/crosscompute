@@ -778,7 +778,6 @@ def validate_dataset_reference(dataset_dictionary):
 
 
 def validate_script_identifiers(script_dictionary):
-    folder = script_dictionary.get('folder', '.').strip()
     method_count = 0
 
     if 'command' in script_dictionary:
@@ -803,7 +802,7 @@ def validate_script_identifiers(script_dictionary):
     if method_count > 1:
         raise CrossComputeConfigurationError(
             'script command or path or function is required')
-    return {'folder': Path(folder), 'command': command, 'path': path}
+    return {'command': command, 'path': path}
 
 
 def validate_package_identifiers(package_dictionary):
