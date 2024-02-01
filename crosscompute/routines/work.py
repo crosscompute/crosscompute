@@ -642,7 +642,7 @@ def _proxy_podman_ports(
     if PROXY_URI:
         def get_port_uri(target_port, relative_uri):
             requests.post(PROXY_URI + relative_uri, json={
-                'target': target_port})
+                'target': f'http://localhost:{target_port}'})
             relative_uris.append(relative_uri)
             return origin_uri + relative_uri
     else:
