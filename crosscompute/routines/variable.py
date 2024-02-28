@@ -589,9 +589,11 @@ def save_variable_data(target_path, batch_definition, variable_definitions):
                 download_uri(variable_uri, target_path)
             elif variable_uri.startswith('/f/'):
                 link_files(target_path, variable_uri)
+            '''
             update_variable_data(
                 batch_definition.get_data_configuration_path(
                     variable_definition), {'uri': variable_uri})
+            '''
         variable_view = VariableView.get_from(variable_definition)
         variable_view.process(target_path)
 
