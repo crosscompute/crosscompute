@@ -630,7 +630,11 @@ def get_data_by_id_from_folder(folder, variable_definitions):
     for variable_definition in variable_definitions:
         variable_id = variable_definition.id
         variable_path = variable_definition.path
-        variable_data = load_variable_data(folder / variable_path, variable_id)
+        try:
+            variable_data = load_variable_data(
+                folder / variable_path, variable_id)
+        except CrossComputeDataError:
+            variable_data = {}
         data_by_id[variable_id] = variable_data
     return data_by_id
 
@@ -847,7 +851,7 @@ def format_text(text, data_by_id):
         except KeyError:
             raise CrossComputeConfigurationError(
                 f'variable {variable_id} missing in batch configuration')
-        value = variable_data.get('value', '')
+        value = variable_data.get('value', '{%s}' % variable_id)
         try:
             value = apply_functions(value, expression_terms[1:], {
                 'slug': format_slug,
