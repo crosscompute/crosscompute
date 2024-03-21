@@ -310,6 +310,8 @@ def _run_automation_single(automation_definition, run_batch, user_environment):
 def _run_automation_multiple(
         automation_definition, run_batch, user_environment, concurrency_name):
     worker_count = getenv('CROSSCOMPUTE_WORKER_COUNT')
+    if worker_count:
+        worker_count = int(worker_count)
     if concurrency_name == 'thread':
         BatchExecutor = ThreadPoolExecutor
     else:
