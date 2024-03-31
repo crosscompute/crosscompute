@@ -264,6 +264,9 @@ datasets:
   - path: datasets/abc.csv
     reference:
       path: datasets/abc-2022.csv
+# - path: datasets/def.csv
+#   script:
+#     path: def.ipynb
 
 # scripts contain code that turn input variables into output variables
 scripts:
