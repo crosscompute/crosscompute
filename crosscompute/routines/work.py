@@ -14,7 +14,6 @@ from urllib.request import urlretrieve as download_uri
 import requests
 from invisibleroads_macros_disk import make_folder
 from invisibleroads_macros_web.port import find_open_port
-from jinja2 import Template
 
 from ..constants import (
     Error,
@@ -26,14 +25,12 @@ from ..constants import (
     MINIMUM_PORT,
     PORT_ROUTE,
     PROXY_URI,
-    STEP_CODE_BY_NAME,
-    STEP_NAMES)
+    STEP_CODE_BY_NAME)
 from ..exceptions import (
     CrossComputeConfigurationError,
-    CrossComputeDataError,
     CrossComputeExecutionError,
     CrossComputeError)
-from ..macros.iterable import find_item, group_by
+from ..macros.iterable import find_item
 from .configuration import (
     get_folder_plus_path)
 from .printer import (
@@ -44,33 +41,10 @@ from .uri import (
 from .variable import (
     get_variable_data_by_id,
     get_variable_value_by_id,
-    process_variable_data,
-    save_variable_data,
     update_variable_data)
 
 
 class PodmanEngine(AbstractEngine):
-
-    def prepare(self, automation_definition):
-        if not automation_definition.script_definitions:
-            return
-        image_name = _get_image_name(automation_definition)
-        if not self.with_rebuild and _has_podman_image(image_name):
-            return
-        automation_folder = automation_definition.folder
-        (automation_folder / CONTAINER_FILE_NAME).write_text(
-            _prepare_container_file_text(automation_definition))
-        (automation_folder / '.containerignore').write_text(
-            CONTAINER_IGNORE_TEXT)
-        command_texts = [
-            s.get_command_string().format(**CONTAINER_STEP_FOLDER_BY_NAME)
-            for s in automation_definition.script_definitions]
-        (automation_folder / CONTAINER_SCRIPT_NAME).write_text(
-            '\n'.join([_ + CONTAINER_PIPE_TEXT for _ in command_texts]))
-        if subprocess.run([
-            'podman', 'build', '-t', image_name, '-f', CONTAINER_FILE_NAME,
-        ], cwd=automation_folder).returncode != 0:
-            raise CrossComputeExecutionError(f'could not build "{image_name}"')
 
     def run(self, automation_definition, batch_folder, custom_environment):
         automation_folder = automation_definition.folder
@@ -408,12 +382,6 @@ def _run_podman_image(automation_definition, batch_folder, custom_environment):
     return container_id, port_packs
 
 
-def _get_image_name(automation_definition):
-    automation_slug = automation_definition.slug
-    automation_version = automation_definition.version
-    return f'localhost/{automation_slug}:{automation_version}'
-
-
 # TODO: Check if this works in jupyterlab extension
 @contextmanager
 def _proxy_podman_ports(
@@ -501,44 +469,4 @@ def _process_podman_return_code(return_code, absolute_batch_folder):
     return return_code
 
 
-CONTAINER_IGNORE_TEXT = '''\
-**/.git
-**/.gitignore
-**/.gitmodules
-**/.ipynb_checkpoints
-**/batches
-**/datasets
-**/runs
-**/tests
-.containerfile
-.containerignore'''
-CONTAINER_FILE_NAME = '.containerfile'
-CONTAINER_FILE_TEXT = Template('''\
-FROM {{ parent_image_name }}
-WORKDIR /home/user
-RUN \
-{% if root_package_commands %}
-{{ ' && '.join(root_package_commands) }} && \
-{% endif %}
-useradd user && \
-chown user:user /home/user -R
-USER user
-{% if path_folders %}
-ENV PATH="${PATH}:{{ ':'.join(path_folders) }}"
-{% endif %}
-{% if user_package_commands %}
-RUN \
-{{ ' && '.join(user_package_commands) }}
-{% endif %}
-{% if port_numbers %}
-EXPOSE {{ ' '.join(port_numbers) }}
-{% endif %}
-COPY --chown=user:user . .
-CMD ["sleep", "infinity"]''', trim_blocks=True)
-CONTAINER_PIPE_TEXT = (
-    ' 1>runs/next/debug/stdout.txt'
-    ' 2>runs/next/debug/stderr.txt')
-CONTAINER_SCRIPT_NAME = '.run.sh'
 CONTAINER_ENV_NAME = '.run.env'
-CONTAINER_STEP_FOLDER_BY_NAME = {
-    _ + '_folder': 'runs/next/' + _ for _ in STEP_NAMES}
