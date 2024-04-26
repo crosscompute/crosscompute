@@ -379,21 +379,16 @@ display:
       configuration:
         # design none removes all variable labels and css
         design: none
+        # buttons override the design of specific buttons
+        buttons:
+          - id: continue
+            text: Continuar
+          - id: back
+            text: Volver
     - id: output
       configuration:
         # design none removes all variable labels and css
         design: none
-
-  # buttons override the design of specific buttons
-  buttons:
-    # id specifies the name of the button to override;
-    # configuration sets the design of the button
-    - id: continue
-      configuration:
-        button-text: Continuar
-    - id: back
-      configuration:
-        button-text: Volver
 
 # authorization restricts access to your automation
 authorization:
