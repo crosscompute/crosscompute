@@ -1,44 +1,45 @@
 ---
 # Examples: https://github.com/crosscompute/crosscompute-examples
-# Documentation: https://docs.crosscompute.com
 # Forum: https://forum.crosscompute.com
 # Gallery: https://crosscompute.net
+# Documentation: https://docs.crosscompute.com
 
-# crosscompute version determines how this file is interpreted (required)
+# protocol version determines how this file is interpreted (required)
 crosscompute: 0.0.0
 
-# name summarizes what your automation does
-name: Automation X
-# slug customizes the automation uri
-slug: automation-x
+# name summarizes what your tool does
+name: Tool X
+# slug customizes the tool uri
+slug: tool-x
 # title sets the page title
-title: Automation X - Improve health, safety, quality of life
-# description explains why your automation is useful
+title: Tool X - Improve health, safety, quality of life
+# description explains why your tool is useful
 description: Improve health, safety, quality of life in our communities
-# version should increment after you make changes to your automation
+# version should increment after you make changes to your tool
 version: 0.0.0
 
 # copyright declares who owns the rights to this work
 copyright:
   text: >-
-    [<img src="/assets/logo.svg" alt="{name}" loading="lazy">](
-    {uri}) © {year}. Made with the [CrossCompute Analytics
+    [<img src="{image_uri}" alt="{name}" loading="lazy">](
+    {owner_uri}) © {year}. Made with the [CrossCompute Analytics
     Software Development Kit](https://docs.crosscompute.com).
   name: CrossCompute
-  uri: https://crosscompute.com
-  year: 2023
+  image_uri: /assets/logo.svg
+  owner_uri: https://crosscompute.com
+  year: 2024
 
-# imports let you embed other automations in this automation
+# imports let you embed other tools in this tool
 imports:
   # id references this import in your templates when embedding;
-  # path specifies the location of the automation file to import (required)
+  # path specifies the location of the configuration to import (required)
   - id: abc
     path: abc/automate.yml
 
 # input is how your scripts get data from the user
 input:
 
-  # input variables are provided to your scripts from the user or from batches
+  # input variables are provided to your scripts from the user or from presets
   variables:
     # id references this variable in your templates (required);
     # view specifies how to render your variable (required);
@@ -222,37 +223,37 @@ print:
       configuration:
         path: report-uri.json
 
-# batches are pre-defined runs with specific values set for each input variable
-batches:
+# presets are pre-defined runs with specific values set for each input variable
+presets:
 
   # case 0:
   # folder sets values for input variables;
   # folder contains an input subfolder;
   # input subfolder contains files for the input variables
-  - folder: batches/standard
+  - folder: presets/standard
 
   # case 1:
-  # csv sets values for input variables, where each row is a separate batch;
+  # csv sets values for input variables, where each row is a separate preset;
   # folder is the name of the folder saved to disk;
-  # name is the batch name displayed online;
-  # slug is the batch uri;
+  # name is the preset name displayed online;
+  # slug is the preset uri;
   # the above string templates can include variable ids and filters
-  - folder: batches/{x1 | slug}-{x2}
+  - folder: presets/{x1 | slug}-{x2}
     name: '{x1 | title} {x2}'
     slug: '{x1 | slug}-{x2}'
     configuration:
-      path: datasets/batches.csv
+      path: datasets/presets.csv
 
   # case 2:
   # reference folder sets default values for variables missing in the csv;
-  # csv sets values for input variables, where each row is a separate batch
-  - folder: batches/{x1 | slug}-{x2}
+  # csv sets values for input variables, where each row is a separate preset
+  - folder: presets/{x1 | slug}-{x2}
     name: '{x1 | title} {x2}'
     slug: '{x1 | slug}-{x2}'
     reference:
-      folder: batches/standard
+      folder: presets/standard
     configuration:
-      path: datasets/batches.csv
+      path: datasets/presets.csv
 
 # datasets are files that are expected by your scripts
 datasets:
@@ -264,21 +265,21 @@ datasets:
   # use reference path to point to the latest version of your monthly dataset
   - path: datasets/abc.csv
     reference:
-      path: datasets/abc-2022.csv
+      path: datasets/abc-2024.csv
   - path: datasets/def.csv
     reference:
-      uri: https://example.net/def-2022.csv
+      uri: https://example.net/def-2024.csv
 
 # scripts contain code that turn input variables into output variables
 scripts:
   # case 0:
-  # command runs in the automation folder;
+  # command runs in the tool folder;
   # folder paths are passed as arguments
   - command: >
       python run.py
       {input_folder} {output_folder} {log_folder} {debug_folder}
   # case 1:
-  # path is a python script that runs in the automation folder;
+  # path is a python script that runs in the tool folder;
   # folder paths are passed as environment variables
   - path: run.py
   # case 2:
@@ -287,11 +288,11 @@ scripts:
   - path: run.py
     folder: scripts
   # case 3:
-  # path is a jupyter notebook that runs in the automation folder;
+  # path is a jupyter notebook that runs in the tool folder;
   # folder paths are passed as environment variables
   - path: run.ipynb
   # case 4:
-  # function is a python function that runs in the automation folder;
+  # function is a python function that runs in the tool folder;
   # folder paths are passed as function arguments
   - function: run.plot_all
 
@@ -311,9 +312,15 @@ environment:
   # engine=podman will install the packages in the container image
   packages:
     # id is the name of the package as defined in the package manager
-    # manager is the name of a package manager such as apt, dnf, npm, pip
+    # manager is the name of a package manager such as pip, npm, dnf, apt
     - id: matplotlib
       manager: pip
+    - id: turf
+      manager: npm
+    - id: gdal
+      manager: dnf
+    - id: libgeos-dev
+      manager: apt
 
   # ports expose server processes running in your scripts
   ports:
@@ -327,18 +334,18 @@ environment:
     # id is the environment variable to make available to your script
     - id: GOOGLE_KEY
 
-  # batch concurrency defines how your batches run;
-  # batch thread runs each batch as a separate thread;
-  # batch process runs each batch as a separate process;
-  # batch single runs each batch one at a time
-  batch: process
+  # concurrency defines how your presets run;
+  # thread runs each preset as a separate thread;
+  # process runs each preset as a separate process;
+  # none runs each preset one at a time
+  concurrency: process
 
   # interval specifies how long to wait before running your scripts again;
   # use this setting to have dashboards update themselves;
   # add an exclamation point to ensure the scripts run even if nobody watches
   interval: 30 minutes
 
-# display configures the overall look and feel of your automation
+# display configures the overall look and feel of your tool
 display:
 
   # styles customize how your templates look
@@ -363,17 +370,17 @@ display:
   pages:
     # id specifies the name of the page to override;
     # configuration sets the design of the page
-    - id: automation
+    - id: tool
       configuration:
-        # design input puts the input template on the automation page
+        # design input puts the input template on the tool page
         design: input
-    - id: automation
+    - id: tool
       configuration:
-        # design output puts the output template on the automation page
+        # design output puts the output template on the tool page
         design: output
-    - id: automation
+    - id: tool
       configuration:
-        # design none only renders the list of batches on the automation page
+        # design none only renders the list of presets on the tool page
         design: none
     - id: input
       configuration:
@@ -390,9 +397,9 @@ display:
         # design none removes all variable labels and css
         design: none
 
-# authorization restricts access to your automation
+# authorization restricts access to your tool
 authorization:
-  # tokens are api keys for your automation;
+  # tokens are api keys for your tool;
   # each token defines an identity
   tokens:
     # path specifies the location of a yaml file;
@@ -416,9 +423,9 @@ authorization:
       permissions:
         - id: add_token
         - id: see_root
-        - id: see_automation
-        - id: see_batch
-        - id: run_automation
+        - id: see_tool
+        - id: see_preset
+        - id: run_tool
     # note that the value for each configuration setting can also be a list;
     # then an identity will match this group if its setting matches a value
     - configuration:
@@ -427,10 +434,10 @@ authorization:
           - member
       permissions:
         - id: see_root
-        - id: see_automation
-        - id: see_batch
-          # action match is specific to the permission see_batch;
+        - id: see_tool
+        - id: see_preset
+          # action match is specific to the permission see_preset;
           # in the example above, suppose that a user uses the token cdef;
           # then the user will have town_name Mansfield and
-          # can only see batches whose input variable town_name is Mansfield
+          # can only see presets whose input variable town_name is Mansfield
           action: match
