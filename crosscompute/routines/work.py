@@ -184,23 +184,21 @@ class PodmanEngine(AbstractEngine):
 
 
 def run_automation(automation_definition, user_environment, with_rebuild=True):
-    ds = []
     run_batch = get_script_engine(
         automation_definition.engine_name, with_rebuild).run_batch
     concurrency_name = automation_definition.batch_concurrency_name
     update_datasets(automation_definition)
     try:
         if concurrency_name == 'single':
-            ds.extend(_run_automation_single(
-                automation_definition, run_batch, user_environment))
+            _run_automation_single(
+                automation_definition, run_batch, user_environment)
         else:
-            ds.extend(_run_automation_multiple(
+            _run_automation_multiple(
                 automation_definition, run_batch, user_environment,
-                concurrency_name))
+                concurrency_name)
     except CrossComputeError as e:
         e.automation_definition = automation_definition
         L.error(e)
-    return ds
 
 
 def run_batch(automation_definition, batch_definition, user_environment):
@@ -305,21 +303,20 @@ def prepare_batch(automation_definition, batch_definition):
 
 
 def _run_automation_single(automation_definition, run_batch, user_environment):
-    ds = []
     for batch_definition in automation_definition.batch_definitions:
-        ds.append(run_batch(
-            automation_definition, batch_definition, user_environment))
-    return ds
+        run_batch(automation_definition, batch_definition, user_environment)
 
 
 def _run_automation_multiple(
         automation_definition, run_batch, user_environment, concurrency_name):
-    ds = []
+    worker_count = getenv('CROSSCOMPUTE_WORKER_COUNT')
+    if worker_count:
+        worker_count = int(worker_count)
     if concurrency_name == 'thread':
         BatchExecutor = ThreadPoolExecutor
     else:
         BatchExecutor = ProcessPoolExecutor
-    with BatchExecutor() as executor:
+    with BatchExecutor(max_workers=worker_count) as executor:
         futures = []
         for batch_definition in automation_definition.batch_definitions:
             futures.append(executor.submit(
@@ -327,10 +324,11 @@ def _run_automation_multiple(
                 user_environment))
         try:
             for future in as_completed(futures):
-                ds.append(future.result())
+                d = future.result()
+                L.info('execution_time_in_seconds = %s' % d['debug'][
+                    'execution_time_in_seconds'])
         except KeyboardInterrupt:
             pass
-    return ds
 
 
 def _get_automation_task(
@@ -642,7 +640,7 @@ def _proxy_podman_ports(
     if PROXY_URI:
         def get_port_uri(target_port, relative_uri):
             requests.post(PROXY_URI + relative_uri, json={
-                'target': target_port})
+                'target': f'http://localhost:{target_port}'})
             relative_uris.append(relative_uri)
             return origin_uri + relative_uri
     else:

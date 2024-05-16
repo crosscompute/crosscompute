@@ -18,15 +18,16 @@ description: Improve health, safety, quality of life in our communities
 # version should increment after you make changes to your automation
 version: 0.0.0
 
-# copyright declares who owns the rights to this work
+# copyright declares who owns the rights to this tool or toolkit
 copyright:
   text: >-
-    [<img src="/assets/logo.svg" alt="{name}" loading="lazy">](
-    {uri}) © {year}. Made with the [CrossCompute Analytics
+    [<img src="{image_uri}" alt="{name}" loading="lazy">](
+    {owner_uri}) © {year}. Made with the [CrossCompute Analytics
     Software Development Kit](https://docs.crosscompute.com).
   name: CrossCompute
-  uri: https://crosscompute.com
-  year: 2023
+  image_uri: /assets/logo.svg
+  owner_uri: https://crosscompute.com
+  year: 2024
 
 # imports let you embed other automations in this automation
 imports:
@@ -97,7 +98,7 @@ input:
           - value: swimming
     - id: profile_photo
       view: file
-      path: photo{index}{extension}
+      path: photo{index}{suffix}
       configuration:
         mime-types:
           - image/png
@@ -265,6 +266,9 @@ datasets:
   - path: datasets/abc.csv
     reference:
       path: datasets/abc-2022.csv
+# - path: datasets/def.csv
+#   script:
+#     path: def.ipynb
 
 # scripts contain code that turn input variables into output variables
 scripts:

@@ -58,11 +58,12 @@ AUTOMATION_NAME = 'Automation X'
 AUTOMATION_VERSION = '0.0.0'
 AUTOMATION_PATH = Path('automate.yml')
 COPYRIGHT_NAME = 'CrossCompute'
-COPYRIGHT_URI = 'https://crosscompute.com'
+COPYRIGHT_IMAGE_URI = '/assets/logo.svg'
+COPYRIGHT_OWNER_URI = 'https://crosscompute.com'
 COPYRIGHT_YEAR = datetime.now().year
 ATTRIBUTION_TEXT = '''
-[<img src="/assets/logo.svg" alt="{copyright_name}" loading="lazy">](
-{copyright_uri}) © {copyright_year}. Made with the [CrossCompute Analytics
+[<img src="{image_uri}" alt="{name}" loading="lazy">](
+{owner_uri}) © {year}. Made with the [CrossCompute Analytics
 Software Development Kit](https://docs.crosscompute.com).
 '''.strip()
 LOGO_PATH = ASSETS_FOLDER / 'LogoBrand-Horizontal-20230501.svg'

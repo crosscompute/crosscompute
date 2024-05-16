@@ -2,7 +2,7 @@ async function refreshMarkdown(elementId, dataUri, dataValue) {
   await refreshString(elementId, 'innerHTML', dataUri, dataValue, formatMarkdown);
 }
 function formatMarkdown(text) {
-  let h = marked.parse(text).trim();
+  let h = marked.parse(text, {'breaks': true}).trim();
   if (!h.includes('</p>\n<p>')) {
     h = h.replace(/^<p>/, '').replace(/<\/p>$/, '');
   }

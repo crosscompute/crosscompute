@@ -554,11 +554,27 @@ def save_variable_data(target_path, batch_definition, variable_definitions):
                 download_uri(variable_uri, target_path)
             elif variable_uri.startswith('/f/'):
                 link_files(target_path, variable_uri)
+            '''
             update_variable_data(
                 batch_definition.get_data_configuration_path(
                     variable_definition), {'uri': variable_uri})
+            '''
         variable_view = VariableView.get_from(variable_definition)
         variable_view.process(target_path)
+
+
+def link_files(path_template, variable_uri):
+    folder = FILES_FOLDER / variable_uri.replace('/f/', '')
+    file_dictionaries = load_file_json(folder / 'files.json')
+    for file_index, file_dictionary in enumerate(file_dictionaries):
+        file_path = folder / str(file_index)
+        file_suffix = file_dictionary['suffix']
+        target_path = str(path_template).format(
+            index=file_index, suffix=file_suffix)
+        symlink(file_path, target_path)
+        L.debug(f'linked {file_path} to {target_path}')
+        if target_path == path_template:
+            break
 
 
 def get_data_by_id(automation_definition, batch_definition):
@@ -579,7 +595,11 @@ def get_data_by_id_from_folder(folder, variable_definitions):
     for variable_definition in variable_definitions:
         variable_id = variable_definition.id
         variable_path = variable_definition.path
-        variable_data = load_variable_data(folder / variable_path, variable_id)
+        try:
+            variable_data = load_variable_data(
+                folder / variable_path, variable_id)
+        except CrossComputeDataError:
+            variable_data = {}
         data_by_id[variable_id] = variable_data
     return data_by_id
 
@@ -791,7 +811,7 @@ def format_text(text, data_by_id):
         except KeyError:
             raise CrossComputeConfigurationError(
                 f'variable {variable_id} missing in batch configuration')
-        value = variable_data.get('value', '')
+        value = variable_data.get('value', '{%s}' % variable_id)
         try:
             value = apply_functions(value, expression_terms[1:], {
                 'slug': format_slug,
