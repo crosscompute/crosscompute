@@ -30,8 +30,9 @@ from ..constants import (
     AUTOMATION_VERSION,
     BATCH_ROUTE,
     BUTTON_TEXT_BY_ID,
+    COPYRIGHT_IMAGE_URI,
     COPYRIGHT_NAME,
-    COPYRIGHT_URI,
+    COPYRIGHT_OWNER_URI,
     COPYRIGHT_YEAR,
     DEBUG_VARIABLE_DICTIONARIES,
     DESIGN_NAMES_BY_PAGE_ID,
@@ -384,15 +385,17 @@ def validate_protocol(configuration):
 def validate_automation_identifiers(configuration):
     name = configuration.get('name', make_automation_name(configuration.index))
     slug = configuration.get('slug', format_slug(name))
-    copyright_name = configuration.get('copyright_name', COPYRIGHT_NAME)
-    copyright_uri = configuration.get('copyright_uri', COPYRIGHT_URI)
-    copyright_year = configuration.get('copyright_year', COPYRIGHT_YEAR)
+    d = get_dictionary(configuration, 'copyright')
+    copyright_name = d.get('name', COPYRIGHT_NAME)
+    copyright_image_uri = d.get('image_uri', COPYRIGHT_IMAGE_URI)
+    copyright_owner_uri = d.get('owner_uri', COPYRIGHT_OWNER_URI)
+    copyright_year = d.get('year', COPYRIGHT_YEAR)
     attribution_text = remove_single_paragraph(get_html_from_markdown(
-        configuration.get('attribution_text', ATTRIBUTION_TEXT).format(
+        d.get('text', ATTRIBUTION_TEXT).format(
             name=name,
-            copyright_name=copyright_name,
-            copyright_uri=copyright_uri,
-            copyright_year=copyright_year,
+            image_uri=copyright_image_uri,
+            owner_uri=copyright_owner_uri,
+            year=copyright_year,
         ), extras=[
             'target-blank-links']))
     return {
@@ -403,7 +406,8 @@ def validate_automation_identifiers(configuration):
         'version': configuration.get('version', AUTOMATION_VERSION),
         'uri': AUTOMATION_ROUTE.format(automation_slug=slug),
         'copyright_name': copyright_name,
-        'copyright_uri': copyright_uri,
+        'copyright_image_uri': copyright_image_uri,
+        'copyright_owner_uri': copyright_owner_uri,
         'attribution_text': attribution_text}
 
 

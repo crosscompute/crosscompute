@@ -18,14 +18,16 @@ description: Improve health, safety, quality of life in our communities
 # version should increment after you make changes to your automation
 version: 0.0.0
 
-# copyright declares who owns the rights to this work
-copyright_name: CrossCompute
-copyright_uri: https://crosscompute.com
-copyright_year: 2023
-attribution_text: >-
-  [<img src="/assets/logo.svg" alt="{copyright_name}" loading="lazy">](
-  {copyright_uri}) © {copyright_year}. Made with the [CrossCompute Analytics
-  Software Development Kit](https://docs.crosscompute.com).
+# copyright declares who owns the rights to this tool or toolkit
+copyright:
+  text: >-
+    [<img src="{image_uri}" alt="{name}" loading="lazy">](
+    {owner_uri}) © {year}. Made with the [CrossCompute Analytics
+    Software Development Kit](https://docs.crosscompute.com).
+  name: CrossCompute
+  image_uri: /assets/logo.svg
+  owner_uri: https://crosscompute.com
+  year: 2024
 
 # imports let you embed other automations in this automation
 imports:
@@ -96,7 +98,7 @@ input:
           - value: swimming
     - id: profile_photo
       view: file
-      path: photo{index}{extension}
+      path: photo{index}{suffix}
       configuration:
         mime-types:
           - image/png
