@@ -97,6 +97,7 @@ class DiskMemory():
                         info['configuration'] = FILE_JSON_CACHE[path]
                     except OSError:
                         pass
+                # TODO: Consider VariableView.is_some_flag instead
                 elif info['view'] in [
                     'string', 'number', 'password', 'email', 'text',
                     'markdown', 'radio', 'checkbox', 'frame',

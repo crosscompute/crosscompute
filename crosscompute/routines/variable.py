@@ -99,6 +99,12 @@ class VariableView():
             View = Class
         return View(variable_definition)
 
+    def parse(self, data):
+        return data
+
+    def process(self, path):
+        pass
+
     def render(self, b: Batch, x: Element):
         if x.mode_name == 'input':
             render = self.render_input
@@ -266,6 +272,7 @@ class TextView(VariableView):
         variable_id = self.variable_id
         view_name = self.view_name
         data_uri = b.get_data_uri(variable_definition, x)
+        # TODO: load data from file, but if we get a path, do not use
         data = get_data_from(x.request_params, variable_definition)
         element_id = x.id
         value = data.get('value', '')
@@ -711,6 +718,7 @@ def parse_data_by_id(data_by_id, variable_definitions):
 
 
 def update_variable_data(path, data_by_id):
+    path.parent.mkdir(parents=True, exist_ok=True)
     try:
         if path.exists():
             with path.open('r+t') as f:

@@ -103,7 +103,7 @@ def get_automation_response_dictionary(
             batch, step_name, root_uri, layout_settings, request_params)
     return {
         'copyright_name': automation_definition.copyright_name,
-        'copyright_uri': automation_definition.copyright_uri,
+        'copyright_owner_uri': automation_definition.copyright_owner_uri,
         'attribution_text': automation_definition.attribution_text,
         'name': automation_definition.name,
         'uri': automation_uri,
