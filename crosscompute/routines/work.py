@@ -205,7 +205,7 @@ def run_batch(automation_definition, batch_definition, user_environment):
     engine = get_script_engine(
         automation_definition.engine_name, with_rebuild=False)
     update_datasets(automation_definition)
-    engine.run_batch(
+    return engine.run_batch(
         automation_definition, batch_definition, user_environment)
 
 

@@ -1,4 +1,4 @@
-<input id="{{ element_id }}" class="_{{ mode_name }} _{{ view_name }} {{ variable_id }}" value="{{ value }}" type="{{ input_type }}" data-view="{{ view_name }}" data-variable="{{ variable_id }}" {%- if suggestions %} list="{{ element_id }}-suggestions">
+<input id="{{ element_id }}" class="_{{ mode_name }} _{{ view_name }} {{ variable_id }}" value="{{ value }}" type="{{ input_type }}" {{- attribute_string }} data-view="{{ view_name }}" data-variable="{{ variable_id }}" {%- if suggestions %} list="{{ element_id }}-suggestions">
 <datalist id="{{ element_id }}-suggestions">
 {% for suggestion in suggestions -%}
 <option value="{{ suggestion['value'] }}">

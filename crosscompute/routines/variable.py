@@ -1,4 +1,6 @@
 # TODO: Validate variable view configurations
+# TODO: Rename variable_definition to variable
+# TODO: Remove variable_id from class
 import csv
 import json
 import shutil
@@ -55,6 +57,7 @@ from .asset import (
     RADIO_OUTPUT_JS,
     STRING_INPUT_HEADER_JS,
     STRING_INPUT_HTML,
+    STRING_INPUT_JS,
     STRING_OUTPUT_HEADER_JS,
     STRING_OUTPUT_JS,
     TABLE_OUTPUT_HEADER_JS,
@@ -69,8 +72,8 @@ from .interface import Batch
 @dataclass(repr=False, eq=False, order=False, frozen=True)
 class Element():
 
-    id: str
-    mode_name: str
+    id: str  # widgets can have duplicate variable ids
+    mode_name: str  # input variables can appear in output templates
     request_params: str
     layout_settings: dict
     function_names: list[str]
@@ -141,7 +144,10 @@ class LinkView(VariableView):
         data_uri = b.get_data_uri(variable_definition, x)
         c = b.get_data_configuration(variable_definition)
         element_id = x.id
-        file_name = c.get('file-name', self.variable_path.name)
+        variable_path = self.variable_path
+        file_name = c.get(
+            'file-name',
+            variable_path.name if variable_path else variable_id)
         link_text = c.get('link-text', file_name)
         main_text = (
             f'<a id="{element_id}" href="{data_uri}" '
@@ -166,22 +172,12 @@ class StringView(VariableView):
     function_by_name = {
         'title': str.title}
 
-    def get_value(self, b: Batch, x: Element):
-        variable_definition = self.variable_definition
-        data = b.load_data_from(x.request_params, variable_definition)
-        if 'value' in data:
-            value = data['value']
-        elif 'path' in data:
-            value = load_file_text(data['path'])
-        else:
-            value = ''
-        return value
-
     def render_input(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
         variable_id = self.variable_id
         view_name = self.view_name
-        value = self.get_value(b, x)
+        data = b.load_data_from(x.request_params, variable_definition)
+        is_big_data = 'path' in data
         c = b.get_data_configuration(variable_definition)
         element_id = x.id
         main_text = STRING_INPUT_HTML.render({
@@ -189,16 +185,25 @@ class StringView(VariableView):
             'mode_name': x.mode_name,
             'view_name': view_name,
             'variable_id': variable_id,
-            'value': escape_quotes_html(value),
+            'value': escape_quotes_html(data[
+                'value']) if 'value' in data else '',
             'input_type': self.input_type,
+            'attribute_string': ' disabled' if is_big_data else '',
             'suggestions': c.get('suggestions', [])})
         js_texts = [
             STRING_INPUT_HEADER_JS.substitute({'view_name': view_name})]
+        if is_big_data:
+            js_texts.extend([
+                STRING_OUTPUT_HEADER_JS,
+                STRING_INPUT_JS.substitute({
+                    'element_id': element_id,
+                    'data_uri': b.get_data_uri(variable_definition, x)})])
         return {
             'css_uris': [], 'css_texts': [], 'js_uris': [],
             'js_texts': js_texts, 'main_text': main_text}
 
     def render_output(self, b: Batch, x: Element):
+        # TODO: apply functions for data_uri
         value = self.get_value(b, x)
         try:
             value = apply_functions(
@@ -572,7 +577,12 @@ def save_variable_data(target_path, batch_definition, variable_definitions):
             variable_definitions, 'id', variable_id)
         # TODO: Separate
         if 'value' in variable_data:
-            target_path.open('wt').write(variable_data['value'])
+            v = variable_data['value']
+            if isinstance(v, dict) or isinstance(v, list):
+                v = json.dumps(v)
+            else:
+                v = str(v)
+            target_path.open('wt').write(v)
         elif 'path' in variable_data:
             shutil.copy(variable_data['path'], target_path)
         elif 'uri' in variable_data:
@@ -825,12 +835,18 @@ def get_variable_data_by_id(
     return variable_data_by_id
 
 
+def get_variable_value_by_id(data_by_id):
+    return {
+        variable_id: data['value'] for variable_id, data in data_by_id.items()}
+
+
 def format_text(text, data_by_id):
     text = str(text)
     if not data_by_id:
         return text
 
     def f(match):
+        # TODO: Rename expression_text
         expression_text = match.group(1)
         expression_terms = expression_text.split('|')
         variable_id = expression_terms[0].strip()
