@@ -109,6 +109,7 @@ STEP_CODE_BY_NAME = {k: v for v, k in STEP_NAME_BY_CODE.items()}
 MAXIMUM_MUTATION_AGE_IN_SECONDS = 180
 
 
+VARIABLE_ID_PATTERN = re.compile(r'[a-zA-Z0-9-_ ]+$')
 VARIABLE_ID_WHITELIST_PATTERN = re.compile(r'{ *(ROOT_URI) *}')
 VARIABLE_ID_TEMPLATE_PATTERN = re.compile(r'{ *([a-zA-Z0-9-_| ]+?) *}')
 CACHED_FILE_SIZE_LIMIT_IN_BYTES = 1024

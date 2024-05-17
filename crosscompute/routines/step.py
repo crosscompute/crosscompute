@@ -18,6 +18,7 @@ from ..constants import (
 from ..macros.iterable import find_item
 from .asset import asset_storage
 from .batch import DiskBatch
+from .configuration import AutomationDefinition
 from .variable import Element, VariableView
 
 
@@ -96,11 +97,9 @@ def get_automation_response_dictionary(
     else:
         layout_settings = get_layout_settings(
             automation_definition.get_design_name(step_name), request_params)
-        # TODO: Let creator choose which batch to feature by default
-        batch = DiskBatch(
-            automation_definition, automation_definition.batch_definitions[0])
         d = get_step_response_dictionary(
-            batch, step_name, root_uri, layout_settings, request_params)
+            automation_definition, automation_definition.batch_definitions[0],
+            step_name, root_uri, layout_settings, request_params)
     return {
         'copyright_name': automation_definition.copyright_name,
         'copyright_uri': automation_definition.copyright_uri,
@@ -112,10 +111,11 @@ def get_automation_response_dictionary(
 
 
 def get_step_response_dictionary(
-        batch, step_name, root_uri, layout_settings, request_params):
-    automation_definition = batch.automation_definition
+        automation_definition, batch_definition, step_name, root_uri,
+        layout_settings, request_params):
     variable_definitions = automation_definition.get_variable_definitions(
         step_name, with_all=True)
+    batch = DiskBatch(automation_definition, batch_definition)
     m = {
         'css_uris': automation_definition.css_uris.copy(), 'css_texts': [],
         'js_uris': [], 'js_texts': []}
@@ -129,7 +129,7 @@ def get_step_response_dictionary(
         automation_definition, step_name, root_uri, render_html,
         layout_settings)
     mutation_reference_uri = get_automation_batch_step_uri(
-        automation_definition, batch.definition, step_name)
+        automation_definition, batch_definition, step_name)
     return layout_settings | {
         'css_uris': m['css_uris'],
         'css_texts': get_css_texts(layout_settings) + m['css_texts'],
@@ -182,14 +182,9 @@ def render_variable_html(
 
 
 def get_main_pack(
-        automation_definition, step_name, root_uri, render_html,
+        a: AutomationDefinition, step_name, root_uri, render_html,
         layout_settings):
-    '''
-    template_definitions = automation_definition.get_template_definitions(
-        step_name)
-    '''
-    template_definitions = (
-        automation_definition.template_definitions_by_step_name[step_name])
+    template_definitions = a.template_definitions_by_step_name[step_name]
     template_count = len(template_definitions)
     format_html = partial(
         format_template_html,
@@ -197,15 +192,14 @@ def get_main_pack(
         render_html=render_html,
         with_button_panel=get_with_button_panel(
             layout_settings, step_name, template_count),
-        button_text_by_id=automation_definition.button_text_by_id)
+        button_text_by_id=a.button_text_by_id)
     if not template_count:
-        template_text = make_template_text(automation_definition, step_name)
+        template_text = make_template_text(a, step_name)
         return format_html(
             template_text, template_index=0, template_expression=''), 1
     parts = []
-    automation_folder = automation_definition.folder
+    automation_folder = a.folder
     for template_index, template_definition in enumerate(template_definitions):
-        # TODO: replace with an abstraction that relies on AutomationDefinition
         path = automation_folder / template_definition.path
         try:
             with path.open('rt') as f:

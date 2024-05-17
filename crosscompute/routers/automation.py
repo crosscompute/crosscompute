@@ -85,10 +85,9 @@ async def see_automation_batch_step(
     request_params = request.query_params
     layout_settings = get_layout_settings(
         automation_definition.get_design_name(step_name), request_params)
-    b = DiskBatch(automation_definition, batch_definition)
     d = get_step_response_dictionary(
-        b, step_name, template_globals['root_uri'], layout_settings,
-        request_params)
+        automation_definition, batch_definition, step_name,
+        template_globals['root_uri'], layout_settings, request_params)
     return TemplateResponse(template_path_by_id['step'], {
         'request': request,
         'title_text': batch_definition.name,
@@ -180,7 +179,6 @@ async def see_automation_batch_step_variable(
         r = FileResponse(
             variable_data['path'], headers=response.headers)
     else:
-        # TODO: !!! consider when to use default json response
         r = Response(str(
             variable_data['value']), headers=response.headers)
     return r

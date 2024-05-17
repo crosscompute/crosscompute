@@ -25,7 +25,9 @@ def configure_logging(with_debug, timestamp):
     if with_debug:
         logging_level = DEBUG
         logging_format = (
-            '%(asctime)s %(levelname)s %(name)s:%(lineno)s %(message)s')
+            '%(asctime)s %(levelname)s '
+            '%(name)s.%(module)s.%(funcName)s:%(lineno)s '
+            '%(message)s')
     else:
         logging_level = INFO
         logging_format = '%(asctime)s %(levelname)s %(message)s'

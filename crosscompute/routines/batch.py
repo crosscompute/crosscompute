@@ -22,7 +22,7 @@ class DiskBatch(Batch):
 
     def __init__(self, automation_definition, batch_definition):
         self.automation_definition = automation_definition
-        self.definition = batch_definition
+        self.batch_definition = batch_definition
         self.folder = automation_definition.folder / batch_definition.folder
 
     def load_data_from(self, request_params, variable_definition):
@@ -47,7 +47,7 @@ class DiskBatch(Batch):
     def get_data_uri(self, variable_definition, element):
         root_uri = template_globals['root_uri']
         automation_uri = self.automation_definition.uri
-        batch_uri = self.definition.uri
+        batch_uri = self.batch_definition.uri
         step_code = STEP_CODE_BY_NAME[variable_definition.step_name]
         step_uri = STEP_ROUTE.format(step_code=step_code)
         variable_uri = VARIABLE_ROUTE.format(
@@ -80,7 +80,7 @@ class DiskBatch(Batch):
     def is_done(self):
         if self.automation_definition.interval_timedelta:
             return False
-        batch_definition = self.definition
+        batch_definition = self.batch_definition
         if hasattr(batch_definition, 'is_done'):
             return True
         path = self.folder / 'debug' / 'variables.dictionary'
