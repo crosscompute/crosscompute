@@ -83,6 +83,7 @@ class VariableView():
 
     view_name = 'variable'
     environment_variable_definitions = []
+    has_direct_refresh = False
 
     def __init__(self, variable_definition):
         self.variable_definition = variable_definition
@@ -143,6 +144,7 @@ class VariableView():
 class LinkView(VariableView):
 
     view_name = 'link'
+    has_direct_refresh = False
 
     def render_output(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
@@ -177,6 +179,18 @@ class StringView(VariableView):
     input_type = 'text'
     function_by_name = {
         'title': str.title}
+    has_direct_refresh = True
+
+    def get_value(self, b: Batch, x: Element):
+        variable_definition = self.variable_definition
+        data = b.load_data_from(x.request_params, variable_definition)
+        if 'value' in data:
+            value = data['value']
+        elif 'path' in data:
+            value = load_file_text(data['path'])
+        else:
+            value = ''
+        return value
 
     def render_input(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
@@ -266,29 +280,28 @@ class EmailView(StringView):
 class TextView(VariableView):
 
     view_name = 'text'
+    has_direct_refresh = True
 
     def render_input(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
         variable_id = self.variable_id
         view_name = self.view_name
+        data = b.load_data_from(x.request_params, variable_definition)
+        is_big_data = 'path' in data
         data_uri = b.get_data_uri(variable_definition, x)
-        # TODO: load data from file, but if we get a path, do not use
-        data = get_data_from(x.request_params, variable_definition)
         element_id = x.id
-        value = data.get('value', '')
         main_text = TEXT_INPUT_HTML.substitute({
             'element_id': element_id,
             'mode_name': x.mode_name,
             'view_name': view_name,
             'variable_id': variable_id,
-            'attribute_string': '' if value else ' disabled',
-            'value': value})
+            'attribute_string': ' disabled' if is_big_data else '',
+            'value': data.get('value', '')})
         js_texts = [
             STRING_OUTPUT_HEADER_JS,
             STRING_INPUT_HEADER_JS.substitute({'view_name': view_name})]
-        if not value:
+        if is_big_data:
             js_texts.extend([
-                TEXT_OUTPUT_HEADER_JS,
                 TEXT_INPUT_JS.substitute({
                     'element_id': element_id,
                     'data_uri': data_uri})])
@@ -299,19 +312,23 @@ class TextView(VariableView):
     def render_output(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
         variable_id = self.variable_id
+        data = b.load_data_from(x.request_params, variable_definition)
+        is_big_data = 'path' in data
+        value = data.get('value', '')
         data_uri = b.get_data_uri(variable_definition, x)
         element_id = x.id
         main_text = (
             f'<span id="{element_id}" '
-            f'class="_{x.mode_name} _{self.view_name} {variable_id}">'
+            f'class="_{x.mode_name} _{self.view_name} {variable_id}">{value}'
             '</span>')
         js_texts = [
             STRING_OUTPUT_HEADER_JS,
             TEXT_OUTPUT_HEADER_JS,
-            TEXT_OUTPUT_JS.substitute({
+            TEXT_OUTPUT_JS.render({
                 'variable_id': variable_id,
                 'element_id': element_id,
-                'data_uri': data_uri})]
+                'data_uri': data_uri,
+                'is_big_data': is_big_data})]
         return {
             'css_uris': [], 'css_texts': [], 'js_uris': [],
             'js_texts': js_texts, 'main_text': main_text}
@@ -371,6 +388,7 @@ class ImageView(VariableView):
 class RadioView(VariableView):
 
     view_name = 'radio'
+    has_direct_refresh = True
 
     def render_input(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
@@ -405,6 +423,7 @@ class RadioView(VariableView):
 class CheckboxView(VariableView):
 
     view_name = 'checkbox'
+    has_direct_refresh = True
 
     def render_input(self, b: Batch, x: Element):
         view_name = self.view_name
@@ -463,6 +482,7 @@ class TableView(VariableView):
 class FrameView(VariableView):
 
     view_name = 'frame'
+    has_direct_refresh = True
 
     def render_output(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
@@ -493,16 +513,25 @@ class FrameView(VariableView):
 class JsonView(VariableView):
 
     view_name = 'json'
+    has_direct_refresh = True
 
     def render_output(self, b: Batch, x: Element):
         variable_definition = self.variable_definition
         variable_id = self.variable_id
         data_uri = b.get_data_uri(variable_definition, x)
+        data = b.load_data_from(x.request_params, variable_definition)
+        if 'value' in data:
+            value = data['value']
+        elif 'path' in data:
+            value = 'undefined'
+        else:
+            value = '\'\''
         js_texts = [
             JSON_OUTPUT_HEADER_JS,
             JSON_OUTPUT_JS.substitute({
                 'variable_id': variable_id,
-                'data_uri': data_uri})]
+                'data_uri': data_uri,
+                'value': value})]
         return {
             'css_uris': [], 'css_texts': [], 'js_uris': [],
             'js_texts': js_texts, 'main_text': ''}
@@ -584,12 +613,12 @@ def save_variable_data(target_path, batch_definition, variable_definitions):
             variable_definitions, 'id', variable_id)
         # TODO: Separate
         if 'value' in variable_data:
-            v = variable_data['value']
-            if isinstance(v, dict) or isinstance(v, list):
-                v = json.dumps(v)
+            x = variable_data['value']
+            if isinstance(x, dict) or isinstance(x, list):
+                x = json.dumps(x)
             else:
-                v = str(v)
-            target_path.open('wt').write(v)
+                x = str(x)
+            target_path.open('wt').write(x)
         elif 'path' in variable_data:
             shutil.copy(variable_data['path'], target_path)
         elif 'uri' in variable_data:
@@ -788,6 +817,8 @@ def load_file_data(path):
         return load_dictionary_data(path)
     if suffix in ['.md', '.txt']:
         return load_text_data(path)
+    if suffix in ['.json', '.geojson']:
+        return load_json_data(path)
     return {'path': path}
 
 
@@ -809,6 +840,17 @@ def load_text_data(path):
             return {'path': path}
         value = load_file_text(path)
     except OSError as e:
+        raise CrossComputeDataError(
+            f'could not load {format_path(path)}: {e}')
+    return {'value': value}
+
+
+def load_json_data(path):
+    try:
+        if path.stat().st_size > CACHED_FILE_SIZE_LIMIT_IN_BYTES:
+            return {'path': path}
+        value = load_file_json(path)
+    except (json.JSONDecodeError, OSError) as e:
         raise CrossComputeDataError(
             f'could not load {format_path(path)}: {e}')
     return {'value': value}

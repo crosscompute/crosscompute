@@ -47,7 +47,7 @@ TEXT_INPUT_JS = asset_storage.load_string_text(
     'text-input.js')
 TEXT_OUTPUT_HEADER_JS = asset_storage.load_raw_text(
     'text-output-header.js')
-TEXT_OUTPUT_JS = asset_storage.load_string_text(
+TEXT_OUTPUT_JS = asset_storage.load_jinja_text(
     'text-output.js')
 
 

@@ -2,8 +2,12 @@ from pathlib import Path
 from time import time
 
 from fastapi import APIRouter, Depends, Request, Response, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, ORJSONResponse, JSONResponse
 from invisibleroads_macros_disk import make_random_folder
+try:
+    import orjson
+except ImportError:
+    orjson = None
 
 from ..constants import (
     Task,
@@ -177,10 +181,12 @@ async def see_automation_batch_step_variable(
     if 'error' in variable_data:
         raise HTTPException(status_code=404)
     if 'path' in variable_data:
-        r = FileResponse(
-            variable_data['path'], headers=response.headers)
+        R = FileResponse
+        x = variable_data['path']
     else:
-        # TODO: !!! consider when to use default json response
-        r = Response(str(
-            variable_data['value']), headers=response.headers)
-    return r
+        x = variable_data['value']
+        if isinstance(x, dict) or isinstance(x, list):
+            R = ORJSONResponse if orjson else JSONResponse
+        else:
+            x = str(x)
+    return R(x, headers=response.headers)
