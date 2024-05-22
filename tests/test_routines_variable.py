@@ -1,5 +1,6 @@
 import json
 
+from crosscompute.constants import CACHED_FILE_SIZE_LIMIT_IN_BYTES
 from crosscompute.exceptions import CrossComputeDataError
 from crosscompute.routines import variable
 from crosscompute.routines.variable import (
@@ -53,9 +54,13 @@ def test_load_file_data(tmp_path):
     path = tmp_path / 'x.txt'
     path.write_text('whee')
     assert load_file_data(path)['value'] == 'whee'
+    path.write_text('w' * LARGE_SIZE_IN_BYTES)
+    assert load_file_data(path)['path'] == path
 
     path = tmp_path / 'x.json'
     json.dump({}, path.open('wt'))
+    assert load_file_data(path)['value'] == {}
+    json.dump({'w' * LARGE_SIZE_IN_BYTES: 1}, path.open('wt'))
     assert load_file_data(path)['path'] == path
 
 
@@ -86,3 +91,6 @@ def test_load_text_data(monkeypatch, tmp_path):
 
     monkeypatch.setattr(variable, 'CACHED_FILE_SIZE_LIMIT_IN_BYTES', 10)
     assert load_text_data(path)['value'] == 'whee'
+
+
+LARGE_SIZE_IN_BYTES = CACHED_FILE_SIZE_LIMIT_IN_BYTES + 1
