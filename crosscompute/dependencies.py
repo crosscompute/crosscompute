@@ -114,7 +114,7 @@ async def get_authorization_identities(
     automation_definition: AutomationDefinition = Depends(
         get_automation_definition),
 ):
-    identities = {}
+    identities = {'ip_address': request.client.host}
     if token:
         try:
             d = site['safe'].get(token)
@@ -122,7 +122,7 @@ async def get_authorization_identities(
             c = automation_definition if automation_definition else site[
                 'configuration']
             d = c.identities_by_token.get(token, {})
-        identities.update(d, ip_address=request.client.host)
+        identities.update(d)
     return identities
 
 

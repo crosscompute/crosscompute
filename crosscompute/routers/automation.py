@@ -2,8 +2,12 @@ from pathlib import Path
 from time import time
 
 from fastapi import APIRouter, Depends, Request, Response, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, ORJSONResponse, JSONResponse
 from invisibleroads_macros_disk import make_random_folder
+try:
+    import orjson
+except ImportError:
+    orjson = None
 
 from ..constants import (
     Task,
@@ -93,9 +97,10 @@ async def see_automation_batch_step(
     request_params = request.query_params
     layout_settings = get_layout_settings(
         automation_definition.get_design_name(step_name), request_params)
+    b = DiskBatch(automation_definition, batch_definition)
     d = get_step_response_dictionary(
-        automation_definition, batch_definition, step_name,
-        template_globals['root_uri'], layout_settings, request_params)
+        b, step_name, template_globals['root_uri'], layout_settings,
+        request_params)
     return TemplateResponse(template_path_by_id['step'], {
         'request': request,
         'title_text': batch_definition.name,
@@ -184,9 +189,12 @@ async def see_automation_batch_step_variable(
     if 'error' in variable_data:
         raise HTTPException(status_code=404)
     if 'path' in variable_data:
-        r = FileResponse(
-            variable_data['path'], headers=response.headers)
+        R = FileResponse
+        x = variable_data['path']
     else:
-        r = Response(str(
-            variable_data['value']), headers=response.headers)
-    return r
+        x = variable_data['value']
+        if isinstance(x, dict) or isinstance(x, list):
+            R = ORJSONResponse if orjson else JSONResponse
+        else:
+            x = str(x)
+    return R(x, headers=response.headers)

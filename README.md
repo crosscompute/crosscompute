@@ -69,7 +69,7 @@ cd crosscompute
 pip install -e .[test]
 
 # Run tests
-pytest --cov=crosscompute --cov-report term-missing:skip-covered tests
+pytest --cov=crosscompute --cov-report term-missing:skip-covered -n auto tests
 
 # Build package for PyPI
 pip install build

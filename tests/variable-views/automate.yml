@@ -55,7 +55,7 @@ input:
           - value: swimming
     - id: profile_photo
       view: file
-      path: photo{index}{extension}
+      path: photo{index}{suffix}
       configuration:
         mime-types:
           - image/*

@@ -28,7 +28,7 @@ async def add_files_json(files: list[UploadFile]):
             'name': name,
             'type': content_type,
             'size': path.stat().st_size,
-            'extension': guess_extension(content_type)})
+            'suffix': guess_extension(content_type)})
         L.info(f'saved {name} in {path}')
     with (folder / 'files.json').open('wt') as f:
         json.dump(sorted(file_dictionaries, key=lambda _: _['name']), f)

@@ -16,6 +16,8 @@ from ..constants import (
     STEP_ROUTE)
 from ..exceptions import CrossComputeDataError
 from ..macros.disk import FileCache
+from ..settings import (
+    view_by_name)
 from .configuration import (
     get_folder_plus_path)
 from .variable import (
@@ -97,10 +99,10 @@ class DiskMemory():
                         info['configuration'] = FILE_JSON_CACHE[path]
                     except OSError:
                         pass
-                elif info['view'] in [
-                    'string', 'number', 'password', 'email', 'text',
-                    'markdown', 'radio', 'checkbox', 'frame',
-                ]:
+                    continue
+                view_name = info['view']
+                View = view_by_name[view_name]
+                if View.has_direct_refresh:
                     try:
                         info['value'] = load_variable_data(
                             path, info['id'])['value']
