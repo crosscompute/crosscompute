@@ -74,12 +74,6 @@ async def see_root(
     }, headers=response.headers)
 
 
-@router.get('/a/serviceworker.js')
-async def service_worker(response: Response):
-    return FileResponse(
-        ASSETS_FOLDER / 'serviceworker.js', headers=response.headers)
-
-
 @router.get('/favicon.ico', tags=['root'])
 async def see_icon(response: Response):
     return FileResponse(
@@ -89,6 +83,12 @@ async def see_icon(response: Response):
 @router.get('/assets/logo.svg', tags=['root'])
 async def see_logo(response: Response):
     return FileResponse(LOGO_PATH, headers=response.headers)
+
+
+@router.get('/assets/service-worker.js', tags=['root'])
+async def service_worker(response: Response):
+    return FileResponse(
+        ASSETS_FOLDER / 'service-worker.js', headers=response.headers)
 
 
 @router.get(STYLE_ROUTE, tags=['root'])

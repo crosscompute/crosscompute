@@ -15,7 +15,7 @@ from ..constants import (
     BATCH_ROUTE,
     ID_LENGTH,
     STEP_ROUTE,
-    VARIABLE_ROUTE, ASSETS_FOLDER, SERVICE_WORKER_ROUTE)
+    VARIABLE_ROUTE)
 from ..dependencies import (
     AuthorizationGuardFactory,
     get_automation_definition,
@@ -46,14 +46,6 @@ from ..settings import (
 
 
 router = APIRouter()
-
-
-@router.get(
-    SERVICE_WORKER_ROUTE,
-    tags=['automation'])
-async def service_worker(response: Response):
-    return FileResponse(
-        ASSETS_FOLDER / 'serviceworker.js', headers=response.headers)
 
 
 @router.get(
