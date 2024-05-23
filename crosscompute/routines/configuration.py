@@ -680,6 +680,7 @@ def validate_variable_identifiers(variable_dictionary):
                 f'printer "{view_name}" is not supported')
         elif view_name not in printer_by_name:
             raise CrossComputeConfigurationError(
+                f'printer "{view_name}" is missing; '
                 f'pip install crosscompute-printers-{view_name}')
     if not variable_path:
         raise CrossComputeConfigurationError(
@@ -897,7 +898,7 @@ def validate_token_identifiers(token_dictionary):
         raise CrossComputeConfigurationError(f'{e} is required for each token')
     path = Path(token_dictionary.automation_folder, token_path)
     suffix = path.suffix
-    if suffix == '.yml':
+    if suffix in ['.yaml', '.yml']:
         d = load_raw_configuration_yaml(path)
     else:
         raise CrossComputeConfigurationError(

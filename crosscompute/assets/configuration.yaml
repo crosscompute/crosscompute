@@ -14,7 +14,8 @@ slug: automation-x
 # title sets the page title
 title: Automation X - Improve health, safety, quality of life
 # description explains why your automation is useful
-description: Improve health, safety, quality of life in our communities
+description: >-
+  Improve health, safety, quality of life in our communities
 # version should increment after you make changes to your automation
 version: 0.0.0
 

@@ -216,7 +216,8 @@ def get_script_engine(engine_name, with_rebuild=True):
             'podman': PodmanEngine,
         }[engine_name]
     except KeyError:
-        raise CrossComputeExecutionError(f'unsupported engine "{engine_name}"')
+        raise CrossComputeExecutionError(
+            f'engine "{engine_name}" is not supported')
     return ScriptEngine(with_rebuild=with_rebuild)
 
 

@@ -188,5 +188,6 @@ async def see_automation_batch_step_variable(
         if isinstance(x, dict) or isinstance(x, list):
             R = ORJSONResponse if orjson else JSONResponse
         else:
+            R = Response
             x = str(x)
     return R(x, headers=response.headers)
