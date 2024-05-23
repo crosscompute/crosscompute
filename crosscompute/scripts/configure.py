@@ -62,7 +62,7 @@ def configure(path_or_folder):
 def input_configuration(configuration, path_or_folder):
     if not configuration:
         configuration = load_raw_configuration(
-            ASSETS_FOLDER / 'configuration.yml', with_comments=True)
+            ASSETS_FOLDER / 'configuration.yaml', with_comments=True)
     old_automation_name = configuration.get('name', AUTOMATION_NAME)
     old_automation_version = configuration.get('version', AUTOMATION_VERSION)
     old_configuration_path = get_configuration_path(path_or_folder)

@@ -22,7 +22,7 @@ scripts:
   - path: run.py
 authorization:
   tokens:
-    - path: tokens.yml
+    - path: tokens.yaml
   groups:
     - configuration:
         x: a
