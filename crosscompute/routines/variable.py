@@ -287,6 +287,9 @@ class TextView(VariableView):
         variable_id = self.variable_id
         view_name = self.view_name
         data = b.load_data_from(x.request_params, variable_definition)
+        value = data.get('value', '')
+        if isinstance(value, dict) or isinstance(value, list):
+            value = json.dumps(value)
         is_big_data = 'path' in data
         data_uri = b.get_data_uri(variable_definition, x)
         element_id = x.id
@@ -296,7 +299,7 @@ class TextView(VariableView):
             'view_name': view_name,
             'variable_id': variable_id,
             'attribute_string': ' disabled' if is_big_data else '',
-            'value': data.get('value', '')})
+            'value': value})
         js_texts = [
             STRING_OUTPUT_HEADER_JS,
             STRING_INPUT_HEADER_JS.substitute({'view_name': view_name})]
@@ -315,6 +318,8 @@ class TextView(VariableView):
         data = b.load_data_from(x.request_params, variable_definition)
         is_big_data = 'path' in data
         value = data.get('value', '')
+        if isinstance(value, dict) or isinstance(value, list):
+            value = json.dumps(value)
         data_uri = b.get_data_uri(variable_definition, x)
         element_id = x.id
         main_text = (
