@@ -24,6 +24,16 @@
 - Support live print preview
 - Support conditional templates
 - Support copyright attribution
+- Add basic support for offline form submissions thanks to @zoek1
+- Save client ip address in debug/identities.dictionary
+- Return JSONResponse if variable value is a dictionary or list (see crosscompute-views-chart)
+- Prefer yaml vs yml suffix
+- Support `VariableView.has_direct_refresh` to refresh variables over streams/sockets instead of via fetch
+- Load json if variable path suffix ends in .json or .geojson
+- Get podman user id to set file owner
+- Reduce memory consumption for massive batch lists
+- Expose environment variable to control worker count for massive batch lists
+- Update generated podman container image name to include localhost prefix
 
 # 0.8
 - Start from scratch
