@@ -21,8 +21,12 @@ class Clock:
             del d[key_b]
         except KeyError:
             pass
-        yield
-        d[key_b] = time()
+        try:
+            yield
+        except Exception:
+            raise
+        finally:
+            d[key_b] = time()
 
     def is_in(self, name, t=None):
         time_a = self.get_start_time(name)
