@@ -76,7 +76,6 @@ DISK_STEP_IN_MILLISECONDS = 50
 
 
 AUTOMATION_ROUTE = '/a/{automation_slug}'
-SERVICE_WORKER_ROUTE = '/a/{automation_slug}/serviceworker.js'
 BATCH_ROUTE = '/b/{batch_slug}'
 STEP_ROUTE = '/{step_code}'
 VARIABLE_ROUTE = '/{variable_id}'
