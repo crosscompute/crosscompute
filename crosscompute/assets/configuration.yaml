@@ -35,7 +35,7 @@ imports:
   # id references this import in your templates when embedding;
   # path specifies the location of the automation file to import (required)
   - id: abc
-    path: abc/automate.yml
+    path: abc/automate.yaml
 
 # input is how your scripts get data from the user
 input:
@@ -399,21 +399,14 @@ buttons:
 
 # authorization restricts access to your automation
 authorization:
-  # tokens are api keys for your automation;
-  # each token defines an identity
+  # tokens are api keys for your automation; each token defines an identity
   tokens:
     # path specifies the location of a yaml file;
     # the file should have tokens as keys and configuration settings as values;
-    # abcd:
-    #   role_name: admin
-    #   town_name: Springfield
-    # bcde:
-    #   role_name: leader
-    #   town_name: Branson
-    # cdef:
-    #   role_name: member
-    #   town_name: Mansfield
-    - path: tokens.yml
+    #   abcd:
+    #     role_name: admin
+    #     town_name: Springfield
+    - path: tokens.yaml
   # groups define permissions
   groups:
     # configuration settings define how a group matches an identity

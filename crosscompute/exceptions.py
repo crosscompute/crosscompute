@@ -11,7 +11,7 @@ class CrossComputeError(Exception):
             automation_version = automation_definition.version
             text += f' for {automation_name} {automation_version}'
         if hasattr(self, 'path'):
-            text += f' in {format_path(self.path)}'
+            text += f' at {format_path(self.path)}'
         return text
 
 

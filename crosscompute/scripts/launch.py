@@ -120,7 +120,7 @@ def _get_automation_from(args):
             'existing configuration was not found; configuring new automation')
         print()
         path = configure_with(args)
-        automation = DiskAutomation.load(path)
+        raise SystemExit
     except CrossComputeError as e:
         L.error(e)
         raise SystemExit

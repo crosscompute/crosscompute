@@ -342,8 +342,9 @@ def load_raw_configuration_ini(configuration_path, with_comments=False):
     except (OSError, UnicodeDecodeError) as e:
         raise CrossComputeConfigurationError(e)
     if not paths:
-        raise CrossComputeConfigurationError(
-            f'configuration path "{configuration_path}" was not found')
+        e = CrossComputeConfigurationError('configuration path was not found')
+        e.path = configuration_path
+        raise e
     return dict(configuration)
 
 
@@ -574,8 +575,9 @@ def validate_display_styles(configuration):
             style_path = style_definition.path
             path = automation_folder / style_path
             if not path.exists():
-                raise CrossComputeConfigurationError(
-                    f'style path "{path}" was not found')
+                e = CrossComputeConfigurationError('style path was not found')
+                e.path = path
+                raise e
             style_name = format_slug(
                 f'{splitext(style_path)[0]}-{reference_time}')
             style_uri = STYLE_ROUTE.format(style_name=style_name)
@@ -652,8 +654,9 @@ def validate_template_identifiers(template_dictionary):
     automation_folder = template_dictionary.automation_folder
     template_path = Path(template_path)
     if not (automation_folder / template_path).exists():
-        raise CrossComputeConfigurationError(
-            f'template path "{template_path}" was not found')
+        e = CrossComputeConfigurationError('template path was not found')
+        e.path = template_path
+        raise e
     return {
         'path': template_path,
         'expression': template_dictionary.get('expression', '')}
@@ -774,8 +777,10 @@ def validate_dataset_reference(dataset_dictionary):
             elif source_path.name == 'runs':
                 source_path.mkdir(parents=True)
             else:
-                raise CrossComputeConfigurationError(
-                    f'dataset reference path "{reference_path}" was not found')
+                e = CrossComputeConfigurationError(
+                    'dataset reference path was not found')
+                e.path = reference_path
+                raise e
         target_path = dataset_dictionary.path
         if target_path.exists() and not target_path.is_symlink():
             raise CrossComputeConfigurationError(
@@ -899,7 +904,11 @@ def validate_token_identifiers(token_dictionary):
     path = Path(token_dictionary.automation_folder, token_path)
     suffix = path.suffix
     if suffix in ['.yaml', '.yml']:
-        d = load_raw_configuration_yaml(path)
+        if path.exists():
+            d = load_raw_configuration_yaml(path)
+        else:
+            d = {}
+            L.warning(f'token path "{format_path(path)}" was not found')
     else:
         raise CrossComputeConfigurationError(
             f'token path suffix "{suffix}" is not supported')
