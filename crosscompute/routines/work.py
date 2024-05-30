@@ -396,10 +396,13 @@ def _get_task_mode(automation_definition, batch_definition, file_changes):
     if not run_time:
         return Task.RUN_PRINT
     print_time = batch_clock.get_start_time('print')
+    uri = automation_definition.uri + batch_definition.uri
     for t, infos in file_changes.items():
         if t < run_time:
             continue
         for info in infos:
+            if not uri.startswith(info.get('uri', '')):
+                continue
             match info['code']:
                 case Info.VARIABLE:
                     if info['step'] != 'i' or batch_clock.is_in('run', t):

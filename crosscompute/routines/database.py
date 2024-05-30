@@ -156,10 +156,11 @@ def add_configuration_infos(memory, configuration):
 def add_script_infos(memory, configuration):
     info = {'code': Info.SCRIPT}
     for automation_definition in configuration.automation_definitions:
+        automation_uri = automation_definition.uri
         automation_folder = automation_definition.folder
         for i, script_definition in enumerate(
                 automation_definition.script_definitions):
-            script_info = info | {'index': i}
+            script_info = info | {'index': i, 'uri': automation_uri}
             if 'command' in script_definition:
                 for term in shlex.split(script_definition.command):
                     file_path = automation_folder / term
@@ -181,13 +182,16 @@ def add_script_infos(memory, configuration):
 def add_dataset_infos(memory, configuration):
     info = {'code': Info.DATASET}
     for automation_definition in configuration.automation_definitions:
+        automation_uri = automation_definition.uri
         automation_folder = automation_definition.folder
-        for dataset_definition in automation_definition.dataset_definitions:
+        for i, dataset_definition in enumerate(
+                automation_definition.dataset_definitions):
             reference_configuration = dataset_definition.reference
             reference_path = get_folder_plus_path(reference_configuration)
             if reference_path:
                 file_path = automation_folder / reference_path
-                memory.add(file_path, info)
+                dataset_info = info | {'index': i, 'uri': automation_uri}
+                memory.add(file_path, dataset_info)
 
 
 def add_variable_infos(memory, configuration):
