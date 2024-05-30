@@ -56,7 +56,10 @@ TOKEN_LENGTH = 32
 
 AUTOMATION_NAME = 'Automation X'
 AUTOMATION_VERSION = '0.0.0'
-AUTOMATION_PATH = Path('automate.yaml')
+AUTOMATION_PATHS = [
+    'automate.yaml',
+    'automate.yml']
+AUTOMATION_PATH = AUTOMATION_PATHS[0]
 COPYRIGHT_NAME = 'CrossCompute'
 COPYRIGHT_IMAGE_URI = '/assets/logo.svg'
 COPYRIGHT_OWNER_URI = 'https://crosscompute.com'

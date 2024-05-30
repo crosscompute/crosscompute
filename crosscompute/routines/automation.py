@@ -6,7 +6,7 @@ from pathlib import Path
 from invisibleroads_macros_web.port import find_open_port
 
 from ..constants import (
-    AUTOMATION_PATH,
+    AUTOMATION_PATHS,
     HOST,
     MAXIMUM_PORT,
     MINIMUM_PORT,
@@ -110,10 +110,11 @@ class DiskAutomation(Automation):
 
     def _initialize_from_folder(self, folder):
         paths = list(folder.iterdir())
-        default_automation_path = folder / AUTOMATION_PATH
-        if default_automation_path in paths:
-            paths.remove(default_automation_path)
-            paths.insert(0, default_automation_path)
+        for automation_path in AUTOMATION_PATHS:
+            default_automation_path = folder / automation_path
+            if default_automation_path in paths:
+                paths.remove(default_automation_path)
+                paths.insert(0, default_automation_path)
         for path in paths:
             if path.is_dir():
                 continue
