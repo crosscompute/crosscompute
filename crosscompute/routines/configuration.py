@@ -1,11 +1,12 @@
 # TODO: Save to ini, toml
+import hashlib
 import shutil
 from collections import Counter, defaultdict
 from configparser import ConfigParser
 from datetime import datetime, timedelta
 from logging import getLogger
 from os import environ
-from os.path import basename, relpath, splitext
+from os.path import basename, exists, getmtime, relpath, splitext
 from pathlib import Path
 from string import Template
 from time import time
@@ -195,39 +196,43 @@ class ScriptDefinition(Definition):
             validate_script_identifiers]
 
     def get_command_string(self):
-        command_string = self.command
-        if command_string:
-            return command_string
         folder = self.automation_folder / self.folder
         if 'path' in self:
             script_path = self.path
             suffix = script_path.suffix
             if suffix == '.ipynb':
                 old_path = folder / script_path
-                script_path = '.' + str(script_path.with_suffix('.ipynb.py'))
+                timestamp = datetime.fromtimestamp(getmtime(
+                    old_path)).strftime('%Y%m%d-%H%M%S-%f')
+                script_path = '.' + timestamp + '-' + str(
+                    script_path.with_suffix('.ipynb.py'))
                 new_path = folder / script_path
-                L.info(
-                    'exporting %s to %s in %s', self.path, script_path, folder)
-                try:
-                    script_text = PythonExporter().from_notebook_node(
-                        load_notebook(old_path, NO_CONVERT))[0]
-                    with new_path.open('wt') as script_file:
-                        script_file.write(script_text)
-                except Exception as e:
-                    e = CrossComputeConfigurationError(e)
-                    e.path = new_path
-                    L.error(e)
+                if not exists(new_path):
+                    L.info(
+                        'exporting %s to %s in %s', self.path, script_path,
+                        folder)
+                    try:
+                        script_text = PythonExporter().from_notebook_node(
+                            load_notebook(old_path, NO_CONVERT))[0]
+                        with new_path.open('wt') as script_file:
+                            script_file.write(script_text)
+                    except Exception as e:
+                        e = CrossComputeConfigurationError(e)
+                        e.path = new_path
+                        L.error(e)
         elif 'function' in self:
-            script_path = '.run.py'
             function_string = self['function']
-            with (folder / script_path).open('wt') as f:
-                f.write(RUN_PY.substitute({
-                    'module_name': function_string.split('.')[0],
-                    'function_string': function_string}))
+            function_hash = hashlib.sha256().hexdigest()
+            script_path = f'.{function_hash}.py'
+            new_path = folder / script_path
+            if not exists(new_path):
+                with new_path.open('wt') as f:
+                    f.write(RUN_PY.substitute({
+                        'module_name': function_string.split('.')[0],
+                        'function_string': function_string}))
         else:
             return
-        self.command = command_string = f'python3 "{script_path}"'
-        return command_string
+        return f'python3 "{script_path}"'
 
 
 class PackageDefinition(Definition):
