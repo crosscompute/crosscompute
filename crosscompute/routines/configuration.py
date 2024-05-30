@@ -196,6 +196,9 @@ class ScriptDefinition(Definition):
             validate_script_identifiers]
 
     def get_command_string(self):
+        command_string = self.command
+        if command_string:
+            return command_string
         folder = self.automation_folder / self.folder
         if 'path' in self:
             script_path = self.path
