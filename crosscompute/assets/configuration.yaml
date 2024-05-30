@@ -336,10 +336,10 @@ environment:
   batch: process
 
   # interval specifies how long to wait before running your scripts again;
-  # use this setting to have dashboards update themselves;
-  # add an exclamation point to ensure the scripts run even if nobody watches
+  # use this setting to have dashboards update themselves
   interval: 30 minutes
-  # interval: 30 minutes!
+  # add an exclamation point to ensure the scripts run even if nobody watches
+  interval: 30 minutes!
 
 # display configures the overall look and feel of your automation
 display:
