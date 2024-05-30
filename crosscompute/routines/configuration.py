@@ -133,8 +133,9 @@ class AutomationDefinition(Definition):
     def is_interval_ready(self, batch_definition):
         interval_timedelta = self.interval_timedelta
         if interval_timedelta:
-            run_datetime = datetime.fromtimestamp(
-                batch_definition.clock.get_end_time('run'))
+            batch_clock = batch_definition.clock
+            run_datetime = datetime.fromtimestamp(batch_clock.get_end_time(
+                'run') or batch_clock.get_start_time('run'))
             if datetime.now() > run_datetime + interval_timedelta:
                 return True
         return False
