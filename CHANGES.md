@@ -26,14 +26,16 @@
 - Support copyright attribution
 - Add basic support for offline form submissions thanks to @zoek1
 - Save client ip address in debug/identities.dictionary
-- Return JSONResponse if variable value is a dictionary or list (see crosscompute-views-chart)
+- Return JSONResponse for a dictionary or list (see crosscompute-views-chart)
 - Prefer yaml vs yml suffix
-- Support `VariableView.has_direct_refresh` to refresh variables over streams/sockets instead of via fetch
+- Support `has_direct_refresh` to refresh variables over streams/sockets
 - Load json if variable path suffix ends in .json or .geojson
 - Get podman user id to set file owner
 - Reduce memory consumption for massive batch lists
 - Expose environment variable to control worker count for massive batch lists
 - Update generated podman container image name to include localhost prefix
+- Use modification time or function hash to decide whether to regenerate script
+- Match info uri when deciding whether to re-runn a batch
 
 # 0.8
 - Start from scratch
