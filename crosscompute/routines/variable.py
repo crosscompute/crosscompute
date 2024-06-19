@@ -235,16 +235,16 @@ class StringView(VariableView):
         variable_id = self.variable_id
         data_uri = b.get_data_uri(variable_definition, x)
         element_id = x.id
-        main_text = (
-            f'<span id="{element_id}" '
-            f'class="_{x.mode_name} _{self.view_name} {variable_id}">'
-            f'{value}</span>')
         js_texts = [
             STRING_OUTPUT_HEADER_JS,
             STRING_OUTPUT_JS.substitute({
                 'variable_id': variable_id,
                 'element_id': element_id,
                 'data_uri': data_uri})]
+        main_text = (
+            f'<span id="{element_id}" '
+            f'class="_{x.mode_name} _{self.view_name} {variable_id}">'
+            f'{value}</span>')
         return {
             'css_uris': [], 'css_texts': [], 'js_uris': [],
             'js_texts': js_texts, 'main_text': main_text}
