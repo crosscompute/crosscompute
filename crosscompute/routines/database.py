@@ -217,7 +217,7 @@ def add_variable_infos_from_folder(
         folder = absolute_batch_folder / step_name
         for variable_definition in variable_definitions:
             variable_id = variable_definition.id
-            variable_view = variable_definition.view_name
+            view_name = variable_definition.view_name
             if variable_id != 'return_code':
                 info_uri = uri + step_uri
             else:
@@ -229,7 +229,7 @@ def add_variable_infos_from_folder(
                 path = folder / variable_configuration['path']
                 memory.add(path, variable_info | {'is_configuration': 1})
             path = folder / variable_definition.path
-            memory.add(path, variable_info | {'view': variable_view})
+            memory.add(path, variable_info | {'view': view_name})
 
 
 def add_template_infos(memory, configuration):

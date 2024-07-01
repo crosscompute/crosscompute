@@ -700,7 +700,7 @@ def validate_variable_identifiers(variable_dictionary):
     elif relpath(variable_path).startswith('..'):
         raise CrossComputeConfigurationError(
             f'variable "{variable_id}" path "{variable_path}" must be within '
-            'the automation folder')
+            'the folder')
     label = variable_dictionary.get('label', format_name(variable_id)).strip()
     return {
         'id': variable_id,
