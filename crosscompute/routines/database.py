@@ -118,9 +118,8 @@ class DiskMemory():
 class PositiveFileFilter(DefaultFilter):
 
     def __call__(self, change, path):
-        is_positive = change != Change.deleted
-        is_file = isfile(path)
-        return is_positive and is_file and super().__call__(change, path)
+        return change != Change.deleted and isfile(path) and super().__call__(
+            change, path)
 
 
 def learn(configuration, with_restart):
