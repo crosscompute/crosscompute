@@ -119,7 +119,7 @@ def _get_automation_from(args):
         L.info(
             'existing configuration was not found; configuring new automation')
         print()
-        path = configure_with(args)
+        configure_with(args)
         raise SystemExit
     except CrossComputeError as e:
         L.error(e)
