@@ -402,7 +402,7 @@ def validate_automation_identifiers(configuration):
     copyright_year = d.get('year', COPYRIGHT_YEAR)
     attribution_text = remove_single_paragraph(get_html_from_markdown(
         d.get('text', ATTRIBUTION_TEXT).format(
-            name=name,
+            name=copyright_name,
             image_uri=copyright_image_uri,
             owner_uri=copyright_owner_uri,
             year=copyright_year,

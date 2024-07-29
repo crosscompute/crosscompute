@@ -271,7 +271,6 @@ def format_template_html(
         root_uri, render_html, template_index=template_index).process(h)
     h = remove_parent_paragraphs(h)
     h = remove_line_break_after_div(h)
-    h = h.replace('</div><br/>', '</div>')
     if with_button_panel and 'class="_continue"' not in h:
         h += '\n' + get_button_panel_html(template_index, button_text_by_id)
     return (
