@@ -616,29 +616,18 @@ def save_variable_data(target_path, batch_definition, variable_definitions):
         variable_id, variable_data = list(variable_data_by_id.items())[0]
         variable_definition = find_item(
             variable_definitions, 'id', variable_id)
-        # TODO: Separate
         if 'value' in variable_data:
             x = variable_data['value']
-            if isinstance(x, dict) or isinstance(x, list):
-                x = json.dumps(x)
-            else:
-                x = str(x)
-            target_path.open('wt').write(x)
+            target_path.open('wt').write(json.dumps(x) if isinstance(
+                x, dict) or isinstance(x, list) else str(x))
         elif 'path' in variable_data:
             shutil.copy(variable_data['path'], target_path)
         elif 'uri' in variable_data:
-            variable_uri = variable_data['uri']
-            is_http = variable_uri.startswith('http://')
-            is_https = variable_uri.startswith('https://')
-            if is_http or is_https:
-                download_uri(variable_uri, target_path)
-            elif variable_uri.startswith('/f/'):
-                link_files(target_path, variable_uri)
-            '''
-            update_variable_data(
-                batch_definition.get_data_configuration_path(
-                    variable_definition), {'uri': variable_uri})
-            '''
+            x = variable_data['uri']
+            if x.startswith('http://') or x.startswith('https://'):
+                download_uri(x, target_path)
+            elif x.startswith('/f/'):
+                link_files(target_path, x)
         variable_view = VariableView.get_from(variable_definition)
         variable_view.process(target_path)
 
