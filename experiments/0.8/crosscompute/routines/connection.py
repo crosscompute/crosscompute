@@ -45,21 +45,3 @@ def fetch_resource(
             CrossComputeExecutionError if status_code == 400 else
             CrossComputeImplementationError)(d)
     return response_json
-
-
-def yield_echo(statistics_dictionary, is_quiet=False, as_json=False):
-    statistics_dictionary['ping count'] = 0
-    try:
-        for echo_message in get_echoes_client():
-            event_name = echo_message.event
-            if event_name == 'message':
-                if not is_quiet and not as_json:
-                    print('.', end='', flush=True)
-                statistics_dictionary['ping count'] += 1
-                continue
-            elif not is_quiet:
-                print('$', end='', flush=True)
-            event_dictionary = json.loads(echo_message.data)
-            yield event_name, event_dictionary
-    except KeyboardInterrupt:
-        raise CrossComputeKeyboardInterrupt
