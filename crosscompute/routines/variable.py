@@ -378,7 +378,6 @@ class ImageView(VariableView):
             f'<img id="{element_id}" '
             f'class="_{x.mode_name} _{self.view_name} {variable_id}" '
             f'src="{data_uri}" alt="">')
-        # TODO: Show spinner on error
         js_texts = [
             IMAGE_OUTPUT_HEADER_JS,
             IMAGE_OUTPUT_JS.substitute({
