@@ -23,7 +23,6 @@ dist/
 .containerfile
 .containerignore
 .run.*
-batches/
 datasets/
 debug/
-runs/
+results/
