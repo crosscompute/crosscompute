@@ -1,0 +1,10 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "crosscompute"
+dynamic = ["version"]
+
+[tool.hatch.version]
+path = "sources/crosscompute/__init__.py"
