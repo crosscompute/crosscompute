@@ -5,6 +5,29 @@ build-backend = "hatchling.build"
 [project]
 name = "crosscompute"
 dynamic = ["version"]
+# dependencies = []
+# requires-python = ""
+# authors = []
+# maintainers = []
+# description = ""
+# readme = "README.md"
+# keywords = []
+# classifiers = []
+
+[project.optional-dependencies]
+
+[project.urls]
+# Homepage = ""
+# Documentation = ""
+# Repository = ""
+# Issues = ""
+# Changelog = ""
+
+[project.scripts]
+crosscompute = "crosscompute.scripts.launch:start"
+
+[tool.hatch.build]
+packages = ["sources/crosscompute"]
 
 [tool.hatch.version]
 path = "sources/crosscompute/__init__.py"
