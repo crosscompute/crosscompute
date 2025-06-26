@@ -24,7 +24,7 @@ dynamic = ["version"]
 # Changelog = ""
 
 [project.scripts]
-crosscompute = "crosscompute.scripts.launch:start"
+crosscompute = "crosscompute.scripts.launch:run"
 
 [tool.hatch.build]
 packages = ["sources/crosscompute"]
