@@ -3,6 +3,7 @@ from argparse import ArgumentParser
 from logging import getLogger
 
 from crosscompute.scripts.add import (
+    configure_argument_parser_for_adding,
     add_with)
 
 
@@ -11,9 +12,12 @@ def run():
 
 
 async def start(arguments=None):
-    args = get_args(arguments)
-    command_names = args.command_names
-    match primary_command_name := command_names[0]:
+    a = ArgumentParser()
+    s = a.add_subparsers(dest='command_name')
+    configure_argument_parser_for_adding(s.add_parser('add'))
+    args = a.parse_args(arguments)
+    command_name = args.command_name
+    match command_name:
         case 'info':
             pass
         case 'configure':
@@ -25,36 +29,11 @@ async def start(arguments=None):
         case 'print':
             pass
         case 'add':
-            await add_with(args, command_names[1:])
+            await add_with(args)
         case 'work':
             pass
-        case _:
-            L.error(
-                '"%s" is not a recognized command. %s',
-                primary_command_name, COMMANDS_OVERVIEW_TEXT)
 
 
-def get_args(arguments):
-    a = ArgumentParser()
-    configure_argument_parser_for_launching(a)
-    args = a.parse_args(arguments)
-    return args
-
-
-def configure_argument_parser_for_launching(a):
-    a.add_argument('command_names', nargs='+')
-
-
-COMMANDS_OVERVIEW_TEXT = '''\
-Here are the available commands:
-
-crosscompute info
-crosscompute configure
-crosscompute run
-crosscompute serve
-crosscompute print
-crosscompute add
-crosscompute work'''
 L = getLogger('crosscomputes.scripts.launch')
 
 
