@@ -1,4 +1,12 @@
+from enum import Enum
 from pathlib import Path
+
+
+class ToolAccess(Enum):
+    PRIVATE = 0
+    PROTECTED = 2
+    HIDDEN = 5
+    PUBLIC = 7
 
 
 USER_SETTINGS_PATH = '~/.crosscompute/user.yaml'

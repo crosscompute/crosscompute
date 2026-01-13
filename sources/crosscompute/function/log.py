@@ -5,12 +5,10 @@ from ruamel.yaml import YAML
 
 from ..setting import (
     declared_settings as D)
-from .asset import (
-    asset_storage)
 
 
-def configure_log():
-    log_config = load_log_configuration()
+def configure_log(asset_storage):
+    log_config = load_log_configuration(asset_storage)
     for handler_map in log_config['handlers'].values():
         if 'filename' in handler_map:
             log_path = handler_map['filename']
@@ -18,7 +16,7 @@ def configure_log():
     configure_logging_from_map(log_config)
 
 
-def load_log_configuration():
+def load_log_configuration(asset_storage):
     if D.mode == 'development':
         configuration_name = 'development.yaml'
         value_by_key = {}

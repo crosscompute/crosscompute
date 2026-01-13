@@ -31,8 +31,7 @@ async def start(arguments=None):
     configure_argument_parser_for_looking(s.add_parser('look'))
     configure_argument_parser_for_adding(s.add_parser('add'))
     args = a.parse_args(arguments)
-    command_name = args.command_name
-    match command_name:
+    match args.command_name:
         case 'look':
             await look_with(args)
         case 'draft':
@@ -48,6 +47,8 @@ async def start(arguments=None):
         case 'work':
             pass
         case 'clean':
+            # TODO: Remove payloads
+            # TODO: Remove repositories
             pass
 
 

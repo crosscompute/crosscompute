@@ -30,11 +30,13 @@ from crosscompute_platform.backend.cloud import (
     CloudBackend)
 from crosscompute_platform.backend.disk import (
     DiskBackend)
-from crosscompute_platform.constant import (
+from crosscompute.constant import (
     ToolAccess)
 from crosscompute.error import (
     RepositoryCheckoutError,
     RepositoryCloneError)
+from crosscompute.function.asset import (
+    asset_storage)
 from crosscompute.function.log import (
     configure_log)
 from crosscompute_platform.function.variable import (
@@ -62,7 +64,7 @@ async def add_with(args):
     from crosscompute_platform.setting import load_settings_from_path as f
     f()
     load_settings_from_path()
-    configure_log()
+    configure_log(asset_storage)
     initialize_variable()
     server_uri = getenv('SERVER_URI') or D.server_uri
     user_token = getenv('USER_TOKEN') or D.user_token
