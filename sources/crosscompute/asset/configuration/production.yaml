@@ -43,6 +43,11 @@ loggers:
       - default_stream
       - default_file
     level: INFO
+  crosscompute_platform:
+    handlers:
+      - default_stream
+      - default_file
+    level: INFO
   crosscompute:
     handlers:
       - default_stream

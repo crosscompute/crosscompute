@@ -1,6 +1,7 @@
 ---
 # data_folder: ~/.crosscompute
-# log_path = '{data_folder}/logs/user.log'
-# server_uri = https://crosscompute.com
-# worker_slug =
-# user_token =
+# log_path: '{data_folder}/logs/user.log'
+# server_uri: https://crosscompute.com
+# mode: production
+# worker_slug:
+# user_token:
