@@ -1,0 +1,76 @@
+from pathlib import Path
+
+from crosscompute_macros.abstract import Mold
+from crosscompute_macros.datetime import (
+    get_datestamp)
+from crosscompute_macros.yaml import (
+    sync_load_raw_yaml)
+from crosscompute_validation.error import (
+    CrossComputeError)
+
+from .constant import (
+    ASSET_FOLDER,
+    LOG_PATH,
+    USER_SETTINGS_PATH)
+
+
+def get_settings_path(default_path=USER_SETTINGS_PATH):
+    default_path = Path(default_path)
+    asset_path = ASSET_FOLDER / 'configuration' / 'user.yaml'
+    try:
+        if default_path.exists():
+            path = default_path
+        elif asset_path.exists():
+            path = asset_path
+        else:
+            x = 'settings path was not found'
+            raise CrossComputeError(x)
+    except OSError as e:
+        x = 'settings path is not accessible'
+        raise CrossComputeError(x) from e
+    return path
+
+
+def load_settings_from_path(settings_path=None, overrides_map=None):
+    if not settings_path:
+        settings_path = get_settings_path()
+    if not overrides_map:
+        overrides_map = {}
+    d = sync_load_raw_yaml(settings_path)
+    load_settings_from_map(d | overrides_map)
+    D = declared_settings
+    D.settings_path = settings_path
+
+
+def load_settings_from_map(d):
+    D = declared_settings
+    D.set('log_path', d, expand_path)
+    D.set('server_uri', d)
+    D.set('mode', d)
+    # Worker
+    D.set('worker_slug', d)
+    # User
+    D.set('user_token', d)
+
+
+def expand_path(path):
+    if path:
+        D = declared_settings
+        kwargs = {'date_stamp': date_stamp}
+        if hasattr(D, 'data_folder'):
+            kwargs['data_folder'] = D.data_folder
+        path = Path(str(path).format(**kwargs)).expanduser()
+    return path
+
+
+declared_settings = Mold({
+    'log_path': LOG_PATH,
+    'server_uri': 'https://crosscompute.com',
+    'mode': 'production',
+    # Worker
+    'worker_slug': None,
+    # User
+    'user_token': None})
+
+
+date_stamp = get_datestamp()

@@ -1,0 +1,64 @@
+---
+version: 1
+disable_existing_loggers: true
+formatters:
+  default:
+    (): uvicorn.logging.DefaultFormatter
+    datefmt: '%Y%m%d-%H%M%S'
+    fmt: >-
+      %(asctime)s %(levelprefix)s %(name)s:%(lineno)s %(message)s
+    use_colors: false
+  access:
+    (): uvicorn.logging.AccessFormatter
+    datefmt: '%Y%m%d-%H%M%S'
+    fmt: >-
+      %(asctime)s %(levelprefix)s %(client_addr)s - "%(request_line)s"
+      %(status_code)s
+    use_colors: false
+handlers:
+  default_stream:
+    formatter: default
+    class: logging.StreamHandler
+    stream: ext://sys.stderr
+  default_file:
+    formatter: default
+    class: logging.FileHandler
+    filename: $default_log_path
+  access_stream:
+    formatter: access
+    class: logging.StreamHandler
+    stream: ext://sys.stdout
+  access_file:
+    formatter: access
+    class: logging.FileHandler
+    filename: $access_log_path
+loggers:
+  crosscompute_macros:
+    handlers:
+      - default_stream
+      - default_file
+    level: INFO
+  crosscompute_validation:
+    handlers:
+      - default_stream
+      - default_file
+    level: INFO
+  crosscompute:
+    handlers:
+      - default_stream
+      - default_file
+    level: INFO
+  uvicorn:
+    handlers:
+      - default_stream
+      - default_file
+    level: INFO
+    propagate: false
+  uvicorn.access:
+    handlers:
+      - access_stream
+      - access_file
+    level: INFO
+    propagate: false
+  uvicorn.error:
+    level: INFO

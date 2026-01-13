@@ -57,10 +57,6 @@ def do(arguments=None):
 
 
 def _get_args(arguments):
-    configure_argument_parser_for_logging(a)
-    configure_argument_parser_for_configuring(a)
-    configure_argument_parser_for_serving(a)
-    configure_argument_parser_for_running(a)
     if args.is_version_only:
         print(__version__)
         raise SystemExit
