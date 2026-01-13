@@ -1,4 +1,4 @@
-from crosscompute_validation.errors import (
+from crosscompute_validation.error import (
     CrossComputeError)
 
 

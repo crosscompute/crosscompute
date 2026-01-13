@@ -47,6 +47,8 @@ async def start(arguments=None):
             await add_with(args)
         case 'work':
             pass
+        case 'clean':
+            pass
 
 
 L = getLogger('crosscomputes.scripts.launch')

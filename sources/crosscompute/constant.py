@@ -2,7 +2,8 @@ from pathlib import Path
 
 
 USER_SETTINGS_PATH = '~/.crosscompute/user.yaml'
-LOG_PATH = '~/.crosscompute/user.log'
+DATA_FOLDER = '~/.crosscompute'
+LOG_PATH = DATA_FOLDER + '/logs/user.log'
 
 
 PACKAGE_FOLDER = Path(__file__).parent

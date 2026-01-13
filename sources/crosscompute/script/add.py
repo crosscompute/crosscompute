@@ -58,12 +58,16 @@ def configure_argument_parser_for_adding(a):
 
 
 async def add_with(args):
+    # !!!
+    from crosscompute_platform.setting import load_settings_from_path as f
+    f()
     load_settings_from_path()
     configure_log()
     initialize_variable()
     server_uri = getenv('SERVER_URI') or D.server_uri
     user_token = getenv('USER_TOKEN') or D.user_token
     worker_slug = getenv('WORKER_SLUG') or D.worker_slug
+    repositories_folder = D.data_folder / 'repositories'
     configuration_path = args.configuration_path
     configuration = await load_raw_yaml(configuration_path)
     action = args.action
@@ -71,13 +75,13 @@ async def add_with(args):
     tool_maps = configuration.get('tools', [])
     if tool_slug:
         tool_maps = [_ for _ in tool_maps if _['slug'] == tool_slug]
-    tool_paths = await download_tools(tool_maps)
+    tool_paths = await download_tools(repositories_folder, tool_maps)
     tool_by_slug = await load_tools(tool_paths)
     tools = annotate_tools(tool_by_slug, tool_maps, worker_slug)
     await upload_tools(server_uri, user_token, tools, action)
 
 
-async def download_tools(tool_maps):
+async def download_tools(target_folder, tool_maps):
     paths = []
     timestamp = get_longstamp()
     for tool_map in tool_maps:
@@ -86,7 +90,7 @@ async def download_tools(tool_maps):
         commit_hash = repository_map['version']
         relative_path = repository_map['path']
         repository_folder = await get_repository_folder(
-            REPOSITORIES_FOLDER, repository_uri, commit_hash, timestamp)
+            target_folder, repository_uri, commit_hash, timestamp)
         paths.append(repository_folder / relative_path)
     return paths
 
@@ -199,7 +203,6 @@ EPILOG = '''environment variables:
   SERVER_URI
   USER_TOKEN
   WORKER_SLUG'''
-REPOSITORIES_FOLDER = Path('~/.cache/crosscompute/repositories').expanduser()
 L = getLogger('crosscompute.scripts.add')
 
 

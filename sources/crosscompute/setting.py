@@ -10,6 +10,7 @@ from crosscompute_validation.error import (
 
 from .constant import (
     ASSET_FOLDER,
+    DATA_FOLDER,
     LOG_PATH,
     USER_SETTINGS_PATH)
 
@@ -44,6 +45,7 @@ def load_settings_from_path(settings_path=None, overrides_map=None):
 
 def load_settings_from_map(d):
     D = declared_settings
+    D.set('data_folder', d, expand_path)
     D.set('log_path', d, expand_path)
     D.set('server_uri', d)
     D.set('mode', d)
@@ -51,6 +53,8 @@ def load_settings_from_map(d):
     D.set('worker_slug', d)
     # User
     D.set('user_token', d)
+    # Extended
+    compute_extended_settings()
 
 
 def expand_path(path):
@@ -63,7 +67,16 @@ def expand_path(path):
     return path
 
 
+def compute_extended_settings():
+    D = declared_settings
+    data_folder = D.data_folder
+
+    E = extended_settings
+    # E.payloads_folder = data_folder / 'payloads'
+
+
 declared_settings = Mold({
+    'data_folder': DATA_FOLDER,
     'log_path': LOG_PATH,
     'server_uri': 'https://crosscompute.com',
     'mode': 'production',
@@ -71,6 +84,7 @@ declared_settings = Mold({
     'worker_slug': None,
     # User
     'user_token': None})
+extended_settings = Mold()
 
 
 date_stamp = get_datestamp()
