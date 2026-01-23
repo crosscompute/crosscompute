@@ -16,7 +16,7 @@ from .constant import (
 
 
 def get_settings_path(default_path=USER_SETTINGS_PATH):
-    default_path = Path(default_path)
+    default_path = Path(default_path).expanduser()
     asset_path = ASSET_FOLDER / 'configuration' / 'user.yaml'
     try:
         if default_path.exists():
