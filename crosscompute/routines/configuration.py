@@ -338,7 +338,7 @@ def load_raw_configuration(configuration_path, with_comments=False):
     configuration_format = get_configuration_format(configuration_path)
     load_raw_configuration = {
         'ini': load_raw_configuration_ini,
-        'toml': load_raw_configuration_toml,
+        # 'toml': load_raw_configuration_toml,
         'yaml': load_raw_configuration_yaml,
     }[configuration_format]
     return load_raw_configuration(configuration_path, with_comments)
@@ -972,7 +972,7 @@ def get_configuration_format(path):
         configuration_format = {
             '.cfg': 'ini',
             '.ini': 'ini',
-            '.toml': 'toml',
+            # '.toml': 'toml',
             '.yaml': 'yaml',
             '.yml': 'yaml',
         }[suffix]
