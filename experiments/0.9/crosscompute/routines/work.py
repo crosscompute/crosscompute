@@ -591,11 +591,6 @@ def _prepare_container_file_text(automation_definition):
             _.number) for _ in automation_definition.port_definitions])
 
 
-def _has_podman_image(image_name):
-    return _run_podman_command({}, [
-        'image', 'exists', image_name]).returncode == 0
-
-
 def _run_podman_image(automation_definition, batch_folder, custom_environment):
     automation_folder = automation_definition.folder
     container_env_path = automation_folder / CONTAINER_ENV_NAME
@@ -683,26 +678,8 @@ def _copy_datasets_into_podman(container_id, automation_definition):
             'cp', dataset_path, f'{container_id}:{dataset_path}'])
 
 
-def _get_podman_user_id(container_id):
-    process = _run_podman_command({
-        'capture_output': True,
-    }, ['exec', container_id, 'id', '-u'])
-    return process.stdout.decode().strip()
-
-
-def _set_podman_folder_owner(folder, user_id):
-    _run_podman_command({}, [
-        'unshare', 'chown', f'{user_id}:{user_id}', str(folder), '-R'])
-
-
 def _make_podman_folder(container_id, folder):
     _run_podman_command({}, ['exec', container_id, 'mkdir', folder, '-p'])
-
-
-def _run_podman_command(options, terms):
-    command_terms = ['podman'] + terms
-    L.debug(' '.join(command_terms))
-    return subprocess.run(command_terms, **options)
 
 
 def _process_podman_return_code(return_code, absolute_batch_folder):
