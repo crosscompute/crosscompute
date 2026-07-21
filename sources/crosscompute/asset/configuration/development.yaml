@@ -23,10 +23,6 @@ handlers:
     class: logging.StreamHandler
     stream: ext://sys.stdout
 loggers:
-  root:
-    handlers:
-      - default_stream
-    level: DEBUG
   asyncio:
     level: INFO
   uvicorn:
@@ -43,3 +39,7 @@ loggers:
     level: INFO
   watchfiles:
     level: WARNING
+root:
+  handlers:
+    - default_stream
+  level: DEBUG
