@@ -594,57 +594,6 @@ class FileView(VariableView):
             'js_texts': js_texts, 'main_text': main_text}
 
 
-def initialize_view_by_name():
-    for entry_point in entry_points().select(group='crosscompute.views'):
-        view_by_name[entry_point.name] = import_attribute(entry_point.value)
-    return view_by_name
-
-
-def save_variable_data(target_path, batch_definition, variable_definitions):
-    target_path.parent.mkdir(parents=True, exist_ok=True)
-    variable_data_by_id = get_variable_data_by_id(
-        variable_definitions, batch_definition.data_by_id)
-    if target_path.suffix == '.dictionary':
-        with target_path.open('wt') as input_file:
-            json.dump(get_variable_value_by_id(
-                variable_data_by_id), input_file)
-    elif len(variable_data_by_id) > 1:
-        raise CrossComputeConfigurationError(
-            'use file extension .dictionary for multiple variables')
-    else:
-        variable_id, variable_data = list(variable_data_by_id.items())[0]
-        variable_definition = find_item(
-            variable_definitions, 'id', variable_id)
-        if 'value' in variable_data:
-            x = variable_data['value']
-            target_path.open('wt').write(json.dumps(x) if isinstance(
-                x, dict) or isinstance(x, list) else str(x))
-        elif 'path' in variable_data:
-            shutil.copy(variable_data['path'], target_path)
-        elif 'uri' in variable_data:
-            x = variable_data['uri']
-            if x.startswith('http://') or x.startswith('https://'):
-                download_uri(x, target_path)
-            elif x.startswith('/f/'):
-                link_files(target_path, x)
-        variable_view = VariableView.get_from(variable_definition)
-        variable_view.process(target_path)
-
-
-def link_files(path_template, variable_uri):
-    folder = FILES_FOLDER / variable_uri.replace('/f/', '')
-    file_dictionaries = load_file_json(folder / 'files.json')
-    for file_index, file_dictionary in enumerate(file_dictionaries):
-        file_path = folder / str(file_index)
-        file_suffix = file_dictionary['suffix']
-        target_path = str(path_template).format(
-            index=file_index, suffix=file_suffix)
-        symlink(file_path, target_path)
-        L.debug(f'linked {file_path} to {target_path}')
-        if target_path == path_template:
-            break
-
-
 def get_data_by_id(automation_definition, batch_definition):
     automation_folder = automation_definition.folder
     batch_folder = batch_definition.folder
