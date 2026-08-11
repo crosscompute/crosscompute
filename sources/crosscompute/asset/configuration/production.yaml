@@ -34,31 +34,21 @@ handlers:
     filename: $access_log_path
 loggers:
   crosscompute_macros:
-    handlers:
-      - default_stream
-      - default_file
     level: INFO
-  crosscompute_validation:
-    handlers:
-      - default_stream
-      - default_file
+  crosscompute_definitions:
+    level: INFO
+  crosscompute_settings:
+    level: INFO
+  crosscompute_views:
+    level: INFO
+  crosscompute_backends:
     level: INFO
   crosscompute_platform:
-    handlers:
-      - default_stream
-      - default_file
     level: INFO
   crosscompute:
-    handlers:
-      - default_stream
-      - default_file
     level: INFO
   uvicorn:
-    handlers:
-      - default_stream
-      - default_file
     level: INFO
-    propagate: false
   uvicorn.access:
     handlers:
       - access_stream

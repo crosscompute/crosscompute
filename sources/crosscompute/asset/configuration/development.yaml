@@ -26,10 +26,7 @@ loggers:
   asyncio:
     level: INFO
   uvicorn:
-    handlers:
-      - default_stream
     level: INFO
-    propagate: false
   uvicorn.access:
     handlers:
       - access_stream
