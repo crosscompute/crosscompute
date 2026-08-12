@@ -111,18 +111,6 @@ class AutomationDefinition(Definition):
             validate_display_pages,
             validate_display_buttons]
 
-    def get_variable_definitions(self, step_name, with_all=False):
-        variable_definitions = self.variable_definitions_by_step_name.get(
-            step_name, [])
-        if with_all:
-            variable_definitions = variable_definitions.copy()
-            for STEP_NAME in STEP_NAMES:
-                if step_name == STEP_NAME:
-                    continue
-                variable_definitions.extend(self.get_variable_definitions(
-                    STEP_NAME))
-        return variable_definitions
-
     def get_design_name(self, page_id):
         design_name = DESIGN_NAMES_BY_PAGE_ID[page_id][0]
         if page_id in self.page_definition_by_id:
