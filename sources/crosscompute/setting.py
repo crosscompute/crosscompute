@@ -68,11 +68,7 @@ def expand_path(path):
 
 
 def compute_extended_settings():
-    D = declared_settings
-    data_folder = D.data_folder
-
-    E = extended_settings
-    # E.payloads_folder = data_folder / 'payloads'
+    pass
 
 
 declared_settings = Mold({
