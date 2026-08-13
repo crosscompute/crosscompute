@@ -6,7 +6,7 @@ formatters:
     (): uvicorn.logging.DefaultFormatter
     datefmt: '%Y%m%d-%H%M%S'
     fmt: >-
-      %(asctime)s %(levelname)s %(name)s:%(pathname)s:%(lineno)s %(message)s
+      %(asctime)s %(levelname)s %(name)s:%(lineno)s %(message)s
     use_colors: false
   access:
     (): uvicorn.logging.AccessFormatter
