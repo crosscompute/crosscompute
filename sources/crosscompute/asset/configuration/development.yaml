@@ -6,12 +6,12 @@ formatters:
     (): uvicorn.logging.DefaultFormatter
     datefmt: '%Y%m%d-%H%M%S'
     fmt: >-
-      %(asctime)s %(levelprefix)s %(name)s:%(pathname)s:%(lineno)s %(message)s
+      %(asctime)s %(levelname)s %(name)s:%(pathname)s:%(lineno)s %(message)s
   access:
     (): uvicorn.logging.AccessFormatter
     datefmt: '%Y%m%d-%H%M%S'
     fmt: >-
-      %(asctime)s %(levelprefix)s %(client_addr)s - "%(request_line)s"
+      %(asctime)s %(levelname)s %(client_addr)s - "%(request_line)s"
       %(status_code)s
 handlers:
   default_stream:
