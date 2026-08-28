@@ -15,26 +15,6 @@ from pytest import raises
 from conftest import start_server
 
 
-class FetchResourceRequestHandler(BaseHTTPRequestHandler):
-
-    def do_GET(self):
-        if self.path == '/a.json':
-            self.send_response(500)
-        elif self.path == '/b.json':
-            self.send_response(401)
-        elif self.path == '/c.json':
-            self.send_response(400)
-        else:
-            self.send_response(200)
-        self.end_headers()
-        try:
-            length = int(self.headers['Content-Length'])
-        except TypeError:
-            pass
-        else:
-            self.wfile.write(self.rfile.read(length))
-
-
 def test_get_bash_configuration_text():
     environ['CROSSCOMPUTE_CLIENT'] = CLIENT_URL
     environ['CROSSCOMPUTE_SERVER'] = SERVER_URL

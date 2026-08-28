@@ -81,5 +81,5 @@ output:
 # view: map-deck-screengrid
 # templates:
 #   - path: output.md
-batches:
-  - folder: batches/standard
+presets:
+  - folder: presets/standard

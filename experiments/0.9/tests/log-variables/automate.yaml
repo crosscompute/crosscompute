@@ -22,8 +22,8 @@ output:
     - id: time_in_seconds
       view: number
       path: variables.dictionary
-batches:
-  - folder: batches/standard
+presets:
+  - folder: presets/standard
 scripts:
   - command: python3 run.py {input_folder} {output_folder} {log_folder}
 display:

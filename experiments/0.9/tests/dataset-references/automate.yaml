@@ -7,8 +7,8 @@ output:
     - id: word_count
       view: number
       path: variables.dictionary
-batches:
-  - folder: batches/standard
+presets:
+  - folder: presets/standard
 datasets:
   - path: datasets/document.txt
     reference:

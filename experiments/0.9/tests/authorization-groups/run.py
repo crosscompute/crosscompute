@@ -4,11 +4,11 @@ from pathlib import Path
 
 
 input_folder = Path(getenv(
-    'CROSSCOMPUTE_INPUT_FOLDER', 'batches/standard/input'))
+    'INPUT_FOLDER', 'presets/standard/input'))
 output_folder = Path(getenv(
-    'CROSSCOMPUTE_OUTPUT_FOLDER', 'batches/standard/output'))
+    'OUTPUT_FOLDER', 'presets/standard/output'))
 debug_folder = Path(getenv(
-    'CROSSCOMPUTE_DEBUG_FOLDER', 'batches/standard/debug'))
+    'DEBUG_FOLDER', 'presets/standard/debug'))
 
 
 output_folder.mkdir(parents=True, exist_ok=True)

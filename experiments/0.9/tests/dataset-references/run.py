@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 output_folder = Path(getenv(
-    'CROSSCOMPUTE_OUTPUT_FOLDER', 'batches/standard/output'))
+    'OUTPUT_FOLDER', 'presets/standard/output'))
 datasets_folder = Path('datasets')
 document_path = datasets_folder / 'document.txt'
 with document_path.open('rt') as f:

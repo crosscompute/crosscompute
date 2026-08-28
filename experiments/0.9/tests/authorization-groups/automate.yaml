@@ -15,9 +15,9 @@ output:
     - id: z
       view: string
       path: variables.dictionary
-batches:
-  - folder: batches/p
-  - folder: batches/q
+presets:
+  - folder: presets/p
+  - folder: presets/q
 scripts:
   - path: run.py
 authorization:

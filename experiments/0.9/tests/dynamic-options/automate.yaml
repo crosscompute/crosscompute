@@ -36,7 +36,7 @@ output:
       path: document.txt
       configuration:
         path: document.json
-batches:
-  - folder: batches/standard
+presets:
+  - folder: presets/standard
 scripts:
   - command: python3 run.py {output_folder}
