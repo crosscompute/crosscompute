@@ -29,7 +29,7 @@ class DiskDatabase():
 
     def __init__(self, configuration, changes, with_restart):
         self._configuration = configuration
-        self._changes = changes
+        # self._changes = changes
         self._memory = learn(configuration, with_restart)
 
     def grok(self, paths):
@@ -40,8 +40,10 @@ class DiskDatabase():
             except KeyError:
                 continue
             changed_infos.extend(infos)
-        if changed_infos:
-            self._changes[time()] = changed_infos
+        # FUTURE NOTE START
+        # if changed_infos:
+            # self._changes[time()] = changed_infos
+        # FUTURE NOTE END
         L.debug(changed_infos)
         return changed_infos
 

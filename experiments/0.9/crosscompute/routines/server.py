@@ -96,6 +96,10 @@ class DiskServer(Server):
                     step=DISK_STEP_IN_MILLISECONDS):
                 changed_paths = [_[1] for _ in changed_packs]
                 changed_infos = d_database.grok(changed_paths)
+                # FUTURE NOTE START
+                if changed_infos:
+                    self._changes[time()] = changed_infos
+                # FUTURE NOTE END
                 should_restart_server = False
                 for info in changed_infos:
                     if info['code'] == Info.CONFIGURATION:
