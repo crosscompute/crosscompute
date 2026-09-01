@@ -69,42 +69,7 @@ from .asset import (
 from .interface import Batch
 
 
-@dataclass(repr=False, eq=False, order=False, frozen=True)
-class Element():
-
-    id: str  # widgets can have duplicate variable ids
-    mode_name: str  # input variables can appear in output templates
-    request_params: str
-    layout_settings: dict
-    function_names: list[str]
-
-
 class VariableView():
-
-    view_name = 'variable'
-    environment_variable_definitions = []
-    has_direct_refresh = False
-
-    def __init__(self, variable_definition):
-        self.variable_definition = variable_definition
-        self.variable_id = variable_definition.id
-        self.variable_path = variable_definition.path
-
-    @classmethod
-    def get_from(Class, variable_definition):
-        view_name = variable_definition.view_name
-        try:
-            View = view_by_name[view_name]
-        except KeyError:
-            L.error('view "%s" is not installed', view_name)
-            View = Class
-        return View(variable_definition)
-
-    def parse(self, data):
-        return data
-
-    def process(self, path):
-        pass
 
     def render(self, b: Batch, x: Element):
         if x.mode_name == 'input':
@@ -123,22 +88,6 @@ class VariableView():
             page_dictionary['main_text'] = '<%s class="_view">\n%s\n</%s>' % (
                 tag_name, main_text, tag_name)
         return page_dictionary
-
-    def render_input(self, b: Batch, x: Element):
-        return {
-            'css_uris': [],
-            'css_texts': [],
-            'js_uris': [],
-            'js_texts': [],
-            'main_text': ''}
-
-    def render_output(self, b: Batch, x: Element):
-        return {
-            'css_uris': [],
-            'css_texts': [],
-            'js_uris': [],
-            'js_texts': [],
-            'main_text': ''}
 
 
 class LinkView(VariableView):
